@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { Send, ArrowRight, Loader2 } from 'lucide-svelte';
+  import { Send, ArrowRight, Loader2, LayoutDashboard } from 'lucide-svelte';
+  import { goto } from '$app/navigation';
   import TaskInput from '$lib/components/TaskInput.svelte';
   import ChatMessage from '$lib/components/ChatMessage.svelte';
   import HarpyHeading from '$lib/components/ui/HarpyHeading.svelte';
@@ -12,6 +13,8 @@
   let chatMessages = $state<{ role: 'user' | 'agent' | 'system'; content: string; timestamp: string }[]>([]);
   let loading = $state(false);
   let error = $state<string | null>(null);
+  let taskId = $state<string | null>(null);
+  let dismissed = $state(false);
 
   const exampleTasks = [
     'Create a social media post about our product launch',
@@ -27,6 +30,7 @@
   async function handleSubmit(text: string) {
     loading = true;
     error = null;
+    dismissed = false;
 
     chatMessages = [{ role: 'user', content: text, timestamp: now() }];
 
@@ -39,34 +43,27 @@
       });
 
       task = res.task;
+      taskId = res.task.id;
+      taskCreated = true;
       chatMessages = [
         ...chatMessages,
-        { role: 'agent', content: `Task created: "${res.task.title}". Status: ${TaskStatus[res.task.status]}.`, timestamp: now() },
+        { role: 'agent', content: `Task created: "${res.task.title}". Opening dashboard...`, timestamp: now() },
       ];
-      taskCreated = true;
 
       // Start streaming updates
-      const controller = watchTask(
+      watchTask(
         'default',
         res.task.id,
         (updated) => {
           task = updated;
-          const statusLabel = TaskStatus[updated.status];
-          chatMessages = [
-            ...chatMessages,
-            {
-              role: 'system',
-              content: `Task status changed to: ${statusLabel}`,
-              timestamp: now(),
-            },
-          ];
         },
         (err) => {
           error = err.message;
         },
       );
 
-      // Store for cleanup (we don't clean up in this demo — in real app use $effect cleanup)
+      // Redirect to the task dashboard
+      goto(`/tasks#${res.task.id}`);
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to create task';
       chatMessages = [
@@ -78,10 +75,19 @@
     }
   }
 
+  function viewDashboard() {
+    if (taskId) {
+      goto(`/tasks#${taskId}`);
+    } else {
+      goto('/tasks');
+    }
+  }
+
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'Escape') {
       taskCreated = false;
       task = null;
+      taskId = null;
       chatMessages = [];
       error = null;
     }
@@ -137,10 +143,45 @@
             {/each}
           </div>
         </div>
+
+        <a
+          href="/tasks"
+          class="mt-6 inline-flex items-center gap-2 font-body text-sm text-crown-ash transition-colors hover:text-talon-gold"
+        >
+          <LayoutDashboard class="size-4" />
+          View Task Dashboard
+        </a>
       </div>
     {:else}
       <!-- Chat state -->
       <div class="flex flex-1 flex-col min-h-0">
+        {#if !dismissed && task}
+          <div class="mx-4 mt-4 rounded-lg border border-talon-gold/30 bg-talon-gold/10 p-4 lg:mx-6">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <p class="font-heading text-base font-semibold text-talon-gold">Task created!</p>
+                <p class="mt-1 font-body text-sm text-cream">{task.title}</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button
+                  onclick={viewDashboard}
+                  class="inline-flex cursor-pointer items-center gap-2 rounded-md bg-talon-gold px-4 py-2 font-body text-sm font-medium text-obsidian transition-all hover:bg-talon-gold-bright"
+                >
+                  <LayoutDashboard class="size-4" />
+                  Open Dashboard
+                </button>
+                <button
+                  onclick={() => dismissed = true}
+                  class="rounded-md p-2 text-crown-ash transition-colors hover:text-cream"
+                  aria-label="Dismiss"
+                >
+                  <span class="text-lg">&times;</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        {/if}
+
         <div class="flex-1 overflow-y-auto px-4 py-6 lg:px-6">
           <div class="mx-auto max-w-2xl space-y-4">
             {#each chatMessages as msg (msg.timestamp + msg.content.slice(0, 10))}
@@ -163,17 +204,13 @@
     <div class="w-[40%] border-l bg-card overflow-y-auto transition-all duration-500">
       <div class="flex items-center justify-between border-b px-4 py-3">
         <HarpyHeading tag="h3" class="text-base">Task Status</HarpyHeading>
-        <span
-          class="inline-flex items-center rounded-full px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-wider {task.status === TaskStatus.COMPLETED
-            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-            : task.status === TaskStatus.FAILED || task.status === TaskStatus.CANCELLED
-              ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-              : task.status === TaskStatus.IN_PROGRESS
-                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                : 'bg-talon-gold/10 text-talon-gold'}"
+        <button
+          onclick={viewDashboard}
+          class="inline-flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-1.5 font-body text-xs text-talon-gold transition-colors hover:bg-talon-gold/10"
         >
-          {TaskStatus[task.status]}
-        </span>
+          <LayoutDashboard class="size-3.5" />
+          Full Dashboard
+        </button>
       </div>
 
       <div class="p-4 space-y-4">
