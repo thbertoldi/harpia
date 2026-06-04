@@ -48,6 +48,10 @@ spec:
               value: disable
             - name: ZITADEL_EXTERNALSECURE
               value: "false"
+            - name: ZITADEL_EXTERNALDOMAIN
+              value: "localhost"
+            - name: ZITADEL_EXTERNALPORT
+              value: "8085"
             - name: ZITADEL_TLS_ENABLED
               value: "false"
             - name: ZITADEL_FIRSTINSTANCE_ORG_NAME
