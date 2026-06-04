@@ -10,65 +10,58 @@
 		}
 	});
 
-	function handleLogin() {
-		login({ login_hint: email || undefined });
-	}
-
-	function handleSubmit(e: Event) {
-		e.preventDefault();
-		handleLogin();
+	async function handleLogin() {
+		await login(email ? { login_hint: email } : undefined);
 	}
 </script>
 
-<div class="flex min-h-screen bg-[#121318]">
-	<div class="w-[5px] shrink-0 bg-gradient-to-b from-[#C8920F] via-[#E0A512] to-[#C8920F]"></div>
+<div class="flex min-h-screen items-center justify-center bg-[#121318]">
+	<div class="fixed left-0 top-0 h-full w-[5px] bg-gradient-to-b from-[#E0A512] via-[#C8920F] to-[#C8920F]/30"></div>
 
-	<div class="flex flex-1 flex-col items-center justify-center px-8">
-		<div class="w-full max-w-md">
-			<h1
-				class="font-[Bodoni_Moda] text-6xl font-bold tracking-tight text-[#C8920F]"
-			>
+	<div class="w-full max-w-md space-y-8 p-8">
+		<div class="text-center">
+			<h1 class="font-heading text-5xl font-black text-[#C8920F] tracking-tight" style="font-family: 'Bodoni Moda', serif">
 				Harpia
 			</h1>
-			<p class="mt-2 text-lg text-[#9DA1AB]" style="font-family: 'DM Sans', sans-serif;">
+			<p class="mt-3 font-body text-[#9DA1AB]" style="font-family: 'DM Sans', sans-serif">
 				AI operations for your business
 			</p>
+		</div>
 
-			<div class="mt-12">
-				<button
-					onclick={() => login()}
-					class="w-full cursor-pointer rounded-lg bg-[#C8920F] px-6 py-3 text-base font-medium text-[#121318] transition-colors hover:bg-[#E0A512]"
-					style="font-family: 'DM Sans', sans-serif;"
-				>
-					Sign in with Zitadel
-				</button>
+		<div class="space-y-4">
+			<button
+				onclick={handleLogin}
+				class="w-full cursor-pointer rounded-lg bg-[#C8920F] px-6 py-3 font-medium text-[#121318] transition-all hover:bg-[#E0A512]"
+				style="font-family: 'DM Sans', sans-serif"
+			>
+				Sign in with Zitadel
+			</button>
+
+			<div class="relative">
+				<div class="absolute inset-0 flex items-center">
+					<div class="w-full border-t border-[#2A2D3A]"></div>
+				</div>
+				<div class="relative flex justify-center text-xs">
+					<span class="bg-[#121318] px-2 font-mono text-[#6B7080] uppercase tracking-wider" style="font-family: 'JetBrains Mono', monospace">
+						or
+					</span>
+				</div>
 			</div>
 
-			<div class="mt-8 flex items-center gap-4">
-				<div class="h-px flex-1 bg-[#2A2D3A]"></div>
-				<span
-					class="shrink-0 text-xs text-[#6B7080]"
-					style="font-family: 'JetBrains Mono', monospace;"
-				>
-					or continue with
-				</span>
-				<div class="h-px flex-1 bg-[#2A2D3A]"></div>
-			</div>
-
-			<form onsubmit={handleSubmit} class="mt-6 space-y-4">
+			<form onsubmit={(e) => { e.preventDefault(); handleLogin(); }} class="space-y-3">
 				<input
 					type="email"
-					placeholder="Email address"
 					bind:value={email}
-					class="w-full rounded-lg border border-[#2A2D3A] bg-[#1A1B24] px-4 py-2.5 text-sm text-[#F5F2EB] placeholder:text-[#6B7080] focus:border-[#C8920F] focus:outline-none"
-					style="font-family: 'DM Sans', sans-serif;"
+					placeholder="admin@harpia.local"
+					class="w-full rounded-lg border border-[#2A2D3A] bg-[#1A1B24] px-4 py-3 font-body text-[#F5F2EB] placeholder:text-[#6B7080] focus:border-[#C8920F] focus:outline-none transition-colors"
+					style="font-family: 'DM Sans', sans-serif"
 				/>
 				<button
 					type="submit"
-					class="w-full cursor-pointer rounded-lg border border-[#2A2D3A] px-6 py-2.5 text-sm font-medium text-[#9DA1AB] transition-colors hover:border-[#C8920F] hover:text-[#C8920F]"
-					style="font-family: 'DM Sans', sans-serif;"
+					class="w-full cursor-pointer rounded-lg border border-[#2A2D3A] px-6 py-3 font-body text-sm text-[#9DA1AB] transition-colors hover:border-[#C8920F] hover:text-[#C8920F]"
+					style="font-family: 'DM Sans', sans-serif"
 				>
-					Continue
+					Continue with email
 				</button>
 			</form>
 		</div>

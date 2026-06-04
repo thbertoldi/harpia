@@ -11,6 +11,7 @@ const config = {
       $components: "./src/lib/components",
       $stores: "./src/lib/stores",
     },
+    inlineStyleThreshold: 0,
   },
 };
 
