@@ -1,5 +1,5 @@
 [tools]
-go = "1.24"
+go = "1.25"
 python = "3.12"
 node = "22"
 bun = "latest"
