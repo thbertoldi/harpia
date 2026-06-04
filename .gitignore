@@ -56,3 +56,4 @@ deploy/**/charts/*.tgz
 
 # Temporal
 temporalite.db
+control-plane/api
