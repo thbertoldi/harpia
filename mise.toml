@@ -78,32 +78,32 @@ description = "Check for breaking changes in protobuf schemas"
 run = "cd proto && buf breaking --against '.git#branch=trunk'"
 
 [tasks.dev]
-description = "Start all dev infrastructure via podman compose"
-run = "podman compose -f deploy/dev/compose.yaml up -d"
+description = "Start full dev environment via Tilt + k3s"
+run = "tilt up"
 
 [tasks.dev-down]
-description = "Stop all dev infrastructure"
-run = "podman compose -f deploy/dev/compose.yaml down"
+description = "Tear down Tilt environment"
+run = "tilt down"
 
 [tasks.dev-api]
-description = "Run API server in dev mode (with hot reload)"
+description = "Run API server directly (hot reload outside k3s)"
 run = "cd control-plane && go run ./cmd/api/"
 
-[tasks.dev-worker]
-description = "Run Temporal worker in dev mode"
-run = "cd control-plane && HARPIA_ROLE=worker go run ./cmd/api/"
-
 [tasks.dev-agent]
-description = "Run agent runtime in dev mode"
+description = "Run agent runtime directly (outside k3s)"
 run = "cd agent-runtime && uv run python -m harpia_agents.main"
 
-[tasks.dev-agent-worker]
-description = "Run agent Temporal worker in dev mode"
-run = "cd agent-runtime && HARPIA_ROLE=worker uv run python -m harpia_agents.main"
-
 [tasks.dev-web]
-description = "Run frontend in dev mode (with Vite HMR)"
+description = "Run frontend directly with Vite HMR (outside k3s)"
 run = "cd frontend && bun run dev"
+
+[tasks.dev-worker]
+description = "Run Temporal worker directly (outside k3s)"
+run = "cd control-plane && HARPIA_ROLE=worker go run ./cmd/api/"
+
+[tasks.dev-agent-worker]
+description = "Run agent Temporal worker directly (outside k3s)"
+run = "cd agent-runtime && HARPIA_ROLE=worker uv run python -m harpia_agents.main"
 
 [tasks.dev-openfga-migrate]
 description = "Run OpenFGA database migrations"

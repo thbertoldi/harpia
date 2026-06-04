@@ -1,0 +1,46 @@
+# Harpia Dev — Agent Runtime
+# Image built by Tilt via docker_build
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: harpia-agent
+  labels:
+    app: harpia-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: harpia-agent
+  template:
+    metadata:
+      labels:
+        app: harpia-agent
+    spec:
+      containers:
+        - name: agent
+          image: harpia-agent
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            - name: HARPIA_AGENT_HOST
+              value: "0.0.0.0"
+            - name: HARPIA_AGENT_PORT
+              value: "8000"
+            - name: TEMPORAL_HOST
+              value: "temporal:7233"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: harpia-agent
+  labels:
+    app: harpia-agent
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8000
+      targetPort: 8000
+  selector:
+    app: harpia-agent

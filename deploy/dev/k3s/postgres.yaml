@@ -1,0 +1,87 @@
+# Harpia Dev — PostgreSQL
+# k3s manifest for local development
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  labels:
+    app: postgres
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  labels:
+    app: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: docker.io/library/postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: harpia
+            - name: POSTGRES_PASSWORD
+              value: harpia
+            - name: POSTGRES_DB
+              value: harpia
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "harpia"]
+            initialDelaySeconds: 3
+            periodSeconds: 3
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: postgres-pvc
+        - name: init
+          configMap:
+            name: postgres-init
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+data:
+  01-create-dbs.sql: |
+    SELECT 'CREATE DATABASE zitadel'
+    WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'zitadel')\gexec
+    GRANT ALL PRIVILEGES ON DATABASE zitadel TO harpia;
+    CREATE DATABASE openfga;
+    GRANT ALL PRIVILEGES ON DATABASE openfga TO harpia;
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  labels:
+    app: postgres
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: 5432
+  selector:
+    app: postgres

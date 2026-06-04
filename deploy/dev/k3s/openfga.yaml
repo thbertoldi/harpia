@@ -1,0 +1,56 @@
+# Harpia Dev — OpenFGA authorization
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openfga
+  labels:
+    app: openfga
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openfga
+  template:
+    metadata:
+      labels:
+        app: openfga
+    spec:
+      initContainers:
+        - name: migrate
+          image: docker.io/openfga/openfga:v1.8.0
+          args:
+            - "migrate"
+            - "--datastore-engine"
+            - "postgres"
+            - "--datastore-uri"
+            - "postgres://harpia:harpia@postgres:5432/openfga?sslmode=disable"
+      containers:
+        - name: openfga
+          image: docker.io/openfga/openfga:v1.8.0
+          args: ["run"]
+          ports:
+            - containerPort: 8080
+          env:
+            - name: OPENFGA_DATASTORE_ENGINE
+              value: postgres
+            - name: OPENFGA_DATASTORE_URI
+              value: "postgres://harpia:harpia@postgres:5432/openfga?sslmode=disable"
+            - name: OPENFGA_LOG_LEVEL
+              value: info
+            - name: OPENFGA_PLAYGROUND_ENABLED
+              value: "true"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openfga
+  labels:
+    app: openfga
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: openfga

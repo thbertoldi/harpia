@@ -1,0 +1,58 @@
+# Harpia Dev — Control Plane API
+# Image built by Tilt via docker_build
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: harpia-api
+  labels:
+    app: harpia-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: harpia-api
+  template:
+    metadata:
+      labels:
+        app: harpia-api
+    spec:
+      containers:
+        - name: api
+          image: harpia-api
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DATABASE_URL
+              value: "postgres://harpia:harpia@postgres:5432/harpia?sslmode=disable"
+            - name: VALKEY_URL
+              value: "valkey://valkey:6379"
+            - name: TEMPORAL_HOST
+              value: "temporal:7233"
+            - name: GARAGE_URL
+              value: "http://garage:3900"
+            - name: ZITADEL_URL
+              value: "http://zitadel:8080"
+            - name: LOG_LEVEL
+              value: "debug"
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8080
+            initialDelaySeconds: 2
+            periodSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: harpia-api
+  labels:
+    app: harpia-api
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: harpia-api
