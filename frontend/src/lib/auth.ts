@@ -156,6 +156,25 @@ export function logout(): void {
   window.location.href = "/login";
 }
 
+export function devLogin(role: string = 'Leader'): Session {
+  const session: Session = {
+    user: {
+      sub: 'dev-user',
+      email: 'dev@harpia.local',
+      name: 'Dev User',
+      role,
+    },
+    tenant: { id: 'dev', name: 'Dev Workspace' },
+    tokens: {
+      access_token: 'dev-token',
+      id_token: 'dev-token',
+    },
+  };
+  localStorage.setItem('harpia_session', JSON.stringify(session));
+  document.cookie = `harpia_session=${encodeURIComponent(JSON.stringify(session))}; path=/; SameSite=Lax`;
+  return session;
+}
+
 export function getSession(): Session | null {
   if (typeof localStorage === "undefined") return null;
   const stored = localStorage.getItem("harpia_session");
