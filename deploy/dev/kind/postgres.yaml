@@ -1,5 +1,5 @@
 # Harpia Dev — PostgreSQL
-# k3s manifest for local development
+# kind manifest for local development
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

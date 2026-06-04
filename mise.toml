@@ -86,8 +86,8 @@ description = "Start infrastructure only (podman compose)"
 run = "podman compose -f deploy/dev/compose.yaml up -d"
 
 [tasks.dev-infra-kind]
-description = "Start infrastructure on kind cluster"
-run = "kubectl apply -f deploy/dev/k3s/ && kubectl apply -f deploy/dev/kind/"
+description = "Deploy infrastructure to kind cluster"
+run = "kubectl apply -f deploy/dev/kind/"
 
 [tasks.dev-down]
 description = "Tear down dev environment"
