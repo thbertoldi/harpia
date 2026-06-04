@@ -8,14 +8,16 @@ import (
 	"github.com/google/uuid"
 
 	tasksv1 "github.com/harpia/control-plane/gen/harpia/tasks/v1"
+	"github.com/harpia/control-plane/internal/workflow"
 )
 
 type TaskHandler struct {
-	repo *Repository
+	repo     *Repository
+	temporal *workflow.TemporalClient
 }
 
-func NewTaskHandler(repo *Repository) *TaskHandler {
-	return &TaskHandler{repo: repo}
+func NewTaskHandler(repo *Repository, temporal *workflow.TemporalClient) *TaskHandler {
+	return &TaskHandler{repo: repo, temporal: temporal}
 }
 
 func (h *TaskHandler) CreateTask(ctx context.Context, req *connect.Request[tasksv1.CreateTaskRequest]) (*connect.Response[tasksv1.CreateTaskResponse], error) {
@@ -36,6 +38,18 @@ func (h *TaskHandler) CreateTask(ctx context.Context, req *connect.Request[tasks
 	created, err := h.repo.Create(ctx, task)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	if h.temporal != nil {
+		input := workflow.TaskInput{
+			TaskID:      created.ID.String(),
+			TenantID:    created.TenantID.String(),
+			Description: created.Description,
+		}
+		_, err := h.temporal.StartTaskWorkflow(ctx, input)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, err)
+		}
 	}
 
 	return connect.NewResponse(&tasksv1.CreateTaskResponse{

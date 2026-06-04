@@ -21,6 +21,7 @@ import (
 	"github.com/harpia/control-plane/internal/feedback"
 	"github.com/harpia/control-plane/internal/identity"
 	"github.com/harpia/control-plane/internal/tasks"
+	"github.com/harpia/control-plane/internal/workflow"
 )
 
 func main() {
@@ -46,6 +47,17 @@ func main() {
 		}
 	}
 
+	var temporalClient *workflow.TemporalClient
+	if cfg.TemporalHost != "" {
+		var err error
+		temporalClient, err = workflow.NewTemporalClient(cfg.TemporalHost)
+		if err != nil {
+			logger.Error("temporal client failed, running without workflow engine", "error", err)
+		} else {
+			defer temporalClient.Close()
+		}
+	}
+
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/api/v1/health", func(w http.ResponseWriter, r *http.Request) {
@@ -57,7 +69,7 @@ func main() {
 		})
 	})
 
-	taskHandler := tasks.NewTaskHandler(taskRepo)
+	taskHandler := tasks.NewTaskHandler(taskRepo, temporalClient)
 	agentsPath, agentsHandler := agentsv1connect.NewAgentServiceHandler(agents.NewAgentHandler(agentRepo))
 	tasksPath, tasksHandler := tasksv1connect.NewTaskServiceHandler(taskHandler)
 	identityPath, identityHandler := identityv1connect.NewIdentityServiceHandler(identity.NewIdentityHandler())
