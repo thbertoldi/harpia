@@ -15,7 +15,7 @@ Object Store Garage (S3-compatible)
 AuthN        Zitadel
 AuthZ        OpenFGA
 Observability OTEL -> Tempo + Prometheus + Grafana
-Infra        k3s/podman (dev), k8s/Helm (prod)
+Infra        podman-compose (dev), k8s/Helm (prod)
 ```
 
 ## Domain-Driven Design
@@ -48,7 +48,6 @@ Workflow guide: [docs/WORKFLOW.md](docs/WORKFLOW.md)
 
 - [mise](https://mise.jdx.dev/) — runtime version manager
 - [podman](https://podman.io/) — container runtime
-- [k3s](https://k3s.io/) — lightweight Kubernetes
 - [buf](https://buf.build/) — protobuf schema management
 
 ## Quick Start

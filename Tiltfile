@@ -51,9 +51,6 @@ docker_build(
 # ---- PostgreSQL (dev) ----
 docker_compose('./deploy/dev/compose.yaml')
 
-# ---- Resources ----
-k8s_yaml('./deploy/dev/k3s')
-
-# Port forwards
+# Port forwards (for services built by tilt's docker_build)
 k8s_resource('harpia-api', port_forwards=['8080:8080'])
 k8s_resource('harpia-frontend', port_forwards=['5173:3000'])
