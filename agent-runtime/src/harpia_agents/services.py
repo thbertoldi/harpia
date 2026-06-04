@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
+from harpia_agents.gen.harpia.agents.v1.agents_connect import AgentService
 from harpia_agents.gen.harpia.agents.v1.agents_pb2 import (
     AgentInstanceStatus,
     AgentType,
@@ -25,7 +26,7 @@ if TYPE_CHECKING:
     from connectrpc.request import RequestContext
 
 
-class AgentServiceImpl:
+class AgentServiceImpl(AgentService):
     """ConnectRPC AgentService implementation with LangGraph integration."""
 
     async def register_agent_type(
