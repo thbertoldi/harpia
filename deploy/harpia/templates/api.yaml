@@ -1,45 +1,69 @@
+{{- if .Values.api.enabled }}
+{{- $svcName := include "harpia.serviceName" (dict "name" "api" "root" .) }}
+{{- $postgresHost := include "harpia.serviceName" (dict "name" "postgres" "root" .) }}
+{{- $valkeyHost := include "harpia.serviceName" (dict "name" "valkey" "root" .) }}
+{{- $garageHost := include "harpia.serviceName" (dict "name" "garage" "root" .) }}
+{{- $zitadelHost := include "harpia.serviceName" (dict "name" "zitadel" "root" .) }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "harpia.fullname" . }}-api
+  name: {{ $svcName }}
   labels:
-    app: {{ include "harpia.name" . }}-api
+    {{- include "harpia.labels" . | nindent 4 }}
+    app: {{ $svcName }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app: {{ include "harpia.name" . }}-api
+      app: {{ $svcName }}
   template:
     metadata:
       labels:
-        app: {{ include "harpia.name" . }}-api
+        app: {{ $svcName }}
     spec:
       containers:
         - name: api
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: {{ include "harpia.image" (dict "imageRepo" (printf "%s/control-plane" .Values.image.repository) "root" .) }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
-            - containerPort: {{ .Values.service.port }}
+            - containerPort: {{ .Values.api.port }}
           env:
             - name: DATABASE_URL
-              value: "postgres://{{ .Values.database.user }}@{{ .Values.database.host }}:{{ .Values.database.port }}/{{ .Values.database.name }}"
+              value: {{ printf "postgres://%s:%s@%s:5432/%s?sslmode=disable" .Values.postgres.user .Values.postgres.password $postgresHost .Values.postgres.database | quote }}
             - name: VALKEY_URL
-              value: "valkey://{{ .Values.valkey.host }}:{{ .Values.valkey.port }}"
+              value: {{ printf "valkey://%s:6379" $valkeyHost | quote }}
+            - name: TEMPORAL_HOST
+              value: "temporal:7233"
             - name: GARAGE_URL
-              value: {{ .Values.garage.endpoint }}
+              value: {{ printf "http://%s:3900" $garageHost | quote }}
             - name: ZITADEL_URL
-              value: {{ .Values.zitadel.issuerUrl }}
+              value: {{ printf "http://%s:8080" $zitadelHost | quote }}
+            - name: LOG_LEVEL
+              value: "debug"
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: {{ .Values.api.port }}
+            initialDelaySeconds: 2
+            periodSeconds: 3
+          {{- with .Values.resources }}
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "harpia.fullname" . }}-api
+  name: {{ $svcName }}
+  labels:
+    {{- include "harpia.labels" . | nindent 4 }}
+    app: {{ $svcName }}
 spec:
-  type: {{ .Values.service.type }}
+  type: ClusterIP
   ports:
-    - port: {{ .Values.service.port }}
-      targetPort: {{ .Values.service.port }}
+    - port: {{ .Values.api.port }}
+      targetPort: {{ .Values.api.port }}
   selector:
-    app: {{ include "harpia.name" . }}-api
+    app: {{ $svcName }}
+{{- end }}

@@ -1,0 +1,42 @@
+{{- if .Values.valkey.enabled }}
+{{- $svcName := include "harpia.serviceName" (dict "name" "valkey" "root" .) }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $svcName }}
+  labels:
+    {{- include "harpia.labels" . | nindent 4 }}
+    app: {{ $svcName }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ $svcName }}
+  template:
+    metadata:
+      labels:
+        app: {{ $svcName }}
+    spec:
+      containers:
+        - name: valkey
+          image: {{ .Values.valkey.image | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $svcName }}
+  labels:
+    {{- include "harpia.labels" . | nindent 4 }}
+    app: {{ $svcName }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 6379
+      targetPort: 6379
+  selector:
+    app: {{ $svcName }}
+{{- end }}
