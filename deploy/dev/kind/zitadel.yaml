@@ -62,6 +62,8 @@ spec:
               value: admin
             - name: ZITADEL_FIRSTINSTANCE_HUMAN_PASSWORD
               value: HarpiaAdmin1!
+            - name: ZITADEL_FIRSTINSTANCE_HUMAN_EMAIL_VERIFIED
+              value: "true"
             - name: ZITADEL_MASTERKEY
               value: uLGG7IoNMEk58Ik942cZFRmaMnio/3oI
 ---
