@@ -4,6 +4,7 @@ python = "3.12"
 node = "22"
 bun = "latest"
 uv = "latest"
+buf = "latest"
 # temporal CLI should be installed separately: https://docs.temporal.io/cli
 
 [env]
