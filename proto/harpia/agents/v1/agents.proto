@@ -22,7 +22,7 @@ service AgentService {
   rpc ExecuteTask(ExecuteTaskRequest) returns (stream ExecuteTaskResponse);
 
   // ContinueExecution resumes a paused agent execution (e.g., after human feedback).
-  rpc ContinueExecution(ContinueExecutionRequest) returns (stream ExecuteTaskResponse);
+  rpc ContinueExecution(ContinueExecutionRequest) returns (ContinueExecutionResponse);
 }
 
 message AgentType {
@@ -120,4 +120,10 @@ message ContinueExecutionRequest {
   string agent_instance_id = 2;
   string feedback_decision = 3;
   string comment = 4;
+}
+
+message ContinueExecutionResponse {
+  string agent_instance_id = 1;
+  AgentInstanceStatus status = 2;
+  string message = 3;
 }

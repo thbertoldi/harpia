@@ -1,6 +1,6 @@
 version: v2
 modules:
-  - path: harpia
+  - path: .
 lint:
   use:
     - STANDARD

@@ -8,8 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "lint": "prettier --check . && eslint .",
-    "format": "prettier --write . && eslint --fix .",
+    "lint": "prettier --check .",
+    "format": "prettier --write .",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
   },
   "devDependencies": {

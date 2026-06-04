@@ -25,7 +25,7 @@ service FeedbackService {
   rpc GetFeedbackStatus(GetFeedbackStatusRequest) returns (GetFeedbackStatusResponse);
 }
 
-message FeedbackRequest_ {
+message FeedbackRequest {
   string id = 1;
   string tenant_id = 2;
   string task_id = 3;
@@ -75,7 +75,7 @@ message RequestFeedbackRequest {
 }
 
 message RequestFeedbackResponse {
-  FeedbackRequest_ feedback_request = 1;
+  FeedbackRequest feedback_request = 1;
 }
 
 message SubmitFeedbackRequest {
@@ -86,7 +86,7 @@ message SubmitFeedbackRequest {
 }
 
 message SubmitFeedbackResponse {
-  FeedbackRequest_ feedback_request = 1;
+  FeedbackRequest feedback_request = 1;
 }
 
 message ListPendingFeedbackRequest {
@@ -96,7 +96,7 @@ message ListPendingFeedbackRequest {
 }
 
 message ListPendingFeedbackResponse {
-  repeated FeedbackRequest_ feedback_requests = 1;
+  repeated FeedbackRequest feedback_requests = 1;
   string next_page_token = 2;
 }
 
@@ -106,5 +106,5 @@ message GetFeedbackStatusRequest {
 }
 
 message GetFeedbackStatusResponse {
-  FeedbackRequest_ feedback_request = 1;
+  FeedbackRequest feedback_request = 1;
 }
