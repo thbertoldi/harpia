@@ -71,7 +71,7 @@ run = "echo 'Start Zitadel with: docker run -p 8085:8085 ghcr.io/zitadel/zitadel
 
 [tasks.dev-openfga]
 description = "Start OpenFGA for local dev"
-run = "echo 'Start OpenFGA with: docker run -p 8081:8080 openfga/openfga run'"
+run = "podman-compose -f deploy/dev/compose.yaml up -d openfga"
 
 [tasks.dev-temporal]
 description = "Start Temporal dev server (single binary)"

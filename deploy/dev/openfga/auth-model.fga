@@ -1,0 +1,23 @@
+model
+  schema 1.1
+
+type user
+type tenant
+  relations
+    define member: [user]
+    define admin: [user]
+type workspace
+  relations
+    define tenant: [tenant]
+    define editor: [user] or member from tenant
+    define viewer: [user] or member from tenant
+type task
+  relations
+    define tenant: [tenant]
+    define workspace: [workspace]
+    define assignee: [user]
+    define viewer: viewer from workspace or editor from workspace
+    define editor: editor from workspace
+type agent_type
+  relations
+    define executor: [user]

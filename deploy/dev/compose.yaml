@@ -1,7 +1,6 @@
-# Development dependencies (PostgreSQL + Valkey + Garage)
-# Zitadel, OpenFGA, and Temporal are started externally via mise tasks:
+# Development dependencies (PostgreSQL + Valkey + Garage + OpenFGA)
+# Zitadel and Temporal are started externally via mise tasks:
 #   mise run dev-zitadel     -> Zitadel identity provider
-#   mise run dev-openfga     -> OpenFGA authorization
 #   mise run dev-temporal    -> Temporal dev server
 # Use: podman-compose -f deploy/dev/compose.yaml up -d
 
@@ -16,6 +15,7 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
 
   valkey:
     image: docker.io/valkey/valkey:8-alpine
@@ -33,6 +33,19 @@ services:
       - garage-data:/var/lib/garage/data
     environment:
       GARAGE_LOG_TO_SYSLOG: "0"
+
+  openfga:
+    image: docker.io/openfga/openfga:latest
+    ports:
+      - "8081:8080"
+    environment:
+      OPENFGA_DATASTORE_ENGINE: postgres
+      OPENFGA_DATASTORE_URI: "postgres://harpia:harpia@postgres:5432/openfga"
+      OPENFGA_LOG_LEVEL: info
+      OPENFGA_PLAYGROUND_ENABLED: "true"
+    depends_on:
+      postgres:
+        condition: service_started
 
 volumes:
   pgdata:
