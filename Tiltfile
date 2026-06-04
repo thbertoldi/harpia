@@ -1,7 +1,16 @@
 # Harpia Development Environment
 # Use: tilt up
+#
+# Tilt starts infrastructure via podman-compose. Application services
+# (api, agent, frontend) are run locally for hot reload:
+#   mise run dev-api     — Go API server on :8080
+#   mise run dev-agent   — Python agent runtime on :8000
+#   mise run dev-web     — Svelte frontend on :5173
 
-# ---- Go API Server ----
+# ---- Infrastructure (PostgreSQL + Valkey + Garage + Zitadel + OpenFGA) ----
+docker_compose('./deploy/dev/compose.yaml')
+
+# ---- Application images (built on change, run locally) ----
 docker_build(
     'harpia-api',
     context='./control-plane',
@@ -12,15 +21,8 @@ docker_build(
         './control-plane/go.mod',
         './control-plane/go.sum',
     ],
-    live_update=[
-        sync('./control-plane/cmd', '/app/cmd'),
-        sync('./control-plane/internal', '/app/internal'),
-        run('cd /app && go build -o /api ./cmd/api/ && /api', trigger='./control-plane/cmd'),
-        run('cd /app && go build -o /api ./cmd/api/ && /api', trigger='./control-plane/internal'),
-    ],
 )
 
-# ---- Agent Runtime ----
 docker_build(
     'harpia-agent',
     context='./agent-runtime',
@@ -29,12 +31,8 @@ docker_build(
         './agent-runtime/src',
         './agent-runtime/pyproject.toml',
     ],
-    live_update=[
-        sync('./agent-runtime/src', '/app/src'),
-    ],
 )
 
-# ---- Frontend ----
 docker_build(
     'harpia-frontend',
     context='./frontend',
@@ -43,14 +41,4 @@ docker_build(
         './frontend/src',
         './frontend/package.json',
     ],
-    live_update=[
-        sync('./frontend/src', '/app/src'),
-    ],
 )
-
-# ---- PostgreSQL (dev) ----
-docker_compose('./deploy/dev/compose.yaml')
-
-# Port forwards (for services built by tilt's docker_build)
-k8s_resource('harpia-api', port_forwards=['8080:8080'])
-k8s_resource('harpia-frontend', port_forwards=['5173:3000'])
