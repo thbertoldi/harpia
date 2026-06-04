@@ -1,0 +1,80 @@
+# Harpia Dev — Zitadel OIDC identity provider
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zitadel
+  labels:
+    app: zitadel
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zitadel
+  template:
+    metadata:
+      labels:
+        app: zitadel
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: zitadel
+          image: ghcr.io/zitadel/zitadel:v2.62.0
+          args:
+            - "start-from-init"
+            - "--masterkeyFromEnv"
+            - "--tlsMode"
+            - "disabled"
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ZITADEL_DATABASE_POSTGRES_HOST
+              value: postgres
+            - name: ZITADEL_DATABASE_POSTGRES_PORT
+              value: "5432"
+            - name: ZITADEL_DATABASE_POSTGRES_DATABASE
+              value: zitadel
+            - name: ZITADEL_DATABASE_POSTGRES_USER_USERNAME
+              value: harpia
+            - name: ZITADEL_DATABASE_POSTGRES_USER_PASSWORD
+              value: harpia
+            - name: ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME
+              value: harpia
+            - name: ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD
+              value: harpia
+            - name: ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE
+              value: disable
+            - name: ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE
+              value: disable
+            - name: ZITADEL_EXTERNALDOMAIN
+              value: "localhost"
+            - name: ZITADEL_EXTERNALPORT
+              value: "8085"
+            - name: ZITADEL_EXTERNALSECURE
+              value: "false"
+            - name: ZITADEL_TLS_ENABLED
+              value: "false"
+            - name: ZITADEL_FIRSTINSTANCE_ORG_NAME
+              value: Harpia
+            - name: ZITADEL_FIRSTINSTANCE_HUMAN_EMAIL
+              value: admin@harpia.local
+            - name: ZITADEL_FIRSTINSTANCE_HUMAN_USERNAME
+              value: admin
+            - name: ZITADEL_FIRSTINSTANCE_HUMAN_PASSWORD
+              value: HarpiaAdmin1!
+            - name: ZITADEL_MASTERKEY
+              value: uLGG7IoNMEk58Ik942cZFRmaMnio/3oI
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zitadel
+  labels:
+    app: zitadel
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: zitadel

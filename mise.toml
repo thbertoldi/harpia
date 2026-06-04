@@ -85,9 +85,9 @@ run = "tilt up"
 description = "Start infrastructure only (podman compose)"
 run = "podman compose -f deploy/dev/compose.yaml up -d"
 
-[tasks.dev-infra-k3s]
-description = "Start infrastructure on k3s (requires sudo k3s setup)"
-run = "kubectl apply -f deploy/dev/k3s/"
+[tasks.dev-infra-kind]
+description = "Start infrastructure on kind cluster"
+run = "kubectl apply -f deploy/dev/k3s/ && kubectl apply -f deploy/dev/kind/"
 
 [tasks.dev-down]
 description = "Tear down dev environment"
@@ -108,18 +108,6 @@ run = "cd agent-runtime && uv run python -m harpia_agents.main"
 [tasks.dev-web]
 description = "Run frontend directly with Vite HMR"
 run = "cd frontend && bun run dev --host"
-
-[tasks.dev-api]
-description = "Run API server directly (hot reload outside k3s)"
-run = "cd control-plane && go run ./cmd/api/"
-
-[tasks.dev-agent]
-description = "Run agent runtime directly (outside k3s)"
-run = "cd agent-runtime && uv run python -m harpia_agents.main"
-
-[tasks.dev-web]
-description = "Run frontend directly with Vite HMR (outside k3s)"
-run = "cd frontend && bun run dev"
 
 [tasks.dev-worker]
 description = "Run Temporal worker directly (outside k3s)"

@@ -1,0 +1,68 @@
+# Harpia Dev — Zitadel readiness check + registration instructions
+# NOTE: Zitadel's masterkey is for DB encryption, not API authentication.
+# OIDC client registration must be done manually via the Console UI.
+# See deploy/dev/README.md for step-by-step instructions.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: zitadel-ready-check
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: ready-check
+          image: curlimages/curl:8.9.0
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              ZITADEL_URL="http://zitadel:8080"
+
+              echo "============================================"
+              echo "Zitadel Readiness Check"
+              echo "============================================"
+              echo ""
+
+              echo "Waiting for Zitadel to be ready..."
+              RETRIES=0
+              until curl -sf -H "Host: localhost:8085" "$ZITADEL_URL/.well-known/openid-configuration" > /dev/null 2>&1; do
+                RETRIES=$((RETRIES + 1))
+                if [ "$RETRIES" -gt 60 ]; then
+                  echo "ERROR: Zitadel did not become ready after 120 seconds"
+                  exit 1
+                fi
+                sleep 2
+              done
+              echo "Zitadel is ready!"
+              echo ""
+
+              echo "Verifying OIDC discovery..."
+              curl -s -H "Host: localhost:8085" "$ZITADEL_URL/.well-known/openid-configuration" | head -c 200
+              echo ""
+              echo ""
+
+              echo "============================================"
+              echo "NEXT STEPS: Register the OIDC Client"
+              echo "============================================"
+              echo ""
+              echo "1. Port-forward Zitadel:"
+              echo "   kubectl port-forward svc/zitadel 8085:8080"
+              echo ""
+              echo "2. Open Zitadel Console:"
+              echo "   http://localhost:8085/ui/console"
+              echo ""
+              echo "3. Login: admin@harpia.local / HarpiaAdmin1!"
+              echo ""
+              echo "4. Create Project 'Harpia' if it doesn't exist"
+              echo ""
+              echo "5. Under the project, create a Web application:"
+              echo "   - Name: Harpia Web"
+              echo "   - Auth Method: None (PKCE)"
+              echo "   - Redirect URI: http://localhost:5173/auth/callback"
+              echo "   - Post-Logout URI: http://localhost:5173"
+              echo ""
+              echo "6. Copy the Client ID to frontend/src/lib/auth.ts"
+              echo ""
+              echo "See deploy/dev/README.md for detailed instructions."
+              echo "============================================"
