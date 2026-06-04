@@ -78,12 +78,36 @@ description = "Check for breaking changes in protobuf schemas"
 run = "cd proto && buf breaking --against '.git#branch=trunk'"
 
 [tasks.dev]
-description = "Start full dev environment via Tilt + k3s"
+description = "Start dev environment (Tilt: compose infra + image builds)"
 run = "tilt up"
 
+[tasks.dev-infra]
+description = "Start infrastructure only (podman compose)"
+run = "podman compose -f deploy/dev/compose.yaml up -d"
+
+[tasks.dev-infra-k3s]
+description = "Start infrastructure on k3s (requires sudo k3s setup)"
+run = "kubectl apply -f deploy/dev/k3s/"
+
 [tasks.dev-down]
-description = "Tear down Tilt environment"
-run = "tilt down"
+description = "Tear down dev environment"
+run = "podman compose -f deploy/dev/compose.yaml down; tilt down 2>/dev/null; true"
+
+[tasks.dev-frontend]
+description = "Run frontend with Vite HMR (no infra needed)"
+run = "cd frontend && bun run dev --host"
+
+[tasks.dev-api]
+description = "Run API server directly (hot reload outside k3s)"
+run = "cd control-plane && go run ./cmd/api/"
+
+[tasks.dev-agent]
+description = "Run agent runtime directly (outside k3s)"
+run = "cd agent-runtime && uv run python -m harpia_agents.main"
+
+[tasks.dev-web]
+description = "Run frontend directly with Vite HMR"
+run = "cd frontend && bun run dev --host"
 
 [tasks.dev-api]
 description = "Run API server directly (hot reload outside k3s)"
