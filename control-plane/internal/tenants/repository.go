@@ -1,4 +1,4 @@
-package repository
+package tenants
 
 import (
 	"context"
@@ -19,15 +19,15 @@ type Tenant struct {
 	UpdatedAt time.Time       `json:"updated_at"`
 }
 
-type TenantRepository struct {
+type Repository struct {
 	pool *pgxpool.Pool
 }
 
-func NewTenantRepository(pool *pgxpool.Pool) *TenantRepository {
-	return &TenantRepository{pool: pool}
+func NewRepository(pool *pgxpool.Pool) *Repository {
+	return &Repository{pool: pool}
 }
 
-func (r *TenantRepository) Create(ctx context.Context, tenant *Tenant) (*Tenant, error) {
+func (r *Repository) Create(ctx context.Context, tenant *Tenant) (*Tenant, error) {
 	row := r.pool.QueryRow(ctx,
 		`INSERT INTO tenants (name, slug, settings)
 		 VALUES ($1, $2, $3)
@@ -47,7 +47,7 @@ func (r *TenantRepository) Create(ctx context.Context, tenant *Tenant) (*Tenant,
 	return &created, nil
 }
 
-func (r *TenantRepository) GetBySlug(ctx context.Context, slug string) (*Tenant, error) {
+func (r *Repository) GetBySlug(ctx context.Context, slug string) (*Tenant, error) {
 	row := r.pool.QueryRow(ctx,
 		`SELECT id, name, slug, settings, created_at, updated_at
 		 FROM tenants

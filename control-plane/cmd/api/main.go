@@ -12,8 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/harpia/control-plane/internal/config"
-	"github.com/harpia/control-plane/internal/handler"
-	"github.com/harpia/control-plane/internal/middleware"
+	"github.com/harpia/control-plane/internal/server"
 )
 
 func main() {
@@ -23,13 +22,13 @@ func main() {
 	gin.SetMode(cfg.GinMode)
 
 	r := gin.New()
-	r.Use(middleware.Logger(logger))
-	r.Use(middleware.Recovery(logger))
-	r.Use(middleware.RequestID())
+	r.Use(server.Logger(logger))
+	r.Use(server.Recovery(logger))
+	r.Use(server.RequestID())
 
 	api := r.Group("/api/v1")
 	{
-		health := handler.NewHealth()
+		health := server.NewHealth()
 		api.GET("/health", health.Check)
 	}
 

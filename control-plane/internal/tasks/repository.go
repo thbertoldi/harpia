@@ -1,4 +1,4 @@
-package repository
+package tasks
 
 import (
 	"context"
@@ -32,15 +32,15 @@ type Task struct {
 	CompletedAt   sql.NullTime    `json:"completed_at"`
 }
 
-type TaskRepository struct {
+type Repository struct {
 	pool *pgxpool.Pool
 }
 
-func NewTaskRepository(pool *pgxpool.Pool) *TaskRepository {
-	return &TaskRepository{pool: pool}
+func NewRepository(pool *pgxpool.Pool) *Repository {
+	return &Repository{pool: pool}
 }
 
-func (r *TaskRepository) Create(ctx context.Context, task *Task) (*Task, error) {
+func (r *Repository) Create(ctx context.Context, task *Task) (*Task, error) {
 	conn, err := database.SetTenantContext(ctx, r.pool, task.TenantID)
 	if err != nil {
 		return nil, err
@@ -70,7 +70,7 @@ func (r *TaskRepository) Create(ctx context.Context, task *Task) (*Task, error) 
 	return &created, nil
 }
 
-func (r *TaskRepository) GetByID(ctx context.Context, tenantID, taskID uuid.UUID) (*Task, error) {
+func (r *Repository) GetByID(ctx context.Context, tenantID, taskID uuid.UUID) (*Task, error) {
 	conn, err := database.SetTenantContext(ctx, r.pool, tenantID)
 	if err != nil {
 		return nil, err
@@ -102,7 +102,7 @@ func (r *TaskRepository) GetByID(ctx context.Context, tenantID, taskID uuid.UUID
 	return &task, nil
 }
 
-func (r *TaskRepository) List(ctx context.Context, tenantID uuid.UUID, status string, limit, offset int) ([]Task, error) {
+func (r *Repository) List(ctx context.Context, tenantID uuid.UUID, status string, limit, offset int) ([]Task, error) {
 	conn, err := database.SetTenantContext(ctx, r.pool, tenantID)
 	if err != nil {
 		return nil, err
@@ -163,14 +163,7 @@ func (r *TaskRepository) List(ctx context.Context, tenantID uuid.UUID, status st
 	return tasks, nil
 }
 
-func (r *TaskRepository) UpdateStatus(ctx context.Context, taskID uuid.UUID, status string) error {
-	var tenantID uuid.UUID
-	if err := r.pool.QueryRow(ctx,
-		`SELECT tenant_id FROM tasks WHERE id = $1`, taskID,
-	).Scan(&tenantID); err != nil {
-		return fmt.Errorf("lookup task tenant: %w", err)
-	}
-
+func (r *Repository) UpdateStatus(ctx context.Context, tenantID, taskID uuid.UUID, status string) error {
 	conn, err := database.SetTenantContext(ctx, r.pool, tenantID)
 	if err != nil {
 		return err
@@ -192,14 +185,7 @@ func (r *TaskRepository) UpdateStatus(ctx context.Context, taskID uuid.UUID, sta
 	return nil
 }
 
-func (r *TaskRepository) UpdateResult(ctx context.Context, taskID uuid.UUID, result json.RawMessage) error {
-	var tenantID uuid.UUID
-	if err := r.pool.QueryRow(ctx,
-		`SELECT tenant_id FROM tasks WHERE id = $1`, taskID,
-	).Scan(&tenantID); err != nil {
-		return fmt.Errorf("lookup task tenant: %w", err)
-	}
-
+func (r *Repository) UpdateResult(ctx context.Context, tenantID, taskID uuid.UUID, result json.RawMessage) error {
 	conn, err := database.SetTenantContext(ctx, r.pool, tenantID)
 	if err != nil {
 		return err
@@ -221,7 +207,7 @@ func (r *TaskRepository) UpdateResult(ctx context.Context, taskID uuid.UUID, res
 	return nil
 }
 
-func (r *TaskRepository) fetchUserName(ctx context.Context, conn *pgxpool.Conn, userID uuid.UUID) string {
+func (r *Repository) fetchUserName(ctx context.Context, conn *pgxpool.Conn, userID uuid.UUID) string {
 	var name string
 	if err := conn.QueryRow(ctx, `SELECT COALESCE(name, '') FROM users WHERE id = $1`, userID).Scan(&name); err != nil {
 		return ""

@@ -1,4 +1,4 @@
-package repository
+package agents
 
 import (
 	"context"
@@ -21,15 +21,15 @@ type AgentType struct {
 	CreatedAt    time.Time       `json:"created_at"`
 }
 
-type AgentTypeRepository struct {
+type Repository struct {
 	pool *pgxpool.Pool
 }
 
-func NewAgentTypeRepository(pool *pgxpool.Pool) *AgentTypeRepository {
-	return &AgentTypeRepository{pool: pool}
+func NewRepository(pool *pgxpool.Pool) *Repository {
+	return &Repository{pool: pool}
 }
 
-func (r *AgentTypeRepository) Create(ctx context.Context, agentType *AgentType) (*AgentType, error) {
+func (r *Repository) Create(ctx context.Context, agentType *AgentType) (*AgentType, error) {
 	row := r.pool.QueryRow(ctx,
 		`INSERT INTO agent_types (name, description, input_schema, output_schema, mcp_servers, enabled)
 		 VALUES ($1, $2, $3, $4, $5, $6)
@@ -51,7 +51,7 @@ func (r *AgentTypeRepository) Create(ctx context.Context, agentType *AgentType) 
 	return &created, nil
 }
 
-func (r *AgentTypeRepository) GetByID(ctx context.Context, id uuid.UUID) (*AgentType, error) {
+func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*AgentType, error) {
 	row := r.pool.QueryRow(ctx,
 		`SELECT id, name, description, input_schema, output_schema, mcp_servers, enabled, created_at
 		 FROM agent_types
@@ -72,7 +72,7 @@ func (r *AgentTypeRepository) GetByID(ctx context.Context, id uuid.UUID) (*Agent
 	return &agentType, nil
 }
 
-func (r *AgentTypeRepository) List(ctx context.Context, enabledOnly bool) ([]AgentType, error) {
+func (r *Repository) List(ctx context.Context, enabledOnly bool) ([]AgentType, error) {
 	var rows interface {
 		Close()
 		Err() error
@@ -120,7 +120,7 @@ func (r *AgentTypeRepository) List(ctx context.Context, enabledOnly bool) ([]Age
 	return agentTypes, nil
 }
 
-func (r *AgentTypeRepository) Update(ctx context.Context, agentType *AgentType) (*AgentType, error) {
+func (r *Repository) Update(ctx context.Context, agentType *AgentType) (*AgentType, error) {
 	row := r.pool.QueryRow(ctx,
 		`UPDATE agent_types
 		 SET name = $1, description = $2, input_schema = $3, output_schema = $4, mcp_servers = $5, enabled = $6
