@@ -67,7 +67,7 @@ jobs:
             run: |
               pip install -e .
               pip install pytest pytest-asyncio
-              pytest tests/ --tb=short || true
+              pytest tests/ --tb=short
           - lang: svelte
             working-directory: frontend
             run: |
@@ -107,7 +107,7 @@ jobs:
       - name: Check breaking changes
         working-directory: proto
         run: |
-          buf breaking --against "https://github.com/${{ github.repository }}.git#branch=trunk,ref=HEAD~1" || true
+          buf breaking --against "https://github.com/${{ github.repository }}.git#branch=trunk,ref=HEAD~1" --error-format=text
 
   build-containers:
     name: Build and Publish Containers

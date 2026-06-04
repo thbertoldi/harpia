@@ -28,7 +28,7 @@ func Load() *Config {
 		ValkeyURL:    envStr("VALKEY_URL", "valkey://localhost:6379"),
 		TemporalHost: envStr("TEMPORAL_HOST", "localhost:7233"),
 		GarageURL:    envStr("GARAGE_URL", "http://localhost:3900"),
-		ZitadelURL:   envStr("ZITADEL_URL", "http://localhost:8080"),
+		ZitadelURL:   envStr("ZITADEL_URL", "http://localhost:8085"),
 	}
 }
 
