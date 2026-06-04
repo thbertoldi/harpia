@@ -40,6 +40,7 @@ See [ADR-006](docs/adr/ADR-006-domain-driven-design.md).
 | [ADR-004](docs/adr/ADR-004-identity-and-access.md) | Zitadel + OpenFGA |
 | [ADR-005](docs/adr/ADR-005-development-and-delivery.md) | mise, Tilt, Buf, trunk-based dev |
 | [ADR-006](docs/adr/ADR-006-domain-driven-design.md) | DDD for agentic architecture |
+| [ADR-007](docs/adr/ADR-007-agentic-architecture-patterns.md) | Agentic patterns (Arsanjani & Bustos) |
 
 Workflow guide: [docs/WORKFLOW.md](docs/WORKFLOW.md)
 
