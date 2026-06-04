@@ -12,23 +12,25 @@ service:
 ingress:
   enabled: false
 
-nats:
-  enabled: true
-
-temporal:
-  enabled: false
-
 database:
   host: postgres
   port: 5432
   name: harpia
   user: harpia
 
+valkey:
+  host: valkey
+  port: 6379
+
 garage:
   endpoint: http://garage:3900
 
-authentik:
-  issuerUrl: http://authentik:9000/application/o/harpia
+zitadel:
+  issuerUrl: http://zitadel:8080
+
+openfga:
+  host: openfga
+  port: 8081
 
 resources:
   limits:
