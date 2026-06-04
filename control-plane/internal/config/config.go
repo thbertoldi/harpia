@@ -12,10 +12,10 @@ type Config struct {
 	LogLevel slog.Level
 
 	DatabaseURL  string
-	NATSURL      string
+	ValkeyURL    string
 	TemporalHost string
 	GarageURL    string
-	AuthentikURL string
+	ZitadelURL   string
 }
 
 func Load() *Config {
@@ -25,10 +25,10 @@ func Load() *Config {
 		LogLevel: parseLogLevel(envStr("LOG_LEVEL", "info")),
 
 		DatabaseURL:  envStr("DATABASE_URL", "postgres://localhost:5432/harpia"),
-		NATSURL:      envStr("NATS_URL", "nats://localhost:4222"),
+		ValkeyURL:    envStr("VALKEY_URL", "valkey://localhost:6379"),
 		TemporalHost: envStr("TEMPORAL_HOST", "localhost:7233"),
 		GarageURL:    envStr("GARAGE_URL", "http://localhost:3900"),
-		AuthentikURL: envStr("AUTHENTIK_URL", "http://localhost:9000"),
+		ZitadelURL:   envStr("ZITADEL_URL", "http://localhost:8080"),
 	}
 }
 

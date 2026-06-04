@@ -1,4 +1,5 @@
-# Development dependencies (PostgreSQL + NATS + Garage + Temporal)
+# Development dependencies (PostgreSQL + Valkey + Garage)
+# Temporal replaced by Temporalite (single binary, see mise task dev-temporalite)
 # Use: podman-compose -f deploy/dev/compose.yaml up -d
 
 services:
@@ -13,11 +14,10 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
-  nats:
-    image: docker.io/library/nats:2.10-alpine
-    command: -js
+  valkey:
+    image: docker.io/valkey/valkey:8-alpine
     ports:
-      - "4222:4222"
+      - "6379:6379"
 
   garage:
     image: docker.io/dxflrs/garage:v1.0
@@ -30,17 +30,6 @@ services:
       - garage-data:/var/lib/garage/data
     environment:
       GARAGE_LOG_TO_SYSLOG: "0"
-
-  temporal:
-    image: docker.io/temporalio/auto-setup:1.26
-    ports:
-      - "7233:7233"
-    environment:
-      DB: postgres12
-      DB_PORT: 5432
-      POSTGRES_USER: harpia
-      POSTGRES_PWD: harpia
-      POSTGRES_SEEDS: postgres
 
 volumes:
   pgdata:

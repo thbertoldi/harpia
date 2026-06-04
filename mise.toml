@@ -4,6 +4,7 @@ python = "3.12"
 node = "22"
 bun = "latest"
 uv = "latest"
+"go:github.com/temporalio/temporalite/cmd/temporalite" = "latest"
 
 [env]
 HARPIA_ENV = "development"
@@ -63,6 +64,10 @@ run = "cd control-plane && go run ./cmd/api/"
 [tasks.dev-agent]
 description = "Run agent runtime in dev mode"
 run = "cd agent-runtime && uv run harpia-agent"
+
+[tasks.dev-temporalite]
+description = "Start Temporalite (single-binary Temporal for dev)"
+run = "temporalite start --namespace default --ip 0.0.0.0"
 
 [tasks.dev-web]
 description = "Run frontend in dev mode"
