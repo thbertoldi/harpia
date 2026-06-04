@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package harpia.identity.v1;
+
+import "buf/validate/validate.proto";
+
+// IdentityService provides tenant and user management. Authentication is delegated
+// to Zitadel; this service manages tenant-scoped user profiles and settings.
+service IdentityService {
+  // GetCurrentUser returns the authenticated user's profile.
+  rpc GetCurrentUser(GetCurrentUserRequest) returns (GetCurrentUserResponse);
+
+  // ListTenants lists tenants visible to the current user.
+  rpc ListTenants(ListTenantsRequest) returns (ListTenantsResponse);
+
+  // GetTenant returns details for a tenant.
+  rpc GetTenant(GetTenantRequest) returns (GetTenantResponse);
+}
+
+message Tenant {
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+  string created_at = 4;
+}
+
+message User {
+  string id = 1;
+  string tenant_id = 2;
+  string email = 3;
+  string display_name = 4;
+  string avatar_url = 5;
+  repeated string roles = 6;
+  string created_at = 7;
+}
+
+message GetCurrentUserRequest {}
+
+message GetCurrentUserResponse {
+  User user = 1;
+  repeated Tenant tenants = 2;
+}
+
+message ListTenantsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message ListTenantsResponse {
+  repeated Tenant tenants = 1;
+  string next_page_token = 2;
+}
+
+message GetTenantRequest {
+  string tenant_id = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+message GetTenantResponse {
+  Tenant tenant = 1;
+}

@@ -1,0 +1,124 @@
+syntax = "proto3";
+
+package harpia.agents.v1;
+
+import "buf/validate/validate.proto";
+
+// AgentService handles agent type registration, capability discovery, and agent
+// instance lifecycle. This is the interface between the agent-runtime (Python/LangGraph)
+// and the control plane (Go).
+service AgentService {
+  // RegisterAgentType declares a new agent type with its capabilities.
+  rpc RegisterAgentType(RegisterAgentTypeRequest) returns (RegisterAgentTypeResponse);
+
+  // ListAgentTypes lists all available agent types, optionally filtered by capability.
+  rpc ListAgentTypes(ListAgentTypesRequest) returns (stream ListAgentTypesResponse);
+
+  // MatchAgent finds the best agent for a given task description using semantic
+  // similarity via pgvector.
+  rpc MatchAgent(MatchAgentRequest) returns (MatchAgentResponse);
+
+  // ExecuteTask is called by Temporal workflows to run a task on an agent instance.
+  // The agent-runtime runs the LangGraph supervisor graph and streams results back.
+  rpc ExecuteTask(ExecuteTaskRequest) returns (stream ExecuteTaskResponse);
+
+  // ContinueExecution resumes a paused agent execution (e.g., after human feedback).
+  rpc ContinueExecution(ContinueExecutionRequest) returns (stream ExecuteTaskResponse);
+}
+
+message AgentType {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string capabilities_text = 4;  // Natural language, embedded for similarity search
+  string created_at = 5;
+}
+
+message AgentInstance {
+  string id = 1;
+  string agent_type_id = 2;
+  string tenant_id = 3;
+  string task_id = 4;
+  string subtask_id = 5;
+  AgentInstanceStatus status = 6;
+  string created_at = 7;
+  string updated_at = 8;
+}
+
+enum AgentInstanceStatus {
+  AGENT_INSTANCE_STATUS_UNSPECIFIED = 0;
+  AGENT_INSTANCE_STATUS_IDLE = 1;
+  AGENT_INSTANCE_STATUS_PLANNING = 2;
+  AGENT_INSTANCE_STATUS_EXECUTING = 3;
+  AGENT_INSTANCE_STATUS_AWAITING_FEEDBACK = 4;
+  AGENT_INSTANCE_STATUS_COMPLETED = 5;
+  AGENT_INSTANCE_STATUS_FAILED = 6;
+}
+
+message RegisterAgentTypeRequest {
+  string name = 1 [(buf.validate.field).string.min_len = 1];
+  string description = 2 [(buf.validate.field).string.min_len = 1];
+  string capabilities_text = 3 [(buf.validate.field).string.min_len = 1];
+}
+
+message RegisterAgentTypeResponse {
+  AgentType agent_type = 1;
+}
+
+message ListAgentTypesRequest {
+  optional string capability_filter = 1;  // Search filter text
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListAgentTypesResponse {
+  repeated AgentType agent_types = 1;
+  string next_page_token = 2;
+}
+
+message MatchAgentRequest {
+  string tenant_id = 1 [(buf.validate.field).string.min_len = 1];
+  string task_description = 2 [(buf.validate.field).string.min_len = 1];
+  int32 max_results = 3;
+}
+
+message MatchAgentResponse {
+  repeated AgentMatch matches = 1;
+}
+
+message AgentMatch {
+  AgentType agent_type = 1;
+  float similarity_score = 2;
+}
+
+message ExecuteTaskRequest {
+  string tenant_id = 1 [(buf.validate.field).string.min_len = 1];
+  string task_id = 2 [(buf.validate.field).string.min_len = 1];
+  string subtask_id = 3 [(buf.validate.field).string.min_len = 1];
+  string agent_type_id = 4 [(buf.validate.field).string.min_len = 1];
+  string task_description = 5 [(buf.validate.field).string.min_len = 1];
+  // Context from the parent task decomposition.
+  repeated string previous_results = 6;
+}
+
+message ExecuteTaskResponse {
+  string agent_instance_id = 1;
+  AgentInstanceStatus status = 2;
+  string message = 3;
+  optional string output = 4;
+  optional string error = 5;
+  optional FeedbackRequest feedback_request = 6;
+}
+
+message FeedbackRequest {
+  string subtask_id = 1;
+  string question = 2;
+  repeated string options = 3;
+}
+
+message ContinueExecutionRequest {
+  string tenant_id = 1 [(buf.validate.field).string.min_len = 1];
+  string agent_instance_id = 2 [(buf.validate.field).string.min_len = 1];
+  string feedback_decision = 3;
+  string comment = 4;
+}
