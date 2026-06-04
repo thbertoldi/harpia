@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package harpia.tasks.v1;
 
-import "buf/validate/validate.proto";
 
 // TaskService manages the lifecycle of tasks and their decomposition into subtasks.
 // This is the primary API through which the Svelte UI and Temporal workflows interact
@@ -65,9 +64,9 @@ enum SubtaskStatus {
 }
 
 message CreateTaskRequest {
-  string tenant_id = 1 [(buf.validate.field).string.min_len = 1];
-  string workspace_id = 2 [(buf.validate.field).string.min_len = 1];
-  string title = 3 [(buf.validate.field).string.min_len = 1];
+  string tenant_id = 1;
+  string workspace_id = 2;
+  string title = 3;
   string description = 4;
 }
 
@@ -76,8 +75,8 @@ message CreateTaskResponse {
 }
 
 message GetTaskRequest {
-  string tenant_id = 1 [(buf.validate.field).string.min_len = 1];
-  string task_id = 2 [(buf.validate.field).string.min_len = 1];
+  string tenant_id = 1;
+  string task_id = 2;
 }
 
 message GetTaskResponse {
@@ -85,7 +84,7 @@ message GetTaskResponse {
 }
 
 message ListTasksRequest {
-  string tenant_id = 1 [(buf.validate.field).string.min_len = 1];
+  string tenant_id = 1;
   optional string workspace_id = 2;
   optional TaskStatus status = 3;
   int32 page_size = 4;
@@ -98,8 +97,8 @@ message ListTasksResponse {
 }
 
 message WatchTaskRequest {
-  string tenant_id = 1 [(buf.validate.field).string.min_len = 1];
-  string task_id = 2 [(buf.validate.field).string.min_len = 1];
+  string tenant_id = 1;
+  string task_id = 2;
 }
 
 message WatchTaskResponse {

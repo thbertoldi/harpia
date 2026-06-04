@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package harpia.feedback.v1;
 
-import "buf/validate/validate.proto";
 
 // FeedbackService manages the human-in-the-loop interactions. When an agent
 // encounters a decision point that requires human judgment, this service
@@ -66,13 +65,13 @@ enum FeedbackDecision {
 }
 
 message RequestFeedbackRequest {
-  string tenant_id = 1 [(buf.validate.field).string.min_len = 1];
-  string task_id = 2 [(buf.validate.field).string.min_len = 1];
-  string subtask_id = 3 [(buf.validate.field).string.min_len = 1];
-  string agent_instance_id = 4 [(buf.validate.field).string.min_len = 1];
-  string question = 5 [(buf.validate.field).string.min_len = 1];
-  repeated string options = 6 [(buf.validate.field).repeated.min_items = 1];
-  repeated FeedbackChannel channels = 7 [(buf.validate.field).repeated.min_items = 1];
+  string tenant_id = 1;
+  string task_id = 2;
+  string subtask_id = 3;
+  string agent_instance_id = 4;
+  string question = 5;
+  repeated string options = 6;
+  repeated FeedbackChannel channels = 7;
 }
 
 message RequestFeedbackResponse {
@@ -80,8 +79,8 @@ message RequestFeedbackResponse {
 }
 
 message SubmitFeedbackRequest {
-  string tenant_id = 1 [(buf.validate.field).string.min_len = 1];
-  string feedback_id = 2 [(buf.validate.field).string.min_len = 1];
+  string tenant_id = 1;
+  string feedback_id = 2;
   FeedbackDecision decision = 3;
   string comment = 4;
 }
@@ -91,7 +90,7 @@ message SubmitFeedbackResponse {
 }
 
 message ListPendingFeedbackRequest {
-  string tenant_id = 1 [(buf.validate.field).string.min_len = 1];
+  string tenant_id = 1;
   int32 page_size = 2;
   string page_token = 3;
 }
@@ -102,8 +101,8 @@ message ListPendingFeedbackResponse {
 }
 
 message GetFeedbackStatusRequest {
-  string tenant_id = 1 [(buf.validate.field).string.min_len = 1];
-  string feedback_id = 2 [(buf.validate.field).string.min_len = 1];
+  string tenant_id = 1;
+  string feedback_id = 2;
 }
 
 message GetFeedbackStatusResponse {

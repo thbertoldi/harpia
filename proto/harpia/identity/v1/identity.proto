@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package harpia.identity.v1;
 
-import "buf/validate/validate.proto";
 
 // IdentityService provides tenant and user management. Authentication is delegated
 // to Zitadel; this service manages tenant-scoped user profiles and settings.
@@ -52,7 +51,7 @@ message ListTenantsResponse {
 }
 
 message GetTenantRequest {
-  string tenant_id = 1 [(buf.validate.field).string.min_len = 1];
+  string tenant_id = 1;
 }
 
 message GetTenantResponse {

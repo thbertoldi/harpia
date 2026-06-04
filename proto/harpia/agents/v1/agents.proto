@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package harpia.agents.v1;
 
-import "buf/validate/validate.proto";
 
 // AgentService handles agent type registration, capability discovery, and agent
 // instance lifecycle. This is the interface between the agent-runtime (Python/LangGraph)
@@ -56,9 +55,9 @@ enum AgentInstanceStatus {
 }
 
 message RegisterAgentTypeRequest {
-  string name = 1 [(buf.validate.field).string.min_len = 1];
-  string description = 2 [(buf.validate.field).string.min_len = 1];
-  string capabilities_text = 3 [(buf.validate.field).string.min_len = 1];
+  string name = 1;
+  string description = 2;
+  string capabilities_text = 3;
 }
 
 message RegisterAgentTypeResponse {
@@ -77,8 +76,8 @@ message ListAgentTypesResponse {
 }
 
 message MatchAgentRequest {
-  string tenant_id = 1 [(buf.validate.field).string.min_len = 1];
-  string task_description = 2 [(buf.validate.field).string.min_len = 1];
+  string tenant_id = 1;
+  string task_description = 2;
   int32 max_results = 3;
 }
 
@@ -92,11 +91,11 @@ message AgentMatch {
 }
 
 message ExecuteTaskRequest {
-  string tenant_id = 1 [(buf.validate.field).string.min_len = 1];
-  string task_id = 2 [(buf.validate.field).string.min_len = 1];
-  string subtask_id = 3 [(buf.validate.field).string.min_len = 1];
-  string agent_type_id = 4 [(buf.validate.field).string.min_len = 1];
-  string task_description = 5 [(buf.validate.field).string.min_len = 1];
+  string tenant_id = 1;
+  string task_id = 2;
+  string subtask_id = 3;
+  string agent_type_id = 4;
+  string task_description = 5;
   // Context from the parent task decomposition.
   repeated string previous_results = 6;
 }
@@ -117,8 +116,8 @@ message FeedbackRequest {
 }
 
 message ContinueExecutionRequest {
-  string tenant_id = 1 [(buf.validate.field).string.min_len = 1];
-  string agent_instance_id = 2 [(buf.validate.field).string.min_len = 1];
+  string tenant_id = 1;
+  string agent_instance_id = 2;
   string feedback_decision = 3;
   string comment = 4;
 }
