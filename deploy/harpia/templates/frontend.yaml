@@ -1,0 +1,50 @@
+{{- if .Values.frontend.enabled }}
+{{- $svcName := include "harpia.serviceName" (dict "name" "frontend" "root" .) }}
+{{- $apiHost := include "harpia.serviceName" (dict "name" "api" "root" .) }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $svcName }}
+  labels:
+    {{- include "harpia.labels" . | nindent 4 }}
+    app: {{ $svcName }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ $svcName }}
+  template:
+    metadata:
+      labels:
+        app: {{ $svcName }}
+    spec:
+      containers:
+        - name: frontend
+          image: {{ include "harpia.image" (dict "imageRepo" (printf "%s/frontend" .Values.image.repository) "root" .) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.frontend.port }}
+          env:
+            - name: HARPIA_API_URL
+              value: {{ printf "http://%s:%d" $apiHost (int .Values.api.port) | quote }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $svcName }}
+  labels:
+    {{- include "harpia.labels" . | nindent 4 }}
+    app: {{ $svcName }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.frontend.port }}
+      targetPort: {{ .Values.frontend.port }}
+  selector:
+    app: {{ $svcName }}
+{{- end }}

@@ -1,0 +1,95 @@
+{{- if .Values.postgres.enabled }}
+{{- $svcName := include "harpia.serviceName" (dict "name" "postgres" "root" .) }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $svcName }}-pvc
+  labels:
+    {{- include "harpia.labels" . | nindent 4 }}
+    app: {{ $svcName }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.postgres.storage }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $svcName }}-init
+  labels:
+    {{- include "harpia.labels" . | nindent 4 }}
+    app: {{ $svcName }}
+data:
+  01-create-dbs.sql: |
+    SELECT 'CREATE DATABASE zitadel'
+    WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'zitadel')\gexec
+    GRANT ALL PRIVILEGES ON DATABASE zitadel TO {{ .Values.postgres.user }};
+    CREATE DATABASE openfga;
+    GRANT ALL PRIVILEGES ON DATABASE openfga TO {{ .Values.postgres.user }};
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $svcName }}
+  labels:
+    {{- include "harpia.labels" . | nindent 4 }}
+    app: {{ $svcName }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ $svcName }}
+  template:
+    metadata:
+      labels:
+        app: {{ $svcName }}
+    spec:
+      containers:
+        - name: postgres
+          image: {{ .Values.postgres.image | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: {{ .Values.postgres.user | quote }}
+            - name: POSTGRES_PASSWORD
+              value: {{ .Values.postgres.password | quote }}
+            - name: POSTGRES_DB
+              value: {{ .Values.postgres.database | quote }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", {{ .Values.postgres.user | quote }}]
+            initialDelaySeconds: 3
+            periodSeconds: 3
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ $svcName }}-pvc
+        - name: init
+          configMap:
+            name: {{ $svcName }}-init
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $svcName }}
+  labels:
+    {{- include "harpia.labels" . | nindent 4 }}
+    app: {{ $svcName }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: 5432
+  selector:
+    app: {{ $svcName }}
+{{- end }}

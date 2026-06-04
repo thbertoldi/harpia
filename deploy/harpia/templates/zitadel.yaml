@@ -1,0 +1,85 @@
+{{- if .Values.zitadel.enabled }}
+{{- $svcName := include "harpia.serviceName" (dict "name" "zitadel" "root" .) }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $svcName }}
+  labels:
+    {{- include "harpia.labels" . | nindent 4 }}
+    app: {{ $svcName }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ $svcName }}
+  template:
+    metadata:
+      labels:
+        app: {{ $svcName }}
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: zitadel
+          image: {{ .Values.zitadel.image | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - "start-from-init"
+            - "--masterkeyFromEnv"
+            - "--tlsMode"
+            - "disabled"
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ZITADEL_DATABASE_POSTGRES_HOST
+              value: {{ include "harpia.serviceName" (dict "name" "postgres" "root" .) | quote }}
+            - name: ZITADEL_DATABASE_POSTGRES_PORT
+              value: "5432"
+            - name: ZITADEL_DATABASE_POSTGRES_DATABASE
+              value: "zitadel"
+            - name: ZITADEL_DATABASE_POSTGRES_USER_USERNAME
+              value: {{ .Values.postgres.user | quote }}
+            - name: ZITADEL_DATABASE_POSTGRES_USER_PASSWORD
+              value: {{ .Values.postgres.password | quote }}
+            - name: ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME
+              value: {{ .Values.postgres.user | quote }}
+            - name: ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD
+              value: {{ .Values.postgres.password | quote }}
+            - name: ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE
+              value: "disable"
+            - name: ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE
+              value: "disable"
+            - name: ZITADEL_EXTERNALSECURE
+              value: "false"
+            - name: ZITADEL_EXTERNALDOMAIN
+              value: {{ .Values.zitadel.externalDomain | quote }}
+            - name: ZITADEL_EXTERNALPORT
+              value: {{ .Values.zitadel.externalPort | quote }}
+            - name: ZITADEL_TLS_ENABLED
+              value: "false"
+            - name: ZITADEL_FIRSTINSTANCE_ORG_NAME
+              value: "Harpia"
+            - name: ZITADEL_FIRSTINSTANCE_HUMAN_EMAIL
+              value: {{ .Values.zitadel.adminEmail | quote }}
+            - name: ZITADEL_FIRSTINSTANCE_HUMAN_USERNAME
+              value: "admin"
+            - name: ZITADEL_FIRSTINSTANCE_HUMAN_PASSWORD
+              value: {{ .Values.zitadel.adminPassword | quote }}
+            - name: ZITADEL_MASTERKEY
+              value: {{ .Values.zitadel.masterkey | quote }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $svcName }}
+  labels:
+    {{- include "harpia.labels" . | nindent 4 }}
+    app: {{ $svcName }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: {{ $svcName }}
+{{- end }}

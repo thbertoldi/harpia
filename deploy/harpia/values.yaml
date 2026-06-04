@@ -1,37 +1,65 @@
+# Deployment settings
 replicaCount: 1
+namespace: harpia
 
+# Image registry
 image:
-  repository: harpia/control-plane
+  registry: ghcr.io
+  repository: thbertoldi/harpia
   tag: latest
   pullPolicy: IfNotPresent
 
-service:
-  type: ClusterIP
+# Postgres
+postgres:
+  enabled: true
+  image: docker.io/library/postgres:16-alpine
+  database: harpia
+  user: harpia
+  password: harpia
+  storage: 10Gi
+
+# Valkey
+valkey:
+  enabled: true
+  image: docker.io/valkey/valkey:8-alpine
+
+# Garage
+garage:
+  enabled: true
+  image: docker.io/dxflrs/garage:v1.0.1
+
+# Zitadel
+zitadel:
+  enabled: true
+  image: ghcr.io/zitadel/zitadel:v2.62.0
+  externalDomain: localhost
+  externalPort: "8085"
+  masterkey: uLGG7IoNMEk58Ik942cZFRmaMnio/3oI
+  adminEmail: admin@harpia.local
+  adminPassword: HarpiaAdmin1!
+
+# OpenFGA
+openfga:
+  enabled: true
+  image: docker.io/openfga/openfga:v1.8.0
+
+# API
+api:
+  enabled: true
   port: 8080
 
-ingress:
-  enabled: false
+# Agent Runtime
+agent:
+  enabled: true
+  port: 8000
+  role: server
 
-database:
-  host: postgres
-  port: 5432
-  name: harpia
-  user: harpia
+# Frontend
+frontend:
+  enabled: true
+  port: 3000
 
-valkey:
-  host: valkey
-  port: 6379
-
-garage:
-  endpoint: http://garage:3900
-
-zitadel:
-  issuerUrl: http://zitadel:8080
-
-openfga:
-  host: openfga
-  port: 8081
-
+# Resource limits/requests
 resources:
   limits:
     cpu: 500m
