@@ -1,0 +1,63 @@
+# Agent skills (installed via npx skills)
+.agents/
+skills-lock.json
+
+# mise
+.mise.local.toml
+
+# Go
+control-plane/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.venv/
+uv.lock
+
+# JavaScript / SvelteKit
+node_modules/
+frontend/.svelte-kit/
+frontend/build/
+frontend/.output/
+
+# Bun
+bun.lockb
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# Tilt
+.tilt/
+
+# Generated protobuf code
+control-plane/gen/
+agent-runtime/src/harpia_agents/gen/
+# Keep __init__.py for package structure (gen dir is fully generated)
+!agent-runtime/src/harpia_agents/gen/__init__.py
+
+# Helm
+deploy/**/charts/*.tgz
+
+# Temporal
+temporalite.db

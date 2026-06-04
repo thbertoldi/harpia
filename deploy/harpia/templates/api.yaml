@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "harpia.fullname" . }}-api
+  labels:
+    app: {{ include "harpia.name" . }}-api
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "harpia.name" . }}-api
+  template:
+    metadata:
+      labels:
+        app: {{ include "harpia.name" . }}-api
+    spec:
+      containers:
+        - name: api
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.port }}
+          env:
+            - name: DATABASE_URL
+              value: "postgres://{{ .Values.database.user }}@{{ .Values.database.host }}:{{ .Values.database.port }}/{{ .Values.database.name }}"
+            - name: NATS_URL
+              value: "nats://nats:4222"
+            - name: GARAGE_URL
+              value: {{ .Values.garage.endpoint }}
+            - name: AUTHENTIK_URL
+              value: {{ .Values.authentik.issuerUrl }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "harpia.fullname" . }}-api
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.port }}
+  selector:
+    app: {{ include "harpia.name" . }}-api

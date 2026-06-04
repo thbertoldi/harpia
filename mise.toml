@@ -1,0 +1,73 @@
+[tools]
+go = "1.24"
+python = "3.12"
+node = "22"
+bun = "latest"
+uv = "latest"
+
+[env]
+HARPIA_ENV = "development"
+
+[tasks.build]
+description = "Build all services"
+run = [
+    "cd control-plane && go build ./cmd/api/",
+    "cd agent-runtime && uv build",
+    "cd frontend && bun run build",
+]
+
+[tasks.test]
+description = "Run all tests"
+run = [
+    "cd control-plane && go test ./...",
+    "cd agent-runtime && uv run pytest",
+    "cd frontend && bun test",
+]
+
+[tasks.lint]
+description = "Lint all code"
+run = [
+    "cd control-plane && golangci-lint run",
+    "cd agent-runtime && uv run ruff check .",
+    "cd frontend && bun run lint",
+]
+
+[tasks.fmt]
+description = "Format all code"
+run = [
+    "cd control-plane && go fmt ./...",
+    "cd agent-runtime && uv run ruff format .",
+    "cd frontend && bun run format",
+]
+
+[tasks.buf-generate]
+description = "Generate protobuf code for all languages"
+run = "cd proto && buf generate"
+
+[tasks.buf-lint]
+description = "Lint protobuf schemas"
+run = "cd proto && buf lint"
+
+[tasks.buf-breaking]
+description = "Check for breaking changes in protobuf schemas"
+run = "cd proto && buf breaking --against '.git#branch=trunk'"
+
+[tasks.dev]
+description = "Start development environment"
+run = "tilt up"
+
+[tasks.dev-api]
+description = "Run API server in dev mode"
+run = "cd control-plane && go run ./cmd/api/"
+
+[tasks.dev-agent]
+description = "Run agent runtime in dev mode"
+run = "cd agent-runtime && uv run harpia-agent"
+
+[tasks.dev-web]
+description = "Run frontend in dev mode"
+run = "cd frontend && bun run dev"
+
+[tasks.db-migrate]
+description = "Run database migrations"
+run = "cd database && atlas migrate apply --dir migrations --url \"$DATABASE_URL\""

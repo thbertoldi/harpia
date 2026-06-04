@@ -1,0 +1,48 @@
+# Development dependencies (PostgreSQL + NATS + Garage + Temporal)
+# Use: podman-compose -f deploy/dev/compose.yaml up -d
+
+services:
+  postgres:
+    image: docker.io/library/postgres:16-alpine
+    environment:
+      POSTGRES_USER: harpia
+      POSTGRES_PASSWORD: harpia
+      POSTGRES_DB: harpia
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  nats:
+    image: docker.io/library/nats:2.10-alpine
+    command: -js
+    ports:
+      - "4222:4222"
+
+  garage:
+    image: docker.io/dxflrs/garage:v1.0
+    ports:
+      - "3900:3900"
+      - "3901:3901"
+      - "3902:3902"
+    volumes:
+      - garage-meta:/var/lib/garage/meta
+      - garage-data:/var/lib/garage/data
+    environment:
+      GARAGE_LOG_TO_SYSLOG: "0"
+
+  temporal:
+    image: docker.io/temporalio/auto-setup:1.26
+    ports:
+      - "7233:7233"
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: harpia
+      POSTGRES_PWD: harpia
+      POSTGRES_SEEDS: postgres
+
+volumes:
+  pgdata:
+  garage-meta:
+  garage-data:

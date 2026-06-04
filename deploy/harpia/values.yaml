@@ -1,0 +1,39 @@
+replicaCount: 1
+
+image:
+  repository: harpia/control-plane
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: false
+
+nats:
+  enabled: true
+
+temporal:
+  enabled: false
+
+database:
+  host: postgres
+  port: 5432
+  name: harpia
+  user: harpia
+
+garage:
+  endpoint: http://garage:3900
+
+authentik:
+  issuerUrl: http://authentik:9000/application/o/harpia
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi

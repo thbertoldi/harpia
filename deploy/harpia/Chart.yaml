@@ -1,0 +1,6 @@
+apiVersion: v2
+name: harpia
+description: Harpia — Multi-tenant multi-agent AI platform
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
