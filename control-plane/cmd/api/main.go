@@ -16,10 +16,12 @@ import (
 	"github.com/harpia/control-plane/gen/harpia/identity/v1/identityv1connect"
 	"github.com/harpia/control-plane/gen/harpia/tasks/v1/tasksv1connect"
 	"github.com/harpia/control-plane/internal/agents"
+	"github.com/harpia/control-plane/internal/cache"
 	"github.com/harpia/control-plane/internal/config"
 	"github.com/harpia/control-plane/internal/database"
 	"github.com/harpia/control-plane/internal/feedback"
 	"github.com/harpia/control-plane/internal/identity"
+	"github.com/harpia/control-plane/internal/server"
 	"github.com/harpia/control-plane/internal/tasks"
 	"github.com/harpia/control-plane/internal/workflow"
 )
@@ -47,6 +49,28 @@ func main() {
 		}
 	}
 
+	var (
+		cacheClient          *cache.Client
+		agentCapabilityCache *cache.AgentCapabilityCache
+		rateLimiter          *cache.RateLimiter
+	)
+
+	if cfg.ValkeyURL != "" {
+		var err error
+		cacheClient, err = cache.NewClient(cfg.ValkeyURL)
+		if err != nil {
+			logger.Error("valkey connection failed, running without cache", "error", err)
+		} else {
+			if pingErr := cacheClient.Ping(ctx); pingErr != nil {
+				logger.Error("valkey ping failed, running without cache", "error", pingErr)
+			} else {
+				agentCapabilityCache = cache.NewAgentCapabilityCache(cacheClient)
+				rateLimiter = cache.NewRateLimiter(cacheClient)
+				defer cacheClient.Close()
+			}
+		}
+	}
+
 	var temporalClient *workflow.TemporalClient
 	if cfg.TemporalHost != "" {
 		var err error
@@ -69,8 +93,8 @@ func main() {
 		})
 	})
 
-	taskHandler := tasks.NewTaskHandler(taskRepo, temporalClient)
-	agentsPath, agentsHandler := agentsv1connect.NewAgentServiceHandler(agents.NewAgentHandler(agentRepo))
+	taskHandler := tasks.NewTaskHandler(taskRepo, temporalClient, cacheClient)
+	agentsPath, agentsHandler := agentsv1connect.NewAgentServiceHandler(agents.NewAgentHandler(agentRepo, agentCapabilityCache))
 	tasksPath, tasksHandler := tasksv1connect.NewTaskServiceHandler(taskHandler)
 	identityPath, identityHandler := identityv1connect.NewIdentityServiceHandler(identity.NewIdentityHandler())
 	feedbackPath, feedbackHandler := feedbackv1connect.NewFeedbackServiceHandler(feedback.NewFeedbackHandler())
@@ -80,7 +104,11 @@ func main() {
 	mux.Handle(identityPath, identityHandler)
 	mux.Handle(feedbackPath, feedbackHandler)
 
-	wrapped := withLogging(logger)(mux)
+	var wrapped http.Handler = mux
+	if rateLimiter != nil {
+		wrapped = server.RateLimit(rateLimiter, 100)(wrapped)
+	}
+	wrapped = withLogging(logger)(wrapped)
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Port),

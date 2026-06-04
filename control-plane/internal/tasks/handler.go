@@ -2,22 +2,26 @@ package tasks
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"time"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 
 	tasksv1 "github.com/harpia/control-plane/gen/harpia/tasks/v1"
+	"github.com/harpia/control-plane/internal/cache"
 	"github.com/harpia/control-plane/internal/workflow"
 )
 
 type TaskHandler struct {
 	repo     *Repository
 	temporal *workflow.TemporalClient
+	cache    *cache.Client
 }
 
-func NewTaskHandler(repo *Repository, temporal *workflow.TemporalClient) *TaskHandler {
-	return &TaskHandler{repo: repo, temporal: temporal}
+func NewTaskHandler(repo *Repository, temporal *workflow.TemporalClient, cacheClient *cache.Client) *TaskHandler {
+	return &TaskHandler{repo: repo, temporal: temporal, cache: cacheClient}
 }
 
 func (h *TaskHandler) CreateTask(ctx context.Context, req *connect.Request[tasksv1.CreateTaskRequest]) (*connect.Response[tasksv1.CreateTaskResponse], error) {
@@ -68,9 +72,28 @@ func (h *TaskHandler) GetTask(ctx context.Context, req *connect.Request[tasksv1.
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
+	if h.cache != nil {
+		cacheKey := fmt.Sprintf("task:%s", taskID.String())
+		if cached, cacheErr := h.cache.Get(ctx, cacheKey); cacheErr == nil {
+			var task Task
+			if json.Unmarshal([]byte(cached), &task) == nil {
+				return connect.NewResponse(&tasksv1.GetTaskResponse{
+					Task: domainToProto(&task),
+				}), nil
+			}
+		}
+	}
+
 	task, err := h.repo.GetByID(ctx, tenantID, taskID)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, err)
+	}
+
+	if h.cache != nil {
+		cacheKey := fmt.Sprintf("task:%s", taskID.String())
+		if data, marshalErr := json.Marshal(task); marshalErr == nil {
+			_ = h.cache.Set(ctx, cacheKey, string(data), 5*time.Minute)
+		}
 	}
 
 	return connect.NewResponse(&tasksv1.GetTaskResponse{

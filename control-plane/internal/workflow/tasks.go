@@ -40,10 +40,10 @@ type HumanFeedbackSignal struct {
 }
 
 const (
-	TaskQueueName               = "harpia-task-queue"
-	DecomposeTaskActivityName   = "DecomposeTaskActivity"
-	ExecuteSubtaskActivityName  = "ExecuteSubtaskActivity"
-	HumanFeedbackSignalName     = "human-feedback-signal"
+	TaskQueueName              = "harpia-task-queue"
+	DecomposeTaskActivityName  = "DecomposeTaskActivity"
+	ExecuteSubtaskActivityName = "ExecuteSubtaskActivity"
+	HumanFeedbackSignalName    = "human-feedback-signal"
 )
 
 func TaskOrchestration(ctx workflow.Context, input TaskInput) (TaskResult, error) {
