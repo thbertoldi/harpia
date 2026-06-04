@@ -1,4 +1,4 @@
-FROM oven/bun:1-alpine AS builder
+FROM oven/bun:1-slim AS builder
 
 WORKDIR /app
 
@@ -8,7 +8,7 @@ RUN bun install --frozen-lockfile
 COPY . .
 RUN bun run build
 
-FROM oven/bun:1-alpine
+FROM oven/bun:1-slim
 
 WORKDIR /app
 
@@ -18,4 +18,4 @@ COPY --from=builder /app/node_modules ./node_modules
 
 EXPOSE 3000
 
-ENTRYPOINT ["bun", "run", "build/index.js"]
+ENTRYPOINT ["bun", "build/index.js"]
