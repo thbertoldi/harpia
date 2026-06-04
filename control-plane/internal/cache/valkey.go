@@ -52,9 +52,6 @@ func NewClient(valkeyURL string) (*Client, error) {
 
 	db := parsed.Query().Get("db")
 	if db != "" {
-		if dbNum, err := fmt.Sscanf(db, "%d", new(int)); err == nil && dbNum == 1 {
-			// parse handled below
-		}
 		fmt.Sscanf(db, "%d", &opts.DB)
 	}
 
