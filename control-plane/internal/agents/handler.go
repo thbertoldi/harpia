@@ -3,6 +3,7 @@ package agents
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
@@ -40,7 +41,7 @@ func (h *AgentHandler) RegisterAgentType(ctx context.Context, req *connect.Reque
 			Name:             created.Name,
 			Description:      created.Description,
 			CapabilitiesText: "",
-			CreatedAt:        created.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+			CreatedAt:        created.CreatedAt.Format(time.RFC3339),
 		},
 	}), nil
 }
