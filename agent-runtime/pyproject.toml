@@ -10,13 +10,16 @@ dependencies = [
     "langchain-openai>=0.2.0",
     "langchain-mcp-adapters>=0.1.0",
     "temporalio>=1.8.0",
-    "redis>=5.0",
+    "redis>=5.0",  # Valkey wire-compatible (no separate valkey-py package)
     # "connectrpc" — not yet published on PyPI; planned for gRPC client integration
     "pydantic>=2.0",
     "httpx>=0.28.0",
     "structlog>=24.0",
     "uvicorn>=0.32.0",
 ]
+
+[project.scripts]
+harpia-agent = "harpia_agents.main:main"
 
 [project.optional-dependencies]
 dev = [

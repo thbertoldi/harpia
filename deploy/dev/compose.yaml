@@ -1,8 +1,8 @@
 # Development dependencies (PostgreSQL + Valkey + Garage)
-# Zitadel, OpenFGA, and Temporalite are started externally via mise tasks:
+# Zitadel, OpenFGA, and Temporal are started externally via mise tasks:
 #   mise run dev-zitadel     -> Zitadel identity provider
 #   mise run dev-openfga     -> OpenFGA authorization
-#   mise run dev-temporalite -> Temporal single-binary dev server
+#   mise run dev-temporal    -> Temporal dev server
 # Use: podman-compose -f deploy/dev/compose.yaml up -d
 
 services:

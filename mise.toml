@@ -63,7 +63,15 @@ run = "cd control-plane && go run ./cmd/api/"
 
 [tasks.dev-agent]
 description = "Run agent runtime in dev mode"
-run = "cd agent-runtime && uv run harpia-agent"
+run = "cd agent-runtime && uv run python -m harpia_agents.main"
+
+[tasks.dev-zitadel]
+description = "Start Zitadel identity provider for local dev"
+run = "echo 'Start Zitadel with: docker run -p 8085:8085 ghcr.io/zitadel/zitadel:latest start --masterkey=Masterkey123 --tlsMode=disabled'"
+
+[tasks.dev-openfga]
+description = "Start OpenFGA for local dev"
+run = "echo 'Start OpenFGA with: docker run -p 8081:8080 openfga/openfga run'"
 
 [tasks.dev-temporal]
 description = "Start Temporal dev server (single binary)"
