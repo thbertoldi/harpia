@@ -67,7 +67,7 @@ run = "cd agent-runtime && uv run python -m harpia_agents.main"
 
 [tasks.dev-zitadel]
 description = "Start Zitadel identity provider for local dev"
-run = "echo 'Start Zitadel with: docker run -p 8085:8085 ghcr.io/zitadel/zitadel:latest start --masterkey=Masterkey123 --tlsMode=disabled'"
+run = "echo 'Zitadel is now part of the dev compose stack. Start with: podman-compose -f deploy/dev/compose.yaml up -d zitadel'"
 
 [tasks.dev-openfga]
 description = "Start OpenFGA for local dev"

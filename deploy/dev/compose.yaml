@@ -1,6 +1,5 @@
-# Development dependencies (PostgreSQL + Valkey + Garage)
-# Zitadel, OpenFGA, and Temporal are started externally via mise tasks:
-#   mise run dev-zitadel     -> Zitadel identity provider
+# Development dependencies (PostgreSQL + Valkey + Garage + Zitadel)
+# OpenFGA and Temporal are started externally via mise tasks:
 #   mise run dev-openfga     -> OpenFGA authorization
 #   mise run dev-temporal    -> Temporal dev server
 # Use: podman-compose -f deploy/dev/compose.yaml up -d
@@ -16,6 +15,7 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
 
   valkey:
     image: docker.io/valkey/valkey:8-alpine
@@ -33,6 +33,32 @@ services:
       - garage-data:/var/lib/garage/data
     environment:
       GARAGE_LOG_TO_SYSLOG: "0"
+
+  # Zitadel OIDC identity provider.
+  # For Apple Silicon (arm64), override the image with:
+  #   image: ghcr.io/zitadel/zitadel:latest-arm64
+  zitadel:
+    image: ghcr.io/zitadel/zitadel:latest
+    command: start-from-init --masterkeyFromEnv --tlsMode external --config /dev/null
+    ports:
+      - "8085:8080"
+    depends_on:
+      - postgres
+    environment:
+      ZITADEL_DATABASE_POSTGRES_HOST: postgres
+      ZITADEL_DATABASE_POSTGRES_PORT: "5432"
+      ZITADEL_DATABASE_POSTGRES_DATABASE: zitadel
+      ZITADEL_DATABASE_POSTGRES_USER_USERNAME: harpia
+      ZITADEL_DATABASE_POSTGRES_USER_PASSWORD: harpia
+      ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME: harpia
+      ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD: harpia
+      ZITADEL_EXTERNALSECURE: "false"
+      ZITADEL_TLS_ENABLED: "false"
+      ZITADEL_FIRSTINSTANCE_ORG_NAME: Harpia
+      ZITADEL_FIRSTINSTANCE_HUMAN_EMAIL: admin@harpia.local
+      ZITADEL_FIRSTINSTANCE_HUMAN_USERNAME: admin
+      ZITADEL_FIRSTINSTANCE_HUMAN_PASSWORD: HarpiaAdmin1!
+      ZITADEL_MASTERKEY: Masterkey123
 
 volumes:
   pgdata:
