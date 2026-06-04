@@ -23,12 +23,12 @@ spec:
           env:
             - name: DATABASE_URL
               value: "postgres://{{ .Values.database.user }}@{{ .Values.database.host }}:{{ .Values.database.port }}/{{ .Values.database.name }}"
-            - name: NATS_URL
-              value: "nats://nats:4222"
+            - name: VALKEY_URL
+              value: "valkey://{{ .Values.valkey.host }}:{{ .Values.valkey.port }}"
             - name: GARAGE_URL
               value: {{ .Values.garage.endpoint }}
-            - name: AUTHENTIK_URL
-              value: {{ .Values.authentik.issuerUrl }}
+            - name: ZITADEL_URL
+              value: {{ .Values.zitadel.issuerUrl }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
 ---
