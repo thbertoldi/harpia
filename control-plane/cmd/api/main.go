@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -10,31 +11,68 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/harpia/control-plane/gen/harpia/agents/v1/agentsv1connect"
+	"github.com/harpia/control-plane/gen/harpia/feedback/v1/feedbackv1connect"
+	"github.com/harpia/control-plane/gen/harpia/identity/v1/identityv1connect"
+	"github.com/harpia/control-plane/gen/harpia/tasks/v1/tasksv1connect"
+	"github.com/harpia/control-plane/internal/agents"
 	"github.com/harpia/control-plane/internal/config"
-	"github.com/harpia/control-plane/internal/server"
+	"github.com/harpia/control-plane/internal/database"
+	"github.com/harpia/control-plane/internal/feedback"
+	"github.com/harpia/control-plane/internal/identity"
+	"github.com/harpia/control-plane/internal/tasks"
 )
 
 func main() {
 	cfg := config.Load()
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: cfg.LogLevel}))
+	slog.SetDefault(logger)
 
-	gin.SetMode(cfg.GinMode)
+	ctx := context.Background()
 
-	r := gin.New()
-	r.Use(server.Logger(logger))
-	r.Use(server.Recovery(logger))
-	r.Use(server.RequestID())
+	var (
+		taskRepo    *tasks.Repository
+		agentRepo   *agents.Repository
+	)
 
-	api := r.Group("/api/v1")
-	{
-		health := server.NewHealth()
-		api.GET("/health", health.Check)
+	if cfg.DatabaseURL != "" {
+		pool, err := database.NewPool(ctx, cfg.DatabaseURL)
+		if err != nil {
+			logger.Error("database connection failed, running without persistence", "error", err)
+		} else {
+			taskRepo = tasks.NewRepository(pool)
+			agentRepo = agents.NewRepository(pool)
+			defer pool.Close()
+		}
 	}
+
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/api/v1/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{
+			"status":    "ok",
+			"service":   "harpia-api",
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
+		})
+	})
+
+	taskHandler := tasks.NewTaskHandler(taskRepo)
+	agentsPath, agentsHandler := agentsv1connect.NewAgentServiceHandler(agents.NewAgentHandler(agentRepo))
+	tasksPath, tasksHandler := tasksv1connect.NewTaskServiceHandler(taskHandler)
+	identityPath, identityHandler := identityv1connect.NewIdentityServiceHandler(identity.NewIdentityHandler())
+	feedbackPath, feedbackHandler := feedbackv1connect.NewFeedbackServiceHandler(feedback.NewFeedbackHandler())
+
+	mux.Handle(agentsPath, agentsHandler)
+	mux.Handle(tasksPath, tasksHandler)
+	mux.Handle(identityPath, identityHandler)
+	mux.Handle(feedbackPath, feedbackHandler)
+
+	wrapped := withLogging(logger)(mux)
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Port),
-		Handler:      r,
+		Handler:      wrapped,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
@@ -53,12 +91,47 @@ func main() {
 	<-quit
 
 	logger.Info("shutting down server")
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	if err := srv.Shutdown(ctx); err != nil {
+	if err := srv.Shutdown(shutdownCtx); err != nil {
 		logger.Error("forced shutdown", "error", err)
 	}
 
 	logger.Info("server stopped")
+}
+
+func withLogging(logger *slog.Logger) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			start := time.Now()
+			wr := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
+
+			defer func() {
+				if rec := recover(); rec != nil {
+					logger.Error("panic recovered", "error", rec, "path", r.URL.Path)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				}
+			}()
+
+			next.ServeHTTP(wr, r)
+
+			logger.Info("request",
+				"method", r.Method,
+				"path", r.URL.Path,
+				"status", wr.statusCode,
+				"latency", time.Since(start).String(),
+			)
+		})
+	}
+}
+
+type responseWriter struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+func (rw *responseWriter) WriteHeader(code int) {
+	rw.statusCode = code
+	rw.ResponseWriter.WriteHeader(code)
 }
