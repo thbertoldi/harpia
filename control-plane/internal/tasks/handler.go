@@ -3,6 +3,7 @@ package tasks
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -15,13 +16,17 @@ import (
 )
 
 type TaskHandler struct {
-	repo     *Repository
-	temporal *workflow.TemporalClient
-	cache    *cache.Client
+	repo      *Repository
+	temporal  *workflow.TemporalClient
+	cache     *cache.Client
+	devUserID uuid.UUID
 }
 
-func NewTaskHandler(repo *Repository, temporal *workflow.TemporalClient, cacheClient *cache.Client) *TaskHandler {
-	return &TaskHandler{repo: repo, temporal: temporal, cache: cacheClient}
+func NewTaskHandler(repo *Repository, temporal *workflow.TemporalClient, cacheClient *cache.Client, devUserID uuid.UUID) (*TaskHandler, error) {
+	if repo == nil {
+		return nil, errors.New("tasks: repository is required")
+	}
+	return &TaskHandler{repo: repo, temporal: temporal, cache: cacheClient, devUserID: devUserID}, nil
 }
 
 func (h *TaskHandler) CreateTask(ctx context.Context, req *connect.Request[tasksv1.CreateTaskRequest]) (*connect.Response[tasksv1.CreateTaskResponse], error) {
@@ -36,7 +41,7 @@ func (h *TaskHandler) CreateTask(ctx context.Context, req *connect.Request[tasks
 		Status:      "pending",
 		Priority:    0,
 		TenantID:    tenantID,
-		CreatedBy:   uuid.Nil,
+		CreatedBy:   h.devUserID,
 	}
 
 	created, err := h.repo.Create(ctx, task)

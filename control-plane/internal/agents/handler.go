@@ -2,6 +2,7 @@ package agents
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
 	"connectrpc.com/connect"
@@ -16,8 +17,11 @@ type AgentHandler struct {
 	agentCache *cache.AgentCapabilityCache
 }
 
-func NewAgentHandler(repo *Repository, agentCache *cache.AgentCapabilityCache) *AgentHandler {
-	return &AgentHandler{repo: repo, agentCache: agentCache}
+func NewAgentHandler(repo *Repository, agentCache *cache.AgentCapabilityCache) (*AgentHandler, error) {
+	if repo == nil {
+		return nil, errors.New("agents: repository is required")
+	}
+	return &AgentHandler{repo: repo, agentCache: agentCache}, nil
 }
 
 func (h *AgentHandler) RegisterAgentType(ctx context.Context, req *connect.Request[agentsv1.RegisterAgentTypeRequest]) (*connect.Response[agentsv1.RegisterAgentTypeResponse], error) {

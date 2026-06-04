@@ -1,10 +1,9 @@
 package server
 
 import (
+	"encoding/json"
 	"net/http"
 	"time"
-
-	"github.com/gin-gonic/gin"
 )
 
 type Health struct {
@@ -15,8 +14,9 @@ func NewHealth() *Health {
 	return &Health{startTime: time.Now()}
 }
 
-func (h *Health) Check(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
+func (h *Health) Check(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
 		"status":    "ok",
 		"service":   "harpia-api",
 		"uptime":    time.Since(h.startTime).String(),

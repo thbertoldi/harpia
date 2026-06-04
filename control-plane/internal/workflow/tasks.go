@@ -73,7 +73,20 @@ func TaskOrchestration(ctx workflow.Context, input TaskInput) (TaskResult, error
 		if result.Status == "needs_approval" {
 			signalChan := workflow.GetSignalChannel(ctx, HumanFeedbackSignalName)
 			var signal HumanFeedbackSignal
-			signalChan.Receive(ctx, &signal)
+			var received bool
+
+			selector := workflow.NewSelector(ctx)
+			selector.AddReceive(signalChan, func(c workflow.ReceiveChannel, more bool) {
+				c.Receive(ctx, &signal)
+				received = true
+			})
+			selector.AddFuture(workflow.NewTimer(ctx, 24*time.Hour), func(f workflow.Future) {
+			})
+			selector.Select(ctx)
+
+			if !received {
+				return TaskResult{Status: "cancelled", Error: "timed out waiting for human feedback"}, nil
+			}
 			if !signal.Approved {
 				return TaskResult{Status: "cancelled", Output: signal.Feedback}, nil
 			}

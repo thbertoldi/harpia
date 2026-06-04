@@ -11,6 +11,8 @@ import (
 	"syscall"
 	"time"
 
+	"go.temporal.io/sdk/client"
+
 	"github.com/harpia/control-plane/gen/harpia/agents/v1/agentsv1connect"
 	"github.com/harpia/control-plane/gen/harpia/feedback/v1/feedbackv1connect"
 	"github.com/harpia/control-plane/gen/harpia/identity/v1/identityv1connect"
@@ -33,21 +35,54 @@ func main() {
 
 	ctx := context.Background()
 
-	var (
-		taskRepo  *tasks.Repository
-		agentRepo *agents.Repository
-	)
-
-	if cfg.DatabaseURL != "" {
-		pool, err := database.NewPool(ctx, cfg.DatabaseURL)
-		if err != nil {
-			logger.Error("database connection failed, running without persistence", "error", err)
-		} else {
-			taskRepo = tasks.NewRepository(pool)
-			agentRepo = agents.NewRepository(pool)
-			defer pool.Close()
-		}
+	if os.Getenv("HARPIA_ROLE") == "worker" {
+		runWorker(ctx, cfg, logger)
+		return
 	}
+
+	runAPI(ctx, cfg, logger)
+}
+
+func fatal(msg string, args ...any) {
+	slog.Error(msg, args...)
+	os.Exit(1)
+}
+
+func runWorker(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
+	if cfg.TemporalHost == "" {
+		fatal("HARPIA_ROLE=worker requires TEMPORAL_HOST to be set")
+	}
+
+	c, err := client.Dial(client.Options{HostPort: cfg.TemporalHost})
+	if err != nil {
+		fatal("temporal client dial failed", "error", err)
+	}
+	defer c.Close()
+
+	if err := workflow.StartWorker(ctx, c, workflow.TaskQueueName); err != nil {
+		fatal("temporal worker failed", "error", err)
+	}
+}
+
+func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
+	if cfg.DatabaseURL == "" {
+		fatal("DATABASE_URL is required")
+	}
+
+	pool, err := database.NewPool(ctx, cfg.DatabaseURL)
+	if err != nil {
+		fatal("database connection failed", "error", err)
+	}
+	defer pool.Close()
+
+	tenantID, userID, err := database.EnsureDevData(ctx, pool)
+	if err != nil {
+		fatal("seed dev data failed", "error", err)
+	}
+	logger.Info("dev data ensured", "tenant_id", tenantID.String(), "user_id", userID.String())
+
+	taskRepo := tasks.NewRepository(pool)
+	agentRepo := agents.NewRepository(pool)
 
 	var (
 		cacheClient          *cache.Client
@@ -56,13 +91,12 @@ func main() {
 	)
 
 	if cfg.ValkeyURL != "" {
-		var err error
 		cacheClient, err = cache.NewClient(cfg.ValkeyURL)
 		if err != nil {
-			logger.Error("valkey connection failed, running without cache", "error", err)
+			logger.Warn("valkey connection failed, running without cache", "error", err)
 		} else {
 			if pingErr := cacheClient.Ping(ctx); pingErr != nil {
-				logger.Error("valkey ping failed, running without cache", "error", pingErr)
+				logger.Warn("valkey ping failed, running without cache", "error", pingErr)
 			} else {
 				agentCapabilityCache = cache.NewAgentCapabilityCache(cacheClient)
 				rateLimiter = cache.NewRateLimiter(cacheClient)
@@ -73,13 +107,22 @@ func main() {
 
 	var temporalClient *workflow.TemporalClient
 	if cfg.TemporalHost != "" {
-		var err error
 		temporalClient, err = workflow.NewTemporalClient(cfg.TemporalHost)
 		if err != nil {
-			logger.Error("temporal client failed, running without workflow engine", "error", err)
+			logger.Warn("temporal client failed, running without workflow engine", "error", err)
 		} else {
 			defer temporalClient.Close()
 		}
+	}
+
+	taskHandler, err := tasks.NewTaskHandler(taskRepo, temporalClient, cacheClient, userID)
+	if err != nil {
+		fatal("create task handler failed", "error", err)
+	}
+
+	agentHandler, err := agents.NewAgentHandler(agentRepo, agentCapabilityCache)
+	if err != nil {
+		fatal("create agent handler failed", "error", err)
 	}
 
 	mux := http.NewServeMux()
@@ -93,8 +136,7 @@ func main() {
 		})
 	})
 
-	taskHandler := tasks.NewTaskHandler(taskRepo, temporalClient, cacheClient)
-	agentsPath, agentsHandler := agentsv1connect.NewAgentServiceHandler(agents.NewAgentHandler(agentRepo, agentCapabilityCache))
+	agentsPath, agentsHandler := agentsv1connect.NewAgentServiceHandler(agentHandler)
 	tasksPath, tasksHandler := tasksv1connect.NewTaskServiceHandler(taskHandler)
 	identityPath, identityHandler := identityv1connect.NewIdentityServiceHandler(identity.NewIdentityHandler())
 	feedbackPath, feedbackHandler := feedbackv1connect.NewFeedbackServiceHandler(feedback.NewFeedbackHandler())
