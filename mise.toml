@@ -14,11 +14,31 @@ temporal = "latest"
 HARPIA_ENV = "development"
 
 [tasks.build]
-description = "Build all services"
+description = "Build all services locally"
 run = [
     "cd control-plane && go build ./cmd/api/",
     "cd agent-runtime && uv build",
     "cd frontend && bun run build",
+]
+
+[tasks.build-container-api]
+description = "Build control-plane container image"
+run = "podman build -t harpia-api:latest -f control-plane/Containerfile control-plane/"
+
+[tasks.build-container-agent]
+description = "Build agent-runtime container image"
+run = "podman build -t harpia-agent:latest -f agent-runtime/Containerfile agent-runtime/"
+
+[tasks.build-container-web]
+description = "Build frontend container image"
+run = "podman build -t harpia-frontend:latest -f frontend/Containerfile frontend/"
+
+[tasks.build-containers]
+description = "Build all container images"
+run = [
+    "mise run build-container-api",
+    "mise run build-container-agent",
+    "mise run build-container-web",
 ]
 
 [tasks.test]
@@ -58,32 +78,40 @@ description = "Check for breaking changes in protobuf schemas"
 run = "cd proto && buf breaking --against '.git#branch=trunk'"
 
 [tasks.dev]
-description = "Start development environment"
-run = "tilt up"
+description = "Start all dev infrastructure via podman compose"
+run = "podman compose -f deploy/dev/compose.yaml up -d"
+
+[tasks.dev-down]
+description = "Stop all dev infrastructure"
+run = "podman compose -f deploy/dev/compose.yaml down"
 
 [tasks.dev-api]
-description = "Run API server in dev mode"
+description = "Run API server in dev mode (with hot reload)"
 run = "cd control-plane && go run ./cmd/api/"
+
+[tasks.dev-worker]
+description = "Run Temporal worker in dev mode"
+run = "cd control-plane && HARPIA_ROLE=worker go run ./cmd/api/"
 
 [tasks.dev-agent]
 description = "Run agent runtime in dev mode"
 run = "cd agent-runtime && uv run python -m harpia_agents.main"
 
-[tasks.dev-zitadel]
-description = "Start Zitadel identity provider for local dev"
-run = "echo 'Zitadel is now part of the dev compose stack. Start with: podman-compose -f deploy/dev/compose.yaml up -d zitadel'"
+[tasks.dev-agent-worker]
+description = "Run agent Temporal worker in dev mode"
+run = "cd agent-runtime && HARPIA_ROLE=worker uv run python -m harpia_agents.main"
 
-[tasks.dev-openfga]
-description = "Start OpenFGA for local dev"
-run = "podman-compose -f deploy/dev/compose.yaml up -d openfga"
+[tasks.dev-web]
+description = "Run frontend in dev mode (with Vite HMR)"
+run = "cd frontend && bun run dev"
+
+[tasks.dev-openfga-migrate]
+description = "Run OpenFGA database migrations"
+run = "podman compose -f deploy/dev/compose.yaml run --rm openfga migrate --datastore-engine postgres --datastore-uri 'postgres://harpia:harpia@postgres:5432/openfga?sslmode=disable'"
 
 [tasks.dev-temporal]
 description = "Start Temporal dev server (single binary)"
 run = "temporal server start-dev --namespace default --ip 0.0.0.0"
-
-[tasks.dev-web]
-description = "Run frontend in dev mode"
-run = "cd frontend && bun run dev"
 
 [tasks.db-migrate]
 description = "Run database migrations"

@@ -8,7 +8,6 @@ import (
 
 type Config struct {
 	Port     int
-	GinMode  string
 	LogLevel slog.Level
 
 	DatabaseURL  string
@@ -21,14 +20,13 @@ type Config struct {
 func Load() *Config {
 	return &Config{
 		Port:     envInt("PORT", 8080),
-		GinMode:  envStr("GIN_MODE", "debug"),
 		LogLevel: parseLogLevel(envStr("LOG_LEVEL", "info")),
 
-		DatabaseURL:  envStr("DATABASE_URL", "postgres://localhost:5432/harpia"),
-		ValkeyURL:    envStr("VALKEY_URL", "valkey://localhost:6379"),
+		DatabaseURL:  envStr("DATABASE_URL", "postgres://harpia:harpia@localhost:15000/harpia?sslmode=disable"),
+		ValkeyURL:    envStr("VALKEY_URL", "valkey://localhost:15001"),
 		TemporalHost: envStr("TEMPORAL_HOST", "localhost:7233"),
-		GarageURL:    envStr("GARAGE_URL", "http://localhost:3900"),
-		ZitadelURL:   envStr("ZITADEL_URL", "http://localhost:8085"),
+		GarageURL:    envStr("GARAGE_URL", "http://localhost:15002"),
+		ZitadelURL:   envStr("ZITADEL_URL", "http://localhost:15005"),
 	}
 }
 

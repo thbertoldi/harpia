@@ -1,7 +1,16 @@
-# Development dependencies (PostgreSQL + Valkey + Garage + Zitadel + OpenFGA)
-# Temporal is started externally via mise tasks:
-#   mise run dev-temporal    -> Temporal dev server
-# Use: podman-compose -f deploy/dev/compose.yaml up -d
+# Harpia Development Dependencies
+# Start: podman compose -f deploy/dev/compose.yaml up -d
+# Stop:  podman compose -f deploy/dev/compose.yaml down
+#
+# Services communicate on the internal compose network.
+# For local API development, connect via podman network:
+#   DATABASE_URL="postgres://harpia:harpia@localhost:15000/harpia?sslmode=disable"
+#   (access host-mapped ports after starting)
+#
+# To expose a service to the host, uncomment the ports: line.
+#
+# Temporal server is started separately:
+#   mise run dev-temporal
 
 services:
   postgres:
@@ -10,39 +19,51 @@ services:
       POSTGRES_USER: harpia
       POSTGRES_PASSWORD: harpia
       POSTGRES_DB: harpia
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
+    # ports:
+    #   - "15000:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./postgres-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "harpia"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
 
   valkey:
     image: docker.io/valkey/valkey:8-alpine
-    ports:
-      - "6379:6379"
+    expose:
+      - "6379"
+    # ports:
+    #   - "15001:6379"
 
   garage:
-    image: docker.io/dxflrs/garage:v1.0
-    ports:
-      - "3900:3900"
-      - "3901:3901"
-      - "3902:3902"
+    image: docker.io/dxflrs/garage:v1.0.1
+    expose:
+      - "3900"
+      - "3901"
+      - "3902"
+    # ports:
+    #   - "15002:3900"
+    #   - "15003:3901"
+    #   - "15004:3902"
     volumes:
+      - ./garage.toml:/etc/garage.toml:ro
       - garage-meta:/var/lib/garage/meta
       - garage-data:/var/lib/garage/data
-    environment:
-      GARAGE_LOG_TO_SYSLOG: "0"
 
-  # Zitadel OIDC identity provider.
-  # For Apple Silicon (arm64), override the image with:
-  #   image: ghcr.io/zitadel/zitadel:latest-arm64
   zitadel:
     image: ghcr.io/zitadel/zitadel:v2.62.0
-    command: start-from-init --masterkeyFromEnv --tlsMode external --config /dev/null
-    ports:
-      - "8085:8080"
+    command: ["start-from-init", "--masterkeyFromEnv", "--tlsMode", "disabled"]
+    expose:
+      - "8080"
+    # ports:
+    #   - "15005:8080"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     environment:
       ZITADEL_DATABASE_POSTGRES_HOST: postgres
       ZITADEL_DATABASE_POSTGRES_PORT: "5432"
@@ -51,19 +72,21 @@ services:
       ZITADEL_DATABASE_POSTGRES_USER_PASSWORD: harpia
       ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME: harpia
       ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD: harpia
+      ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE: disable
+      ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE: disable
       ZITADEL_EXTERNALSECURE: "false"
       ZITADEL_TLS_ENABLED: "false"
       ZITADEL_FIRSTINSTANCE_ORG_NAME: Harpia
       ZITADEL_FIRSTINSTANCE_HUMAN_EMAIL: admin@harpia.local
       ZITADEL_FIRSTINSTANCE_HUMAN_USERNAME: admin
       ZITADEL_FIRSTINSTANCE_HUMAN_PASSWORD: HarpiaAdmin1!
-      ZITADEL_MASTERKEY: Masterkey123
+      ZITADEL_MASTERKEY: uLGG7IoNMEk58Ik942cZFRmaMnio/3oI
 
   openfga:
     image: docker.io/openfga/openfga:v1.8.0
-    command: sh -c "openfga migrate --datastore-engine postgres --datastore-uri 'postgres://harpia:harpia@postgres:5432/openfga?sslmode=disable' && openfga run"
-    ports:
-      - "8081:8080"
+    command: ["run"]
+    expose:
+      - "8080"
     environment:
       OPENFGA_DATASTORE_ENGINE: postgres
       OPENFGA_DATASTORE_URI: "postgres://harpia:harpia@postgres:5432/openfga?sslmode=disable"
@@ -71,7 +94,7 @@ services:
       OPENFGA_PLAYGROUND_ENABLED: "true"
     depends_on:
       postgres:
-        condition: service_started
+        condition: service_healthy
 
 volumes:
   pgdata:
