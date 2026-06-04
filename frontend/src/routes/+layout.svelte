@@ -3,6 +3,8 @@
 	import { Menu, X, Sun, Moon, LayoutDashboard, Eye, Settings } from 'lucide-svelte';
 	import GoldStripe from '$lib/components/ui/GoldStripe.svelte';
 	import TenantSelector from '$lib/components/TenantSelector.svelte';
+	import FeedbackBadge from '$lib/components/FeedbackBadge.svelte';
+	import { listPendingFeedback } from '$lib/client';
 	import { logout } from '$lib/auth';
 	import { page } from '$app/state';
 
@@ -10,6 +12,17 @@
 
 	let navOpen = $state(false);
 	let dark = $state(false);
+	let pendingCount = $state(0);
+
+	$effect(() => {
+		listPendingFeedback({ tenantId: 'default', pageSize: 100, pageToken: '' })
+			.then((res) => {
+				pendingCount = res.feedbackRequests?.length ?? 0;
+			})
+			.catch(() => {
+				pendingCount = 0;
+			});
+	});
 
 	$effect(() => {
 		const stored = localStorage.getItem('harpia-theme');
@@ -75,6 +88,9 @@
 						>
 							<section.icon class="size-4" />
 							<span class="font-body text-sm font-medium">{section.label}</span>
+							{#if section.label === 'Oversee'}
+								<FeedbackBadge count={pendingCount} />
+							{/if}
 						</a>
 					{/each}
 				</div>
