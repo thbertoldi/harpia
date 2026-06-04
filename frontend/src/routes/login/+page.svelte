@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { login, getSession, devLogin } from '$lib/auth';
+	import { login, getSession } from '$lib/auth';
 
 	let email = $state('');
 
@@ -12,11 +12,6 @@
 
 	async function handleLogin() {
 		await login(email ? { login_hint: email } : undefined);
-	}
-
-	async function handleDevLogin(role: string) {
-		devLogin(role);
-		await goto('/');
 	}
 </script>
 
@@ -69,24 +64,6 @@
 					Continue with email
 				</button>
 			</form>
-		</div>
-
-		<div class="mt-8 border-t border-[#2A2D3A] pt-6">
-			<p class="text-center text-xs font-mono uppercase tracking-wider text-[#6B7080]" style="font-family: 'JetBrains Mono', monospace">Dev quick login</p>
-			<div class="mt-3 flex gap-2">
-				<button onclick={() => handleDevLogin('Leader')}
-					class="flex-1 cursor-pointer rounded-md border border-[#2A2D3A] px-3 py-2 text-xs text-[#9DA1AB] transition-colors hover:border-[#C8920F] hover:text-[#C8920F]">
-					Leader
-				</button>
-				<button onclick={() => handleDevLogin('Overseer')}
-					class="flex-1 cursor-pointer rounded-md border border-[#2A2D3A] px-3 py-2 text-xs text-[#9DA1AB] transition-colors hover:border-[#C8920F] hover:text-[#C8920F]">
-					Overseer
-				</button>
-				<button onclick={() => handleDevLogin('Platform Engineer')}
-					class="flex-1 cursor-pointer rounded-md border border-[#2A2D3A] px-3 py-2 text-xs text-[#9DA1AB] transition-colors hover:border-[#C8920F] hover:text-[#C8920F]">
-					Engineer
-				</button>
-			</div>
 		</div>
 	</div>
 </div>

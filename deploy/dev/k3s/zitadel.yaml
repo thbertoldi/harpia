@@ -16,6 +16,7 @@ spec:
       labels:
         app: zitadel
     spec:
+      enableServiceLinks: false
       containers:
         - name: zitadel
           image: ghcr.io/zitadel/zitadel:v2.62.0

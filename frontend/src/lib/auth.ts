@@ -1,5 +1,5 @@
 const ZITADEL_CONFIG = {
-  issuer: "http://localhost:15005",
+  issuer: "http://localhost:8085",
   clientId: "harpia",
   redirectUri: "http://localhost:5173/auth/callback",
   scope: "openid profile email",
