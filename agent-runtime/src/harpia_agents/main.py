@@ -1,6 +1,6 @@
 """Harpia Agent Runtime entry point.
 
-Starts a ConnectRPC ASGI server for the agent service.
+Starts a ConnectRPC ASGI server or a Temporal worker depending on HARPIA_ROLE.
 """
 
 import asyncio
@@ -26,7 +26,8 @@ def create_app():
         return None
 
 
-def main():
+def start_server() -> None:
+    """Start the ConnectRPC ASGI server."""
     host = os.environ.get("HARPIA_AGENT_HOST", "0.0.0.0")
     port = int(os.environ.get("HARPIA_AGENT_PORT", "8000"))
 
@@ -38,6 +39,24 @@ def main():
         # uvicorn.run(app, host=host, port=port)
     else:
         logger.info("agent runtime ready (ConnectRPC server stub)")
+
+
+def start_worker() -> None:
+    """Start the Temporal worker."""
+    from harpia_agents.temporal_worker import run_worker
+
+    asyncio.run(run_worker())
+
+
+def main() -> None:
+    """Entry point: dispatch based on HARPIA_ROLE or --worker flag."""
+    role = os.environ.get("HARPIA_ROLE", "server")
+
+    if role == "worker":
+        logger.info("starting in worker mode (Temporal)")
+        start_worker()
+    else:
+        start_server()
 
 
 if __name__ == "__main__":
