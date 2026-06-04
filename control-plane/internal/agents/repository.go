@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/pgvector/pgvector-go"
 )
 
 type AgentType struct {
@@ -19,6 +20,7 @@ type AgentType struct {
 	MCPServers   json.RawMessage `json:"mcp_servers"`
 	Enabled      bool            `json:"enabled"`
 	CreatedAt    time.Time       `json:"created_at"`
+	Similarity   float32         `json:"similarity,omitempty"`
 }
 
 type Repository struct {
@@ -118,6 +120,57 @@ func (r *Repository) List(ctx context.Context, enabledOnly bool) ([]AgentType, e
 	}
 
 	return agentTypes, nil
+}
+
+func (r *Repository) MatchByCapability(ctx context.Context, embedding []float32, limit int) ([]AgentType, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT id, name, description, input_schema, output_schema, mcp_servers, enabled, created_at,
+		        1 - (capabilities_embedding <=> $1) AS similarity
+		 FROM agent_types
+		 WHERE enabled = true
+		 ORDER BY capabilities_embedding <=> $1
+		 LIMIT $2`,
+		pgvector.NewVector(embedding),
+		limit,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("match by capability: %w", err)
+	}
+	defer rows.Close()
+
+	agentTypes := make([]AgentType, 0)
+	for rows.Next() {
+		var agentType AgentType
+		if err := rows.Scan(
+			&agentType.ID, &agentType.Name, &agentType.Description,
+			&agentType.InputSchema, &agentType.OutputSchema, &agentType.MCPServers,
+			&agentType.Enabled, &agentType.CreatedAt,
+			&agentType.Similarity,
+		); err != nil {
+			return nil, fmt.Errorf("scan agent match: %w", err)
+		}
+		agentTypes = append(agentTypes, agentType)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate agent matches: %w", err)
+	}
+
+	return agentTypes, nil
+}
+
+func (r *Repository) SetEmbedding(ctx context.Context, id uuid.UUID, embedding []float32) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE agent_types
+		 SET capabilities_embedding = $1
+		 WHERE id = $2`,
+		pgvector.NewVector(embedding),
+		id,
+	)
+	if err != nil {
+		return fmt.Errorf("set embedding: %w", err)
+	}
+	return nil
 }
 
 func (r *Repository) Update(ctx context.Context, agentType *AgentType) (*AgentType, error) {

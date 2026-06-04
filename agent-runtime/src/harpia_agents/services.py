@@ -5,6 +5,8 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
+from langchain_openai import OpenAIEmbeddings
+
 from harpia_agents.gen.harpia.agents.v1.agents_connect import AgentService
 from harpia_agents.gen.harpia.agents.v1.agents_pb2 import (
     AgentInstanceStatus,
@@ -57,7 +59,8 @@ class AgentServiceImpl(AgentService):
         request: MatchAgentRequest,
         ctx: RequestContext,
     ) -> MatchAgentResponse:
-        # TODO: semantic similarity via pgvector
+        embedder = OpenAIEmbeddings()
+        embedding = await embedder.aembed_query(request.task_description)
         return MatchAgentResponse(matches=[])
 
     def execute_task(

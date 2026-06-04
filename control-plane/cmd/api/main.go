@@ -120,7 +120,7 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 		fatal("create task handler failed", "error", err)
 	}
 
-	agentHandler, err := agents.NewAgentHandler(agentRepo, agentCapabilityCache)
+	agentHandler, err := agents.NewAgentHandler(agentRepo, agents.NewNoopEmbedder(), agentCapabilityCache)
 	if err != nil {
 		fatal("create agent handler failed", "error", err)
 	}

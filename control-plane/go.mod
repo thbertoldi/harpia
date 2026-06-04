@@ -6,6 +6,7 @@ require (
 	connectrpc.com/connect v1.20.0
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.10.0
+	github.com/pgvector/pgvector-go v0.4.0
 	github.com/redis/go-redis/v9 v9.20.0
 	go.temporal.io/sdk v1.44.1
 	google.golang.org/protobuf v1.36.11

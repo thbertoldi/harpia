@@ -14,15 +14,19 @@ import (
 )
 
 type AgentHandler struct {
-	repo       *Repository
+	repo      *Repository
+	embedder  Embedder
 	agentCache *cache.AgentCapabilityCache
 }
 
-func NewAgentHandler(repo *Repository, agentCache *cache.AgentCapabilityCache) (*AgentHandler, error) {
+func NewAgentHandler(repo *Repository, embedder Embedder, agentCache *cache.AgentCapabilityCache) (*AgentHandler, error) {
 	if repo == nil {
 		return nil, errors.New("agents: repository is required")
 	}
-	return &AgentHandler{repo: repo, agentCache: agentCache}, nil
+	if embedder == nil {
+		return nil, errors.New("agents: embedder is required")
+	}
+	return &AgentHandler{repo: repo, embedder: embedder, agentCache: agentCache}, nil
 }
 
 func (h *AgentHandler) RegisterAgentType(ctx context.Context, req *connect.Request[agentsv1.RegisterAgentTypeRequest]) (*connect.Response[agentsv1.RegisterAgentTypeResponse], error) {
@@ -71,11 +75,45 @@ func (h *AgentHandler) MatchAgent(ctx context.Context, req *connect.Request[agen
 		}
 	}
 
-	// TODO: perform pgvector similarity search to find best matching agent type,
-	// then store the result in agentCache via SetBestAgent.
+	embedding, err := h.embedder.Embed(ctx, req.Msg.TaskDescription)
+	if err != nil {
+		slog.Warn("failed to generate embedding, falling back to empty results", "error", err)
+		return connect.NewResponse(&agentsv1.MatchAgentResponse{
+			Matches: []*agentsv1.AgentMatch{},
+		}), nil
+	}
+
+	limit := int(req.Msg.MaxResults)
+	if limit <= 0 {
+		limit = 10
+	}
+
+	results, err := h.repo.MatchByCapability(ctx, embedding, limit)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	matches := make([]*agentsv1.AgentMatch, 0, len(results))
+	for _, at := range results {
+		matches = append(matches, &agentsv1.AgentMatch{
+			AgentType: &agentsv1.AgentType{
+				Id:          at.ID.String(),
+				Name:        at.Name,
+				Description: at.Description,
+				CreatedAt:   at.CreatedAt.Format(time.RFC3339),
+			},
+			SimilarityScore: at.Similarity,
+		})
+	}
+
+	if h.agentCache != nil && len(results) > 0 {
+		if err := h.agentCache.SetBestAgent(ctx, req.Msg.TaskDescription, results[0].ID.String()); err != nil {
+			slog.Warn("failed to cache best agent match", "error", err)
+		}
+	}
 
 	return connect.NewResponse(&agentsv1.MatchAgentResponse{
-		Matches: []*agentsv1.AgentMatch{},
+		Matches: matches,
 	}), nil
 }
 
