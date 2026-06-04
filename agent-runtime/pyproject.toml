@@ -40,9 +40,11 @@ packages = ["src/harpia_agents"]
 [tool.ruff]
 target-version = "py312"
 line-length = 100
+extend-exclude = ["**/gen/", ".venv/", "build/"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]
+ignore = ["E501"]  # line-length handled by formatter
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

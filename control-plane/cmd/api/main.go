@@ -31,8 +31,8 @@ func main() {
 	ctx := context.Background()
 
 	var (
-		taskRepo    *tasks.Repository
-		agentRepo   *agents.Repository
+		taskRepo  *tasks.Repository
+		agentRepo *agents.Repository
 	)
 
 	if cfg.DatabaseURL != "" {
