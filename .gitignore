@@ -49,10 +49,6 @@ Thumbs.db
 # Tilt
 .tilt/
 
-# Generated protobuf code
-control-plane/gen/
-agent-runtime/src/harpia_agents/gen/
-# Keep __init__.py for package structure (gen dir is fully generated)
 !agent-runtime/src/harpia_agents/gen/__init__.py
 
 # Helm

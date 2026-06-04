@@ -16,4 +16,4 @@ plugins:
   - remote: buf.build/connectrpc/python
     out: ../agent-runtime/src/harpia_agents/gen
 inputs:
-  - directory: harpia
+  - directory: .
