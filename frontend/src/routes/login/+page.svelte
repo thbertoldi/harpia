@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { login, getSession } from '$lib/auth';
+	import { Sun, Moon } from 'lucide-svelte';
 
 	let email = $state('');
+	let dark = $state(true);
 
 	$effect(() => {
 		if (getSession()) {
@@ -10,20 +12,38 @@
 		}
 	});
 
+	function toggleDark() {
+		dark = !dark;
+		document.documentElement.classList.toggle('dark', dark);
+		localStorage.setItem('harpia-theme', dark ? 'dark' : 'light');
+	}
+
 	async function handleLogin() {
 		await login(email ? { login_hint: email } : undefined);
 	}
 </script>
 
-<div class="flex min-h-screen items-center justify-center bg-[#121318]">
-	<div class="fixed left-0 top-0 h-full w-[5px] bg-gradient-to-b from-[#E0A512] via-[#C8920F] to-[#C8920F]/30"></div>
+<div class="flex min-h-screen items-center justify-center bg-obsidian">
+	<div class="fixed left-0 top-0 h-full w-[5px] bg-gradient-to-b from-talon-gold-bright via-talon-gold to-talon-gold/30"></div>
+
+	<button
+		onclick={toggleDark}
+		class="fixed right-4 top-4 z-50 cursor-pointer rounded-md border border-plumage p-2 text-crown-ash transition-colors hover:border-talon-gold hover:text-cream"
+		aria-label="Toggle dark mode"
+	>
+		{#if dark}
+			<Sun class="size-4" />
+		{:else}
+			<Moon class="size-4" />
+		{/if}
+	</button>
 
 	<div class="w-full max-w-md space-y-8 p-8">
 		<div class="text-center">
-			<h1 class="font-heading text-5xl font-black text-[#C8920F] tracking-tight" style="font-family: 'Bodoni Moda', serif">
+			<h1 class="font-heading text-5xl font-black text-talon-gold tracking-tight" style="font-family: 'Bodoni Moda', serif">
 				Harpia
 			</h1>
-			<p class="mt-3 font-body text-[#9DA1AB]" style="font-family: 'DM Sans', sans-serif">
+			<p class="mt-3 font-body text-cream/70" style="font-family: 'DM Sans', sans-serif">
 				AI operations for your business
 			</p>
 		</div>
@@ -31,7 +51,7 @@
 		<div class="space-y-4">
 			<button
 				onclick={handleLogin}
-				class="w-full cursor-pointer rounded-lg bg-[#C8920F] px-6 py-3 font-medium text-[#121318] transition-all hover:bg-[#E0A512]"
+				class="w-full cursor-pointer rounded-lg bg-talon-gold px-6 py-3 font-medium text-obsidian transition-all hover:bg-talon-gold-bright"
 				style="font-family: 'DM Sans', sans-serif"
 			>
 				Sign in with Zitadel
@@ -39,10 +59,10 @@
 
 			<div class="relative">
 				<div class="absolute inset-0 flex items-center">
-					<div class="w-full border-t border-[#2A2D3A]"></div>
+					<div class="w-full border-t border-plumage"></div>
 				</div>
 				<div class="relative flex justify-center text-xs">
-					<span class="bg-[#121318] px-2 font-mono text-[#6B7080] uppercase tracking-wider" style="font-family: 'JetBrains Mono', monospace">
+					<span class="bg-obsidian px-2 font-mono text-crown-ash uppercase tracking-wider" style="font-family: 'JetBrains Mono', monospace">
 						or
 					</span>
 				</div>
@@ -53,12 +73,12 @@
 					type="email"
 					bind:value={email}
 					placeholder="admin@harpia.local"
-					class="w-full rounded-lg border border-[#2A2D3A] bg-[#1A1B24] px-4 py-3 font-body text-[#F5F2EB] placeholder:text-[#6B7080] focus:border-[#C8920F] focus:outline-none transition-colors"
+					class="w-full rounded-lg border border-plumage bg-obsidian-light px-4 py-3 font-body text-cream placeholder:text-crown-ash-dark focus:border-talon-gold focus:outline-none focus:ring-1 focus:ring-talon-gold transition-colors"
 					style="font-family: 'DM Sans', sans-serif"
 				/>
 				<button
 					type="submit"
-					class="w-full cursor-pointer rounded-lg border border-[#2A2D3A] px-6 py-3 font-body text-sm text-[#9DA1AB] transition-colors hover:border-[#C8920F] hover:text-[#C8920F]"
+					class="w-full cursor-pointer rounded-lg border border-plumage px-6 py-3 font-body text-sm text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
 					style="font-family: 'DM Sans', sans-serif"
 				>
 					Continue with email

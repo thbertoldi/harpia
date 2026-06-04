@@ -1,25 +1,15 @@
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --radius: 0.5rem;
-  }
+@import "tailwindcss";
 
-  .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-  }
-
-  * {
-    border-color: hsl(var(--border, 240 5.9% 90%));
-  }
-
-  body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
-  }
+@theme {
+  --color-obsidian: #121318;
+  --color-obsidian-light: #1A1B24;
+  --color-plumage: #2A2D3A;
+  --color-talon-gold: #C8920F;
+  --color-talon-gold-bright: #E0A512;
+  --color-cream: #F5F2EB;
+  --color-crown-ash: #9DA1AB;
+  --color-crown-ash-dark: #6B7080;
+  --font-heading: 'Bodoni Moda', serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 }
