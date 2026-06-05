@@ -141,7 +141,7 @@
           {#each tasks as task (task.id)}
             <button
               onclick={() => selectTask(task)}
-              class="w-full rounded-lg border bg-card p-4 text-left transition-all duration-200 hover:border-talon-gold/50 hover:bg-obsidian-light {selectedTask?.id === task.id ? 'border-talon-gold bg-obsidian-light' : 'border-plumage'}"
+              class="w-full rounded-lg border bg-obsidian-light/60 p-4 text-left transition-all duration-200 hover:border-talon-gold/50 hover:bg-obsidian-light {selectedTask?.id === task.id ? 'border-talon-gold bg-obsidian-light' : 'border-plumage'}"
             >
               <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0 flex-1">

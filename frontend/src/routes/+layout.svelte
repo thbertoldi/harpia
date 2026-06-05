@@ -1,4 +1,5 @@
 <script lang="ts">
+	import '../app.css';
 	import { Menu, X, Sun, Moon, LayoutDashboard, Eye, Settings } from 'lucide-svelte';
 	import TenantSelector from '$lib/components/TenantSelector.svelte';
 	import FeedbackBadge from '$lib/components/FeedbackBadge.svelte';
@@ -55,7 +56,7 @@
 		<div class="h-full overflow-hidden transition-all duration-300 {navOpen ? 'w-64' : 'w-0'}">
 			<nav class="h-full w-64 border-r border-plumage bg-obsidian px-4 py-6">
 				<div class="mb-8 flex items-center justify-between">
-					<span class="font-heading text-xl font-semibold text-talon-gold" style="font-family: 'Bodoni Moda', serif">
+					<span class="text-xl font-semibold text-talon-gold" style="font-family: 'Bodoni Moda', serif">
 						Harpia
 					</span>
 					<button onclick={() => (navOpen = false)}
@@ -99,7 +100,7 @@
 							aria-label="Toggle navigation">
 							<Menu class="size-5" />
 						</button>
-						<span class="font-heading text-lg font-bold tracking-tight text-cream" style="font-family: 'Bodoni Moda', serif">
+						<span class="text-lg font-bold tracking-tight text-cream" style="font-family: 'Bodoni Moda', serif">
 							<span class="text-talon-gold">Harp</span>ia
 						</span>
 					</div>

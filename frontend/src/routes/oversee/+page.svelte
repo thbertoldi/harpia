@@ -119,7 +119,7 @@
 	</div>
 
 	{#if selectedId}
-		<div class="w-[480px] shrink-0 border-l border-plumage bg-card overflow-y-auto transition-all duration-300">
+		<div class="w-[480px] shrink-0 border-l border-plumage bg-obsidian-light overflow-y-auto transition-all duration-300">
 			<div class="flex items-center justify-between border-b border-plumage px-4 py-3">
 				<span class="font-mono text-[10px] uppercase tracking-widest text-crown-ash">Feedback Details</span>
 				<button

@@ -6,7 +6,7 @@ const PUBLIC_ROUTES = ["/login", "/auth/callback"];
 export const load: LayoutServerLoad = async ({ cookies, url }) => {
   const sessionCookie = cookies.get("harpia_session");
 
-  let user: { sub: string; email: string; name: string } | null = null;
+  let user: { sub: string; email: string; name: string; role?: string } | null = null;
 
   if (sessionCookie) {
     try {

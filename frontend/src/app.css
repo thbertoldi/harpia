@@ -9,7 +9,8 @@
   --color-cream: #F5F2EB;
   --color-crown-ash: #9DA1AB;
   --color-crown-ash-dark: #6B7080;
-  --font-heading: 'Bodoni Moda', serif;
-  --font-body: 'DM Sans', sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-heading: 'Manrope', system-ui, sans-serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-wordmark: 'Bodoni Moda', serif;
 }

@@ -16,8 +16,8 @@
   <div class="max-w-[75%] rounded-lg px-4 py-3 {role === 'user'
     ? 'bg-talon-gold text-obsidian ml-12'
     : role === 'system'
-      ? 'bg-muted text-muted-foreground text-sm'
-      : 'bg-card border text-card-foreground'}">
+      ? 'bg-plumage text-crown-ash text-sm'
+      : 'bg-obsidian-light border border-plumage text-cream'}">
     <p class="whitespace-pre-wrap font-body text-sm leading-relaxed">{content}</p>
     {#if timestamp}
       <span class="mt-1 block text-xs opacity-60 font-mono">{timestamp}</span>

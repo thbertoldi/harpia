@@ -1,9 +1,15 @@
+import { env } from "$env/dynamic/public";
+
 const ZITADEL_CONFIG = {
-  issuer: "http://localhost:8085",
-  clientId: "CHANGE_ME",
+  issuer: env.PUBLIC_ZITADEL_ISSUER ?? "http://localhost:8085",
+  clientId: env.PUBLIC_ZITADEL_CLIENT_ID ?? "",
   redirectUri: "http://localhost:5173/auth/callback",
   scope: "openid profile email",
 };
+
+export function isZitadelConfigured(): boolean {
+  return ZITADEL_CONFIG.clientId.length > 0;
+}
 
 interface User {
   sub: string;
@@ -156,22 +162,23 @@ export function logout(): void {
   window.location.href = "/login";
 }
 
+const DEV_PERSONAS: Record<string, { sub: string; email: string; name: string }> = {
+  Leader: { sub: 'dev-leader', email: 'leader@harpia.local', name: 'Lena Leader' },
+  Overseer: { sub: 'dev-overseer', email: 'overseer@harpia.local', name: 'Owen Overseer' },
+  Engineer: { sub: 'dev-engineer', email: 'engineer@harpia.local', name: 'Eli Engineer' },
+};
+
 export function devLogin(role: string = 'Leader'): Session {
+  const persona = DEV_PERSONAS[role] ?? DEV_PERSONAS.Leader;
   const session: Session = {
-    user: {
-      sub: 'dev-user',
-      email: 'dev@harpia.local',
-      name: 'Dev User',
-      role,
-    },
+    user: { ...persona, role },
     tenant: { id: 'dev', name: 'Dev Workspace' },
-    tokens: {
-      access_token: 'dev-token',
-      id_token: 'dev-token',
-    },
+    tokens: { access_token: 'dev-token', id_token: 'dev-token' },
   };
   localStorage.setItem('harpia_session', JSON.stringify(session));
-  document.cookie = `harpia_session=${encodeURIComponent(JSON.stringify(session))}; path=/; SameSite=Lax`;
+  document.cookie = `harpia_session=${encodeURIComponent(
+    JSON.stringify({ sub: session.user.sub, email: session.user.email, name: session.user.name, role }),
+  )}; path=/; SameSite=Lax`;
   return session;
 }
 

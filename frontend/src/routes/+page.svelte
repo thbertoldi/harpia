@@ -135,7 +135,7 @@
               <button
                 onclick={() => handleSubmit(example)}
                 disabled={loading}
-                class="flex items-center gap-2 rounded-lg border border-plumage px-4 py-3 text-left font-body text-sm text-foreground transition-all hover:border-talon-gold hover:bg-talon-gold/5 disabled:opacity-50"
+                class="flex items-center gap-2 rounded-lg border border-plumage bg-obsidian-light/60 px-4 py-3 text-left font-body text-sm text-cream transition-all hover:border-talon-gold hover:bg-obsidian-light disabled:opacity-50"
               >
                 <ArrowRight class="size-3.5 shrink-0 text-talon-gold" />
                 <span>{example}</span>
@@ -190,7 +190,7 @@
           </div>
         </div>
 
-        <div class="border-t p-4">
+        <div class="border-t border-plumage p-4">
           <div class="mx-auto max-w-2xl">
             <TaskInput onsubmit={handleSubmit} disabled={loading} placeholder="Follow up or refine your task..." />
           </div>
@@ -201,8 +201,8 @@
 
   <!-- Task status panel (visible when task is created) -->
   {#if taskCreated && task}
-    <div class="w-[40%] border-l bg-card overflow-y-auto transition-all duration-500">
-      <div class="flex items-center justify-between border-b px-4 py-3">
+    <div class="w-[40%] border-l border-plumage bg-obsidian-light overflow-y-auto transition-all duration-500">
+      <div class="flex items-center justify-between border-b border-plumage px-4 py-3">
         <HarpyHeading tag="h3" class="text-base">Task Status</HarpyHeading>
         <button
           onclick={viewDashboard}
@@ -216,17 +216,17 @@
       <div class="p-4 space-y-4">
         <div>
           <p class="font-mono text-[10px] uppercase tracking-widest text-crown-ash mb-1">Task</p>
-          <p class="font-body text-sm font-medium">{task.title}</p>
+          <p class="font-body text-sm font-medium text-cream">{task.title}</p>
         </div>
 
         <div>
           <p class="font-mono text-[10px] uppercase tracking-widest text-crown-ash mb-1">Description</p>
-          <p class="font-body text-sm text-muted-foreground">{task.description}</p>
+          <p class="font-body text-sm text-crown-ash">{task.description}</p>
         </div>
 
         <div>
           <p class="font-mono text-[10px] uppercase tracking-widest text-crown-ash mb-2">Progress</p>
-          <div class="h-2 w-full rounded-full bg-muted overflow-hidden">
+          <div class="h-2 w-full rounded-full bg-plumage overflow-hidden">
             {#if task.status === TaskStatus.COMPLETED}
               <div class="h-full w-full rounded-full bg-green-500 transition-all duration-500"></div>
             {:else if task.status === TaskStatus.FAILED}
@@ -250,7 +250,7 @@
             <p class="font-mono text-[10px] uppercase tracking-widest text-crown-ash mb-2">Subtasks</p>
             <ul class="space-y-2">
               {#each task.subtasks as subtask}
-                <li class="flex items-start gap-2 rounded-lg border p-2.5">
+                <li class="flex items-start gap-2 rounded-lg border border-plumage bg-obsidian/60 p-2.5">
                   <span
                     class="mt-0.5 h-2 w-2 shrink-0 rounded-full {subtask.status === 4
                       ? 'bg-green-500'
@@ -261,7 +261,7 @@
                           : 'bg-crown-ash'}"
                   ></span>
                   <div class="min-w-0 flex-1">
-                    <p class="font-body text-xs">{subtask.description}</p>
+                    <p class="font-body text-xs text-cream">{subtask.description}</p>
                     {#if subtask.assignedAgentId}
                       <p class="font-mono text-[10px] text-crown-ash mt-0.5">Agent: {subtask.assignedAgentId.slice(0, 8)}...</p>
                     {/if}

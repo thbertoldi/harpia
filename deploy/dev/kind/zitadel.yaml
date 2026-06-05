@@ -1,4 +1,24 @@
 # Harpia Dev — Zitadel OIDC identity provider
+#
+# On first boot Zitadel runs `start-from-init` and provisions:
+#   - First Instance with org "Harpia"
+#   - Human admin: admin@harpia.local (verified) / HarpiaAdmin1!
+#   - Machine user "zitadel-admin-sa" with IAM_OWNER role
+#   - Personal Access Token written to /machinekey/zitadel-admin-sa.pat
+# The PAT is then consumed by the zitadel-register-client Job to register
+# the Harpia Web OIDC application via the Management API.
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: zitadel-machinekey
+  labels:
+    app: zitadel
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 16Mi
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -8,6 +28,8 @@ metadata:
     app: zitadel
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: zitadel
@@ -17,6 +39,10 @@ spec:
         app: zitadel
     spec:
       enableServiceLinks: false
+      volumes:
+        - name: machinekey
+          persistentVolumeClaim:
+            claimName: zitadel-machinekey
       containers:
         - name: zitadel
           image: ghcr.io/zitadel/zitadel:v2.62.0
@@ -27,7 +53,11 @@ spec:
             - "disabled"
           ports:
             - containerPort: 8080
+          volumeMounts:
+            - name: machinekey
+              mountPath: /machinekey
           env:
+            # ---- Database ----
             - name: ZITADEL_DATABASE_POSTGRES_HOST
               value: postgres
             - name: ZITADEL_DATABASE_POSTGRES_PORT
@@ -46,24 +76,35 @@ spec:
               value: disable
             - name: ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE
               value: disable
+            # ---- Network ----
             - name: ZITADEL_EXTERNALDOMAIN
-              value: "localhost:8085"
+              value: "localhost"
             - name: ZITADEL_EXTERNALPORT
               value: "8085"
             - name: ZITADEL_EXTERNALSECURE
               value: "false"
             - name: ZITADEL_TLS_ENABLED
               value: "false"
+            # ---- First Instance bootstrap ----
+            - name: ZITADEL_FIRSTINSTANCE_PATPATH
+              value: /machinekey/zitadel-admin-sa.pat
             - name: ZITADEL_FIRSTINSTANCE_ORG_NAME
               value: Harpia
-            - name: ZITADEL_FIRSTINSTANCE_HUMAN_EMAIL
-              value: admin@harpia.local
-            - name: ZITADEL_FIRSTINSTANCE_HUMAN_USERNAME
+            - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME
               value: admin
-            - name: ZITADEL_FIRSTINSTANCE_HUMAN_PASSWORD
+            - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD
               value: HarpiaAdmin1!
-            - name: ZITADEL_FIRSTINSTANCE_HUMAN_EMAIL_VERIFIED
+            - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_ADDRESS
+              value: admin@harpia.local
+            - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_VERIFIED
               value: "true"
+            - name: ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_USERNAME
+              value: zitadel-admin-sa
+            - name: ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_NAME
+              value: Admin Service Account
+            - name: ZITADEL_FIRSTINSTANCE_ORG_MACHINE_PAT_EXPIRATIONDATE
+              value: "2099-01-01T00:00:00Z"
+            # ---- Masterkey (DB encryption only, NOT for API auth) ----
             - name: ZITADEL_MASTERKEY
               value: uLGG7IoNMEk58Ik942cZFRmaMnio/3oI
 ---

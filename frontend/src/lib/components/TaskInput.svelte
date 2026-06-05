@@ -25,13 +25,13 @@
 </script>
 
 <form onsubmit={handleSubmit} class="w-full max-w-2xl mx-auto">
-  <div class="flex items-center gap-2 rounded-lg border bg-card p-1 transition-all focus-within:border-talon-gold focus-within:ring-2 focus-within:ring-talon-gold/20">
+  <div class="flex items-center gap-2 rounded-lg border border-plumage bg-obsidian-light p-1 transition-all focus-within:border-talon-gold focus-within:ring-2 focus-within:ring-talon-gold/20">
     <input
       type="text"
       bind:value
       {disabled}
       {placeholder}
-      class="flex-1 bg-transparent px-4 py-3 text-foreground placeholder:text-crown-ash outline-none font-body text-lg"
+      class="flex-1 bg-transparent px-4 py-3 text-cream placeholder:text-crown-ash outline-none font-body text-lg"
     />
     <button
       type="submit"

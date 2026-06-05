@@ -1,68 +1,153 @@
-# Harpia Dev — Zitadel readiness check + registration instructions
-# NOTE: Zitadel's masterkey is for DB encryption, not API authentication.
-# OIDC client registration must be done manually via the Console UI.
-# See deploy/dev/README.md for step-by-step instructions.
+# Harpia Dev — Zitadel post-init: register Harpia Web OIDC application.
+#
+# Reads the admin PAT written by Zitadel's first-instance bootstrap (see zitadel.yaml),
+# waits for OIDC discovery to come up, then calls the Management API to create:
+#   - Project "Harpia"
+#   - OIDC App "Harpia Web" (PKCE, no client secret, redirect localhost:5173)
+# The resulting client_id is published as ConfigMap/harpia-oidc-config (key: clientId)
+# so the frontend can pick it up via scripts/sync-oidc-config.sh.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: zitadel-register
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: zitadel-register
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "create", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: zitadel-register
+subjects:
+  - kind: ServiceAccount
+    name: zitadel-register
+roleRef:
+  kind: Role
+  name: zitadel-register
+  apiGroup: rbac.authorization.k8s.io
+---
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: zitadel-ready-check
+  name: zitadel-register-client
 spec:
-  ttlSecondsAfterFinished: 300
+  backoffLimit: 6
+  ttlSecondsAfterFinished: 86400
   template:
     spec:
       restartPolicy: OnFailure
+      serviceAccountName: zitadel-register
+      volumes:
+        - name: machinekey
+          persistentVolumeClaim:
+            claimName: zitadel-machinekey
       containers:
-        - name: ready-check
-          image: curlimages/curl:8.9.0
-          command: ["/bin/sh", "-c"]
+        - name: register
+          image: alpine/k8s:1.31.0
+          volumeMounts:
+            - name: machinekey
+              mountPath: /machinekey
+              readOnly: true
+          command: ["/bin/sh", "-eu", "-c"]
           args:
             - |
               ZITADEL_URL="http://zitadel:8080"
+              PAT_FILE=/machinekey/zitadel-admin-sa.pat
+              REDIRECT_URI="http://localhost:5173/auth/callback"
+              LOGOUT_URI="http://localhost:5173"
 
-              echo "============================================"
-              echo "Zitadel Readiness Check"
-              echo "============================================"
-              echo ""
-
-              echo "Waiting for Zitadel to be ready..."
-              RETRIES=0
-              until curl -sf -H "Host: localhost:8085" "$ZITADEL_URL/.well-known/openid-configuration" > /dev/null 2>&1; do
-                RETRIES=$((RETRIES + 1))
-                if [ "$RETRIES" -gt 60 ]; then
-                  echo "ERROR: Zitadel did not become ready after 120 seconds"
-                  exit 1
-                fi
+              echo "[1/5] Waiting for PAT file..."
+              for i in $(seq 1 120); do
+                [ -s "$PAT_FILE" ] && break
                 sleep 2
               done
-              echo "Zitadel is ready!"
-              echo ""
+              [ -s "$PAT_FILE" ] || { echo "ERROR: PAT not emitted at $PAT_FILE"; exit 1; }
+              PAT=$(cat "$PAT_FILE")
+              echo "  PAT loaded (len=${#PAT})"
 
-              echo "Verifying OIDC discovery..."
-              curl -s -H "Host: localhost:8085" "$ZITADEL_URL/.well-known/openid-configuration" | head -c 200
-              echo ""
-              echo ""
+              echo "[2/5] Waiting for Zitadel OIDC discovery..."
+              for i in $(seq 1 120); do
+                curl -sf -H "Host: localhost:8085" "$ZITADEL_URL/.well-known/openid-configuration" >/dev/null 2>&1 && break
+                sleep 2
+              done
 
-              echo "============================================"
-              echo "NEXT STEPS: Register the OIDC Client"
-              echo "============================================"
+              api() {
+                method=$1; path=$2; body=${3:-}
+                if [ -n "$body" ]; then
+                  curl -sS -X "$method" "$ZITADEL_URL$path" \
+                    -H "Authorization: Bearer $PAT" \
+                    -H "Content-Type: application/json" \
+                    -H "Host: localhost:8085" \
+                    -d "$body"
+                else
+                  curl -sS -X "$method" "$ZITADEL_URL$path" \
+                    -H "Authorization: Bearer $PAT" \
+                    -H "Host: localhost:8085"
+                fi
+              }
+
+              echo "[3/5] Creating project 'Harpia' (idempotent)..."
+              EXISTING=$(api POST /management/v1/projects/_search '{"queries":[{"nameQuery":{"name":"Harpia","method":"TEXT_QUERY_METHOD_EQUALS"}}]}')
+              PROJECT_ID=$(echo "$EXISTING" | grep -oE '"id":"[0-9]+"' | head -1 | sed 's/.*"\([0-9]*\)"$/\1/')
+              if [ -z "$PROJECT_ID" ]; then
+                CREATE=$(api POST /management/v1/projects '{"name":"Harpia"}')
+                echo "  create response: $CREATE"
+                PROJECT_ID=$(echo "$CREATE" | grep -oE '"id":"[0-9]+"' | head -1 | sed 's/.*"\([0-9]*\)"$/\1/')
+              fi
+              [ -n "$PROJECT_ID" ] || { echo "ERROR: could not resolve project id"; exit 1; }
+              echo "  project_id=$PROJECT_ID"
+
+              echo "[4/5] Creating OIDC app 'Harpia Web' (idempotent)..."
+              APP_BODY='{
+                "name":"Harpia Web",
+                "redirectUris":["'"$REDIRECT_URI"'"],
+                "responseTypes":["OIDC_RESPONSE_TYPE_CODE"],
+                "grantTypes":["OIDC_GRANT_TYPE_AUTHORIZATION_CODE"],
+                "appType":"OIDC_APP_TYPE_USER_AGENT",
+                "authMethodType":"OIDC_AUTH_METHOD_TYPE_NONE",
+                "postLogoutRedirectUris":["'"$LOGOUT_URI"'"],
+                "version":"OIDC_VERSION_1_0",
+                "devMode":true,
+                "accessTokenType":"OIDC_TOKEN_TYPE_BEARER",
+                "idTokenRoleAssertion":true,
+                "idTokenUserinfoAssertion":true,
+                "clockSkew":"0s"
+              }'
+              EXISTING_APPS=$(api POST "/management/v1/projects/$PROJECT_ID/apps/_search" \
+                '{"queries":[{"nameQuery":{"name":"Harpia Web","method":"TEXT_QUERY_METHOD_EQUALS"}}]}')
+              APP_ID=$(echo "$EXISTING_APPS" | grep -oE '"id":"[0-9]+"' | head -1 | sed 's/.*"\([0-9]*\)"$/\1/')
+              if [ -z "$APP_ID" ]; then
+                APP_CREATE=$(api POST "/management/v1/projects/$PROJECT_ID/apps/oidc" "$APP_BODY")
+                echo "  create response: $APP_CREATE"
+                APP_ID=$(echo "$APP_CREATE" | grep -oE '"appId":"[0-9]+"' | head -1 | sed 's/.*"\([0-9]*\)"$/\1/')
+                CLIENT_ID=$(echo "$APP_CREATE" | grep -oE '"clientId":"[^"]+"' | head -1 | sed 's/.*"\([^"]*\)"$/\1/')
+              else
+                # App exists — fetch full record for clientId
+                APP_GET=$(api GET "/management/v1/projects/$PROJECT_ID/apps/$APP_ID")
+                CLIENT_ID=$(echo "$APP_GET" | grep -oE '"clientId":"[^"]+"' | head -1 | sed 's/.*"\([^"]*\)"$/\1/')
+              fi
+              [ -n "$CLIENT_ID" ] || { echo "ERROR: could not resolve clientId"; exit 1; }
+              echo "  app_id=$APP_ID client_id=$CLIENT_ID"
+
+              echo "[5/5] Publishing client_id to ConfigMap 'harpia-oidc-config'..."
+              kubectl create configmap harpia-oidc-config \
+                --from-literal=clientId="$CLIENT_ID" \
+                --from-literal=issuer="http://localhost:8085" \
+                --from-literal=projectId="$PROJECT_ID" \
+                --from-literal=appId="$APP_ID" \
+                --dry-run=client -o yaml | kubectl apply -f -
+
               echo ""
-              echo "1. Port-forward Zitadel:"
-              echo "   kubectl port-forward svc/zitadel 8085:8080"
-              echo ""
-              echo "2. Open Zitadel Console:"
-              echo "   http://localhost:8085/ui/console"
-              echo ""
-              echo "3. Login: admin@harpia.local / HarpiaAdmin1!"
-              echo ""
-              echo "4. Create Project 'Harpia' if it doesn't exist"
-              echo ""
-              echo "5. Under the project, create a Web application:"
-              echo "   - Name: Harpia Web"
-              echo "   - Auth Method: None (PKCE)"
-              echo "   - Redirect URI: http://localhost:5173/auth/callback"
-              echo "   - Post-Logout URI: http://localhost:5173"
-              echo ""
-              echo "6. Copy the Client ID to frontend/src/lib/auth.ts"
-              echo ""
-              echo "See deploy/dev/README.md for detailed instructions."
-              echo "============================================"
+              echo "========================================"
+              echo "OIDC client registered."
+              echo "  clientId = $CLIENT_ID"
+              echo "  issuer   = http://localhost:8085"
+              echo "On host, run:  ./scripts/sync-oidc-config.sh"
+              echo "========================================"

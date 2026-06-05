@@ -6,6 +6,6 @@
   } = $props();
 </script>
 
-<svelte:element this={tag} class="font-heading tracking-tight text-talon-gold {className}" style="font-family: 'Bodoni Moda', serif">
+<svelte:element this={tag} class="font-heading tracking-tight text-talon-gold {className}">
   {@render children()}
 </svelte:element>
