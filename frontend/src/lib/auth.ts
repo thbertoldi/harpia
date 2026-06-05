@@ -1,7 +1,5 @@
 const ZITADEL_CONFIG = {
   issuer: "http://localhost:8085",
-  // Update this with the Client ID from Zitadel auto-registration
-  // or the Zitadel Console (see deploy/dev/README.md)
   clientId: "CHANGE_ME",
   redirectUri: "http://localhost:5173/auth/callback",
   scope: "openid profile email",

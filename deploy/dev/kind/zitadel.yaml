@@ -47,7 +47,7 @@ spec:
             - name: ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE
               value: disable
             - name: ZITADEL_EXTERNALDOMAIN
-              value: "localhost"
+              value: "localhost:8085"
             - name: ZITADEL_EXTERNALPORT
               value: "8085"
             - name: ZITADEL_EXTERNALSECURE
