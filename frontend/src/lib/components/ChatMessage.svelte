@@ -15,22 +15,22 @@
     <div
       class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-talon-gold/20"
     >
-      <span class="font-heading text-xs text-talon-gold font-bold">H</span>
+      <span class="font-heading text-xs font-bold text-talon-gold">H</span>
     </div>
   {/if}
 
   <div
     class="max-w-[75%] rounded-lg px-4 py-3 {role === 'user'
-      ? 'bg-talon-gold text-obsidian ml-12'
+      ? 'ml-12 bg-talon-gold text-obsidian'
       : role === 'system'
-        ? 'bg-plumage text-crown-ash text-sm'
-        : 'bg-obsidian-light border border-plumage text-cream'}"
+        ? 'bg-plumage text-sm text-crown-ash'
+        : 'border border-plumage bg-obsidian-light text-cream'}"
   >
-    <p class="whitespace-pre-wrap font-body text-sm leading-relaxed">
+    <p class="font-body text-sm leading-relaxed whitespace-pre-wrap">
       {content}
     </p>
     {#if timestamp}
-      <span class="mt-1 block text-xs opacity-60 font-mono">{timestamp}</span>
+      <span class="mt-1 block font-mono text-xs opacity-60">{timestamp}</span>
     {/if}
   </div>
 
@@ -38,7 +38,7 @@
     <div
       class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-crown-ash/20"
     >
-      <span class="font-heading text-xs text-crown-ash font-bold">U</span>
+      <span class="font-heading text-xs font-bold text-crown-ash">U</span>
     </div>
   {/if}
 </div>

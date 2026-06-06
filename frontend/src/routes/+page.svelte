@@ -109,7 +109,7 @@
 <div class="flex flex-1">
   <!-- Chat area -->
   <div
-    class="flex flex-1 flex-col min-h-0 {taskCreated
+    class="flex min-h-0 flex-1 flex-col {taskCreated
       ? 'max-w-[60%]'
       : ''} transition-all duration-500"
   >
@@ -132,15 +132,15 @@
           </svg>
         </div>
 
-        <HarpyHeading tag="h1" class="text-5xl font-bold mb-3 text-center">
+        <HarpyHeading tag="h1" class="mb-3 text-center text-5xl font-bold">
           What do you want to get done?
         </HarpyHeading>
 
-        <p class="font-body text-lg text-crown-ash mb-10 text-center">
+        <p class="mb-10 text-center font-body text-lg text-crown-ash">
           Describe your task in natural language. Harpia handles the rest.
         </p>
 
-        <div class="w-full mb-12">
+        <div class="mb-12 w-full">
           <TaskInput onsubmit={handleSubmit} disabled={loading} />
         </div>
 
@@ -153,11 +153,11 @@
 
         <div class="mt-8 w-full max-w-2xl">
           <p
-            class="font-mono text-xs uppercase tracking-widest text-crown-ash mb-3"
+            class="mb-3 font-mono text-xs tracking-widest text-crown-ash uppercase"
           >
             Try asking
           </p>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {#each exampleTasks as example (example)}
               <button
                 onclick={() => handleSubmit(example)}
@@ -181,7 +181,7 @@
       </div>
     {:else}
       <!-- Chat state -->
-      <div class="flex flex-1 flex-col min-h-0">
+      <div class="flex min-h-0 flex-1 flex-col">
         {#if !dismissed && task}
           <div
             class="mx-4 mt-4 rounded-lg border border-talon-gold/30 bg-talon-gold/10 p-4 lg:mx-6"
@@ -241,7 +241,7 @@
   <!-- Task status panel (visible when task is created) -->
   {#if taskCreated && task}
     <div
-      class="w-[40%] border-l border-plumage bg-obsidian-light overflow-y-auto transition-all duration-500"
+      class="w-[40%] overflow-y-auto border-l border-plumage bg-obsidian-light transition-all duration-500"
     >
       <div
         class="flex items-center justify-between border-b border-plumage px-4 py-3"
@@ -256,10 +256,10 @@
         </button>
       </div>
 
-      <div class="p-4 space-y-4">
+      <div class="space-y-4 p-4">
         <div>
           <p
-            class="font-mono text-[10px] uppercase tracking-widest text-crown-ash mb-1"
+            class="mb-1 font-mono text-[10px] tracking-widest text-crown-ash uppercase"
           >
             Task
           </p>
@@ -268,7 +268,7 @@
 
         <div>
           <p
-            class="font-mono text-[10px] uppercase tracking-widest text-crown-ash mb-1"
+            class="mb-1 font-mono text-[10px] tracking-widest text-crown-ash uppercase"
           >
             Description
           </p>
@@ -277,11 +277,11 @@
 
         <div>
           <p
-            class="font-mono text-[10px] uppercase tracking-widest text-crown-ash mb-2"
+            class="mb-2 font-mono text-[10px] tracking-widest text-crown-ash uppercase"
           >
             Progress
           </p>
-          <div class="h-2 w-full rounded-full bg-plumage overflow-hidden">
+          <div class="h-2 w-full overflow-hidden rounded-full bg-plumage">
             {#if task.status === TaskStatus.COMPLETED}
               <div
                 class="h-full w-full rounded-full bg-green-500 transition-all duration-500"
@@ -292,11 +292,11 @@
               ></div>
             {:else if task.status === TaskStatus.IN_PROGRESS}
               <div
-                class="h-full w-3/4 rounded-full bg-talon-gold animate-pulse transition-all duration-500"
+                class="h-full w-3/4 animate-pulse rounded-full bg-talon-gold transition-all duration-500"
               ></div>
             {:else if task.status === TaskStatus.PLANNING}
               <div
-                class="h-full w-1/4 rounded-full bg-talon-gold animate-pulse transition-all duration-500"
+                class="h-full w-1/4 animate-pulse rounded-full bg-talon-gold transition-all duration-500"
               ></div>
             {:else if task.status === TaskStatus.AWAITING_FEEDBACK}
               <div
@@ -317,7 +317,7 @@
         {#if task.subtasks && task.subtasks.length > 0}
           <div>
             <p
-              class="font-mono text-[10px] uppercase tracking-widest text-crown-ash mb-2"
+              class="mb-2 font-mono text-[10px] tracking-widest text-crown-ash uppercase"
             >
               Subtasks
             </p>
@@ -341,7 +341,7 @@
                       {subtask.description}
                     </p>
                     {#if subtask.assignedAgentId}
-                      <p class="font-mono text-[10px] text-crown-ash mt-0.5">
+                      <p class="mt-0.5 font-mono text-[10px] text-crown-ash">
                         Agent: {subtask.assignedAgentId.slice(0, 8)}...
                       </p>
                     {/if}

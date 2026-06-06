@@ -37,7 +37,7 @@
   <div class="flex flex-1 flex-col items-center justify-center px-8">
     {#if error}
       <h1
-        class="font-[Bodoni_Moda] text-4xl font-bold text-[#C8920F] tracking-tight"
+        class="font-[Bodoni_Moda] text-4xl font-bold tracking-tight text-[#C8920F]"
       >
         Authentication failed
       </h1>

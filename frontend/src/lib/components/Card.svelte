@@ -9,7 +9,7 @@
 </script>
 
 <div
-  class="rounded-lg border border-plumage bg-obsidian-light text-cream shadow-sm p-6"
+  class="rounded-lg border border-plumage bg-obsidian-light p-6 text-cream shadow-sm"
   {...rest}
 >
   {@render children()}

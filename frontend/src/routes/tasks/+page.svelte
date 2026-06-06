@@ -134,7 +134,7 @@
         </p>
         <button
           onclick={handleNewTask}
-          class="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-talon-gold px-6 py-3 font-heading text-lg font-bold text-obsidian transition-all hover:bg-talon-gold-bright hover:scale-105"
+          class="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-talon-gold px-6 py-3 font-heading text-lg font-bold text-obsidian transition-all hover:scale-105 hover:bg-talon-gold-bright"
         >
           <Sparkles class="size-5" />
           Create Your First Task
@@ -154,13 +154,13 @@
               <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0 flex-1">
                   <p
-                    class="font-heading text-base font-semibold text-cream truncate"
+                    class="truncate font-heading text-base font-semibold text-cream"
                   >
                     {task.title}
                   </p>
                   {#if task.description}
                     <p
-                      class="mt-1 font-body text-sm text-crown-ash line-clamp-2"
+                      class="mt-1 line-clamp-2 font-body text-sm text-crown-ash"
                     >
                       {descriptionPreview(task.description)}
                     </p>
@@ -169,7 +169,7 @@
                 <StatusBadge status={task.status} pulsing={true} />
               </div>
               <div
-                class="mt-2 flex items-center gap-4 font-mono text-[10px] uppercase tracking-wider text-crown-ash-dark"
+                class="mt-2 flex items-center gap-4 font-mono text-[10px] tracking-wider text-crown-ash-dark uppercase"
               >
                 <span>{formattedDate(task.createdAt)}</span>
                 {#if task.subtasks?.length}
