@@ -24,7 +24,7 @@ We need a development environment that:
 [tools]
 go = "1.24"
 python = "3.12"
-node = "22"
+node = "24"
 bun = "latest"
 uv = "latest"
 
