@@ -4,6 +4,12 @@
 # waits for OIDC discovery to come up, then calls the Management API to create:
 #   - Project "Harpia"
 #   - OIDC App "Harpia Web" (PKCE, no client secret, redirect localhost:5173)
+#
+# App type: OIDC_APP_TYPE_NATIVE (not USER_AGENT). The SPA runs in a browser but
+# dev redirect URIs use http://localhost — loopback HTTP is OIDC-compliant for
+# native clients. USER_AGENT + http:// triggers noneCompliant /
+# RedirectUris.HttpOnlyForWeb even with devMode:true; native avoids that log noise
+# while keeping the same PKCE authorization-code flow.
 # The resulting client_id is published as ConfigMap/harpia-oidc-config (key: clientId)
 # so the frontend can pick it up via scripts/sync-oidc-config.sh.
 ---
@@ -81,15 +87,33 @@ spec:
               api() {
                 method=$1; path=$2; body=${3:-}
                 if [ -n "$body" ]; then
-                  curl -sS -X "$method" "$ZITADEL_URL$path" \
+                  curl -sfS -X "$method" "$ZITADEL_URL$path" \
                     -H "Authorization: Bearer $PAT" \
                     -H "Content-Type: application/json" \
                     -H "Host: localhost:8085" \
                     -d "$body"
                 else
-                  curl -sS -X "$method" "$ZITADEL_URL$path" \
+                  curl -sfS -X "$method" "$ZITADEL_URL$path" \
                     -H "Authorization: Bearer $PAT" \
                     -H "Host: localhost:8085"
+                fi
+              }
+
+              # Log OIDC registration outcomes without dumping complianceProblems JSON.
+              summarize_oidc_response() {
+                resp=$1
+                client_id=$(echo "$resp" | grep -oE '"clientId":"[^"]+"' | head -1 | sed 's/.*"\([^"]*\)"$/\1/')
+                app_id=$(echo "$resp" | grep -oE '"appId":"[0-9]+"' | head -1 | sed 's/.*"\([0-9]*\)"$/\1/')
+                none_compliant=$(echo "$resp" | grep -oE '"noneCompliant":(true|false)' | head -1 | cut -d: -f2)
+                echo "clientId=${client_id:-?} appId=${app_id:-?} noneCompliant=${none_compliant:-unknown}"
+              }
+
+              require_native_app() {
+                resp=$1
+                context=$2
+                if ! echo "$resp" | grep -q 'OIDC_APP_TYPE_NATIVE'; then
+                  echo "ERROR: $context — expected appType OIDC_APP_TYPE_NATIVE"
+                  exit 1
                 fi
               }
 
@@ -105,12 +129,11 @@ spec:
               echo "  project_id=$PROJECT_ID"
 
               echo "[4/5] Creating OIDC app 'Harpia Web' (idempotent)..."
-              APP_BODY='{
-                "name":"Harpia Web",
+              OIDC_CONFIG='{
                 "redirectUris":["'"$REDIRECT_URI"'"],
                 "responseTypes":["OIDC_RESPONSE_TYPE_CODE"],
                 "grantTypes":["OIDC_GRANT_TYPE_AUTHORIZATION_CODE"],
-                "appType":"OIDC_APP_TYPE_USER_AGENT",
+                "appType":"OIDC_APP_TYPE_NATIVE",
                 "authMethodType":"OIDC_AUTH_METHOD_TYPE_NONE",
                 "postLogoutRedirectUris":["'"$LOGOUT_URI"'"],
                 "version":"OIDC_VERSION_1_0",
@@ -120,17 +143,22 @@ spec:
                 "idTokenUserinfoAssertion":true,
                 "clockSkew":"0s"
               }'
+              APP_BODY='{"name":"Harpia Web",'"${OIDC_CONFIG#\{}"
               EXISTING_APPS=$(api POST "/management/v1/projects/$PROJECT_ID/apps/_search" \
                 '{"queries":[{"nameQuery":{"name":"Harpia Web","method":"TEXT_QUERY_METHOD_EQUALS"}}]}')
               APP_ID=$(echo "$EXISTING_APPS" | grep -oE '"id":"[0-9]+"' | head -1 | sed 's/.*"\([0-9]*\)"$/\1/')
               if [ -z "$APP_ID" ]; then
                 APP_CREATE=$(api POST "/management/v1/projects/$PROJECT_ID/apps/oidc" "$APP_BODY")
-                echo "  create response: $APP_CREATE"
+                require_native_app "$APP_CREATE" "create response"
+                echo "  create: $(summarize_oidc_response "$APP_CREATE")"
                 APP_ID=$(echo "$APP_CREATE" | grep -oE '"appId":"[0-9]+"' | head -1 | sed 's/.*"\([0-9]*\)"$/\1/')
                 CLIENT_ID=$(echo "$APP_CREATE" | grep -oE '"clientId":"[^"]+"' | head -1 | sed 's/.*"\([^"]*\)"$/\1/')
               else
-                # App exists — fetch full record for clientId
+                echo "  app exists (id=$APP_ID), reconciling OIDC config to NATIVE..."
+                api PUT "/management/v1/projects/$PROJECT_ID/apps/$APP_ID/oidc_config" "$OIDC_CONFIG" >/dev/null
                 APP_GET=$(api GET "/management/v1/projects/$PROJECT_ID/apps/$APP_ID")
+                require_native_app "$APP_GET" "reconcile GET"
+                echo "  reconcile: $(summarize_oidc_response "$APP_GET")"
                 CLIENT_ID=$(echo "$APP_GET" | grep -oE '"clientId":"[^"]+"' | head -1 | sed 's/.*"\([^"]*\)"$/\1/')
               fi
               [ -n "$CLIENT_ID" ] || { echo "ERROR: could not resolve clientId"; exit 1; }
