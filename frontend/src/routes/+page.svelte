@@ -5,9 +5,8 @@
   import TaskInput from "$lib/components/TaskInput.svelte";
   import ChatMessage from "$lib/components/ChatMessage.svelte";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
-  import { createTask, watchTask } from "$lib/client";
-  import type { Task } from "$lib/types";
-  import { TaskStatus } from "$lib/types";
+  import { toUserMessage } from "$lib/connect-errors";
+  import { taskClient, TaskStatus, type Task } from "$lib/rpc";
 
   let taskCreated = $state(false);
   let task: Task | null = $state(null);
@@ -41,12 +40,16 @@
     chatMessages = [{ role: "user", content: text, timestamp: now() }];
 
     try {
-      const res = await createTask({
+      const res = await taskClient.createTask({
         tenantId: "default",
         workspaceId: "default",
         title: text.slice(0, 80),
         description: text,
       });
+
+      if (!res.task) {
+        throw new Error("Task creation returned no task");
+      }
 
       task = res.task;
       taskId = res.task.id;
@@ -60,22 +63,10 @@
         },
       ];
 
-      // Start streaming updates
-      watchTask(
-        "default",
-        res.task.id,
-        (updated) => {
-          task = updated;
-        },
-        (err) => {
-          error = err.message;
-        },
-      );
-
       // Redirect to the task dashboard
       goto(resolve(`/tasks#${res.task.id}`));
     } catch (e) {
-      error = e instanceof Error ? e.message : "Failed to create task";
+      error = toUserMessage(e);
       chatMessages = [
         ...chatMessages,
         { role: "system", content: `Error: ${error}`, timestamp: now() },

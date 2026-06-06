@@ -2,8 +2,9 @@
   import { Plus, Loader2, Sparkles, Bot, AlertTriangle } from "lucide-svelte";
   import { goto } from "$app/navigation";
   import { resolve } from "$app/paths";
-  import type { Task } from "$lib/types";
-  import { listTasks, watchTask } from "$lib/client";
+  import { onDestroy } from "svelte";
+  import { toUserMessage } from "$lib/connect-errors";
+  import { taskClient, type Task } from "$lib/rpc";
   import StatusBadge from "$lib/components/StatusBadge.svelte";
   import TaskDetail from "$lib/components/TaskDetail.svelte";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
@@ -12,6 +13,7 @@
   let selectedTask = $state<Task | null>(null);
   let loading = $state(true);
   let loadError = $state<string | null>(null);
+  let watchError = $state<string | null>(null);
   let watchController = $state<AbortController | null>(null);
   let tenantId = $state("default");
 
@@ -23,14 +25,17 @@
     loading = true;
     loadError = null;
     try {
-      const res = await listTasks({
+      const loadedTasks: Task[] = [];
+      for await (const res of taskClient.listTasks({
         tenantId,
         pageSize: 50,
         pageToken: "",
-      });
-      tasks = res.tasks;
+      })) {
+        loadedTasks.push(...res.tasks);
+      }
+      tasks = loadedTasks;
     } catch (e) {
-      loadError = e instanceof Error ? e.message : "Failed to load tasks";
+      loadError = toUserMessage(e);
     } finally {
       loading = false;
     }
@@ -41,18 +46,32 @@
       watchController.abort();
     }
     selectedTask = task;
+    watchError = null;
 
-    watchController = watchTask(
-      tenantId,
-      task.id,
-      (updated) => {
-        selectedTask = updated;
-        tasks = tasks.map((t) => (t.id === updated.id ? updated : t));
-      },
-      (err) => {
-        console.error("Watch stream error:", err);
-      },
-    );
+    const controller = new AbortController();
+    watchController = controller;
+
+    void (async () => {
+      try {
+        for await (const update of taskClient.watchTask(
+          { tenantId, taskId: task.id },
+          { signal: controller.signal },
+        )) {
+          if (controller.signal.aborted || update.task?.id !== task.id) {
+            break;
+          }
+
+          selectedTask = update.task;
+          tasks = tasks.map((t) =>
+            t.id === update.task?.id ? update.task : t,
+          );
+        }
+      } catch (e) {
+        if (!controller.signal.aborted) {
+          watchError = toUserMessage(e);
+        }
+      }
+    })();
   }
 
   function deselectTask() {
@@ -61,6 +80,7 @@
       watchController = null;
     }
     selectedTask = null;
+    watchError = null;
   }
 
   function handleNewTask() {
@@ -80,6 +100,10 @@
     if (!desc) return "";
     return desc.length > 100 ? desc.slice(0, 100) + "..." : desc;
   }
+
+  onDestroy(() => {
+    watchController?.abort();
+  });
 </script>
 
 <div class="flex h-[calc(100vh-3.5rem)]">
@@ -191,6 +215,11 @@
     <div
       class="hidden w-[55%] border-l border-plumage bg-obsidian transition-all duration-300 lg:block"
     >
+      {#if watchError}
+        <div class="border-b border-red-500/20 bg-red-500/10 px-4 py-2">
+          <p class="font-mono text-xs text-red-400">{watchError}</p>
+        </div>
+      {/if}
       <TaskDetail task={selectedTask} onclose={deselectTask} />
     </div>
   {/if}

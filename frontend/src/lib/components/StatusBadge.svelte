@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { TaskStatus } from "$lib/types";
+  import { TaskStatus } from "$lib/rpc";
 
   let {
     status,
