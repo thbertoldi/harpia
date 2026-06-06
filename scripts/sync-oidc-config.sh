@@ -28,4 +28,4 @@ EOF
 
 echo "Wrote $ENV_FILE"
 echo "  PUBLIC_ZITADEL_CLIENT_ID=$CLIENT_ID"
-echo "Restart vite (mise run dev) to pick up the new env."
+echo "Tilt restarts the vite local_resource when this file changes."

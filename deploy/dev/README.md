@@ -7,31 +7,35 @@
 ## Start
 
 ```bash
-kubectl apply -f deploy/dev/k3s/
-kubectl apply -f deploy/dev/kind/
+mise run dev   # Tilt: infra, Zitadel port-forward, OIDC sync, host Vite
 ```
 
-Apply the Zitadel init Job after Zitadel is ready:
+Tilt applies `deploy/dev/kind/` (including the Zitadel init Job), port-forwards Zitadel
+to localhost:8085, syncs the registered OIDC client into `frontend/.env.local`, and
+starts the Vite dev server on http://localhost:5173.
+
+Manual apply (without Tilt):
 
 ```bash
+kubectl apply -f deploy/dev/kind/
 kubectl wait --for=condition=Ready pod -l app=zitadel --timeout=120s
-kubectl create -f deploy/dev/kind/zitadel-init.yaml
+kubectl apply -f deploy/dev/kind/zitadel-init.yaml
 kubectl logs job/zitadel-register-client -f
+./scripts/sync-oidc-config.sh
 ```
 
 ## Access
 
 | Service       | URL                                   |
 | ------------- | ------------------------------------- |
-| Frontend      | http://localhost:5173                 |
+| Frontend      | http://localhost:5173 (host Vite via Tilt) |
 | Zitadel       | http://localhost:8085                 |
 | Zitadel Console | http://localhost:8085/ui/console    |
 
-Port-forward commands:
+Port-forward commands (only needed outside Tilt):
 
 ```bash
 kubectl port-forward svc/zitadel 8085:8080 &
-kubectl port-forward svc/harpia-frontend 5173:3000 &
 ```
 
 ## Zitadel

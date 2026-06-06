@@ -177,5 +177,5 @@ spec:
               echo "OIDC client registered."
               echo "  clientId = $CLIENT_ID"
               echo "  issuer   = http://localhost:8085"
-              echo "On host, run:  ./scripts/sync-oidc-config.sh"
+              echo "Tilt oidc-sync local_resource writes frontend/.env.local automatically."
               echo "========================================"
