@@ -2,15 +2,15 @@
 
 @theme {
   --color-obsidian: #121318;
-  --color-obsidian-light: #1A1B24;
-  --color-plumage: #2A2D3A;
-  --color-talon-gold: #C8920F;
-  --color-talon-gold-bright: #E0A512;
-  --color-cream: #F5F2EB;
-  --color-crown-ash: #9DA1AB;
-  --color-crown-ash-dark: #6B7080;
-  --font-heading: 'Manrope', system-ui, sans-serif;
-  --font-body: 'DM Sans', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
-  --font-wordmark: 'Bodoni Moda', serif;
+  --color-obsidian-light: #1a1b24;
+  --color-plumage: #2a2d3a;
+  --color-talon-gold: #c8920f;
+  --color-talon-gold-bright: #e0a512;
+  --color-cream: #f5f2eb;
+  --color-crown-ash: #9da1ab;
+  --color-crown-ash-dark: #6b7080;
+  --font-heading: "Manrope", system-ui, sans-serif;
+  --font-body: "DM Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-wordmark: "Bodoni Moda", serif;
 }
