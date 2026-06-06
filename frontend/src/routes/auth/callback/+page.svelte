@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { page } from '$app/stores';
 	import { handleCallback } from '$lib/auth';
 
@@ -21,7 +22,7 @@
 		}
 
 		handleCallback(code)
-			.then(() => goto('/'))
+			.then(() => goto(resolve('/')))
 			.catch((e: Error) => {
 				error = e.message || 'Authentication failed.';
 			});
@@ -42,7 +43,7 @@
 				{error}
 			</p>
 			<a
-				href="/login"
+				href={resolve('/login')}
 				class="mt-10 inline-block rounded-lg bg-[#C8920F] px-6 py-2.5 text-sm font-medium text-[#121318] transition-colors hover:bg-[#E0A512]"
 			>
 				Return to login

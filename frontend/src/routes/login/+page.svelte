@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { login, getSession, devLogin, isZitadelConfigured } from '$lib/auth';
 
 	const zitadelReady = isZitadelConfigured();
@@ -10,7 +11,7 @@
 
 	$effect(() => {
 		if (getSession()) {
-			goto('/');
+			goto(resolve('/'));
 		}
 	});
 
@@ -26,7 +27,7 @@
 
 	function handleDevLogin(role: 'Leader' | 'Overseer' | 'Engineer') {
 		devLogin(role);
-		goto('/');
+		goto(resolve('/'));
 	}
 
 	const personas = [
@@ -83,7 +84,7 @@
 				</div>
 			</div>
 
-			<form onsubmit={(e) => { e.preventDefault(); zitadelReady && handleLogin(); }} class="space-y-3">
+			<form onsubmit={(e) => { e.preventDefault(); if (zitadelReady) handleLogin(); }} class="space-y-3">
 				<input
 					type="email"
 					bind:value={email}
@@ -114,7 +115,7 @@
 			</div>
 
 			<div class="grid grid-cols-1 gap-2">
-				{#each personas as persona}
+				{#each personas as persona (persona.role)}
 					<button
 						onclick={() => handleDevLogin(persona.role)}
 						class="group flex cursor-pointer items-center gap-3 rounded-lg border border-plumage bg-obsidian-light/40 px-4 py-3 text-left transition-colors hover:border-talon-gold hover:bg-obsidian-light"

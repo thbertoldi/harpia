@@ -172,7 +172,7 @@ export interface WatchTaskResponse {
   task: Task;
 }
 
-export interface GetCurrentUserRequest {}
+export type GetCurrentUserRequest = Record<string, never>;
 
 export interface GetCurrentUserResponse {
   user: User;

@@ -128,6 +128,11 @@ mise run lint               # Lint all services
 mise run test               # Test all services
 mise run fmt                # Format all services
 
+# Frontend lint stack (frontend/)
+bun run lint                # prettier --check . && eslint .
+bun run format              # prettier --write .
+bun run check               # svelte-check (types + templates)
+
 # Build for production
 mise run build
 ```
@@ -181,6 +186,18 @@ mise run test
 | control-plane | `go test` | `control-plane/internal/**/` |
 | agent-runtime | pytest + pytest-asyncio | `agent-runtime/tests/` |
 | frontend | vitest | `frontend/src/**/*.test.ts` |
+
+### Frontend lint stack
+
+The frontend uses three complementary tools — each owns a distinct concern:
+
+| Tool | Owns | Command |
+|---|---|---|
+| Prettier | Formatting (whitespace, quotes, semicolons, Tailwind class order) | `bun run format` / `bun run lint` |
+| ESLint | Correctness and style (unused vars, Svelte a11y, navigation rules) | `bun run lint` |
+| svelte-check | Type-checking and template analysis | `bun run check` |
+
+ESLint and Prettier do not overlap: `eslint-config-prettier` disables formatting rules that ESLint would otherwise duplicate. Config lives in `frontend/eslint.config.js` (flat config, ESLint 9).
 
 ## CI/CD (Planned)
 
