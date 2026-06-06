@@ -132,6 +132,13 @@ mise run fmt                # Format all services
 mise run build
 ```
 
+### Frontend Quality
+
+The Svelte frontend runs `prettier --check . && eslint .` through `bun run lint`.
+Prettier owns formatting via `prettier-plugin-svelte` and `prettier-plugin-tailwindcss`;
+ESLint owns correctness and Svelte/TypeScript rules, with `eslint-config-prettier`
+disabling formatting-rule overlap.
+
 ### Hot Reload
 
 Tilt watches for changes and rebuilds only what's needed:

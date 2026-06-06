@@ -1,13 +1,17 @@
 <script lang="ts">
-  import { Send } from 'lucide-svelte';
+  import { Send } from "lucide-svelte";
 
-  let { onsubmit, disabled = false, placeholder = "What do you want to get done?" }: {
+  let {
+    onsubmit,
+    disabled = false,
+    placeholder = "What do you want to get done?",
+  }: {
     onsubmit: (text: string) => void | Promise<void>;
     disabled?: boolean;
     placeholder?: string;
   } = $props();
 
-  let value = $state('');
+  let value = $state("");
   let loading = $state(false);
 
   async function handleSubmit(e: Event) {
@@ -17,7 +21,7 @@
     loading = true;
     try {
       await onsubmit(trimmed);
-      value = '';
+      value = "";
     } finally {
       loading = false;
     }
@@ -25,7 +29,9 @@
 </script>
 
 <form onsubmit={handleSubmit} class="w-full max-w-2xl mx-auto">
-  <div class="flex items-center gap-2 rounded-lg border border-plumage bg-obsidian-light p-1 transition-all focus-within:border-talon-gold focus-within:ring-2 focus-within:ring-talon-gold/20">
+  <div
+    class="flex items-center gap-2 rounded-lg border border-plumage bg-obsidian-light p-1 transition-all focus-within:border-talon-gold focus-within:ring-2 focus-within:ring-talon-gold/20"
+  >
     <input
       type="text"
       bind:value

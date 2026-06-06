@@ -11,7 +11,7 @@ export function isZitadelConfigured(): boolean {
   return ZITADEL_CONFIG.clientId.length > 0;
 }
 
-interface User {
+export interface User {
   sub: string;
   email: string;
   name: string;
@@ -19,12 +19,12 @@ interface User {
   role?: string;
 }
 
-interface Tenant {
+export interface Tenant {
   id: string;
   name: string;
 }
 
-interface Session {
+export interface Session {
   user: User;
   tenant: Tenant | null;
   tokens: {
@@ -162,22 +162,42 @@ export function logout(): void {
   window.location.href = "/login";
 }
 
-const DEV_PERSONAS: Record<string, { sub: string; email: string; name: string }> = {
-  Leader: { sub: 'dev-leader', email: 'leader@harpia.local', name: 'Lena Leader' },
-  Overseer: { sub: 'dev-overseer', email: 'overseer@harpia.local', name: 'Owen Overseer' },
-  Engineer: { sub: 'dev-engineer', email: 'engineer@harpia.local', name: 'Eli Engineer' },
+const DEV_PERSONAS: Record<
+  string,
+  { sub: string; email: string; name: string }
+> = {
+  Leader: {
+    sub: "dev-leader",
+    email: "leader@harpia.local",
+    name: "Lena Leader",
+  },
+  Overseer: {
+    sub: "dev-overseer",
+    email: "overseer@harpia.local",
+    name: "Owen Overseer",
+  },
+  Engineer: {
+    sub: "dev-engineer",
+    email: "engineer@harpia.local",
+    name: "Eli Engineer",
+  },
 };
 
-export function devLogin(role: string = 'Leader'): Session {
+export function devLogin(role: string = "Leader"): Session {
   const persona = DEV_PERSONAS[role] ?? DEV_PERSONAS.Leader;
   const session: Session = {
     user: { ...persona, role },
-    tenant: { id: 'dev', name: 'Dev Workspace' },
-    tokens: { access_token: 'dev-token', id_token: 'dev-token' },
+    tenant: { id: "dev", name: "Dev Workspace" },
+    tokens: { access_token: "dev-token", id_token: "dev-token" },
   };
-  localStorage.setItem('harpia_session', JSON.stringify(session));
+  localStorage.setItem("harpia_session", JSON.stringify(session));
   document.cookie = `harpia_session=${encodeURIComponent(
-    JSON.stringify({ sub: session.user.sub, email: session.user.email, name: session.user.name, role }),
+    JSON.stringify({
+      sub: session.user.sub,
+      email: session.user.email,
+      name: session.user.name,
+      role,
+    }),
   )}; path=/; SameSite=Lax`;
   return session;
 }
@@ -204,5 +224,3 @@ export function setTenant(tenant: Tenant): void {
   session.tenant = tenant;
   localStorage.setItem("harpia_session", JSON.stringify(session));
 }
-
-export type { Session, User, Tenant };

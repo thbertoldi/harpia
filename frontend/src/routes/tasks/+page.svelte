@@ -1,19 +1,19 @@
 <script lang="ts">
-  import { Plus, Loader2, Sparkles, Bot, AlertTriangle } from 'lucide-svelte';
-  import { goto } from '$app/navigation';
-  import { page } from '$app/state';
-  import type { Task } from '$lib/types';
-  import { listTasks, watchTask, getTask } from '$lib/client';
-  import StatusBadge from '$lib/components/StatusBadge.svelte';
-  import TaskDetail from '$lib/components/TaskDetail.svelte';
-  import HarpyHeading from '$lib/components/ui/HarpyHeading.svelte';
+  import { Plus, Loader2, Sparkles, Bot, AlertTriangle } from "lucide-svelte";
+  import { goto } from "$app/navigation";
+  import { resolve } from "$app/paths";
+  import type { Task } from "$lib/types";
+  import { listTasks, watchTask } from "$lib/client";
+  import StatusBadge from "$lib/components/StatusBadge.svelte";
+  import TaskDetail from "$lib/components/TaskDetail.svelte";
+  import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
 
   let tasks = $state<Task[]>([]);
   let selectedTask = $state<Task | null>(null);
   let loading = $state(true);
   let loadError = $state<string | null>(null);
   let watchController = $state<AbortController | null>(null);
-  let tenantId = $state('default');
+  let tenantId = $state("default");
 
   $effect(() => {
     fetchTasks();
@@ -26,11 +26,11 @@
       const res = await listTasks({
         tenantId,
         pageSize: 50,
-        pageToken: '',
+        pageToken: "",
       });
       tasks = res.tasks;
     } catch (e) {
-      loadError = e instanceof Error ? e.message : 'Failed to load tasks';
+      loadError = e instanceof Error ? e.message : "Failed to load tasks";
     } finally {
       loading = false;
     }
@@ -47,10 +47,10 @@
       task.id,
       (updated) => {
         selectedTask = updated;
-        tasks = tasks.map(t => t.id === updated.id ? updated : t);
+        tasks = tasks.map((t) => (t.id === updated.id ? updated : t));
       },
       (err) => {
-        console.error('Watch stream error:', err);
+        console.error("Watch stream error:", err);
       },
     );
   }
@@ -64,26 +64,30 @@
   }
 
   function handleNewTask() {
-    goto('/');
+    goto(resolve("/"));
   }
 
   function formattedDate(dateStr: string): string {
     try {
       const d = new Date(dateStr);
-      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
     } catch {
       return dateStr;
     }
   }
 
   function descriptionPreview(desc: string): string {
-    if (!desc) return '';
-    return desc.length > 100 ? desc.slice(0, 100) + '...' : desc;
+    if (!desc) return "";
+    return desc.length > 100 ? desc.slice(0, 100) + "..." : desc;
   }
 </script>
 
 <div class="flex h-[calc(100vh-3.5rem)]">
-  <div class="flex w-full flex-col transition-all duration-300 {selectedTask ? 'lg:w-[45%]' : 'lg:w-full'}">
+  <div
+    class="flex w-full flex-col transition-all duration-300 {selectedTask
+      ? 'lg:w-[45%]'
+      : 'lg:w-full'}"
+  >
     <div class="flex items-center justify-between px-4 py-3 lg:px-6">
       <HarpyHeading tag="h1" class="text-2xl text-cream">Tasks</HarpyHeading>
       <button
@@ -125,7 +129,8 @@
           No tasks yet. What do you want to get done?
         </HarpyHeading>
         <p class="mb-6 max-w-md text-center font-body text-sm text-crown-ash">
-          Describe your task in natural language and let Harpia's agents handle the execution.
+          Describe your task in natural language and let Harpia's agents handle
+          the execution.
         </p>
         <button
           onclick={handleNewTask}
@@ -141,23 +146,38 @@
           {#each tasks as task (task.id)}
             <button
               onclick={() => selectTask(task)}
-              class="w-full rounded-lg border bg-obsidian-light/60 p-4 text-left transition-all duration-200 hover:border-talon-gold/50 hover:bg-obsidian-light {selectedTask?.id === task.id ? 'border-talon-gold bg-obsidian-light' : 'border-plumage'}"
+              class="w-full rounded-lg border bg-obsidian-light/60 p-4 text-left transition-all duration-200 hover:border-talon-gold/50 hover:bg-obsidian-light {selectedTask?.id ===
+              task.id
+                ? 'border-talon-gold bg-obsidian-light'
+                : 'border-plumage'}"
             >
               <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0 flex-1">
-                  <p class="font-heading text-base font-semibold text-cream truncate">{task.title}</p>
+                  <p
+                    class="font-heading text-base font-semibold text-cream truncate"
+                  >
+                    {task.title}
+                  </p>
                   {#if task.description}
-                    <p class="mt-1 font-body text-sm text-crown-ash line-clamp-2">
+                    <p
+                      class="mt-1 font-body text-sm text-crown-ash line-clamp-2"
+                    >
                       {descriptionPreview(task.description)}
                     </p>
                   {/if}
                 </div>
                 <StatusBadge status={task.status} pulsing={true} />
               </div>
-              <div class="mt-2 flex items-center gap-4 font-mono text-[10px] uppercase tracking-wider text-crown-ash-dark">
+              <div
+                class="mt-2 flex items-center gap-4 font-mono text-[10px] uppercase tracking-wider text-crown-ash-dark"
+              >
                 <span>{formattedDate(task.createdAt)}</span>
                 {#if task.subtasks?.length}
-                  <span>{task.subtasks.length} subtask{task.subtasks.length !== 1 ? 's' : ''}</span>
+                  <span
+                    >{task.subtasks.length} subtask{task.subtasks.length !== 1
+                      ? "s"
+                      : ""}</span
+                  >
                 {/if}
               </div>
             </button>
@@ -168,7 +188,9 @@
   </div>
 
   {#if selectedTask}
-    <div class="hidden w-[55%] border-l border-plumage bg-obsidian transition-all duration-300 lg:block">
+    <div
+      class="hidden w-[55%] border-l border-plumage bg-obsidian transition-all duration-300 lg:block"
+    >
       <TaskDetail task={selectedTask} onclose={deselectTask} />
     </div>
   {/if}
