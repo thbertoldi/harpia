@@ -54,12 +54,12 @@
 
 <div class="flex min-h-screen items-center justify-center bg-obsidian">
   <div
-    class="fixed left-0 top-0 h-full w-[5px] bg-gradient-to-b from-talon-gold-bright via-talon-gold to-talon-gold/30"
+    class="fixed top-0 left-0 h-full w-[5px] bg-gradient-to-b from-talon-gold-bright via-talon-gold to-talon-gold/30"
   ></div>
 
   <button
     onclick={toggleDark}
-    class="fixed right-4 top-4 z-50 cursor-pointer rounded-md border border-plumage p-2 text-crown-ash transition-colors hover:border-talon-gold hover:text-cream"
+    class="fixed top-4 right-4 z-50 cursor-pointer rounded-md border border-plumage p-2 text-crown-ash transition-colors hover:border-talon-gold hover:text-cream"
     aria-label="Toggle dark mode"
   >
     {#if dark}
@@ -72,7 +72,7 @@
   <div class="w-full max-w-md space-y-8 p-8">
     <div class="text-center">
       <h1
-        class="text-6xl font-black text-talon-gold tracking-tight"
+        class="text-6xl font-black tracking-tight text-talon-gold"
         style="font-family: 'Bodoni Moda', serif"
       >
         Harpia
@@ -104,7 +104,7 @@
         </div>
         <div class="relative flex justify-center text-xs">
           <span
-            class="bg-obsidian px-2 font-mono text-crown-ash uppercase tracking-wider"
+            class="bg-obsidian px-2 font-mono tracking-wider text-crown-ash uppercase"
             style="font-family: 'JetBrains Mono', monospace"
           >
             or
@@ -124,7 +124,7 @@
           bind:value={email}
           placeholder="admin@harpia.local"
           disabled={!zitadelReady}
-          class="w-full rounded-lg border border-plumage bg-obsidian-light px-4 py-3 font-body text-cream placeholder:text-crown-ash-dark focus:border-talon-gold focus:outline-none focus:ring-1 focus:ring-talon-gold transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+          class="w-full rounded-lg border border-plumage bg-obsidian-light px-4 py-3 font-body text-cream transition-colors placeholder:text-crown-ash-dark focus:border-talon-gold focus:ring-1 focus:ring-talon-gold focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
           style="font-family: 'DM Sans', sans-serif"
         />
         <button
@@ -143,7 +143,7 @@
         </div>
         <div class="relative flex justify-center text-xs">
           <span
-            class="bg-obsidian px-2 font-mono text-crown-ash-dark uppercase tracking-wider"
+            class="bg-obsidian px-2 font-mono tracking-wider text-crown-ash-dark uppercase"
             style="font-family: 'JetBrains Mono', monospace"
           >
             dev login
@@ -168,7 +168,7 @@
                 {persona.label}
               </div>
               <div
-                class="font-mono text-[10px] uppercase tracking-wider text-crown-ash-dark"
+                class="font-mono text-[10px] tracking-wider text-crown-ash-dark uppercase"
                 style="font-family: 'JetBrains Mono', monospace"
               >
                 {persona.subtitle}

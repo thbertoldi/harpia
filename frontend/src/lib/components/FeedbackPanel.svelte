@@ -84,7 +84,7 @@
   </div>
 {:else if submitted}
   <div
-    class="flex flex-col items-center justify-center py-16 transition-all duration-500 animate-in fade-in"
+    class="animate-in fade-in flex flex-col items-center justify-center py-16 transition-all duration-500"
   >
     <div
       class="flex h-16 w-16 items-center justify-center rounded-full bg-talon-gold/20"
@@ -102,15 +102,15 @@
   </div>
 {:else if feedback}
   <div class="transition-all duration-300">
-    <h2 class="font-heading text-2xl font-bold text-cream mb-6">Your Review</h2>
+    <h2 class="mb-6 font-heading text-2xl font-bold text-cream">Your Review</h2>
 
     <div class="mb-6 rounded-lg border border-plumage bg-obsidian-light p-5">
       <p
-        class="font-mono text-[10px] uppercase tracking-widest text-crown-ash mb-2"
+        class="mb-2 font-mono text-[10px] tracking-widest text-crown-ash uppercase"
       >
         Agent Request
       </p>
-      <p class="font-body text-base text-cream leading-relaxed">
+      <p class="font-body text-base leading-relaxed text-cream">
         {feedback.question}
       </p>
       {#if feedback.createdAt}
@@ -123,14 +123,14 @@
     {#if feedback.options && feedback.options.length > 0}
       <div class="mb-6 rounded-lg border border-plumage bg-obsidian p-4">
         <p
-          class="font-mono text-[10px] uppercase tracking-widest text-crown-ash mb-3"
+          class="mb-3 font-mono text-[10px] tracking-widest text-crown-ash uppercase"
         >
           Agent Output
         </p>
         <div class="max-h-64 overflow-y-auto">
           {#each feedback.options as option (option)}
             <div
-              class="rounded bg-obsidian-light px-3 py-2 mb-2 last:mb-0 font-mono text-sm text-crown-ash leading-relaxed whitespace-pre-wrap"
+              class="mb-2 rounded bg-obsidian-light px-3 py-2 font-mono text-sm leading-relaxed whitespace-pre-wrap text-crown-ash last:mb-0"
             >
               {option}
             </div>
@@ -143,14 +143,14 @@
       <div class="mb-6">
         <label
           for="feedback-comment"
-          class="font-mono text-[10px] uppercase tracking-widest text-crown-ash block mb-2"
+          class="mb-2 block font-mono text-[10px] tracking-widest text-crown-ash uppercase"
           >Comment (optional)</label
         >
         <textarea
           id="feedback-comment"
           bind:value={comment}
           placeholder="Provide additional context for the agent..."
-          class="w-full rounded-lg border border-plumage bg-obsidian-light px-4 py-3 font-body text-sm text-cream placeholder:text-crown-ash-dark focus:border-talon-gold focus:outline-none focus:ring-1 focus:ring-talon-gold/30 resize-none"
+          class="w-full resize-none rounded-lg border border-plumage bg-obsidian-light px-4 py-3 font-body text-sm text-cream placeholder:text-crown-ash-dark focus:border-talon-gold focus:ring-1 focus:ring-talon-gold/30 focus:outline-none"
           rows="3"
         ></textarea>
       </div>
@@ -159,7 +159,7 @@
         <button
           onclick={() => handleDecision(FeedbackDecision.APPROVE, "Approve")}
           disabled={submitting}
-          class="flex items-center gap-2 rounded-lg bg-talon-gold px-5 py-2.5 font-body text-sm font-medium text-obsidian transition-all hover:bg-talon-gold-bright disabled:opacity-50 disabled:cursor-not-allowed"
+          class="flex items-center gap-2 rounded-lg bg-talon-gold px-5 py-2.5 font-body text-sm font-medium text-obsidian transition-all hover:bg-talon-gold-bright disabled:cursor-not-allowed disabled:opacity-50"
         >
           {#if submitting}
             <Loader2 class="size-4 animate-spin" />
@@ -171,7 +171,7 @@
         <button
           onclick={() => handleDecision(FeedbackDecision.REJECT, "Reject")}
           disabled={submitting}
-          class="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-5 py-2.5 font-body text-sm font-medium text-red-400 transition-all hover:border-red-500/50 hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+          class="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-5 py-2.5 font-body text-sm font-medium text-red-400 transition-all hover:border-red-500/50 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {#if submitting}
             <Loader2 class="size-4 animate-spin" />
@@ -183,7 +183,7 @@
         <button
           onclick={() => handleDecision(FeedbackDecision.MODIFY, "Modify")}
           disabled={submitting}
-          class="flex items-center gap-2 rounded-lg border border-plumage bg-transparent px-5 py-2.5 font-body text-sm font-medium text-crown-ash transition-all hover:border-talon-gold hover:text-talon-gold disabled:opacity-50 disabled:cursor-not-allowed"
+          class="flex items-center gap-2 rounded-lg border border-plumage bg-transparent px-5 py-2.5 font-body text-sm font-medium text-crown-ash transition-all hover:border-talon-gold hover:text-talon-gold disabled:cursor-not-allowed disabled:opacity-50"
         >
           {#if submitting}
             <Loader2 class="size-4 animate-spin" />

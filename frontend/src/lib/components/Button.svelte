@@ -15,11 +15,11 @@
 </script>
 
 <button
-  class="inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 {variant ===
+  class="focus-visible:ring-ring inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 {variant ===
   'default'
     ? 'bg-primary text-primary-foreground hover:bg-primary/90'
     : ''} {variant === 'outline'
-    ? 'border border-input bg-background hover:bg-accent hover:text-accent-foreground'
+    ? 'border-input bg-background hover:bg-accent hover:text-accent-foreground border'
     : ''} {variant === 'ghost'
     ? 'hover:bg-accent hover:text-accent-foreground'
     : ''} {size === 'sm' ? 'h-8 px-3 text-xs' : ''} {size === 'md'

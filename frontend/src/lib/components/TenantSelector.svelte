@@ -62,7 +62,7 @@
 
   {#if open}
     <div
-      class="absolute right-0 top-full z-50 mt-1 min-w-[180px] rounded-lg border border-[#2A2D3A] bg-[#1A1B24] py-1 shadow-lg"
+      class="absolute top-full right-0 z-50 mt-1 min-w-[180px] rounded-lg border border-[#2A2D3A] bg-[#1A1B24] py-1 shadow-lg"
     >
       {#each tenants as tenant (tenant.id)}
         <button

@@ -67,7 +67,7 @@
 </script>
 
 <span
-  class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-wider {config.bg} {config.text}"
+  class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-mono text-[10px] tracking-wider uppercase {config.bg} {config.text}"
 >
   {#if pulsing}
     <span class="relative flex h-2 w-2">

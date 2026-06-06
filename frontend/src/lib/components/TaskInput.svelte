@@ -28,7 +28,7 @@
   }
 </script>
 
-<form onsubmit={handleSubmit} class="w-full max-w-2xl mx-auto">
+<form onsubmit={handleSubmit} class="mx-auto w-full max-w-2xl">
   <div
     class="flex items-center gap-2 rounded-lg border border-plumage bg-obsidian-light p-1 transition-all focus-within:border-talon-gold focus-within:ring-2 focus-within:ring-talon-gold/20"
   >
@@ -37,12 +37,12 @@
       bind:value
       {disabled}
       {placeholder}
-      class="flex-1 bg-transparent px-4 py-3 text-cream placeholder:text-crown-ash outline-none font-body text-lg"
+      class="flex-1 bg-transparent px-4 py-3 font-body text-lg text-cream outline-none placeholder:text-crown-ash"
     />
     <button
       type="submit"
       disabled={disabled || loading || !value.trim()}
-      class="flex h-10 w-10 items-center justify-center rounded-md bg-talon-gold text-obsidian transition-all hover:bg-talon-gold-bright disabled:opacity-40 disabled:cursor-not-allowed"
+      class="flex h-10 w-10 items-center justify-center rounded-md bg-talon-gold text-obsidian transition-all hover:bg-talon-gold-bright disabled:cursor-not-allowed disabled:opacity-40"
     >
       <Send class="size-4" />
     </button>

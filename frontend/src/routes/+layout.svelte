@@ -77,7 +77,7 @@
           </span>
           <button
             onclick={() => (navOpen = false)}
-            class="rounded-md p-1 text-crown-ash hover:text-cream transition-colors cursor-pointer"
+            class="cursor-pointer rounded-md p-1 text-crown-ash transition-colors hover:text-cream"
           >
             <X class="size-5" />
           </button>
@@ -88,7 +88,7 @@
             <a
               href={resolve(section.href)}
               onclick={() => (navOpen = false)}
-              class="flex items-center gap-3 rounded-md px-3 py-2.5 transition-all cursor-pointer {isActive(
+              class="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-all {isActive(
                 section.href,
               )
                 ? 'bg-obsidian-light text-talon-gold'
@@ -108,7 +108,7 @@
 
         <div class="mt-8 border-t border-plumage pt-6">
           <p
-            class="font-mono text-[10px] uppercase tracking-widest text-crown-ash-dark"
+            class="font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
             style="font-family: 'JetBrains Mono', monospace"
           >
             Role
@@ -138,7 +138,7 @@
           <div class="flex items-center gap-3">
             <button
               onclick={() => (navOpen = !navOpen)}
-              class="rounded-md p-1.5 text-crown-ash hover:text-cream transition-colors cursor-pointer"
+              class="cursor-pointer rounded-md p-1.5 text-crown-ash transition-colors hover:text-cream"
               aria-label="Toggle navigation"
             >
               <Menu class="size-5" />

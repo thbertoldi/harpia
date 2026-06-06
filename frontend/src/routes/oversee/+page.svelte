@@ -54,8 +54,8 @@
 <div class="flex h-full">
   <div class="flex-1 overflow-y-auto p-6 lg:p-8">
     <div class="mx-auto max-w-3xl">
-      <h1 class="font-heading text-3xl font-bold text-cream mb-2">Oversee</h1>
-      <p class="font-body text-crown-ash mb-8">
+      <h1 class="mb-2 font-heading text-3xl font-bold text-cream">Oversee</h1>
+      <p class="mb-8 font-body text-crown-ash">
         Review agent outputs that need your attention.
       </p>
 
@@ -68,7 +68,7 @@
           <p class="font-mono text-sm text-red-400">{error}</p>
           <button
             onclick={loadPending}
-            class="mt-3 rounded-md border border-red-500/30 px-3 py-1.5 font-body text-xs text-red-400 hover:bg-red-500/10 transition-colors"
+            class="mt-3 rounded-md border border-red-500/30 px-3 py-1.5 font-body text-xs text-red-400 transition-colors hover:bg-red-500/10"
           >
             Retry
           </button>
@@ -98,23 +98,23 @@
                 : 'border-plumage bg-obsidian hover:border-talon-gold/50'}"
             >
               <div class="flex items-start gap-4 p-4">
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2 mb-1">
+                <div class="min-w-0 flex-1">
+                  <div class="mb-1 flex items-center gap-2">
                     <span
-                      class="inline-flex items-center rounded-full bg-talon-gold/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-talon-gold animate-pulse"
+                      class="inline-flex animate-pulse items-center rounded-full bg-talon-gold/10 px-2 py-0.5 font-mono text-[10px] tracking-wider text-talon-gold uppercase"
                     >
                       Awaiting Your Review
                     </span>
                     {#if fb.createdAt}
                       <span
-                        class="font-mono text-[10px] text-crown-ash-dark flex items-center gap-1"
+                        class="flex items-center gap-1 font-mono text-[10px] text-crown-ash-dark"
                       >
                         <Clock class="size-3" />
                         {timeAgo(fb.createdAt)}
                       </span>
                     {/if}
                   </div>
-                  <p class="font-body text-sm font-medium text-cream truncate">
+                  <p class="truncate font-body text-sm font-medium text-cream">
                     {fb.question}
                   </p>
                   <div class="mt-2 flex items-center gap-3">
@@ -128,7 +128,7 @@
                     {/if}
                   </div>
                 </div>
-                <Eye class="size-4 shrink-0 text-crown-ash mt-0.5" />
+                <Eye class="mt-0.5 size-4 shrink-0 text-crown-ash" />
               </div>
             </button>
           {/each}
@@ -139,18 +139,18 @@
 
   {#if selectedId}
     <div
-      class="w-[480px] shrink-0 border-l border-plumage bg-obsidian-light overflow-y-auto transition-all duration-300"
+      class="w-[480px] shrink-0 overflow-y-auto border-l border-plumage bg-obsidian-light transition-all duration-300"
     >
       <div
         class="flex items-center justify-between border-b border-plumage px-4 py-3"
       >
         <span
-          class="font-mono text-[10px] uppercase tracking-widest text-crown-ash"
+          class="font-mono text-[10px] tracking-widest text-crown-ash uppercase"
           >Feedback Details</span
         >
         <button
           onclick={() => (selectedId = null)}
-          class="rounded-md p-1 text-crown-ash hover:text-cream transition-colors"
+          class="rounded-md p-1 text-crown-ash transition-colors hover:text-cream"
           aria-label="Close feedback details"
         >
           <svg

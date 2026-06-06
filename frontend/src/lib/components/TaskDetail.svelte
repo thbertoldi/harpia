@@ -147,7 +147,7 @@
             class="rounded-lg border border-plumage bg-obsidian-light p-4 transition-all duration-300"
           >
             <p
-              class="mb-1 font-mono text-[10px] uppercase tracking-widest text-crown-ash"
+              class="mb-1 font-mono text-[10px] tracking-widest text-crown-ash uppercase"
             >
               Agent Status
             </p>
@@ -181,7 +181,7 @@
             class="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 transition-all duration-300"
           >
             <p
-              class="mb-2 font-mono text-[10px] uppercase tracking-widest text-amber-400"
+              class="mb-2 font-mono text-[10px] tracking-widest text-amber-400 uppercase"
             >
               Feedback Required
             </p>
@@ -212,14 +212,14 @@
         {#if task.subtasks && task.subtasks.length > 0}
           <div>
             <p
-              class="mb-3 font-mono text-[10px] uppercase tracking-widest text-crown-ash"
+              class="mb-3 font-mono text-[10px] tracking-widest text-crown-ash uppercase"
             >
               Subtasks
             </p>
             <div class="space-y-0">
               {#each task.subtasks as subtask, i (subtask.id)}
                 <div
-                  class="relative flex items-start gap-3 py-2.5 pl-4 ml-4 transition-all duration-300"
+                  class="relative ml-4 flex items-start gap-3 py-2.5 pl-4 transition-all duration-300"
                   class:border-l-2={isActiveSubtask(subtask)}
                   class:border-l-talon-gold={isActiveSubtask(subtask)}
                   class:border-l-transparent={!isActiveSubtask(subtask)}
@@ -250,7 +250,7 @@
                     </div>
                     <div class="mt-1 flex items-center gap-2">
                       <span
-                        class="font-mono text-[10px] uppercase tracking-wider text-crown-ash"
+                        class="font-mono text-[10px] tracking-wider text-crown-ash uppercase"
                       >
                         {subtaskStatusLabel(subtask.status)}
                       </span>
@@ -270,7 +270,7 @@
         {#if task.status === TaskStatus.FAILED}
           <div class="rounded-lg border border-red-500/20 bg-red-500/10 p-3">
             <p
-              class="font-mono text-[10px] uppercase tracking-widest text-red-400 mb-1"
+              class="mb-1 font-mono text-[10px] tracking-widest text-red-400 uppercase"
             >
               Error
             </p>
