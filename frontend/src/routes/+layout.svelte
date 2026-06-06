@@ -66,7 +66,7 @@
 				</div>
 
 				<div class="space-y-1">
-					{#each sections as section}
+					{#each sections as section (section.href)}
 						<a href={section.href}
 							onclick={() => (navOpen = false)}
 							class="flex items-center gap-3 rounded-md px-3 py-2.5 transition-all cursor-pointer {isActive(section.href) ? 'bg-obsidian-light text-talon-gold' : 'text-crown-ash hover:bg-obsidian-light hover:text-cream'}">

@@ -105,7 +105,7 @@
 			<div class="mb-6 rounded-lg border border-plumage bg-obsidian p-4">
 				<p class="font-mono text-[10px] uppercase tracking-widest text-crown-ash mb-3">Agent Output</p>
 				<div class="max-h-64 overflow-y-auto">
-					{#each feedback.options as option}
+					{#each feedback.options as option (option)}
 						<div class="rounded bg-obsidian-light px-3 py-2 mb-2 last:mb-0 font-mono text-sm text-crown-ash leading-relaxed whitespace-pre-wrap">
 							{option}
 						</div>

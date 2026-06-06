@@ -1,9 +1,8 @@
 <script lang="ts">
   import { Plus, Loader2, Sparkles, Bot, AlertTriangle } from 'lucide-svelte';
   import { goto } from '$app/navigation';
-  import { page } from '$app/state';
   import type { Task } from '$lib/types';
-  import { listTasks, watchTask, getTask } from '$lib/client';
+  import { listTasks, watchTask } from '$lib/client';
   import StatusBadge from '$lib/components/StatusBadge.svelte';
   import TaskDetail from '$lib/components/TaskDetail.svelte';
   import HarpyHeading from '$lib/components/ui/HarpyHeading.svelte';

@@ -160,7 +160,7 @@
           <div>
             <p class="mb-3 font-mono text-[10px] uppercase tracking-widest text-crown-ash">Subtasks</p>
             <div class="space-y-0">
-              {#each task.subtasks as subtask, i}
+              {#each task.subtasks as subtask, i (subtask.id)}
                 <div
                   class="relative flex items-start gap-3 py-2.5 pl-4 ml-4 transition-all duration-300"
                   class:border-l-2={isActiveSubtask(subtask)}

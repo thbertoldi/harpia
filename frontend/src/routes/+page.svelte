@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Send, ArrowRight, Loader2, LayoutDashboard } from 'lucide-svelte';
+  import { ArrowRight, Loader2, LayoutDashboard } from 'lucide-svelte';
   import { goto } from '$app/navigation';
   import TaskInput from '$lib/components/TaskInput.svelte';
   import ChatMessage from '$lib/components/ChatMessage.svelte';
@@ -131,7 +131,7 @@
         <div class="mt-8 w-full max-w-2xl">
           <p class="font-mono text-xs uppercase tracking-widest text-crown-ash mb-3">Try asking</p>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {#each exampleTasks as example}
+            {#each exampleTasks as example (example)}
               <button
                 onclick={() => handleSubmit(example)}
                 disabled={loading}
@@ -249,7 +249,7 @@
           <div>
             <p class="font-mono text-[10px] uppercase tracking-widest text-crown-ash mb-2">Subtasks</p>
             <ul class="space-y-2">
-              {#each task.subtasks as subtask}
+              {#each task.subtasks as subtask (subtask.id)}
                 <li class="flex items-start gap-2 rounded-lg border border-plumage bg-obsidian/60 p-2.5">
                   <span
                     class="mt-0.5 h-2 w-2 shrink-0 rounded-full {subtask.status === 4
