@@ -87,13 +87,13 @@ spec:
               api() {
                 method=$1; path=$2; body=${3:-}
                 if [ -n "$body" ]; then
-                  curl -sS -X "$method" "$ZITADEL_URL$path" \
+                  curl -sfS -X "$method" "$ZITADEL_URL$path" \
                     -H "Authorization: Bearer $PAT" \
                     -H "Content-Type: application/json" \
                     -H "Host: localhost:8085" \
                     -d "$body"
                 else
-                  curl -sS -X "$method" "$ZITADEL_URL$path" \
+                  curl -sfS -X "$method" "$ZITADEL_URL$path" \
                     -H "Authorization: Bearer $PAT" \
                     -H "Host: localhost:8085"
                 fi
@@ -106,6 +106,15 @@ spec:
                 app_id=$(echo "$resp" | grep -oE '"appId":"[0-9]+"' | head -1 | sed 's/.*"\([0-9]*\)"$/\1/')
                 none_compliant=$(echo "$resp" | grep -oE '"noneCompliant":(true|false)' | head -1 | cut -d: -f2)
                 echo "clientId=${client_id:-?} appId=${app_id:-?} noneCompliant=${none_compliant:-unknown}"
+              }
+
+              require_native_app() {
+                resp=$1
+                context=$2
+                if ! echo "$resp" | grep -q 'OIDC_APP_TYPE_NATIVE'; then
+                  echo "ERROR: $context — expected appType OIDC_APP_TYPE_NATIVE"
+                  exit 1
+                fi
               }
 
               echo "[3/5] Creating project 'Harpia' (idempotent)..."
@@ -140,6 +149,7 @@ spec:
               APP_ID=$(echo "$EXISTING_APPS" | grep -oE '"id":"[0-9]+"' | head -1 | sed 's/.*"\([0-9]*\)"$/\1/')
               if [ -z "$APP_ID" ]; then
                 APP_CREATE=$(api POST "/management/v1/projects/$PROJECT_ID/apps/oidc" "$APP_BODY")
+                require_native_app "$APP_CREATE" "create response"
                 echo "  create: $(summarize_oidc_response "$APP_CREATE")"
                 APP_ID=$(echo "$APP_CREATE" | grep -oE '"appId":"[0-9]+"' | head -1 | sed 's/.*"\([0-9]*\)"$/\1/')
                 CLIENT_ID=$(echo "$APP_CREATE" | grep -oE '"clientId":"[^"]+"' | head -1 | sed 's/.*"\([^"]*\)"$/\1/')
@@ -147,6 +157,7 @@ spec:
                 echo "  app exists (id=$APP_ID), reconciling OIDC config to NATIVE..."
                 api PUT "/management/v1/projects/$PROJECT_ID/apps/$APP_ID/oidc_config" "$OIDC_CONFIG" >/dev/null
                 APP_GET=$(api GET "/management/v1/projects/$PROJECT_ID/apps/$APP_ID")
+                require_native_app "$APP_GET" "reconcile GET"
                 echo "  reconcile: $(summarize_oidc_response "$APP_GET")"
                 CLIENT_ID=$(echo "$APP_GET" | grep -oE '"clientId":"[^"]+"' | head -1 | sed 's/.*"\([^"]*\)"$/\1/')
               fi
