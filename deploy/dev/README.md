@@ -43,7 +43,11 @@ kubectl port-forward svc/harpia-frontend 5173:3000 &
 
 ### OIDC Client Registration
 
-The `zitadel-init.yaml` Job attempts to auto-register the OIDC client. Check its logs:
+The `zitadel-init.yaml` Job registers the Harpia Web client as **Native** (PKCE, no secret) so
+`http://localhost:5173` loopback redirects stay OIDC-compliant in dev without
+`noneCompliant` / `RedirectUris.HttpOnlyForWeb` noise in Job logs.
+
+Check its logs:
 
 ```bash
 kubectl logs job/zitadel-register-client
@@ -61,7 +65,7 @@ If the auto-registration Job fails, create the client manually:
 4. Under the project, click **New Application**
 5. Fill in:
    - Name: `Harpia Web`
-   - Type: **Web**
+   - Type: **Native** (allows `http://localhost` loopback redirects without OIDC compliance warnings in dev)
    - Authentication Method: **None** (PKCE)
 6. Add redirect URI: `http://localhost:5173/auth/callback`
 7. Add post-logout redirect URI: `http://localhost:5173`
