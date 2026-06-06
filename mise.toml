@@ -9,6 +9,7 @@ tilt = "latest"
 golangci-lint = "latest"
 atlas = "latest"
 temporal = "latest"
+helm = "latest"
 
 [env]
 HARPIA_ENV = "development"
@@ -55,6 +56,8 @@ run = [
     "cd control-plane && golangci-lint run",
     "cd agent-runtime && uv run ruff check .",
     "cd frontend && bun run lint",
+    "helm lint deploy/harpia/",
+    "helm template test deploy/harpia/ > /dev/null",
 ]
 
 [tasks.fmt]
@@ -124,6 +127,14 @@ run = "podman compose -f deploy/dev/compose.yaml run --rm openfga migrate --data
 [tasks.dev-temporal]
 description = "Start Temporal dev server (single binary)"
 run = "temporal server start-dev --namespace default --ip 0.0.0.0"
+
+[tasks.helm-lint]
+description = "Lint Helm chart"
+run = "helm lint deploy/harpia/"
+
+[tasks.helm-template]
+description = "Validate Helm chart renders cleanly"
+run = "helm template test deploy/harpia/ > /dev/null"
 
 [tasks.db-migrate]
 description = "Run database migrations"
