@@ -108,7 +108,7 @@ jobs:
       - name: Check breaking changes
         working-directory: proto
         run: |
-          buf breaking --against "https://github.com/${{ github.repository }}.git#branch=trunk,ref=HEAD~1" --error-format=text
+          buf breaking --against "https://github.com/${{ github.repository }}.git#branch=${{ github.base_ref }},subdir=proto" --error-format=text
 
   build-containers:
     name: Build and Publish Containers

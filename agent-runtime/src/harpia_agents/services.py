@@ -60,7 +60,7 @@ class AgentServiceImpl(AgentService):
         ctx: RequestContext,
     ) -> MatchAgentResponse:
         embedder = OpenAIEmbeddings()
-        embedding = await embedder.aembed_query(request.task_description)
+        await embedder.aembed_query(request.task_description)
         return MatchAgentResponse(matches=[])
 
     def execute_task(
