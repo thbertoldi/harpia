@@ -5,6 +5,9 @@ managed:
     - file_option: go_package_prefix
       value: github.com/harpia/control-plane/gen
 plugins:
+  - remote: buf.build/bufbuild/es
+    out: ../frontend/src/lib/gen
+    opt: target=ts
   - remote: buf.build/protocolbuffers/go
     out: ../control-plane/gen
     opt: paths=source_relative

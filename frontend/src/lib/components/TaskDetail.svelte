@@ -6,8 +6,7 @@
     Bot,
     AlertTriangle,
   } from "lucide-svelte";
-  import type { Task, Subtask } from "$lib/types";
-  import { TaskStatus, SubtaskStatus } from "$lib/types";
+  import { TaskStatus, SubtaskStatus, type Task, type Subtask } from "$lib/rpc";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
   import StatusBadge from "$lib/components/StatusBadge.svelte";
 

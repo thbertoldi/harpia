@@ -1,7 +1,12 @@
 <script lang="ts">
   import { Check, X, Pencil, Loader2 } from "lucide-svelte";
-  import { getFeedbackStatus, submitFeedback } from "$lib/client";
-  import { FeedbackDecision, type FeedbackRequest } from "$lib/types";
+  import { toUserMessage } from "$lib/connect-errors";
+  import {
+    feedbackClient,
+    FeedbackDecision,
+    FeedbackStatus,
+    type FeedbackRequest,
+  } from "$lib/rpc";
 
   let {
     feedbackId,
@@ -27,13 +32,16 @@
     loading = true;
     error = null;
     try {
-      const res = await getFeedbackStatus({
+      const res = await feedbackClient.getFeedbackStatus({
         tenantId: "default",
         feedbackId,
       });
+      if (!res.feedbackRequest) {
+        throw new Error("Feedback status returned no request");
+      }
       feedback = res.feedbackRequest;
     } catch (e) {
-      error = e instanceof Error ? e.message : "Failed to load feedback";
+      error = toUserMessage(e);
     } finally {
       loading = false;
     }
@@ -44,7 +52,7 @@
     submitting = true;
     error = null;
     try {
-      await submitFeedback({
+      await feedbackClient.submitFeedback({
         tenantId: "default",
         feedbackId,
         decision,
@@ -56,7 +64,7 @@
         onResolve();
       }, 1500);
     } catch (e) {
-      error = e instanceof Error ? e.message : "Failed to submit feedback";
+      error = toUserMessage(e);
     } finally {
       submitting = false;
     }
@@ -139,7 +147,7 @@
       </div>
     {/if}
 
-    {#if feedback.status === 1}
+    {#if feedback.status === FeedbackStatus.PENDING}
       <div class="mb-6">
         <label
           for="feedback-comment"
@@ -195,7 +203,7 @@
       </div>
     {/if}
 
-    {#if feedback.status !== 1}
+    {#if feedback.status !== FeedbackStatus.PENDING}
       <div class="rounded-lg border border-crown-ash/20 bg-obsidian-light p-4">
         <p class="font-body text-sm text-crown-ash">
           This feedback has already been resolved.

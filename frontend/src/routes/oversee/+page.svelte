@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Check, Loader2, Clock, Eye } from "lucide-svelte";
-  import { listPendingFeedback } from "$lib/client";
-  import type { FeedbackRequest } from "$lib/types";
+  import { toUserMessage } from "$lib/connect-errors";
+  import { feedbackClient, type FeedbackRequest } from "$lib/rpc";
   import FeedbackPanel from "$lib/components/FeedbackPanel.svelte";
 
   let feedbacks = $state<FeedbackRequest[]>([]);
@@ -17,14 +17,17 @@
     loading = true;
     error = null;
     try {
-      const res = await listPendingFeedback({
+      const pending: FeedbackRequest[] = [];
+      for await (const res of feedbackClient.listPendingFeedback({
         tenantId: "default",
         pageSize: 50,
         pageToken: "",
-      });
-      feedbacks = res.feedbackRequests ?? [];
+      })) {
+        pending.push(...res.feedbackRequests);
+      }
+      feedbacks = pending;
     } catch (e) {
-      error = e instanceof Error ? e.message : "Failed to load feedback";
+      error = toUserMessage(e);
     } finally {
       loading = false;
     }

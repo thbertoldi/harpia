@@ -8,7 +8,13 @@ import svelteConfig from "./svelte.config.js";
 
 export default tseslint.config(
   {
-    ignores: [".svelte-kit/**", "build/**", "dist/**", "node_modules/**"],
+    ignores: [
+      ".svelte-kit/**",
+      "build/**",
+      "dist/**",
+      "node_modules/**",
+      "src/lib/gen/**",
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
