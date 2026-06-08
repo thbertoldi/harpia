@@ -9,8 +9,8 @@ import os
 
 import uvicorn
 
-from harpia_agents.services import AgentServiceImpl
 from harpia_agents.identity import TenantResolverMiddleware
+from harpia_agents.services import AgentServiceImpl
 
 logger = logging.getLogger("harpia_agents")
 
