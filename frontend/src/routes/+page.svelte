@@ -5,6 +5,7 @@
   import TaskInput from "$lib/components/TaskInput.svelte";
   import ChatMessage from "$lib/components/ChatMessage.svelte";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
+  import { requireTenantId } from "$lib/auth";
   import { toUserMessage } from "$lib/connect-errors";
   import { taskClient, TaskStatus, type Task } from "$lib/rpc";
 
@@ -41,7 +42,7 @@
 
     try {
       const res = await taskClient.createTask({
-        tenantId: "default",
+        tenantId: requireTenantId(),
         workspaceId: "default",
         title: text.slice(0, 80),
         description: text,

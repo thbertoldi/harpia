@@ -10,6 +10,7 @@ import os
 import uvicorn
 
 from harpia_agents.services import AgentServiceImpl
+from harpia_agents.identity import TenantResolverMiddleware
 
 logger = logging.getLogger("harpia_agents")
 
@@ -21,7 +22,7 @@ def create_app():
         AgentServiceASGIApplication,
     )
 
-    return AgentServiceASGIApplication(service)
+    return TenantResolverMiddleware(AgentServiceASGIApplication(service))
 
 
 def start_server() -> None:

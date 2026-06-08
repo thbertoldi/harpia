@@ -24,6 +24,8 @@ export interface Tenant {
   name: string;
 }
 
+export const DEV_TENANT: Tenant = { id: "dev", name: "Dev Workspace" };
+
 export interface Session {
   user: User;
   tenant: Tenant | null;
@@ -187,7 +189,7 @@ export function devLogin(role: string = "Leader"): Session {
   const persona = DEV_PERSONAS[role] ?? DEV_PERSONAS.Leader;
   const session: Session = {
     user: { ...persona, role },
-    tenant: { id: "dev", name: "Dev Workspace" },
+    tenant: DEV_TENANT,
     tokens: { access_token: "dev-token", id_token: "dev-token" },
   };
   localStorage.setItem("harpia_session", JSON.stringify(session));
@@ -197,6 +199,7 @@ export function devLogin(role: string = "Leader"): Session {
       email: session.user.email,
       name: session.user.name,
       role,
+      tenant_id: DEV_TENANT.id,
     }),
   )}; path=/; SameSite=Lax`;
   return session;
@@ -216,6 +219,14 @@ export function getSession(): Session | null {
 export function getTenant(): Tenant | null {
   const session = getSession();
   return session?.tenant ?? null;
+}
+
+export function requireTenantId(): string {
+  const tenant = getTenant();
+  if (!tenant?.id) {
+    throw new Error("Select a tenant before continuing");
+  }
+  return tenant.id;
 }
 
 export function setTenant(tenant: Tenant): void {

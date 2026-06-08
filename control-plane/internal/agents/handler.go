@@ -11,11 +11,12 @@ import (
 
 	agentsv1 "github.com/harpia/control-plane/gen/harpia/agents/v1"
 	"github.com/harpia/control-plane/internal/cache"
+	"github.com/harpia/control-plane/internal/identity"
 )
 
 type AgentHandler struct {
-	repo      *Repository
-	embedder  Embedder
+	repo       *Repository
+	embedder   Embedder
 	agentCache *cache.AgentCapabilityCache
 }
 
@@ -59,6 +60,10 @@ func (h *AgentHandler) ListAgentTypes(ctx context.Context, req *connect.Request[
 }
 
 func (h *AgentHandler) MatchAgent(ctx context.Context, req *connect.Request[agentsv1.MatchAgentRequest]) (*connect.Response[agentsv1.MatchAgentResponse], error) {
+	if _, err := identity.RequireTenant(ctx, req.Msg.TenantId); err != nil {
+		return nil, err
+	}
+
 	if h.agentCache != nil {
 		cachedAgentID, err := h.agentCache.GetBestAgent(ctx, req.Msg.TaskDescription)
 		if err == nil && cachedAgentID != "" {
@@ -118,10 +123,15 @@ func (h *AgentHandler) MatchAgent(ctx context.Context, req *connect.Request[agen
 }
 
 func (h *AgentHandler) ExecuteTask(ctx context.Context, req *connect.Request[agentsv1.ExecuteTaskRequest], stream *connect.ServerStream[agentsv1.ExecuteTaskResponse]) error {
-	return nil
+	_, err := identity.RequireTenant(ctx, req.Msg.TenantId)
+	return err
 }
 
 func (h *AgentHandler) ContinueExecution(ctx context.Context, req *connect.Request[agentsv1.ContinueExecutionRequest]) (*connect.Response[agentsv1.ContinueExecutionResponse], error) {
+	if _, err := identity.RequireTenant(ctx, req.Msg.TenantId); err != nil {
+		return nil, err
+	}
+
 	return connect.NewResponse(&agentsv1.ContinueExecutionResponse{
 		AgentInstanceId: uuid.New().String(),
 		Status:          agentsv1.AgentInstanceStatus_AGENT_INSTANCE_STATUS_EXECUTING,

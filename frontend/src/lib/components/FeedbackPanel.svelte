@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Check, X, Pencil, Loader2 } from "lucide-svelte";
+  import { requireTenantId } from "$lib/auth";
   import { toUserMessage } from "$lib/connect-errors";
   import {
     feedbackClient,
@@ -33,7 +34,7 @@
     error = null;
     try {
       const res = await feedbackClient.getFeedbackStatus({
-        tenantId: "default",
+        tenantId: requireTenantId(),
         feedbackId,
       });
       if (!res.feedbackRequest) {
@@ -53,7 +54,7 @@
     error = null;
     try {
       await feedbackClient.submitFeedback({
-        tenantId: "default",
+        tenantId: requireTenantId(),
         feedbackId,
         decision,
         comment,

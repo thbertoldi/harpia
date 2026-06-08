@@ -15,28 +15,57 @@ func NewIdentityHandler() *IdentityHandler {
 }
 
 func (h *IdentityHandler) GetCurrentUser(ctx context.Context, req *connect.Request[identityv1.GetCurrentUserRequest]) (*connect.Response[identityv1.GetCurrentUserResponse], error) {
+	rc, err := RequireRequestContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	tenant := tenantFromContext(rc)
 	return connect.NewResponse(&identityv1.GetCurrentUserResponse{
 		User: &identityv1.User{
-			Id:          "unknown",
-			DisplayName: "Unknown User",
+			Id:          rc.UserID,
+			TenantId:    tenant.Id,
+			DisplayName: rc.UserID,
+			Roles:       rc.Roles,
 		},
-		Tenants: []*identityv1.Tenant{},
+		Tenants: []*identityv1.Tenant{tenant},
 	}), nil
 }
 
 func (h *IdentityHandler) ListTenants(ctx context.Context, req *connect.Request[identityv1.ListTenantsRequest]) (*connect.Response[identityv1.ListTenantsResponse], error) {
+	rc, err := RequireRequestContext(ctx)
+	if err != nil {
+		return nil, err
+	}
 	return connect.NewResponse(&identityv1.ListTenantsResponse{
-		Tenants:       []*identityv1.Tenant{},
+		Tenants:       []*identityv1.Tenant{tenantFromContext(rc)},
 		NextPageToken: "",
 	}), nil
 }
 
 func (h *IdentityHandler) GetTenant(ctx context.Context, req *connect.Request[identityv1.GetTenantRequest]) (*connect.Response[identityv1.GetTenantResponse], error) {
+	if _, err := RequireTenant(ctx, req.Msg.TenantId); err != nil {
+		return nil, err
+	}
+	rc, _ := RequestContextFrom(ctx)
 	return connect.NewResponse(&identityv1.GetTenantResponse{
-		Tenant: &identityv1.Tenant{
-			Id:   req.Msg.TenantId,
-			Name: "Unknown Tenant",
-			Slug: "unknown",
-		},
+		Tenant: tenantFromContext(rc),
 	}), nil
+}
+
+func tenantFromContext(rc RequestContext) *identityv1.Tenant {
+	slug := rc.TenantAlias
+	if slug == "" {
+		slug = rc.TenantID.String()
+	}
+
+	name := "Tenant"
+	if slug == DevTenantAlias {
+		name = "Dev Workspace"
+	}
+
+	return &identityv1.Tenant{
+		Id:   rc.TenantID.String(),
+		Name: name,
+		Slug: slug,
+	}
 }

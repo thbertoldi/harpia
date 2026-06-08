@@ -1,6 +1,6 @@
 <script lang="ts">
   import { ChevronDown } from "lucide-svelte";
-  import { getSession, setTenant } from "$lib/auth";
+  import { DEV_TENANT, getSession, setTenant } from "$lib/auth";
   import type { Tenant } from "$lib/auth";
 
   let tenants = $state<Tenant[]>([]);
@@ -8,16 +8,14 @@
   let open = $state(false);
 
   $effect(() => {
-    // TODO: Replace with ConnectRPC IdentityService.ListTenants call
-    tenants = [
-      { id: "1", name: "Acme Corp" },
-      { id: "2", name: "Globex Inc" },
-      { id: "3", name: "Initech" },
-    ];
+    tenants = [DEV_TENANT];
 
     const session = getSession();
     if (session?.tenant) {
       selectedTenant = session.tenant;
+    } else {
+      selectedTenant = DEV_TENANT;
+      setTenant(DEV_TENANT);
     }
   });
 

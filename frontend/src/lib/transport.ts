@@ -95,8 +95,10 @@ async function* retryUnavailableStream<T>(
 }
 
 const tenantHeaderInterceptor: Interceptor = (next) => async (req) => {
-  const tenantId = getTenant()?.id ?? getSession()?.tenant?.id ?? "default";
-  req.header.set("X-Tenant-ID", tenantId);
+  const tenantId = getTenant()?.id ?? getSession()?.tenant?.id;
+  if (tenantId) {
+    req.header.set("X-Tenant-ID", tenantId);
+  }
   return next(req);
 };
 

@@ -12,6 +12,7 @@ import (
 
 	tasksv1 "github.com/harpia/control-plane/gen/harpia/tasks/v1"
 	"github.com/harpia/control-plane/internal/cache"
+	"github.com/harpia/control-plane/internal/identity"
 	"github.com/harpia/control-plane/internal/workflow"
 )
 
@@ -30,9 +31,9 @@ func NewTaskHandler(repo *Repository, temporal *workflow.TemporalClient, cacheCl
 }
 
 func (h *TaskHandler) CreateTask(ctx context.Context, req *connect.Request[tasksv1.CreateTaskRequest]) (*connect.Response[tasksv1.CreateTaskResponse], error) {
-	tenantID, err := uuid.Parse(req.Msg.TenantId)
+	tenantID, err := identity.RequireTenant(ctx, req.Msg.TenantId)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		return nil, err
 	}
 
 	task := &Task{
@@ -67,9 +68,9 @@ func (h *TaskHandler) CreateTask(ctx context.Context, req *connect.Request[tasks
 }
 
 func (h *TaskHandler) GetTask(ctx context.Context, req *connect.Request[tasksv1.GetTaskRequest]) (*connect.Response[tasksv1.GetTaskResponse], error) {
-	tenantID, err := uuid.Parse(req.Msg.TenantId)
+	tenantID, err := identity.RequireTenant(ctx, req.Msg.TenantId)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		return nil, err
 	}
 
 	taskID, err := uuid.Parse(req.Msg.TaskId)
@@ -78,7 +79,7 @@ func (h *TaskHandler) GetTask(ctx context.Context, req *connect.Request[tasksv1.
 	}
 
 	if h.cache != nil {
-		cacheKey := fmt.Sprintf("task:%s", taskID.String())
+		cacheKey := fmt.Sprintf("task:%s:%s", tenantID.String(), taskID.String())
 		if cached, cacheErr := h.cache.Get(ctx, cacheKey); cacheErr == nil {
 			var task Task
 			if json.Unmarshal([]byte(cached), &task) == nil {
@@ -95,7 +96,7 @@ func (h *TaskHandler) GetTask(ctx context.Context, req *connect.Request[tasksv1.
 	}
 
 	if h.cache != nil {
-		cacheKey := fmt.Sprintf("task:%s", taskID.String())
+		cacheKey := fmt.Sprintf("task:%s:%s", tenantID.String(), taskID.String())
 		if data, marshalErr := json.Marshal(task); marshalErr == nil {
 			_ = h.cache.Set(ctx, cacheKey, string(data), 5*time.Minute)
 		}
@@ -107,11 +108,35 @@ func (h *TaskHandler) GetTask(ctx context.Context, req *connect.Request[tasksv1.
 }
 
 func (h *TaskHandler) ListTasks(ctx context.Context, req *connect.Request[tasksv1.ListTasksRequest], stream *connect.ServerStream[tasksv1.ListTasksResponse]) error {
-	return nil
+	tenantID, err := identity.RequireTenant(ctx, req.Msg.TenantId)
+	if err != nil {
+		return err
+	}
+
+	status := ""
+	if req.Msg.Status != nil && *req.Msg.Status != tasksv1.TaskStatus_TASK_STATUS_UNSPECIFIED {
+		status = taskStatusToString(*req.Msg.Status)
+	}
+	limit := int(req.Msg.PageSize)
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+
+	tasks, err := h.repo.List(ctx, tenantID, status, limit, 0)
+	if err != nil {
+		return connect.NewError(connect.CodeInternal, err)
+	}
+
+	response := &tasksv1.ListTasksResponse{Tasks: make([]*tasksv1.Task, 0, len(tasks))}
+	for i := range tasks {
+		response.Tasks = append(response.Tasks, domainToProto(&tasks[i]))
+	}
+	return stream.Send(response)
 }
 
 func (h *TaskHandler) WatchTask(ctx context.Context, req *connect.Request[tasksv1.WatchTaskRequest], stream *connect.ServerStream[tasksv1.WatchTaskResponse]) error {
-	return nil
+	_, err := identity.RequireTenant(ctx, req.Msg.TenantId)
+	return err
 }
 
 func domainToProto(t *Task) *tasksv1.Task {
@@ -126,6 +151,27 @@ func domainToProto(t *Task) *tasksv1.Task {
 		Status:      stringToTaskStatus(t.Status),
 		CreatedAt:   createdAt,
 		UpdatedAt:   updatedAt,
+	}
+}
+
+func taskStatusToString(status tasksv1.TaskStatus) string {
+	switch status {
+	case tasksv1.TaskStatus_TASK_STATUS_PENDING:
+		return "pending"
+	case tasksv1.TaskStatus_TASK_STATUS_PLANNING:
+		return "planning"
+	case tasksv1.TaskStatus_TASK_STATUS_IN_PROGRESS:
+		return "in_progress"
+	case tasksv1.TaskStatus_TASK_STATUS_AWAITING_FEEDBACK:
+		return "awaiting_feedback"
+	case tasksv1.TaskStatus_TASK_STATUS_COMPLETED:
+		return "completed"
+	case tasksv1.TaskStatus_TASK_STATUS_FAILED:
+		return "failed"
+	case tasksv1.TaskStatus_TASK_STATUS_CANCELLED:
+		return "cancelled"
+	default:
+		return ""
 	}
 }
 

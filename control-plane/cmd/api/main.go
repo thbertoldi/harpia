@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"connectrpc.com/connect"
 	"go.temporal.io/sdk/client"
 
 	"github.com/harpia/control-plane/gen/harpia/agents/v1/agentsv1connect"
@@ -136,10 +137,14 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 		})
 	})
 
-	agentsPath, agentsHandler := agentsv1connect.NewAgentServiceHandler(agentHandler)
-	tasksPath, tasksHandler := tasksv1connect.NewTaskServiceHandler(taskHandler)
-	identityPath, identityHandler := identityv1connect.NewIdentityServiceHandler(identity.NewIdentityHandler())
-	feedbackPath, feedbackHandler := feedbackv1connect.NewFeedbackServiceHandler(feedback.NewFeedbackHandler())
+	requestContext := connect.WithInterceptors(identity.NewRequestContextInterceptor(identity.AuthOptions{
+		DevTenantID: tenantID,
+	}))
+
+	agentsPath, agentsHandler := agentsv1connect.NewAgentServiceHandler(agentHandler, requestContext)
+	tasksPath, tasksHandler := tasksv1connect.NewTaskServiceHandler(taskHandler, requestContext)
+	identityPath, identityHandler := identityv1connect.NewIdentityServiceHandler(identity.NewIdentityHandler(), requestContext)
+	feedbackPath, feedbackHandler := feedbackv1connect.NewFeedbackServiceHandler(feedback.NewFeedbackHandler(), requestContext)
 
 	mux.Handle(agentsPath, agentsHandler)
 	mux.Handle(tasksPath, tasksHandler)
