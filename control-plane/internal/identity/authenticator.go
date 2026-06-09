@@ -27,9 +27,10 @@ type BearerAuthenticator interface {
 }
 
 type ZitadelAuthenticator struct {
-	userInfoURL string
-	httpClient  *http.Client
-	cacheTTL    time.Duration
+	userInfoURL     string
+	httpClient      *http.Client
+	cacheTTL        time.Duration
+	cacheMaxEntries int
 
 	mu    sync.Mutex
 	cache map[string]cachedUser
@@ -47,7 +48,7 @@ type zitadelUserInfo struct {
 	PreferredUsername string `json:"preferred_username"`
 }
 
-func NewZitadelAuthenticator(baseURL string, client *http.Client, cacheTTL time.Duration) *ZitadelAuthenticator {
+func NewZitadelAuthenticator(baseURL string, client *http.Client, cacheTTL time.Duration, cacheMaxEntries int) *ZitadelAuthenticator {
 	if client == nil {
 		client = &http.Client{Timeout: 5 * time.Second}
 	}
@@ -56,11 +57,15 @@ func NewZitadelAuthenticator(baseURL string, client *http.Client, cacheTTL time.
 	if baseURL != "" {
 		userInfoURL = baseURL + "/oidc/v1/userinfo"
 	}
+	if cacheMaxEntries <= 0 {
+		cacheTTL = 0
+	}
 	return &ZitadelAuthenticator{
-		userInfoURL: userInfoURL,
-		httpClient:  client,
-		cacheTTL:    cacheTTL,
-		cache:       make(map[string]cachedUser),
+		userInfoURL:     userInfoURL,
+		httpClient:      client,
+		cacheTTL:        cacheTTL,
+		cacheMaxEntries: cacheMaxEntries,
+		cache:           make(map[string]cachedUser),
 	}
 }
 
@@ -85,6 +90,12 @@ func (a *ZitadelAuthenticator) AuthenticateBearer(ctx context.Context, token str
 
 	resp, err := a.httpClient.Do(req)
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return AuthenticatedUser{}, connect.NewError(connect.CodeCanceled, err)
+		}
+		if errors.Is(err, context.DeadlineExceeded) {
+			return AuthenticatedUser{}, connect.NewError(connect.CodeDeadlineExceeded, err)
+		}
 		return AuthenticatedUser{}, connect.NewError(connect.CodeUnavailable, err)
 	}
 	defer resp.Body.Close()
@@ -99,7 +110,7 @@ func (a *ZitadelAuthenticator) AuthenticateBearer(ctx context.Context, token str
 	if resp.StatusCode != http.StatusOK {
 		_, _ = io.Copy(io.Discard, resp.Body)
 		return AuthenticatedUser{}, connect.NewError(
-			connect.CodeUnauthenticated,
+			userInfoStatusCode(resp.StatusCode),
 			fmt.Errorf("userinfo rejected token with status %d", resp.StatusCode),
 		)
 	}
@@ -149,9 +160,36 @@ func (a *ZitadelAuthenticator) setCached(key string, user AuthenticatedUser) {
 
 	a.mu.Lock()
 	defer a.mu.Unlock()
+	now := time.Now()
+	for key, cached := range a.cache {
+		if now.After(cached.expiresAt) {
+			delete(a.cache, key)
+		}
+	}
+	if a.cacheMaxEntries > 0 && len(a.cache) >= a.cacheMaxEntries {
+		for key := range a.cache {
+			delete(a.cache, key)
+			break
+		}
+	}
 	a.cache[key] = cachedUser{
 		user:      user,
-		expiresAt: time.Now().Add(a.cacheTTL),
+		expiresAt: now.Add(a.cacheTTL),
+	}
+}
+
+func userInfoStatusCode(status int) connect.Code {
+	switch status {
+	case http.StatusUnauthorized:
+		return connect.CodeUnauthenticated
+	case http.StatusForbidden:
+		return connect.CodePermissionDenied
+	case http.StatusTooManyRequests:
+		return connect.CodeResourceExhausted
+	case http.StatusNotFound:
+		return connect.CodeUnavailable
+	default:
+		return connect.CodeUnauthenticated
 	}
 }
 

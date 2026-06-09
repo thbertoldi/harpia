@@ -43,6 +43,11 @@
   }
 
   function selectTask(task: Task) {
+    if (watchController) {
+      watchController.abort();
+      watchController = null;
+    }
+
     let tenantId: string;
     try {
       tenantId = requireTenantId();
@@ -51,9 +56,6 @@
       return;
     }
 
-    if (watchController) {
-      watchController.abort();
-    }
     selectedTask = task;
     watchError = null;
 

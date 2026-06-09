@@ -45,6 +45,8 @@ spec:
               value: {{ .Values.api.auth.autoProvisionDefaultTenant | quote }}
             - name: HARPIA_AUTH_CACHE_TTL
               value: {{ .Values.api.auth.cacheTTL | quote }}
+            - name: HARPIA_AUTH_CACHE_MAX_ENTRIES
+              value: {{ .Values.api.auth.cacheMaxEntries | quote }}
             - name: LOG_LEVEL
               value: "debug"
           readinessProbe:

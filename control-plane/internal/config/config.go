@@ -19,6 +19,7 @@ type Config struct {
 
 	AllowDevAuth               bool
 	AuthCacheTTL               time.Duration
+	AuthCacheMaxEntries        int
 	AutoProvisionDefaultTenant bool
 }
 
@@ -35,6 +36,7 @@ func Load() *Config {
 
 		AllowDevAuth:               envBool("HARPIA_ALLOW_DEV_AUTH", false),
 		AuthCacheTTL:               envDuration("HARPIA_AUTH_CACHE_TTL", 60*time.Second),
+		AuthCacheMaxEntries:        envInt("HARPIA_AUTH_CACHE_MAX_ENTRIES", 1024),
 		AutoProvisionDefaultTenant: envBool("HARPIA_AUTO_PROVISION_DEFAULT_TENANT", false),
 	}
 }

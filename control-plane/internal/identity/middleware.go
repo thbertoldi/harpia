@@ -102,6 +102,9 @@ func (i *RequestContextInterceptor) resolve(ctx context.Context, header http.Hea
 	}
 	memberships, err := i.memberships.ResolveMemberships(ctx, user)
 	if err != nil {
+		if errors.Is(err, ErrProvisioningEmailRequired) {
+			return RequestContext{}, connect.NewError(connect.CodeFailedPrecondition, err)
+		}
 		return RequestContext{}, connect.NewError(connect.CodeInternal, err)
 	}
 	if len(memberships) == 0 {

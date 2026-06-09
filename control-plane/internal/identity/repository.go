@@ -2,11 +2,14 @@ package identity
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+var ErrProvisioningEmailRequired = errors.New("auto-provisioning requires user email")
 
 type MembershipResolver interface {
 	ResolveMemberships(ctx context.Context, user AuthenticatedUser) ([]TenantMembership, error)
@@ -84,7 +87,9 @@ func (r *MembershipRepository) listMemberships(ctx context.Context, externalID s
 }
 
 func (r *MembershipRepository) provisionDefaultMembership(ctx context.Context, user AuthenticatedUser) error {
-	email := firstNonEmpty(user.Email, user.Subject)
+	if user.Email == "" {
+		return ErrProvisioningEmailRequired
+	}
 	name := firstNonEmpty(user.Name, user.Email, user.Subject)
 	_, err := r.pool.Exec(ctx,
 		`INSERT INTO users (tenant_id, external_id, email, name, role)
@@ -92,7 +97,7 @@ func (r *MembershipRepository) provisionDefaultMembership(ctx context.Context, u
 		 ON CONFLICT (tenant_id, external_id) DO NOTHING`,
 		r.defaultTenantID,
 		user.Subject,
-		email,
+		user.Email,
 		name,
 	)
 	if err != nil {

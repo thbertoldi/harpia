@@ -51,6 +51,7 @@ api:
     allowDevAuth: false
     autoProvisionDefaultTenant: false
     cacheTTL: 60s
+    cacheMaxEntries: 1024
 
 # Agent Runtime
 agent:

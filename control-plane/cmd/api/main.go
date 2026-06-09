@@ -140,7 +140,7 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	requestContext := connect.WithInterceptors(identity.NewRequestContextInterceptor(identity.AuthOptions{
 		DevTenantID:   tenantID,
 		AllowDevAuth:  cfg.AllowDevAuth,
-		Authenticator: identity.NewZitadelAuthenticator(cfg.ZitadelURL, nil, cfg.AuthCacheTTL),
+		Authenticator: identity.NewZitadelAuthenticator(cfg.ZitadelURL, nil, cfg.AuthCacheTTL, cfg.AuthCacheMaxEntries),
 		Memberships: identity.NewMembershipRepository(pool, identity.MembershipRepositoryOptions{
 			DefaultTenantID:            tenantID,
 			AutoProvisionDefaultTenant: cfg.AutoProvisionDefaultTenant,
