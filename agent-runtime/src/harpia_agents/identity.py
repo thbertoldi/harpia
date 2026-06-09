@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Awaitable, Callable, Mapping, MutableMapping
 from dataclasses import dataclass
 from http import HTTPStatus
 from typing import Any
 
 DEV_TENANT_ID = "dev"
+DEV_TOKEN = "Bearer dev-token"
 
 Scope = MutableMapping[str, Any]
 Receive = Callable[[], Awaitable[dict[str, Any]]]
@@ -53,16 +55,22 @@ class TenantResolverMiddleware:
 
 def resolve_request_context(headers: Mapping[str, str]) -> RequestContext:
     auth = headers.get("authorization", "")
-    cookie = headers.get("cookie", "")
-    if not auth.startswith("Bearer ") and "harpia_session=" not in cookie:
+    if not auth.startswith("Bearer "):
         raise TenantAuthError(HTTPStatus.UNAUTHORIZED, "missing authorization")
+    if auth != DEV_TOKEN or not _allow_dev_auth():
+        raise TenantAuthError(HTTPStatus.UNAUTHORIZED, "unsupported authorization")
 
     tenant_id = headers.get("x-tenant-id", "")
     if not tenant_id:
         raise TenantAuthError(HTTPStatus.UNAUTHORIZED, "missing tenant")
 
-    user_id = "dev-user" if auth == "Bearer dev-token" else "authenticated-user"
-    return RequestContext(tenant_id=tenant_id, user_id=user_id)
+    if tenant_id != DEV_TENANT_ID:
+        raise TenantAuthError(
+            HTTPStatus.FORBIDDEN,
+            f"tenant {tenant_id!r} is not available to the caller",
+        )
+
+    return RequestContext(tenant_id=tenant_id, user_id="dev-user", roles=("admin",))
 
 
 def require_tenant(ctx: object, requested_tenant_id: str) -> str:
@@ -71,7 +79,7 @@ def require_tenant(ctx: object, requested_tenant_id: str) -> str:
 
     context = _request_context_from_connect_context(ctx)
     if context is None:
-        return requested_tenant_id
+        raise TenantAuthError(HTTPStatus.UNAUTHORIZED, "missing request context")
 
     if requested_tenant_id != context.tenant_id:
         raise TenantAuthError(
@@ -79,6 +87,26 @@ def require_tenant(ctx: object, requested_tenant_id: str) -> str:
             f"tenant {requested_tenant_id!r} is not available to the caller",
         )
     return context.tenant_id
+
+
+def require_selected_tenant(ctx: object) -> str:
+    context = _request_context_from_connect_context(ctx)
+    if context is None:
+        raise TenantAuthError(HTTPStatus.UNAUTHORIZED, "missing request context")
+    if not context.tenant_id:
+        raise TenantAuthError(HTTPStatus.UNAUTHORIZED, "missing tenant")
+    return context.tenant_id
+
+
+def _allow_dev_auth() -> bool:
+    return os.environ.get("HARPIA_ALLOW_DEV_AUTH", "").lower() in {
+        "1",
+        "t",
+        "true",
+        "y",
+        "yes",
+        "on",
+    }
 
 
 def validate_temporal_input(input: Mapping[str, object]) -> str:

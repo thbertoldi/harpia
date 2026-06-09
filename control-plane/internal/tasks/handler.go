@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"connectrpc.com/connect"
@@ -121,15 +122,33 @@ func (h *TaskHandler) ListTasks(ctx context.Context, req *connect.Request[tasksv
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
+	offset := 0
+	if req.Msg.PageToken != "" {
+		parsed, parseErr := strconv.Atoi(req.Msg.PageToken)
+		if parseErr != nil || parsed < 0 {
+			return connect.NewError(
+				connect.CodeInvalidArgument,
+				fmt.Errorf("invalid page token %q", req.Msg.PageToken),
+			)
+		}
+		offset = parsed
+	}
 
-	tasks, err := h.repo.List(ctx, tenantID, status, limit, 0)
+	tasks, err := h.repo.List(ctx, tenantID, status, limit+1, offset)
 	if err != nil {
 		return connect.NewError(connect.CodeInternal, err)
 	}
 
+	hasNext := len(tasks) > limit
+	if hasNext {
+		tasks = tasks[:limit]
+	}
 	response := &tasksv1.ListTasksResponse{Tasks: make([]*tasksv1.Task, 0, len(tasks))}
 	for i := range tasks {
 		response.Tasks = append(response.Tasks, domainToProto(&tasks[i]))
+	}
+	if hasNext {
+		response.NextPageToken = strconv.Itoa(offset + limit)
 	}
 	return stream.Send(response)
 }

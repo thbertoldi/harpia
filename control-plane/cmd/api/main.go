@@ -138,7 +138,10 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	})
 
 	requestContext := connect.WithInterceptors(identity.NewRequestContextInterceptor(identity.AuthOptions{
-		DevTenantID: tenantID,
+		DevTenantID:  tenantID,
+		AllowDevAuth: cfg.AllowDevAuth,
+		UserInfoURL:  cfg.ZitadelURL,
+		Memberships:  identity.NewMembershipRepository(pool),
 	}))
 
 	agentsPath, agentsHandler := agentsv1connect.NewAgentServiceHandler(agentHandler, requestContext)

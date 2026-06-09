@@ -2,13 +2,13 @@ package identity
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
-	"net/url"
 	"strings"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
@@ -17,38 +17,46 @@ import (
 const DevTenantAlias = "dev"
 
 type AuthOptions struct {
-	DevTenantID uuid.UUID
+	DevTenantID  uuid.UUID
+	AllowDevAuth bool
+	UserInfoURL  string
+	Memberships  MembershipResolver
+	HTTPClient   *http.Client
 }
 
 type tenantRequest interface {
 	GetTenantId() string
 }
 
-type sessionCookie struct {
-	Sub    string `json:"sub"`
-	Email  string `json:"email"`
-	Name   string `json:"name"`
-	Role   string `json:"role"`
-	Tenant string `json:"tenant_id"`
-}
-
-type jwtClaims struct {
-	Subject  string   `json:"sub"`
-	TenantID string   `json:"tenant_id"`
-	Roles    []string `json:"roles"`
+type userInfo struct {
+	Subject string `json:"sub"`
 }
 
 type RequestContextInterceptor struct {
-	devTenantID uuid.UUID
+	devTenantID  uuid.UUID
+	allowDevAuth bool
+	userInfoURL  string
+	memberships  MembershipResolver
+	httpClient   *http.Client
 }
 
 func NewRequestContextInterceptor(opts AuthOptions) *RequestContextInterceptor {
-	return &RequestContextInterceptor{devTenantID: opts.DevTenantID}
+	client := opts.HTTPClient
+	if client == nil {
+		client = &http.Client{Timeout: 5 * time.Second}
+	}
+	return &RequestContextInterceptor{
+		devTenantID:  opts.DevTenantID,
+		allowDevAuth: opts.AllowDevAuth,
+		userInfoURL:  strings.TrimRight(opts.UserInfoURL, "/"),
+		memberships:  opts.Memberships,
+		httpClient:   client,
+	}
 }
 
 func (i *RequestContextInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-		rc, err := i.resolve(req.Header())
+		rc, err := i.resolve(ctx, req.Header())
 		if err != nil {
 			return nil, err
 		}
@@ -65,87 +73,164 @@ func (i *RequestContextInterceptor) WrapStreamingClient(next connect.StreamingCl
 
 func (i *RequestContextInterceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
 	return func(ctx context.Context, conn connect.StreamingHandlerConn) error {
-		rc, err := i.resolve(conn.RequestHeader())
+		rc, err := i.resolve(ctx, conn.RequestHeader())
 		if err != nil {
 			return err
 		}
-		return next(WithRequestContext(ctx, rc), conn)
+		return next(WithRequestContext(ctx, rc), &authorizedStreamingConn{
+			StreamingHandlerConn: conn,
+			interceptor:          i,
+			rc:                   rc,
+		})
 	}
 }
 
-func (i *RequestContextInterceptor) resolve(header http.Header) (RequestContext, error) {
+func (i *RequestContextInterceptor) resolve(ctx context.Context, header http.Header) (RequestContext, error) {
 	token, tokenOK := bearerToken(header.Get("Authorization"))
-	session, sessionOK := parseSessionCookie(header.Get("Cookie"))
-	if !tokenOK && !sessionOK {
+	if !tokenOK {
 		return RequestContext{}, connect.NewError(
 			connect.CodeUnauthenticated,
 			errors.New("missing authorization"),
 		)
 	}
 
-	userID := session.Sub
-	roles := rolesFromSession(session)
-	var claims jwtClaims
-	if tokenOK && token != "dev-token" {
-		claims = parseJWTClaims(token)
-		if claims.Subject != "" {
-			userID = claims.Subject
-		}
-		if len(claims.Roles) > 0 {
-			roles = claims.Roles
-		}
+	if token == "dev-token" {
+		return i.resolveDevContext(header.Get("X-Tenant-ID"))
 	}
-	if token == "dev-token" && userID == "" {
-		userID = "dev-user"
+
+	user, err := i.authenticateBearer(ctx, token)
+	if err != nil {
+		return RequestContext{}, err
 	}
-	if userID == "" {
+	if i.memberships == nil {
 		return RequestContext{}, connect.NewError(
+			connect.CodeUnauthenticated,
+			errors.New("tenant membership resolver is not configured"),
+		)
+	}
+	memberships, err := i.memberships.ListMemberships(ctx, user.Subject)
+	if err != nil {
+		return RequestContext{}, connect.NewError(connect.CodeInternal, err)
+	}
+	if len(memberships) == 0 {
+		return RequestContext{}, connect.NewError(
+			connect.CodePermissionDenied,
+			errors.New("user is not assigned to any tenant"),
+		)
+	}
+
+	selected, selectedOK, err := selectTenant(header.Get("X-Tenant-ID"), memberships)
+	if err != nil {
+		return RequestContext{}, err
+	}
+	roles := []string(nil)
+	if selectedOK && selected.Role != "" {
+		roles = []string{selected.Role}
+	}
+
+	return RequestContext{
+		TenantID:    selected.TenantID,
+		TenantAlias: selected.Slug,
+		UserID:      user.Subject,
+		Roles:       roles,
+		Tenants:     memberships,
+	}, nil
+}
+
+func (i *RequestContextInterceptor) resolveDevContext(tenantRef string) (RequestContext, error) {
+	if !i.allowDevAuth || i.devTenantID == uuid.Nil {
+		return RequestContext{}, connect.NewError(
+			connect.CodeUnauthenticated,
+			errors.New("dev token is not enabled"),
+		)
+	}
+
+	membership := TenantMembership{
+		TenantID: i.devTenantID,
+		Slug:     DevTenantAlias,
+		Name:     "Dev Workspace",
+		Role:     "admin",
+	}
+	if tenantRef == "" {
+		tenantRef = DevTenantAlias
+	}
+	selected, _, err := selectTenant(tenantRef, []TenantMembership{membership})
+	if err != nil {
+		return RequestContext{}, err
+	}
+	return RequestContext{
+		TenantID:    selected.TenantID,
+		TenantAlias: selected.Slug,
+		UserID:      "dev-user",
+		Roles:       []string{selected.Role},
+		Tenants:     []TenantMembership{membership},
+	}, nil
+}
+
+func (i *RequestContextInterceptor) authenticateBearer(ctx context.Context, token string) (userInfo, error) {
+	if i.userInfoURL == "" {
+		return userInfo{}, connect.NewError(
+			connect.CodeUnauthenticated,
+			errors.New("userinfo endpoint is not configured"),
+		)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, i.userInfoURL+"/oidc/v1/userinfo", nil)
+	if err != nil {
+		return userInfo{}, connect.NewError(connect.CodeInternal, err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := i.httpClient.Do(req)
+	if err != nil {
+		return userInfo{}, connect.NewError(connect.CodeUnauthenticated, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		_, _ = io.Copy(io.Discard, resp.Body)
+		return userInfo{}, connect.NewError(
+			connect.CodeUnauthenticated,
+			fmt.Errorf("userinfo rejected token with status %d", resp.StatusCode),
+		)
+	}
+
+	var info userInfo
+	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
+		return userInfo{}, connect.NewError(connect.CodeUnauthenticated, err)
+	}
+	if info.Subject == "" {
+		return userInfo{}, connect.NewError(
 			connect.CodeUnauthenticated,
 			errors.New("missing user identity"),
 		)
 	}
-
-	tenantRef := header.Get("X-Tenant-ID")
-	if tenantRef == "" {
-		tenantRef = session.Tenant
-	}
-	if tenantRef == "" {
-		tenantRef = claims.TenantID
-	}
-	if tenantRef == "" {
-		return RequestContext{}, connect.NewError(
-			connect.CodeUnauthenticated,
-			errors.New("missing tenant"),
-		)
-	}
-
-	tenantID, alias, err := i.resolveTenant(tenantRef)
-	if err != nil {
-		return RequestContext{}, err
-	}
-
-	return RequestContext{
-		TenantID:    tenantID,
-		TenantAlias: alias,
-		UserID:      userID,
-		Roles:       roles,
-	}, nil
+	return info, nil
 }
 
-func (i *RequestContextInterceptor) resolveTenant(ref string) (uuid.UUID, string, error) {
-	if ref == DevTenantAlias && i.devTenantID != uuid.Nil {
-		return i.devTenantID, DevTenantAlias, nil
+func selectTenant(ref string, memberships []TenantMembership) (TenantMembership, bool, error) {
+	if ref == "" {
+		if len(memberships) == 1 {
+			return memberships[0], true, nil
+		}
+		return TenantMembership{}, false, nil
 	}
 
-	tenantID, err := uuid.Parse(ref)
-	if err != nil {
-		return uuid.Nil, "", connect.NewError(
+	for _, membership := range memberships {
+		if ref == membership.TenantID.String() || (membership.Slug != "" && ref == membership.Slug) {
+			return membership, true, nil
+		}
+	}
+
+	if _, err := uuid.Parse(ref); err != nil && ref != DevTenantAlias {
+		return TenantMembership{}, false, connect.NewError(
 			connect.CodeUnauthenticated,
 			fmt.Errorf("invalid tenant %q", ref),
 		)
 	}
-
-	return tenantID, "", nil
+	return TenantMembership{}, false, connect.NewError(
+		connect.CodePermissionDenied,
+		fmt.Errorf("tenant %q is not available to the caller", ref),
+	)
 }
 
 func (i *RequestContextInterceptor) authorizeRequestTenant(rc RequestContext, msg any) error {
@@ -157,56 +242,23 @@ func (i *RequestContextInterceptor) authorizeRequestTenant(rc RequestContext, ms
 	return err
 }
 
+type authorizedStreamingConn struct {
+	connect.StreamingHandlerConn
+	interceptor *RequestContextInterceptor
+	rc          RequestContext
+}
+
+func (c *authorizedStreamingConn) Receive(msg any) error {
+	if err := c.StreamingHandlerConn.Receive(msg); err != nil {
+		return err
+	}
+	return c.interceptor.authorizeRequestTenant(c.rc, msg)
+}
+
 func bearerToken(header string) (string, bool) {
 	prefix, token, ok := strings.Cut(header, " ")
 	if !ok || !strings.EqualFold(prefix, "Bearer") || strings.TrimSpace(token) == "" {
 		return "", false
 	}
 	return strings.TrimSpace(token), true
-}
-
-func parseSessionCookie(cookieHeader string) (sessionCookie, bool) {
-	if cookieHeader == "" {
-		return sessionCookie{}, false
-	}
-
-	request := http.Request{Header: http.Header{"Cookie": []string{cookieHeader}}}
-	cookie, err := request.Cookie("harpia_session")
-	if err != nil {
-		return sessionCookie{}, false
-	}
-
-	value, err := url.QueryUnescape(cookie.Value)
-	if err != nil {
-		value = cookie.Value
-	}
-
-	var session sessionCookie
-	if err := json.Unmarshal([]byte(value), &session); err != nil {
-		return sessionCookie{}, false
-	}
-	return session, session.Sub != ""
-}
-
-func parseJWTClaims(token string) jwtClaims {
-	parts := strings.Split(token, ".")
-	if len(parts) < 2 {
-		return jwtClaims{}
-	}
-
-	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
-	if err != nil {
-		return jwtClaims{}
-	}
-
-	var claims jwtClaims
-	_ = json.Unmarshal(payload, &claims)
-	return claims
-}
-
-func rolesFromSession(session sessionCookie) []string {
-	if session.Role == "" {
-		return nil
-	}
-	return []string{session.Role}
 }

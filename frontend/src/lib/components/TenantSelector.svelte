@@ -2,22 +2,48 @@
   import { ChevronDown } from "lucide-svelte";
   import { DEV_TENANT, getSession, setTenant } from "$lib/auth";
   import type { Tenant } from "$lib/auth";
+  import { identityClient } from "$lib/rpc";
 
   let tenants = $state<Tenant[]>([]);
   let selectedTenant = $state<Tenant | null>(null);
   let open = $state(false);
+  let loaded = $state(false);
 
   $effect(() => {
-    tenants = [DEV_TENANT];
+    if (loaded) return;
+    loaded = true;
 
     const session = getSession();
     if (session?.tenant) {
       selectedTenant = session.tenant;
-    } else {
+      tenants = [session.tenant];
+      return;
+    }
+
+    if (session?.tokens.access_token === "dev-token") {
       selectedTenant = DEV_TENANT;
+      tenants = [DEV_TENANT];
       setTenant(DEV_TENANT);
+    } else {
+      void loadTenants();
     }
   });
+
+  async function loadTenants() {
+    try {
+      const response = await identityClient.listTenants({});
+      tenants = response.tenants.map((tenant) => ({
+        id: tenant.id,
+        name: tenant.name,
+      }));
+      if (tenants.length === 1) {
+        selectedTenant = tenants[0];
+        setTenant(tenants[0]);
+      }
+    } catch {
+      tenants = [];
+    }
+  }
 
   function select(tenant: Tenant) {
     selectedTenant = tenant;

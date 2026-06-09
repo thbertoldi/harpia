@@ -15,6 +15,7 @@ type Config struct {
 	TemporalHost string
 	GarageURL    string
 	ZitadelURL   string
+	AllowDevAuth bool
 }
 
 func Load() *Config {
@@ -27,6 +28,7 @@ func Load() *Config {
 		TemporalHost: envStr("TEMPORAL_HOST", "localhost:7233"),
 		GarageURL:    envStr("GARAGE_URL", "http://localhost:15002"),
 		ZitadelURL:   envStr("ZITADEL_URL", "http://localhost:9980"),
+		AllowDevAuth: envBool("HARPIA_ALLOW_DEV_AUTH", false),
 	}
 }
 
@@ -41,6 +43,16 @@ func envInt(key string, fallback int) int {
 	if v := os.Getenv(key); v != "" {
 		if i, err := strconv.Atoi(v); err == nil {
 			return i
+		}
+	}
+	return fallback
+}
+
+func envBool(key string, fallback bool) bool {
+	if v := os.Getenv(key); v != "" {
+		parsed, err := strconv.ParseBool(v)
+		if err == nil {
+			return parsed
 		}
 	}
 	return fallback
