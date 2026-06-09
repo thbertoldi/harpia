@@ -91,7 +91,7 @@
         disabled={!zitadelReady}
         title={zitadelReady
           ? ""
-          : "Run scripts/sync-oidc-config.sh after the zitadel-register-client Job completes"}
+          : "Sign-in is not configured. Contact your administrator."}
         class="w-full cursor-pointer rounded-lg bg-talon-gold px-6 py-3 font-medium text-obsidian transition-all hover:bg-talon-gold-bright disabled:cursor-not-allowed disabled:bg-talon-gold/30 disabled:text-obsidian/60"
         style="font-family: 'DM Sans', sans-serif"
       >

@@ -117,6 +117,27 @@ spec:
                 fi
               }
 
+              require_response_contains() {
+                resp=$1
+                needle=$2
+                context=$3
+                if ! printf '%s' "$resp" | grep -Fq "$needle"; then
+                  echo "ERROR: $context — expected OIDC config to contain '$needle'"
+                  exit 1
+                fi
+              }
+
+              require_harpia_oidc_config() {
+                resp=$1
+                context=$2
+                require_native_app "$resp" "$context"
+                require_response_contains "$resp" "$REDIRECT_URI" "$context"
+                require_response_contains "$resp" "$LOGOUT_URI" "$context"
+                require_response_contains "$resp" "OIDC_RESPONSE_TYPE_CODE" "$context"
+                require_response_contains "$resp" "OIDC_GRANT_TYPE_AUTHORIZATION_CODE" "$context"
+                require_response_contains "$resp" "OIDC_AUTH_METHOD_TYPE_NONE" "$context"
+              }
+
               echo "[3/5] Creating project 'Harpia' (idempotent)..."
               EXISTING=$(api POST /management/v1/projects/_search '{"queries":[{"nameQuery":{"name":"Harpia","method":"TEXT_QUERY_METHOD_EQUALS"}}]}')
               PROJECT_ID=$(echo "$EXISTING" | grep -oE '"id":"[0-9]+"' | head -1 | sed 's/.*"\([0-9]*\)"$/\1/')
@@ -155,9 +176,30 @@ spec:
                 CLIENT_ID=$(echo "$APP_CREATE" | grep -oE '"clientId":"[^"]+"' | head -1 | sed 's/.*"\([^"]*\)"$/\1/')
               else
                 echo "  app exists (id=$APP_ID), reconciling OIDC config to NATIVE..."
-                api PUT "/management/v1/projects/$PROJECT_ID/apps/$APP_ID/oidc_config" "$OIDC_CONFIG" >/dev/null
+                RECONCILE_BODY_FILE=$(mktemp)
+                RECONCILE_STATUS=$(curl -sS -o "$RECONCILE_BODY_FILE" -w "%{http_code}" \
+                  -X PUT "$ZITADEL_URL/management/v1/projects/$PROJECT_ID/apps/$APP_ID/oidc_config" \
+                  -H "Authorization: Bearer $PAT" \
+                  -H "Content-Type: application/json" \
+                  -H "Host: localhost:8085" \
+                  -d "$OIDC_CONFIG" || true)
+                case "$RECONCILE_STATUS" in
+                  200|204)
+                    echo "  OIDC config reconciled"
+                    ;;
+                  400)
+                    echo "  reconcile returned HTTP 400; checking existing app config for required Harpia dev settings"
+                    ;;
+                  *)
+                    echo "ERROR: reconcile failed with HTTP $RECONCILE_STATUS"
+                    cat "$RECONCILE_BODY_FILE"
+                    rm -f "$RECONCILE_BODY_FILE"
+                    exit 1
+                    ;;
+                esac
+                rm -f "$RECONCILE_BODY_FILE"
                 APP_GET=$(api GET "/management/v1/projects/$PROJECT_ID/apps/$APP_ID")
-                require_native_app "$APP_GET" "reconcile GET"
+                require_harpia_oidc_config "$APP_GET" "existing app after reconcile"
                 echo "  reconcile: $(summarize_oidc_response "$APP_GET")"
                 CLIENT_ID=$(echo "$APP_GET" | grep -oE '"clientId":"[^"]+"' | head -1 | sed 's/.*"\([^"]*\)"$/\1/')
               fi
@@ -177,5 +219,5 @@ spec:
               echo "OIDC client registered."
               echo "  clientId = $CLIENT_ID"
               echo "  issuer   = http://localhost:8085"
-              echo "On host, run:  ./scripts/sync-oidc-config.sh"
+              echo "Tilt oidc-sync local_resource writes frontend/.env.local automatically."
               echo "========================================"

@@ -7,31 +7,35 @@
 ## Start
 
 ```bash
-kubectl apply -f deploy/dev/k3s/
-kubectl apply -f deploy/dev/kind/
+mise run dev   # Tilt: infra, Zitadel port-forward, OIDC sync, host Vite
 ```
 
-Apply the Zitadel init Job after Zitadel is ready:
+Tilt applies `deploy/dev/kind/` (including the Zitadel init Job), port-forwards Zitadel
+to localhost:8085, waits for `ConfigMap/harpia-oidc-config`, syncs the registered OIDC
+client into `frontend/.env.local`, and starts the Vite dev server on http://localhost:5173.
+
+Manual apply (without Tilt):
 
 ```bash
+kubectl apply -f deploy/dev/kind/
 kubectl wait --for=condition=Ready pod -l app=zitadel --timeout=120s
-kubectl create -f deploy/dev/kind/zitadel-init.yaml
+kubectl apply -f deploy/dev/kind/zitadel-init.yaml
 kubectl logs job/zitadel-register-client -f
+./scripts/sync-oidc-config.sh
 ```
 
 ## Access
 
 | Service       | URL                                   |
 | ------------- | ------------------------------------- |
-| Frontend      | http://localhost:5173                 |
+| Frontend      | http://localhost:5173 (host Vite via Tilt) |
 | Zitadel       | http://localhost:8085                 |
 | Zitadel Console | http://localhost:8085/ui/console    |
 
-Port-forward commands:
+Port-forward commands (only needed outside Tilt):
 
 ```bash
 kubectl port-forward svc/zitadel 8085:8080 &
-kubectl port-forward svc/harpia-frontend 5173:3000 &
 ```
 
 ## Zitadel
@@ -53,7 +57,8 @@ Check its logs:
 kubectl logs job/zitadel-register-client
 ```
 
-Copy the generated `Client ID` to `frontend/src/lib/auth.ts`.
+Tilt syncs the generated `Client ID` to `frontend/.env.local`. Outside Tilt, run
+`./scripts/sync-oidc-config.sh` after the Job publishes `ConfigMap/harpia-oidc-config`.
 
 #### Manual Registration
 
@@ -70,13 +75,12 @@ If the auto-registration Job fails, create the client manually:
 6. Add redirect URI: `http://localhost:5173/auth/callback`
 7. Add post-logout redirect URI: `http://localhost:5173`
 8. Click **Create**
-9. Copy the **Client ID** and update `frontend/src/lib/auth.ts`:
+9. Publish the **Client ID** through the same ConfigMap used by Tilt, then sync it:
 
-```typescript
-const ZITADEL_CONFIG = {
-  issuer: "http://localhost:8085",
-  clientId: "<YOUR_CLIENT_ID>",
-  redirectUri: "http://localhost:5173/auth/callback",
-  scope: "openid profile email",
-};
+```bash
+kubectl create configmap harpia-oidc-config \
+  --from-literal=clientId="<YOUR_CLIENT_ID>" \
+  --from-literal=issuer="http://localhost:8085" \
+  --dry-run=client -o yaml | kubectl apply -f -
+./scripts/sync-oidc-config.sh
 ```

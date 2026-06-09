@@ -39,8 +39,10 @@ docker_build(
         sync('./frontend/src', '/app/src'),
     ],
 )
+# Host Vite serves the frontend in dev (picks up frontend/.env.local for OIDC).
+# The k8s production build stays available but is not started by default.
 k8s_yaml('deploy/dev/kind/frontend.yaml')
-k8s_resource('harpia-frontend', port_forwards=['5173:3000'])
+k8s_resource('harpia-frontend', auto_init=False)
 
 # ---- Infrastructure (pre-built images, no build needed) ----
 k8s_yaml([
@@ -48,5 +50,41 @@ k8s_yaml([
     'deploy/dev/kind/valkey.yaml',
     'deploy/dev/kind/garage.yaml',
     'deploy/dev/kind/zitadel.yaml',
+    'deploy/dev/kind/zitadel-init.yaml',
     'deploy/dev/kind/openfga.yaml',
 ])
+
+k8s_resource('zitadel', resource_deps=['postgres'])
+k8s_resource('zitadel-register-client', resource_deps=['zitadel'])
+
+# ---- Host-side dev helpers (Zitadel OIDC, Vite) ----
+local_resource(
+    'zitadel-port-forward',
+    serve_cmd='kubectl port-forward svc/zitadel 8085:8080',
+    resource_deps=['zitadel'],
+    labels=['infra'],
+)
+
+local_resource(
+    'oidc-sync',
+    cmd='./scripts/sync-oidc-config.sh',
+    resource_deps=['zitadel'],
+    trigger_mode=TRIGGER_MODE_AUTO,
+    deps=['./scripts/sync-oidc-config.sh'],
+    labels=['infra'],
+)
+
+# Vite loads .env.local at startup only (no HMR for env vars). Restart when
+# oidc-sync writes frontend/.env.local or when the sync script changes.
+local_resource(
+    'vite',
+    serve_cmd='cd frontend && bun run dev --host',
+    resource_deps=['oidc-sync', 'zitadel-port-forward'],
+    deps=['frontend/.env.local'],
+    trigger_mode=TRIGGER_MODE_AUTO,
+    readiness_probe=probe(
+        period_secs=2,
+        http_get=http_get_action(port=5173, path='/'),
+    ),
+    labels=['frontend'],
+)
