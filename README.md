@@ -64,6 +64,19 @@ mise run buf-generate
 mise run dev
 ```
 
+### Local dev login
+
+The persona-based dev login is disabled by default. To expose it for the local
+Tilt/Vite dev workflow only, set the public Vite flag when starting dev:
+
+```bash
+PUBLIC_DEV_LOGIN_ENABLED=true mise run dev
+```
+
+Do not set this flag for production artifacts. Dev login is only honored by the
+Vite dev server, and the frontend build fails when
+`PUBLIC_DEV_LOGIN_ENABLED=true` is present.
+
 ## Project Structure
 
 ```

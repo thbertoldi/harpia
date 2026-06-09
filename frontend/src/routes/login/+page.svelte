@@ -1,9 +1,16 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { resolve } from "$app/paths";
-  import { login, getSession, devLogin, isZitadelConfigured } from "$lib/auth";
+  import {
+    login,
+    getSession,
+    devLogin,
+    isDevLoginEnabled,
+    isZitadelConfigured,
+  } from "$lib/auth";
 
   const zitadelReady = isZitadelConfigured();
+  const devLoginEnabled = isDevLoginEnabled();
   import { Sun, Moon, Crown, Eye, Wrench } from "lucide-svelte";
 
   let email = $state("");
@@ -26,7 +33,7 @@
   }
 
   function handleDevLogin(role: "Leader" | "Overseer" | "Engineer") {
-    devLogin(role);
+    if (!devLogin(role)) return;
     goto(resolve("/"));
   }
 
@@ -137,46 +144,48 @@
         </button>
       </form>
 
-      <div class="relative pt-2">
-        <div class="absolute inset-0 flex items-center pt-2">
-          <div class="w-full border-t border-plumage"></div>
+      {#if devLoginEnabled}
+        <div class="relative pt-2">
+          <div class="absolute inset-0 flex items-center pt-2">
+            <div class="w-full border-t border-plumage"></div>
+          </div>
+          <div class="relative flex justify-center text-xs">
+            <span
+              class="bg-obsidian px-2 font-mono tracking-wider text-crown-ash-dark uppercase"
+              style="font-family: 'JetBrains Mono', monospace"
+            >
+              dev login
+            </span>
+          </div>
         </div>
-        <div class="relative flex justify-center text-xs">
-          <span
-            class="bg-obsidian px-2 font-mono tracking-wider text-crown-ash-dark uppercase"
-            style="font-family: 'JetBrains Mono', monospace"
-          >
-            dev login
-          </span>
-        </div>
-      </div>
 
-      <div class="grid grid-cols-1 gap-2">
-        {#each personas as persona (persona.role)}
-          <button
-            onclick={() => handleDevLogin(persona.role)}
-            class="group flex cursor-pointer items-center gap-3 rounded-lg border border-plumage bg-obsidian-light/40 px-4 py-3 text-left transition-colors hover:border-talon-gold hover:bg-obsidian-light"
-          >
-            <persona.icon
-              class="size-5 shrink-0 text-crown-ash transition-colors group-hover:text-talon-gold"
-            />
-            <div class="min-w-0 flex-1">
-              <div
-                class="font-body text-sm font-medium text-cream"
-                style="font-family: 'DM Sans', sans-serif"
-              >
-                {persona.label}
+        <div class="grid grid-cols-1 gap-2">
+          {#each personas as persona (persona.role)}
+            <button
+              onclick={() => handleDevLogin(persona.role)}
+              class="group flex cursor-pointer items-center gap-3 rounded-lg border border-plumage bg-obsidian-light/40 px-4 py-3 text-left transition-colors hover:border-talon-gold hover:bg-obsidian-light"
+            >
+              <persona.icon
+                class="size-5 shrink-0 text-crown-ash transition-colors group-hover:text-talon-gold"
+              />
+              <div class="min-w-0 flex-1">
+                <div
+                  class="font-body text-sm font-medium text-cream"
+                  style="font-family: 'DM Sans', sans-serif"
+                >
+                  {persona.label}
+                </div>
+                <div
+                  class="font-mono text-[10px] tracking-wider text-crown-ash-dark uppercase"
+                  style="font-family: 'JetBrains Mono', monospace"
+                >
+                  {persona.subtitle}
+                </div>
               </div>
-              <div
-                class="font-mono text-[10px] tracking-wider text-crown-ash-dark uppercase"
-                style="font-family: 'JetBrains Mono', monospace"
-              >
-                {persona.subtitle}
-              </div>
-            </div>
-          </button>
-        {/each}
-      </div>
+            </button>
+          {/each}
+        </div>
+      {/if}
     </div>
   </div>
 </div>
