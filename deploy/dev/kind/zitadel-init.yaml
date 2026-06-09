@@ -155,7 +155,28 @@ spec:
                 CLIENT_ID=$(echo "$APP_CREATE" | grep -oE '"clientId":"[^"]+"' | head -1 | sed 's/.*"\([^"]*\)"$/\1/')
               else
                 echo "  app exists (id=$APP_ID), reconciling OIDC config to NATIVE..."
-                api PUT "/management/v1/projects/$PROJECT_ID/apps/$APP_ID/oidc_config" "$OIDC_CONFIG" >/dev/null
+                RECONCILE_BODY_FILE=$(mktemp)
+                RECONCILE_STATUS=$(curl -sS -o "$RECONCILE_BODY_FILE" -w "%{http_code}" \
+                  -X PUT "$ZITADEL_URL/management/v1/projects/$PROJECT_ID/apps/$APP_ID/oidc_config" \
+                  -H "Authorization: Bearer $PAT" \
+                  -H "Content-Type: application/json" \
+                  -H "Host: localhost:8085" \
+                  -d "$OIDC_CONFIG" || true)
+                case "$RECONCILE_STATUS" in
+                  200|204)
+                    echo "  OIDC config reconciled"
+                    ;;
+                  400)
+                    echo "  reconcile returned HTTP 400; verifying existing app config"
+                    ;;
+                  *)
+                    echo "ERROR: reconcile failed with HTTP $RECONCILE_STATUS"
+                    cat "$RECONCILE_BODY_FILE"
+                    rm -f "$RECONCILE_BODY_FILE"
+                    exit 1
+                    ;;
+                esac
+                rm -f "$RECONCILE_BODY_FILE"
                 APP_GET=$(api GET "/management/v1/projects/$PROJECT_ID/apps/$APP_ID")
                 require_native_app "$APP_GET" "reconcile GET"
                 echo "  reconcile: $(summarize_oidc_response "$APP_GET")"
