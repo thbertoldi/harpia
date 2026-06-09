@@ -20,15 +20,15 @@ import (
 type TaskHandler struct {
 	repo      *Repository
 	temporal  *workflow.TemporalClient
-	cache     *cache.Client
+	cache     *cache.TenantStore
 	devUserID uuid.UUID
 }
 
-func NewTaskHandler(repo *Repository, temporal *workflow.TemporalClient, cacheClient *cache.Client, devUserID uuid.UUID) (*TaskHandler, error) {
+func NewTaskHandler(repo *Repository, temporal *workflow.TemporalClient, cacheStore *cache.TenantStore, devUserID uuid.UUID) (*TaskHandler, error) {
 	if repo == nil {
 		return nil, errors.New("tasks: repository is required")
 	}
-	return &TaskHandler{repo: repo, temporal: temporal, cache: cacheClient, devUserID: devUserID}, nil
+	return &TaskHandler{repo: repo, temporal: temporal, cache: cacheStore, devUserID: devUserID}, nil
 }
 
 func (h *TaskHandler) CreateTask(ctx context.Context, req *connect.Request[tasksv1.CreateTaskRequest]) (*connect.Response[tasksv1.CreateTaskResponse], error) {
@@ -80,7 +80,7 @@ func (h *TaskHandler) GetTask(ctx context.Context, req *connect.Request[tasksv1.
 	}
 
 	if h.cache != nil {
-		cacheKey := fmt.Sprintf("task:%s:%s", tenantID.String(), taskID.String())
+		cacheKey := fmt.Sprintf("task:%s", taskID.String())
 		if cached, cacheErr := h.cache.Get(ctx, cacheKey); cacheErr == nil {
 			var task Task
 			if json.Unmarshal([]byte(cached), &task) == nil {
@@ -97,7 +97,7 @@ func (h *TaskHandler) GetTask(ctx context.Context, req *connect.Request[tasksv1.
 	}
 
 	if h.cache != nil {
-		cacheKey := fmt.Sprintf("task:%s:%s", tenantID.String(), taskID.String())
+		cacheKey := fmt.Sprintf("task:%s", taskID.String())
 		if data, marshalErr := json.Marshal(task); marshalErr == nil {
 			_ = h.cache.Set(ctx, cacheKey, string(data), 5*time.Minute)
 		}

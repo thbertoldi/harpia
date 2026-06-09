@@ -87,6 +87,7 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 
 	var (
 		cacheClient          *cache.Client
+		tenantCache          *cache.TenantStore
 		agentCapabilityCache *cache.AgentCapabilityCache
 		rateLimiter          *cache.RateLimiter
 	)
@@ -99,8 +100,9 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 			if pingErr := cacheClient.Ping(ctx); pingErr != nil {
 				logger.Warn("valkey ping failed, running without cache", "error", pingErr)
 			} else {
-				agentCapabilityCache = cache.NewAgentCapabilityCache(cacheClient)
-				rateLimiter = cache.NewRateLimiter(cacheClient)
+				tenantCache = cache.NewTenantStore(cacheClient)
+				agentCapabilityCache = cache.NewAgentCapabilityCache(tenantCache)
+				rateLimiter = cache.NewRateLimiter(tenantCache)
 				defer cacheClient.Close()
 			}
 		}
@@ -116,7 +118,7 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 		}
 	}
 
-	taskHandler, err := tasks.NewTaskHandler(taskRepo, temporalClient, cacheClient, userID)
+	taskHandler, err := tasks.NewTaskHandler(taskRepo, temporalClient, tenantCache, userID)
 	if err != nil {
 		fatal("create task handler failed", "error", err)
 	}
@@ -137,7 +139,7 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 		})
 	})
 
-	requestContext := connect.WithInterceptors(identity.NewRequestContextInterceptor(identity.AuthOptions{
+	interceptors := []connect.Interceptor{identity.NewRequestContextInterceptor(identity.AuthOptions{
 		DevTenantID:   tenantID,
 		AllowDevAuth:  cfg.AllowDevAuth,
 		Authenticator: identity.NewZitadelAuthenticator(cfg.ZitadelURL, nil, cfg.AuthCacheTTL, cfg.AuthCacheMaxEntries),
@@ -145,7 +147,11 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 			DefaultTenantID:            tenantID,
 			AutoProvisionDefaultTenant: cfg.AutoProvisionDefaultTenant,
 		}),
-	}))
+	})}
+	if rateLimiter != nil {
+		interceptors = append(interceptors, server.NewRateLimitInterceptor(rateLimiter, 100))
+	}
+	requestContext := connect.WithInterceptors(interceptors...)
 
 	agentsPath, agentsHandler := agentsv1connect.NewAgentServiceHandler(agentHandler, requestContext)
 	tasksPath, tasksHandler := tasksv1connect.NewTaskServiceHandler(taskHandler, requestContext)
@@ -158,9 +164,6 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	mux.Handle(feedbackPath, feedbackHandler)
 
 	var wrapped http.Handler = mux
-	if rateLimiter != nil {
-		wrapped = server.RateLimit(rateLimiter, 100)(wrapped)
-	}
 	wrapped = withLogging(logger)(wrapped)
 
 	srv := &http.Server{

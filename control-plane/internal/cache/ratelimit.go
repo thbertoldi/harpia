@@ -7,11 +7,11 @@ import (
 )
 
 type RateLimiter struct {
-	client *Client
+	store *TenantStore
 }
 
-func NewRateLimiter(client *Client) *RateLimiter {
-	return &RateLimiter{client: client}
+func NewRateLimiter(store *TenantStore) *RateLimiter {
+	return &RateLimiter{store: store}
 }
 
 const slidingWindowScript = `
@@ -31,12 +31,12 @@ end
 return 0
 `
 
-func (r *RateLimiter) Allow(ctx context.Context, tenantID string, maxPerMinute int) (bool, error) {
-	key := fmt.Sprintf("ratelimit:%s", tenantID)
+func (r *RateLimiter) Allow(ctx context.Context, maxPerMinute int) (bool, error) {
+	key := "ratelimit"
 	now := time.Now().UnixMilli()
 	window := int64(60 * time.Second / time.Millisecond)
 
-	result, err := r.client.rdb.Eval(ctx, slidingWindowScript, []string{key}, now, window, maxPerMinute).Int()
+	result, err := r.store.EvalInt(ctx, slidingWindowScript, []string{key}, now, window, maxPerMinute)
 	if err != nil {
 		return false, fmt.Errorf("rate limit eval: %w", err)
 	}
