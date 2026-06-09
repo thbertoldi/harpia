@@ -1,0 +1,54 @@
+model
+  schema 1.1
+
+type user
+
+type tenant
+  relations
+    define owner: [user]
+    define member: [user] or owner
+    define engineer: [user] or owner
+    define viewer: owner or member or engineer
+    define manage_agent_types: owner or engineer
+    define manage_tools: owner or engineer
+
+type workspace
+  relations
+    define tenant: [tenant]
+    define owner: [user, tenant#owner]
+    define member: [user, tenant#member] or owner
+    define viewer: [user] or owner or member or viewer from tenant
+
+type task
+  relations
+    define workspace: [workspace]
+    define owner: [user, workspace#owner]
+    define member: [user, workspace#member] or owner
+    define assignee: [user, workspace#member]
+    define reviewer: [user, workspace#member]
+    define viewer: [user] or owner or member or assignee or reviewer or viewer from workspace
+
+type subtask
+  relations
+    define task: [task]
+    define owner: [user, task#owner]
+    define member: [user, task#member] or owner
+    define assignee: [user, task#assignee]
+    define viewer: [user] or owner or member or assignee or viewer from task
+
+type agent_type
+  relations
+    define tenant: [tenant]
+    define owner: [user, tenant#owner]
+    define member: [user, tenant#member] or owner
+    define viewer: [user] or owner or member or engineer from tenant
+    define manager: owner or engineer from tenant
+
+type tool
+  relations
+    define tenant: [tenant]
+    define agent_type: [agent_type]
+    define owner: [user, tenant#owner, agent_type#owner]
+    define member: [user, tenant#member, agent_type#member] or owner
+    define viewer: [user] or owner or member or viewer from tenant or viewer from agent_type
+    define manager: owner or engineer from tenant or manager from agent_type
