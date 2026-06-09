@@ -2,6 +2,9 @@
 .agents/
 skills-lock.json
 
+# BMad local artifacts
+_bmad-output/
+
 # mise
 .mise.local.toml
 
