@@ -79,7 +79,7 @@ local_resource(
 local_resource(
     'vite',
     serve_cmd='cd frontend && bun run dev --host',
-    resource_deps=['oidc-sync'],
+    resource_deps=['oidc-sync', 'zitadel-port-forward'],
     deps=['frontend/.env.local'],
     trigger_mode=TRIGGER_MODE_AUTO,
     readiness_probe=probe(
