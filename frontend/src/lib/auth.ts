@@ -1,3 +1,4 @@
+import { dev } from "$app/environment";
 import { env } from "$env/dynamic/public";
 
 const ZITADEL_CONFIG = {
@@ -9,6 +10,10 @@ const ZITADEL_CONFIG = {
 
 export function isZitadelConfigured(): boolean {
   return ZITADEL_CONFIG.clientId.length > 0;
+}
+
+export function isDevLoginEnabled(): boolean {
+  return dev && env.PUBLIC_DEV_LOGIN_ENABLED === "true";
 }
 
 export interface User {
@@ -185,7 +190,11 @@ const DEV_PERSONAS: Record<
   },
 };
 
-export function devLogin(role: string = "Leader"): Session {
+export function devLogin(role: string = "Leader"): Session | null {
+  if (!isDevLoginEnabled()) {
+    return null;
+  }
+
   const persona = DEV_PERSONAS[role] ?? DEV_PERSONAS.Leader;
   const session: Session = {
     user: { ...persona, role },
