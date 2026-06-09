@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Check, Loader2, Clock, Eye } from "lucide-svelte";
+  import { requireTenantId } from "$lib/auth";
   import { toUserMessage } from "$lib/connect-errors";
   import { feedbackClient, type FeedbackRequest } from "$lib/rpc";
   import FeedbackPanel from "$lib/components/FeedbackPanel.svelte";
@@ -19,7 +20,7 @@
     try {
       const pending: FeedbackRequest[] = [];
       for await (const res of feedbackClient.listPendingFeedback({
-        tenantId: "default",
+        tenantId: requireTenantId(),
         pageSize: 50,
         pageToken: "",
       })) {

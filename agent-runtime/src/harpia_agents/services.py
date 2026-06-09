@@ -23,6 +23,7 @@ from harpia_agents.gen.harpia.agents.v1.agents_pb2 import (
     RegisterAgentTypeResponse,
 )
 from harpia_agents.graph import TaskState, build_graph
+from harpia_agents.identity import require_selected_tenant, require_tenant
 
 if TYPE_CHECKING:
     from connectrpc.request import RequestContext
@@ -36,6 +37,7 @@ class AgentServiceImpl(AgentService):
         request: RegisterAgentTypeRequest,
         ctx: RequestContext,
     ) -> RegisterAgentTypeResponse:
+        require_selected_tenant(ctx)
         agent_type = AgentType(
             name=request.name,
             description=request.description,
@@ -48,6 +50,8 @@ class AgentServiceImpl(AgentService):
         request: ListAgentTypesRequest,
         ctx: RequestContext,
     ) -> AsyncIterator[ListAgentTypesResponse]:
+        require_selected_tenant(ctx)
+
         async def _stream() -> AsyncIterator[ListAgentTypesResponse]:
             # TODO: query from registry
             yield ListAgentTypesResponse(agent_types=[])
@@ -59,6 +63,7 @@ class AgentServiceImpl(AgentService):
         request: MatchAgentRequest,
         ctx: RequestContext,
     ) -> MatchAgentResponse:
+        require_tenant(ctx, request.tenant_id)
         embedder = OpenAIEmbeddings()
         await embedder.aembed_query(request.task_description)
         return MatchAgentResponse(matches=[])
@@ -68,11 +73,13 @@ class AgentServiceImpl(AgentService):
         request: ExecuteTaskRequest,
         ctx: RequestContext,
     ) -> AsyncIterator[ExecuteTaskResponse]:
+        tenant_id = require_tenant(ctx, request.tenant_id)
+
         async def _stream() -> AsyncIterator[ExecuteTaskResponse]:
             graph = build_graph()
             state = TaskState(
                 task_id=request.task_id,
-                tenant_id=request.tenant_id,
+                tenant_id=tenant_id,
                 description=request.task_description,
             )
             async for event in graph.astream(state.model_dump()):
@@ -92,6 +99,7 @@ class AgentServiceImpl(AgentService):
         request: ContinueExecutionRequest,
         ctx: RequestContext,
     ) -> ContinueExecutionResponse:
+        require_tenant(ctx, request.tenant_id)
         return ContinueExecutionResponse(
             agent_instance_id=request.agent_instance_id,
             status=AgentInstanceStatus.AGENT_INSTANCE_STATUS_COMPLETED,

@@ -5,15 +5,17 @@ from datetime import timedelta
 from temporalio import activity, workflow
 
 from harpia_agents.graph import TaskState, build_graph
+from harpia_agents.identity import require_temporal_tenant
 
 
 @activity.defn
 async def decompose_task_activity(input: dict) -> dict:
     """Decompose a high-level task into subtasks using LangGraph."""
+    tenant_id = require_temporal_tenant(input)
     graph = build_graph()
     state = TaskState(
         task_id=input["task_id"],
-        tenant_id=input["tenant_id"],
+        tenant_id=tenant_id,
         description=input["description"],
     )
     result = await graph.ainvoke(state.model_dump())
@@ -23,8 +25,15 @@ async def decompose_task_activity(input: dict) -> dict:
 @activity.defn
 async def execute_subtask_activity(input: dict) -> dict:
     """Execute a single subtask using LangGraph worker node."""
+    tenant_id = require_temporal_tenant(input)
     graph = build_graph()
-    state = TaskState(**input)
+    state = TaskState(
+        task_id=input["task_id"],
+        tenant_id=tenant_id,
+        description=input["description"],
+        subtasks=input.get("subtasks", []),
+        current_subtask=input.get("current_subtask", 0),
+    )
     result = await graph.ainvoke(state.model_dump())
     return result
 

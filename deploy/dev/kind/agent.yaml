@@ -28,6 +28,8 @@ spec:
               value: "0.0.0.0"
             - name: HARPIA_AGENT_PORT
               value: "8000"
+            - name: HARPIA_ALLOW_DEV_AUTH
+              value: "true"
             - name: TEMPORAL_HOST
               value: "temporal:7233"
 ---

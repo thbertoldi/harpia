@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"os"
 	"strconv"
+	"time"
 )
 
 type Config struct {
@@ -15,6 +16,11 @@ type Config struct {
 	TemporalHost string
 	GarageURL    string
 	ZitadelURL   string
+
+	AllowDevAuth               bool
+	AuthCacheTTL               time.Duration
+	AuthCacheMaxEntries        int
+	AutoProvisionDefaultTenant bool
 }
 
 func Load() *Config {
@@ -27,6 +33,11 @@ func Load() *Config {
 		TemporalHost: envStr("TEMPORAL_HOST", "localhost:7233"),
 		GarageURL:    envStr("GARAGE_URL", "http://localhost:15002"),
 		ZitadelURL:   envStr("ZITADEL_URL", "http://localhost:9980"),
+
+		AllowDevAuth:               envBool("HARPIA_ALLOW_DEV_AUTH", false),
+		AuthCacheTTL:               envDuration("HARPIA_AUTH_CACHE_TTL", 60*time.Second),
+		AuthCacheMaxEntries:        envInt("HARPIA_AUTH_CACHE_MAX_ENTRIES", 1024),
+		AutoProvisionDefaultTenant: envBool("HARPIA_AUTO_PROVISION_DEFAULT_TENANT", false),
 	}
 }
 
@@ -41,6 +52,25 @@ func envInt(key string, fallback int) int {
 	if v := os.Getenv(key); v != "" {
 		if i, err := strconv.Atoi(v); err == nil {
 			return i
+		}
+	}
+	return fallback
+}
+
+func envBool(key string, fallback bool) bool {
+	if v := os.Getenv(key); v != "" {
+		parsed, err := strconv.ParseBool(v)
+		if err == nil {
+			return parsed
+		}
+	}
+	return fallback
+}
+
+func envDuration(key string, fallback time.Duration) time.Duration {
+	if v := os.Getenv(key); v != "" {
+		if parsed, err := time.ParseDuration(v); err == nil {
+			return parsed
 		}
 	}
 	return fallback

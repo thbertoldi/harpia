@@ -11,11 +11,12 @@ import (
 
 	agentsv1 "github.com/harpia/control-plane/gen/harpia/agents/v1"
 	"github.com/harpia/control-plane/internal/cache"
+	"github.com/harpia/control-plane/internal/identity"
 )
 
 type AgentHandler struct {
-	repo      *Repository
-	embedder  Embedder
+	repo       *Repository
+	embedder   Embedder
 	agentCache *cache.AgentCapabilityCache
 }
 
@@ -30,6 +31,10 @@ func NewAgentHandler(repo *Repository, embedder Embedder, agentCache *cache.Agen
 }
 
 func (h *AgentHandler) RegisterAgentType(ctx context.Context, req *connect.Request[agentsv1.RegisterAgentTypeRequest]) (*connect.Response[agentsv1.RegisterAgentTypeResponse], error) {
+	if _, err := identity.RequireSelectedTenant(ctx); err != nil {
+		return nil, err
+	}
+
 	agentType := &AgentType{
 		Name:        req.Msg.Name,
 		Description: req.Msg.Description,
@@ -55,12 +60,32 @@ func (h *AgentHandler) RegisterAgentType(ctx context.Context, req *connect.Reque
 }
 
 func (h *AgentHandler) ListAgentTypes(ctx context.Context, req *connect.Request[agentsv1.ListAgentTypesRequest], stream *connect.ServerStream[agentsv1.ListAgentTypesResponse]) error {
-	return nil
+	if _, err := identity.RequireSelectedTenant(ctx); err != nil {
+		return err
+	}
+
+	agentTypes, err := h.repo.List(ctx, true)
+	if err != nil {
+		return connect.NewError(connect.CodeInternal, err)
+	}
+
+	response := &agentsv1.ListAgentTypesResponse{
+		AgentTypes: make([]*agentsv1.AgentType, 0, len(agentTypes)),
+	}
+	for i := range agentTypes {
+		response.AgentTypes = append(response.AgentTypes, agentTypeToProto(&agentTypes[i]))
+	}
+	return stream.Send(response)
 }
 
 func (h *AgentHandler) MatchAgent(ctx context.Context, req *connect.Request[agentsv1.MatchAgentRequest]) (*connect.Response[agentsv1.MatchAgentResponse], error) {
+	tenantID, err := identity.RequireTenant(ctx, req.Msg.TenantId)
+	if err != nil {
+		return nil, err
+	}
+
 	if h.agentCache != nil {
-		cachedAgentID, err := h.agentCache.GetBestAgent(ctx, req.Msg.TaskDescription)
+		cachedAgentID, err := h.agentCache.GetBestAgent(ctx, tenantID, req.Msg.TaskDescription)
 		if err == nil && cachedAgentID != "" {
 			return connect.NewResponse(&agentsv1.MatchAgentResponse{
 				Matches: []*agentsv1.AgentMatch{
@@ -107,7 +132,7 @@ func (h *AgentHandler) MatchAgent(ctx context.Context, req *connect.Request[agen
 	}
 
 	if h.agentCache != nil && len(results) > 0 {
-		if err := h.agentCache.SetBestAgent(ctx, req.Msg.TaskDescription, results[0].ID.String()); err != nil {
+		if err := h.agentCache.SetBestAgent(ctx, tenantID, req.Msg.TaskDescription, results[0].ID.String()); err != nil {
 			slog.Warn("failed to cache best agent match", "error", err)
 		}
 	}
@@ -117,11 +142,25 @@ func (h *AgentHandler) MatchAgent(ctx context.Context, req *connect.Request[agen
 	}), nil
 }
 
+func agentTypeToProto(agentType *AgentType) *agentsv1.AgentType {
+	return &agentsv1.AgentType{
+		Id:          agentType.ID.String(),
+		Name:        agentType.Name,
+		Description: agentType.Description,
+		CreatedAt:   agentType.CreatedAt.Format(time.RFC3339),
+	}
+}
+
 func (h *AgentHandler) ExecuteTask(ctx context.Context, req *connect.Request[agentsv1.ExecuteTaskRequest], stream *connect.ServerStream[agentsv1.ExecuteTaskResponse]) error {
-	return nil
+	_, err := identity.RequireTenant(ctx, req.Msg.TenantId)
+	return err
 }
 
 func (h *AgentHandler) ContinueExecution(ctx context.Context, req *connect.Request[agentsv1.ContinueExecutionRequest]) (*connect.Response[agentsv1.ContinueExecutionResponse], error) {
+	if _, err := identity.RequireTenant(ctx, req.Msg.TenantId); err != nil {
+		return nil, err
+	}
+
 	return connect.NewResponse(&agentsv1.ContinueExecutionResponse{
 		AgentInstanceId: uuid.New().String(),
 		Status:          agentsv1.AgentInstanceStatus_AGENT_INSTANCE_STATUS_EXECUTING,

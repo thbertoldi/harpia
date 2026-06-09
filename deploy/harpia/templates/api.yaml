@@ -39,6 +39,14 @@ spec:
               value: {{ printf "http://%s:3900" $garageHost | quote }}
             - name: ZITADEL_URL
               value: {{ printf "http://%s:8080" $zitadelHost | quote }}
+            - name: HARPIA_ALLOW_DEV_AUTH
+              value: {{ .Values.api.auth.allowDevAuth | quote }}
+            - name: HARPIA_AUTO_PROVISION_DEFAULT_TENANT
+              value: {{ .Values.api.auth.autoProvisionDefaultTenant | quote }}
+            - name: HARPIA_AUTH_CACHE_TTL
+              value: {{ .Values.api.auth.cacheTTL | quote }}
+            - name: HARPIA_AUTH_CACHE_MAX_ENTRIES
+              value: {{ .Values.api.auth.cacheMaxEntries | quote }}
             - name: LOG_LEVEL
               value: "debug"
           readinessProbe:

@@ -3,6 +3,7 @@
   import { goto } from "$app/navigation";
   import { resolve } from "$app/paths";
   import { onDestroy } from "svelte";
+  import { requireTenantId } from "$lib/auth";
   import { toUserMessage } from "$lib/connect-errors";
   import { taskClient, type Task } from "$lib/rpc";
   import StatusBadge from "$lib/components/StatusBadge.svelte";
@@ -15,7 +16,6 @@
   let loadError = $state<string | null>(null);
   let watchError = $state<string | null>(null);
   let watchController = $state<AbortController | null>(null);
-  let tenantId = $state("default");
 
   $effect(() => {
     fetchTasks();
@@ -26,6 +26,7 @@
     loadError = null;
     try {
       const loadedTasks: Task[] = [];
+      const tenantId = requireTenantId();
       for await (const res of taskClient.listTasks({
         tenantId,
         pageSize: 50,
@@ -44,7 +45,17 @@
   function selectTask(task: Task) {
     if (watchController) {
       watchController.abort();
+      watchController = null;
     }
+
+    let tenantId: string;
+    try {
+      tenantId = requireTenantId();
+    } catch (e) {
+      watchError = toUserMessage(e);
+      return;
+    }
+
     selectedTask = task;
     watchError = null;
 
