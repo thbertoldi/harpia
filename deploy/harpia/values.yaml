@@ -47,12 +47,18 @@ openfga:
 api:
   enabled: true
   port: 8080
+  auth:
+    allowDevAuth: false
+    autoProvisionDefaultTenant: false
+    cacheTTL: 60s
 
 # Agent Runtime
 agent:
   enabled: true
   port: 8000
   role: server
+  auth:
+    allowDevAuth: false
 
 # Frontend
 frontend:

@@ -33,6 +33,8 @@ spec:
               value: "temporal:7233"
             - name: HARPIA_ROLE
               value: {{ .Values.agent.role | quote }}
+            - name: HARPIA_ALLOW_DEV_AUTH
+              value: {{ .Values.agent.auth.allowDevAuth | quote }}
           {{- with .Values.resources }}
           resources:
             {{- toYaml . | nindent 12 }}

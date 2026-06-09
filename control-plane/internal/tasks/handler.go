@@ -116,7 +116,11 @@ func (h *TaskHandler) ListTasks(ctx context.Context, req *connect.Request[tasksv
 
 	status := ""
 	if req.Msg.Status != nil && *req.Msg.Status != tasksv1.TaskStatus_TASK_STATUS_UNSPECIFIED {
-		status = taskStatusToString(*req.Msg.Status)
+		var statusErr error
+		status, statusErr = taskStatusToString(*req.Msg.Status)
+		if statusErr != nil {
+			return connect.NewError(connect.CodeInvalidArgument, statusErr)
+		}
 	}
 	limit := int(req.Msg.PageSize)
 	if limit <= 0 || limit > 100 {
@@ -173,24 +177,24 @@ func domainToProto(t *Task) *tasksv1.Task {
 	}
 }
 
-func taskStatusToString(status tasksv1.TaskStatus) string {
+func taskStatusToString(status tasksv1.TaskStatus) (string, error) {
 	switch status {
 	case tasksv1.TaskStatus_TASK_STATUS_PENDING:
-		return "pending"
+		return "pending", nil
 	case tasksv1.TaskStatus_TASK_STATUS_PLANNING:
-		return "planning"
+		return "planning", nil
 	case tasksv1.TaskStatus_TASK_STATUS_IN_PROGRESS:
-		return "in_progress"
+		return "in_progress", nil
 	case tasksv1.TaskStatus_TASK_STATUS_AWAITING_FEEDBACK:
-		return "awaiting_feedback"
+		return "awaiting_feedback", nil
 	case tasksv1.TaskStatus_TASK_STATUS_COMPLETED:
-		return "completed"
+		return "completed", nil
 	case tasksv1.TaskStatus_TASK_STATUS_FAILED:
-		return "failed"
+		return "failed", nil
 	case tasksv1.TaskStatus_TASK_STATUS_CANCELLED:
-		return "cancelled"
+		return "cancelled", nil
 	default:
-		return ""
+		return "", fmt.Errorf("unsupported task status %s", status.String())
 	}
 }
 

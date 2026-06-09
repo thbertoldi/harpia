@@ -2,13 +2,10 @@ package identity
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
-	"time"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
@@ -17,40 +14,29 @@ import (
 const DevTenantAlias = "dev"
 
 type AuthOptions struct {
-	DevTenantID  uuid.UUID
-	AllowDevAuth bool
-	UserInfoURL  string
-	Memberships  MembershipResolver
-	HTTPClient   *http.Client
+	DevTenantID   uuid.UUID
+	AllowDevAuth  bool
+	Authenticator BearerAuthenticator
+	Memberships   MembershipResolver
 }
 
 type tenantRequest interface {
 	GetTenantId() string
 }
 
-type userInfo struct {
-	Subject string `json:"sub"`
-}
-
 type RequestContextInterceptor struct {
-	devTenantID  uuid.UUID
-	allowDevAuth bool
-	userInfoURL  string
-	memberships  MembershipResolver
-	httpClient   *http.Client
+	devTenantID   uuid.UUID
+	allowDevAuth  bool
+	authenticator BearerAuthenticator
+	memberships   MembershipResolver
 }
 
 func NewRequestContextInterceptor(opts AuthOptions) *RequestContextInterceptor {
-	client := opts.HTTPClient
-	if client == nil {
-		client = &http.Client{Timeout: 5 * time.Second}
-	}
 	return &RequestContextInterceptor{
-		devTenantID:  opts.DevTenantID,
-		allowDevAuth: opts.AllowDevAuth,
-		userInfoURL:  strings.TrimRight(opts.UserInfoURL, "/"),
-		memberships:  opts.Memberships,
-		httpClient:   client,
+		devTenantID:   opts.DevTenantID,
+		allowDevAuth:  opts.AllowDevAuth,
+		authenticator: opts.Authenticator,
+		memberships:   opts.Memberships,
 	}
 }
 
@@ -98,7 +84,13 @@ func (i *RequestContextInterceptor) resolve(ctx context.Context, header http.Hea
 		return i.resolveDevContext(header.Get("X-Tenant-ID"))
 	}
 
-	user, err := i.authenticateBearer(ctx, token)
+	if i.authenticator == nil {
+		return RequestContext{}, connect.NewError(
+			connect.CodeUnauthenticated,
+			errors.New("bearer authenticator is not configured"),
+		)
+	}
+	user, err := i.authenticator.AuthenticateBearer(ctx, token)
 	if err != nil {
 		return RequestContext{}, err
 	}
@@ -108,7 +100,7 @@ func (i *RequestContextInterceptor) resolve(ctx context.Context, header http.Hea
 			errors.New("tenant membership resolver is not configured"),
 		)
 	}
-	memberships, err := i.memberships.ListMemberships(ctx, user.Subject)
+	memberships, err := i.memberships.ResolveMemberships(ctx, user)
 	if err != nil {
 		return RequestContext{}, connect.NewError(connect.CodeInternal, err)
 	}
@@ -165,46 +157,6 @@ func (i *RequestContextInterceptor) resolveDevContext(tenantRef string) (Request
 		Roles:       []string{selected.Role},
 		Tenants:     []TenantMembership{membership},
 	}, nil
-}
-
-func (i *RequestContextInterceptor) authenticateBearer(ctx context.Context, token string) (userInfo, error) {
-	if i.userInfoURL == "" {
-		return userInfo{}, connect.NewError(
-			connect.CodeUnauthenticated,
-			errors.New("userinfo endpoint is not configured"),
-		)
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, i.userInfoURL+"/oidc/v1/userinfo", nil)
-	if err != nil {
-		return userInfo{}, connect.NewError(connect.CodeInternal, err)
-	}
-	req.Header.Set("Authorization", "Bearer "+token)
-
-	resp, err := i.httpClient.Do(req)
-	if err != nil {
-		return userInfo{}, connect.NewError(connect.CodeUnauthenticated, err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		_, _ = io.Copy(io.Discard, resp.Body)
-		return userInfo{}, connect.NewError(
-			connect.CodeUnauthenticated,
-			fmt.Errorf("userinfo rejected token with status %d", resp.StatusCode),
-		)
-	}
-
-	var info userInfo
-	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
-		return userInfo{}, connect.NewError(connect.CodeUnauthenticated, err)
-	}
-	if info.Subject == "" {
-		return userInfo{}, connect.NewError(
-			connect.CodeUnauthenticated,
-			errors.New("missing user identity"),
-		)
-	}
-	return info, nil
 }
 
 func selectTenant(ref string, memberships []TenantMembership) (TenantMembership, bool, error) {

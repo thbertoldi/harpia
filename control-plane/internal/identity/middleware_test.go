@@ -3,9 +3,6 @@ package identity
 import (
 	"context"
 	"errors"
-	"io"
-	"net/http"
-	"strings"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -94,8 +91,7 @@ func TestRequestContextInterceptorRequiresTenantMembership(t *testing.T) {
 	tenantA := uuid.New()
 	tenantB := uuid.New()
 	interceptor := NewRequestContextInterceptor(AuthOptions{
-		UserInfoURL: "http://zitadel",
-		HTTPClient:  userInfoClient(),
+		Authenticator: fakeAuthenticator{user: AuthenticatedUser{Subject: "user-1"}},
 		Memberships: staticMemberships{
 			"user-1": {
 				{TenantID: tenantA, Slug: "tenant-a", Name: "Tenant A", Role: "member"},
@@ -119,8 +115,7 @@ func TestRequestContextInterceptorRequiresTenantMembership(t *testing.T) {
 func TestRequestContextInterceptorAuthorizesTenantFromMembership(t *testing.T) {
 	tenantID := uuid.New()
 	interceptor := NewRequestContextInterceptor(AuthOptions{
-		UserInfoURL: "http://zitadel",
-		HTTPClient:  userInfoClient(),
+		Authenticator: fakeAuthenticator{user: AuthenticatedUser{Subject: "user-1"}},
 		Memberships: staticMemberships{
 			"user-1": {
 				{TenantID: tenantID, Slug: "tenant-a", Name: "Tenant A", Role: "admin"},
@@ -148,29 +143,15 @@ func TestRequestContextInterceptorAuthorizesTenantFromMembership(t *testing.T) {
 
 type staticMemberships map[string][]TenantMembership
 
-func (s staticMemberships) ListMemberships(_ context.Context, externalID string) ([]TenantMembership, error) {
-	return s[externalID], nil
+func (s staticMemberships) ResolveMemberships(_ context.Context, user AuthenticatedUser) ([]TenantMembership, error) {
+	return s[user.Subject], nil
 }
 
-type roundTripFunc func(*http.Request) (*http.Response, error)
-
-func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
-	return f(req)
+type fakeAuthenticator struct {
+	user AuthenticatedUser
+	err  error
 }
 
-func userInfoClient() *http.Client {
-	return &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-		if got := req.Header.Get("Authorization"); got != "Bearer valid-token" {
-			return &http.Response{
-				StatusCode: http.StatusUnauthorized,
-				Body:       io.NopCloser(strings.NewReader("invalid token")),
-				Header:     make(http.Header),
-			}, nil
-		}
-		return &http.Response{
-			StatusCode: http.StatusOK,
-			Body:       io.NopCloser(strings.NewReader(`{"sub":"user-1"}`)),
-			Header:     http.Header{"Content-Type": []string{"application/json"}},
-		}, nil
-	})}
+func (a fakeAuthenticator) AuthenticateBearer(context.Context, string) (AuthenticatedUser, error) {
+	return a.user, a.err
 }

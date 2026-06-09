@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from collections.abc import Awaitable, Callable, Mapping, MutableMapping
 from dataclasses import dataclass
 from http import HTTPStatus
@@ -35,8 +34,9 @@ class TenantAuthError(PermissionError):
 class TenantResolverMiddleware:
     """Resolve tenant/user metadata before ConnectRPC dispatch."""
 
-    def __init__(self, app: ASGIApp) -> None:
+    def __init__(self, app: ASGIApp, *, allow_dev_auth: bool = False) -> None:
         self.app = app
+        self.allow_dev_auth = allow_dev_auth
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope.get("type") != "http":
@@ -45,7 +45,10 @@ class TenantResolverMiddleware:
 
         headers = _headers_from_scope(scope)
         try:
-            scope["harpia.request_context"] = resolve_request_context(headers)
+            scope["harpia.request_context"] = resolve_request_context(
+                headers,
+                allow_dev_auth=self.allow_dev_auth,
+            )
         except TenantAuthError as exc:
             await _send_plain_error(send, exc.code, str(exc))
             return
@@ -53,11 +56,15 @@ class TenantResolverMiddleware:
         await self.app(scope, receive, send)
 
 
-def resolve_request_context(headers: Mapping[str, str]) -> RequestContext:
+def resolve_request_context(
+    headers: Mapping[str, str],
+    *,
+    allow_dev_auth: bool = False,
+) -> RequestContext:
     auth = headers.get("authorization", "")
     if not auth.startswith("Bearer "):
         raise TenantAuthError(HTTPStatus.UNAUTHORIZED, "missing authorization")
-    if auth != DEV_TOKEN or not _allow_dev_auth():
+    if auth != DEV_TOKEN or not allow_dev_auth:
         raise TenantAuthError(HTTPStatus.UNAUTHORIZED, "unsupported authorization")
 
     tenant_id = headers.get("x-tenant-id", "")
@@ -98,18 +105,12 @@ def require_selected_tenant(ctx: object) -> str:
     return context.tenant_id
 
 
-def _allow_dev_auth() -> bool:
-    return os.environ.get("HARPIA_ALLOW_DEV_AUTH", "").lower() in {
-        "1",
-        "t",
-        "true",
-        "y",
-        "yes",
-        "on",
-    }
+def require_temporal_tenant(input: Mapping[str, object]) -> str:
+    """Return the tenant carried by trusted Temporal input.
 
-
-def validate_temporal_input(input: Mapping[str, object]) -> str:
+    Temporal is treated as an internal queue boundary. This validates shape only;
+    external callers must not be granted direct namespace access.
+    """
     tenant_id = input.get("tenant_id")
     if not isinstance(tenant_id, str) or not tenant_id:
         raise TenantAuthError(HTTPStatus.UNAUTHORIZED, "missing tenant")

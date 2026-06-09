@@ -15,14 +15,24 @@ from harpia_agents.services import AgentServiceImpl
 logger = logging.getLogger("harpia_agents")
 
 
-def create_app():
+def env_bool(name: str, default: bool = False) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.lower() in {"1", "t", "true", "y", "yes", "on"}
+
+
+def create_app(*, allow_dev_auth: bool = False):
     """Create the ConnectRPC ASGI application with the AgentService implementation."""
     service = AgentServiceImpl()
     from harpia_agents.gen.harpia.agents.v1.agents_connect import (
         AgentServiceASGIApplication,
     )
 
-    return TenantResolverMiddleware(AgentServiceASGIApplication(service))
+    return TenantResolverMiddleware(
+        AgentServiceASGIApplication(service),
+        allow_dev_auth=allow_dev_auth,
+    )
 
 
 def start_server() -> None:
@@ -31,7 +41,7 @@ def start_server() -> None:
     port = int(os.environ.get("HARPIA_AGENT_PORT", "8000"))
 
     logger.info("starting harpia agent runtime", extra={"host": host, "port": port})
-    app = create_app()
+    app = create_app(allow_dev_auth=env_bool("HARPIA_ALLOW_DEV_AUTH"))
     logger.info("agent runtime ready (ConnectRPC ASGI server)")
     uvicorn.run(app, host=host, port=port)
 

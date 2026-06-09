@@ -43,6 +43,14 @@
   }
 
   function selectTask(task: Task) {
+    let tenantId: string;
+    try {
+      tenantId = requireTenantId();
+    } catch (e) {
+      watchError = toUserMessage(e);
+      return;
+    }
+
     if (watchController) {
       watchController.abort();
     }
@@ -51,7 +59,6 @@
 
     const controller = new AbortController();
     watchController = controller;
-    const tenantId = requireTenantId();
 
     void (async () => {
       try {
