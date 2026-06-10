@@ -51,12 +51,15 @@ k8s_yaml([
     'deploy/dev/kind/zitadel.yaml',
     'deploy/dev/kind/zitadel-init.yaml',
     'deploy/dev/kind/openfga.yaml',
+    'deploy/dev/kind/openfga-bootstrap.yaml',
 ])
 
 k8s_resource('zitadel', resource_deps=['postgres'])
 k8s_resource('zitadel-register-client', resource_deps=['zitadel'])
+k8s_resource('openfga', resource_deps=['postgres'])
+k8s_resource('openfga-bootstrap', resource_deps=['openfga'])
 
-# ---- Host-side dev helpers (Zitadel OIDC, Vite) ----
+# ---- Host-side dev helpers (Zitadel OIDC, OpenFGA, Vite) ----
 local_resource(
     'db-migrate',
     cmd='./scripts/apply-dev-db-migrations.sh',
@@ -80,11 +83,27 @@ local_resource(
 )
 
 local_resource(
+    'openfga-port-forward',
+    serve_cmd='kubectl port-forward svc/openfga 8086:8080',
+    resource_deps=['openfga'],
+    labels=['infra'],
+)
+
+local_resource(
     'oidc-sync',
     cmd='./scripts/sync-oidc-config.sh',
     resource_deps=['zitadel'],
     trigger_mode=TRIGGER_MODE_AUTO,
     deps=['./scripts/sync-oidc-config.sh'],
+    labels=['infra'],
+)
+
+local_resource(
+    'fga-sync',
+    cmd='./scripts/sync-fga-config.sh',
+    resource_deps=['openfga', 'oidc-sync'],
+    trigger_mode=TRIGGER_MODE_AUTO,
+    deps=['./scripts/sync-fga-config.sh'],
     labels=['infra'],
 )
 
@@ -96,12 +115,18 @@ local_resource(
     labels=['frontend'],
 )
 
-# Vite loads .env.local at startup only (no HMR for env vars). Restart when
-# oidc-sync writes frontend/.env.local or when the sync script changes.
+# Vite loads .env.local at startup only (no HMR for env vars). Restart after
+# the OIDC/FGA sync resources write frontend/.env.local.
 local_resource(
     'vite',
     serve_cmd='cd frontend && bun run dev --host',
-    resource_deps=['frontend-install', 'oidc-sync', 'zitadel-port-forward'],
+    resource_deps=[
+        'frontend-install',
+        'oidc-sync',
+        'fga-sync',
+        'zitadel-port-forward',
+        'openfga-port-forward',
+    ],
     deps=['frontend/.env.local'],
     trigger_mode=TRIGGER_MODE_AUTO,
     readiness_probe=probe(

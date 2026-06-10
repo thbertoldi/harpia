@@ -10,11 +10,11 @@
 mise run dev   # Tilt: infra, Zitadel port-forward, OIDC sync, host Vite
 ```
 
-Tilt applies `deploy/dev/kind/`, runs database migrations, port-forwards the API
-to localhost:19080 and Zitadel to localhost:8085, waits for
-`ConfigMap/harpia-oidc-config`, syncs the registered OIDC client into
-`frontend/.env.local`, installs frontend dependencies when needed, and starts the
-Vite dev server on http://localhost:5173.
+Tilt applies `deploy/dev/kind/`, runs database migrations, bootstraps Zitadel
+and OpenFGA, port-forwards the API to localhost:19080, Zitadel to
+localhost:8085, and OpenFGA to localhost:8086, waits for the OIDC/FGA ConfigMaps,
+syncs local `.env.local` files, installs frontend dependencies when needed, and
+starts the Vite dev server on http://localhost:5173.
 
 Manual apply (without Tilt):
 
@@ -23,9 +23,12 @@ kubectl apply -f deploy/dev/kind/postgres.yaml
 ./scripts/apply-dev-db-migrations.sh
 kubectl apply -f deploy/dev/kind/
 kubectl wait --for=condition=Ready pod -l app=zitadel --timeout=120s
+kubectl wait --for=condition=Available deployment/openfga --timeout=120s
 kubectl apply -f deploy/dev/kind/zitadel-init.yaml
 kubectl logs job/zitadel-register-client -f
 ./scripts/sync-oidc-config.sh
+kubectl logs job/openfga-bootstrap -f
+./scripts/sync-fga-config.sh
 ```
 
 ## Access
@@ -36,11 +39,14 @@ kubectl logs job/zitadel-register-client -f
 | API           | http://localhost:19080                |
 | Zitadel       | http://localhost:8085                 |
 | Zitadel Console | http://localhost:8085/ui/console    |
+| OpenFGA       | http://localhost:8086                 |
+| OpenFGA Playground | http://localhost:8086/playground |
 
 Port-forward commands (only needed outside Tilt):
 
 ```bash
 kubectl port-forward svc/zitadel 8085:8080 &
+kubectl port-forward svc/openfga 8086:8080 &
 ```
 
 ## Zitadel
@@ -88,4 +94,33 @@ kubectl create configmap harpia-oidc-config \
   --from-literal=issuer="http://localhost:8085" \
   --dry-run=client -o yaml | kubectl apply -f -
 ./scripts/sync-oidc-config.sh
+```
+
+## OpenFGA
+
+The `openfga-bootstrap.yaml` Job creates or reuses the `Harpia` OpenFGA store,
+writes the dev authorization model from `deploy/dev/kind/openfga-model.fga`, and
+publishes `storeId` and `authorizationModelId` to `ConfigMap/harpia-fga-config`.
+The Job is idempotent after a successful run: if the ConfigMap points at an
+existing store/model pair, the Job reuses it instead of writing another immutable
+authorization model.
+
+Check its logs:
+
+```bash
+kubectl logs job/openfga-bootstrap
+```
+
+Tilt syncs the generated IDs to `frontend/.env.local` and
+`control-plane/.env.local`. Outside Tilt, run:
+
+```bash
+./scripts/sync-fga-config.sh
+```
+
+Verify the model with the OpenFGA CLI:
+
+```bash
+STORE_ID=$(kubectl get configmap harpia-fga-config -o jsonpath='{.data.storeId}')
+fga model list --api-url http://localhost:8086 --store-id "$STORE_ID"
 ```

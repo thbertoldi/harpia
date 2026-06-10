@@ -1,0 +1,578 @@
+# Harpia Dev — OpenFGA authorization model bootstrap.
+#
+# The ConfigMap keeps both the human-readable OpenFGA DSL and the JSON request
+# body accepted by the OpenFGA HTTP API. Keep both in sync with
+# deploy/dev/kind/openfga-model.fga.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: harpia-openfga-model
+data:
+  openfga-model.fga: |
+    model
+      schema 1.1
+
+    type user
+
+    type tenant
+      relations
+        define owner: [user]
+        define member: [user] or owner
+        define engineer: [user] or owner
+        define viewer: owner or member or engineer
+        define manage_agent_types: owner or engineer
+        define manage_tools: owner or engineer
+
+    type workspace
+      relations
+        define tenant: [tenant]
+        define owner: [user, tenant#owner]
+        define member: [user, tenant#member] or owner
+        define viewer: [user] or owner or member or viewer from tenant
+
+    type task
+      relations
+        define workspace: [workspace]
+        define owner: [user, workspace#owner]
+        define member: [user, workspace#member] or owner
+        define assignee: [user, workspace#member]
+        define reviewer: [user, workspace#member]
+        define viewer: [user] or owner or member or assignee or reviewer or viewer from workspace
+
+    type subtask
+      relations
+        define task: [task]
+        define owner: [user, task#owner]
+        define member: [user, task#member] or owner
+        define assignee: [user, task#assignee]
+        define viewer: [user] or owner or member or assignee or viewer from task
+
+    type agent_type
+      relations
+        define tenant: [tenant]
+        define owner: [user, tenant#owner]
+        define member: [user, tenant#member] or owner
+        define viewer: [user] or owner or member or engineer from tenant
+        define manager: owner or engineer from tenant
+
+    type tool
+      relations
+        define tenant: [tenant]
+        define agent_type: [agent_type]
+        define owner: [user, tenant#owner, agent_type#owner]
+        define member: [user, tenant#member, agent_type#member] or owner
+        define viewer: [user] or owner or member or viewer from tenant or viewer from agent_type
+        define manager: owner or engineer from tenant or manager from agent_type
+  openfga-model.json: |
+    {
+      "schema_version": "1.1",
+      "type_definitions": [
+        { "type": "user" },
+        {
+          "type": "tenant",
+          "relations": {
+            "owner": { "this": {} },
+            "member": {
+              "union": {
+                "child": [
+                  { "this": {} },
+                  { "computedUserset": { "relation": "owner" } }
+                ]
+              }
+            },
+            "engineer": {
+              "union": {
+                "child": [
+                  { "this": {} },
+                  { "computedUserset": { "relation": "owner" } }
+                ]
+              }
+            },
+            "viewer": {
+              "union": {
+                "child": [
+                  { "computedUserset": { "relation": "owner" } },
+                  { "computedUserset": { "relation": "member" } },
+                  { "computedUserset": { "relation": "engineer" } }
+                ]
+              }
+            },
+            "manage_agent_types": {
+              "union": {
+                "child": [
+                  { "computedUserset": { "relation": "owner" } },
+                  { "computedUserset": { "relation": "engineer" } }
+                ]
+              }
+            },
+            "manage_tools": {
+              "union": {
+                "child": [
+                  { "computedUserset": { "relation": "owner" } },
+                  { "computedUserset": { "relation": "engineer" } }
+                ]
+              }
+            }
+          },
+          "metadata": {
+            "relations": {
+              "owner": { "directly_related_user_types": [{ "type": "user" }] },
+              "member": { "directly_related_user_types": [{ "type": "user" }] },
+              "engineer": { "directly_related_user_types": [{ "type": "user" }] }
+            }
+          }
+        },
+        {
+          "type": "workspace",
+          "relations": {
+            "tenant": { "this": {} },
+            "owner": { "this": {} },
+            "member": {
+              "union": {
+                "child": [
+                  { "this": {} },
+                  { "computedUserset": { "relation": "owner" } }
+                ]
+              }
+            },
+            "viewer": {
+              "union": {
+                "child": [
+                  { "this": {} },
+                  { "computedUserset": { "relation": "owner" } },
+                  { "computedUserset": { "relation": "member" } },
+                  {
+                    "tupleToUserset": {
+                      "tupleset": { "relation": "tenant" },
+                      "computedUserset": { "relation": "viewer" }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "metadata": {
+            "relations": {
+              "tenant": { "directly_related_user_types": [{ "type": "tenant" }] },
+              "owner": {
+                "directly_related_user_types": [
+                  { "type": "user" },
+                  { "type": "tenant", "relation": "owner" }
+                ]
+              },
+              "member": {
+                "directly_related_user_types": [
+                  { "type": "user" },
+                  { "type": "tenant", "relation": "member" }
+                ]
+              },
+              "viewer": { "directly_related_user_types": [{ "type": "user" }] }
+            }
+          }
+        },
+        {
+          "type": "task",
+          "relations": {
+            "workspace": { "this": {} },
+            "owner": { "this": {} },
+            "member": {
+              "union": {
+                "child": [
+                  { "this": {} },
+                  { "computedUserset": { "relation": "owner" } }
+                ]
+              }
+            },
+            "assignee": { "this": {} },
+            "reviewer": { "this": {} },
+            "viewer": {
+              "union": {
+                "child": [
+                  { "this": {} },
+                  { "computedUserset": { "relation": "owner" } },
+                  { "computedUserset": { "relation": "member" } },
+                  { "computedUserset": { "relation": "assignee" } },
+                  { "computedUserset": { "relation": "reviewer" } },
+                  {
+                    "tupleToUserset": {
+                      "tupleset": { "relation": "workspace" },
+                      "computedUserset": { "relation": "viewer" }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "metadata": {
+            "relations": {
+              "workspace": { "directly_related_user_types": [{ "type": "workspace" }] },
+              "owner": {
+                "directly_related_user_types": [
+                  { "type": "user" },
+                  { "type": "workspace", "relation": "owner" }
+                ]
+              },
+              "member": {
+                "directly_related_user_types": [
+                  { "type": "user" },
+                  { "type": "workspace", "relation": "member" }
+                ]
+              },
+              "assignee": {
+                "directly_related_user_types": [
+                  { "type": "user" },
+                  { "type": "workspace", "relation": "member" }
+                ]
+              },
+              "reviewer": {
+                "directly_related_user_types": [
+                  { "type": "user" },
+                  { "type": "workspace", "relation": "member" }
+                ]
+              },
+              "viewer": { "directly_related_user_types": [{ "type": "user" }] }
+            }
+          }
+        },
+        {
+          "type": "subtask",
+          "relations": {
+            "task": { "this": {} },
+            "owner": { "this": {} },
+            "member": {
+              "union": {
+                "child": [
+                  { "this": {} },
+                  { "computedUserset": { "relation": "owner" } }
+                ]
+              }
+            },
+            "assignee": { "this": {} },
+            "viewer": {
+              "union": {
+                "child": [
+                  { "this": {} },
+                  { "computedUserset": { "relation": "owner" } },
+                  { "computedUserset": { "relation": "member" } },
+                  { "computedUserset": { "relation": "assignee" } },
+                  {
+                    "tupleToUserset": {
+                      "tupleset": { "relation": "task" },
+                      "computedUserset": { "relation": "viewer" }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "metadata": {
+            "relations": {
+              "task": { "directly_related_user_types": [{ "type": "task" }] },
+              "owner": {
+                "directly_related_user_types": [
+                  { "type": "user" },
+                  { "type": "task", "relation": "owner" }
+                ]
+              },
+              "member": {
+                "directly_related_user_types": [
+                  { "type": "user" },
+                  { "type": "task", "relation": "member" }
+                ]
+              },
+              "assignee": {
+                "directly_related_user_types": [
+                  { "type": "user" },
+                  { "type": "task", "relation": "assignee" }
+                ]
+              },
+              "viewer": { "directly_related_user_types": [{ "type": "user" }] }
+            }
+          }
+        },
+        {
+          "type": "agent_type",
+          "relations": {
+            "tenant": { "this": {} },
+            "owner": { "this": {} },
+            "member": {
+              "union": {
+                "child": [
+                  { "this": {} },
+                  { "computedUserset": { "relation": "owner" } }
+                ]
+              }
+            },
+            "viewer": {
+              "union": {
+                "child": [
+                  { "this": {} },
+                  { "computedUserset": { "relation": "owner" } },
+                  { "computedUserset": { "relation": "member" } },
+                  {
+                    "tupleToUserset": {
+                      "tupleset": { "relation": "tenant" },
+                      "computedUserset": { "relation": "engineer" }
+                    }
+                  }
+                ]
+              }
+            },
+            "manager": {
+              "union": {
+                "child": [
+                  { "computedUserset": { "relation": "owner" } },
+                  {
+                    "tupleToUserset": {
+                      "tupleset": { "relation": "tenant" },
+                      "computedUserset": { "relation": "engineer" }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "metadata": {
+            "relations": {
+              "tenant": { "directly_related_user_types": [{ "type": "tenant" }] },
+              "owner": {
+                "directly_related_user_types": [
+                  { "type": "user" },
+                  { "type": "tenant", "relation": "owner" }
+                ]
+              },
+              "member": {
+                "directly_related_user_types": [
+                  { "type": "user" },
+                  { "type": "tenant", "relation": "member" }
+                ]
+              },
+              "viewer": { "directly_related_user_types": [{ "type": "user" }] }
+            }
+          }
+        },
+        {
+          "type": "tool",
+          "relations": {
+            "tenant": { "this": {} },
+            "agent_type": { "this": {} },
+            "owner": { "this": {} },
+            "member": {
+              "union": {
+                "child": [
+                  { "this": {} },
+                  { "computedUserset": { "relation": "owner" } }
+                ]
+              }
+            },
+            "viewer": {
+              "union": {
+                "child": [
+                  { "this": {} },
+                  { "computedUserset": { "relation": "owner" } },
+                  { "computedUserset": { "relation": "member" } },
+                  {
+                    "tupleToUserset": {
+                      "tupleset": { "relation": "tenant" },
+                      "computedUserset": { "relation": "viewer" }
+                    }
+                  },
+                  {
+                    "tupleToUserset": {
+                      "tupleset": { "relation": "agent_type" },
+                      "computedUserset": { "relation": "viewer" }
+                    }
+                  }
+                ]
+              }
+            },
+            "manager": {
+              "union": {
+                "child": [
+                  { "computedUserset": { "relation": "owner" } },
+                  {
+                    "tupleToUserset": {
+                      "tupleset": { "relation": "tenant" },
+                      "computedUserset": { "relation": "engineer" }
+                    }
+                  },
+                  {
+                    "tupleToUserset": {
+                      "tupleset": { "relation": "agent_type" },
+                      "computedUserset": { "relation": "manager" }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "metadata": {
+            "relations": {
+              "tenant": { "directly_related_user_types": [{ "type": "tenant" }] },
+              "agent_type": { "directly_related_user_types": [{ "type": "agent_type" }] },
+              "owner": {
+                "directly_related_user_types": [
+                  { "type": "user" },
+                  { "type": "tenant", "relation": "owner" },
+                  { "type": "agent_type", "relation": "owner" }
+                ]
+              },
+              "member": {
+                "directly_related_user_types": [
+                  { "type": "user" },
+                  { "type": "tenant", "relation": "member" },
+                  { "type": "agent_type", "relation": "member" }
+                ]
+              },
+              "viewer": { "directly_related_user_types": [{ "type": "user" }] }
+            }
+          }
+        }
+      ]
+    }
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: openfga-bootstrap
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: openfga-bootstrap
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "create", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: openfga-bootstrap
+subjects:
+  - kind: ServiceAccount
+    name: openfga-bootstrap
+roleRef:
+  kind: Role
+  name: openfga-bootstrap
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: openfga-bootstrap
+spec:
+  backoffLimit: 6
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: openfga-bootstrap
+      volumes:
+        - name: model
+          configMap:
+            name: harpia-openfga-model
+      containers:
+        - name: bootstrap
+          image: alpine/k8s:1.31.0
+          volumeMounts:
+            - name: model
+              mountPath: /model
+              readOnly: true
+          command: ["/bin/sh", "-eu", "-c"]
+          args:
+            - |
+              OPENFGA_URL="http://openfga:8080"
+              HOST_OPENFGA_URL="http://localhost:8086"
+              STORE_NAME="Harpia"
+              CONFIGMAP_NAME="harpia-fga-config"
+              MODEL_JSON="/model/openfga-model.json"
+
+              json_value() {
+                field=$1
+                if command -v jq >/dev/null 2>&1; then
+                  jq -r --arg field "$field" '.[$field] // empty'
+                else
+                  sed -n "s/.*\"$field\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\".*/\1/p" | head -1
+                fi
+              }
+
+              store_id_from_list() {
+                if command -v jq >/dev/null 2>&1; then
+                  jq -r --arg name "$STORE_NAME" '.stores[]? | select(.name == $name) | .id' | head -1
+                else
+                  tr '{' '\n' | grep "\"name\"[[:space:]]*:[[:space:]]*\"$STORE_NAME\"" | head -1 | \
+                    sed -n 's/.*"id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p'
+                fi
+              }
+
+              echo "[1/4] Waiting for OpenFGA API..."
+              for i in $(seq 1 120); do
+                curl -sf "$OPENFGA_URL/healthz" >/dev/null 2>&1 && break
+                sleep 2
+              done
+              curl -sf "$OPENFGA_URL/healthz" >/dev/null
+
+              echo "[2/4] Checking existing ConfigMap '$CONFIGMAP_NAME'..."
+              STORE_ID=$(kubectl get configmap "$CONFIGMAP_NAME" -o jsonpath='{.data.storeId}' 2>/dev/null || true)
+              AUTH_MODEL_ID=$(kubectl get configmap "$CONFIGMAP_NAME" -o jsonpath='{.data.authorizationModelId}' 2>/dev/null || true)
+              if [ -n "$STORE_ID" ] && [ -n "$AUTH_MODEL_ID" ]; then
+                if curl -sf "$OPENFGA_URL/stores/$STORE_ID/authorization-models/$AUTH_MODEL_ID" >/dev/null; then
+                  echo "  existing store/model are valid; no model write needed"
+                  SKIP_MODEL_WRITE=1
+                else
+                  echo "  existing ConfigMap points at a missing store/model; reconciling"
+                  STORE_ID=""
+                  AUTH_MODEL_ID=""
+                  SKIP_MODEL_WRITE=0
+                fi
+              else
+                SKIP_MODEL_WRITE=0
+              fi
+
+              if [ -z "$STORE_ID" ]; then
+                echo "[3/4] Resolving OpenFGA store '$STORE_NAME'..."
+                STORES=$(curl -sfS "$OPENFGA_URL/stores")
+                STORE_ID=$(printf '%s' "$STORES" | store_id_from_list)
+                if [ -z "$STORE_ID" ]; then
+                  STORE_CREATE=$(curl -sfS -X POST "$OPENFGA_URL/stores" \
+                    -H "Content-Type: application/json" \
+                    -d '{"name":"Harpia"}')
+                  STORE_ID=$(printf '%s' "$STORE_CREATE" | json_value id)
+                  echo "  created store_id=$STORE_ID"
+                else
+                  echo "  found store_id=$STORE_ID"
+                fi
+              else
+                echo "[3/4] Reusing store_id=$STORE_ID"
+              fi
+              [ -n "$STORE_ID" ] || { echo "ERROR: could not resolve OpenFGA store id"; exit 1; }
+
+              if [ "$SKIP_MODEL_WRITE" != "1" ]; then
+                echo "[4/4] Writing Harpia authorization model..."
+                MODEL_CREATE=$(curl -sfS -X POST "$OPENFGA_URL/stores/$STORE_ID/authorization-models" \
+                  -H "Content-Type: application/json" \
+                  --data-binary "@$MODEL_JSON")
+                AUTH_MODEL_ID=$(printf '%s' "$MODEL_CREATE" | json_value authorization_model_id)
+                [ -n "$AUTH_MODEL_ID" ] || { echo "ERROR: could not resolve authorization_model_id"; exit 1; }
+                echo "  authorization_model_id=$AUTH_MODEL_ID"
+              else
+                echo "[4/4] Reusing authorization_model_id=$AUTH_MODEL_ID"
+              fi
+
+              kubectl create configmap "$CONFIGMAP_NAME" \
+                --from-literal=storeId="$STORE_ID" \
+                --from-literal=authorizationModelId="$AUTH_MODEL_ID" \
+                --from-literal=apiUrl="$OPENFGA_URL" \
+                --from-literal=hostApiUrl="$HOST_OPENFGA_URL" \
+                --dry-run=client -o yaml | kubectl apply -f -
+
+              echo ""
+              echo "========================================"
+              echo "OpenFGA model ready."
+              echo "  storeId              = $STORE_ID"
+              echo "  authorizationModelId = $AUTH_MODEL_ID"
+              echo "  API URL              = $OPENFGA_URL"
+              echo "Tilt fga-sync local_resource writes frontend/.env.local and control-plane/.env.local."
+              echo "========================================"

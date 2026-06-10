@@ -16,6 +16,10 @@ type Config struct {
 	TemporalHost string
 	GarageURL    string
 	ZitadelURL   string
+	OpenFGAURL   string
+
+	OpenFGAStoreID              string
+	OpenFGAAuthorizationModelID string
 
 	AllowDevAuth               bool
 	AuthCacheTTL               time.Duration
@@ -33,6 +37,10 @@ func Load() *Config {
 		TemporalHost: envStr("TEMPORAL_HOST", "localhost:7233"),
 		GarageURL:    envStr("GARAGE_URL", "http://localhost:15002"),
 		ZitadelURL:   envStr("ZITADEL_URL", "http://localhost:9980"),
+		OpenFGAURL:   envStr("OPENFGA_API_URL", "http://localhost:8086"),
+
+		OpenFGAStoreID:              envStr("OPENFGA_STORE_ID", ""),
+		OpenFGAAuthorizationModelID: envStr("OPENFGA_AUTHORIZATION_MODEL_ID", ""),
 
 		AllowDevAuth:               envBool("HARPIA_ALLOW_DEV_AUTH", false),
 		AuthCacheTTL:               envDuration("HARPIA_AUTH_CACHE_TTL", 60*time.Second),
