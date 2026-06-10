@@ -1,0 +1,87 @@
+name: Guard Runtime And Dependencies
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review, edited]
+    paths:
+      - "mise.toml"
+      - "go.mod"
+      - "go.sum"
+      - "Cargo.toml"
+      - "**/go.mod"
+      - "**/go.sum"
+      - "**/pyproject.toml"
+      - "**/uv.lock"
+      - "**/package.json"
+      - "**/bun.lock"
+      - "**/Cargo.toml"
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  detect:
+    name: Detect runtime and dependency changes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out trusted base scripts
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 0
+
+      - name: Fetch pull request head
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_REPO_URL: ${{ github.event.pull_request.head.repo.clone_url }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git fetch --no-tags --depth=1 "$HEAD_REPO_URL" "$HEAD_SHA"
+
+      - name: Detect version changes
+        id: guard
+        env:
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          set -euo pipefail
+          git log --format=%s "$BASE_SHA..$HEAD_SHA" > commit-subjects.txt
+          python3 scripts/ci/guard_runtime_and_deps.py \
+            --base "$BASE_SHA" \
+            --head "$HEAD_SHA" \
+            --pr-title "$PR_TITLE" \
+            --author "$AUTHOR" \
+            --commit-subjects-file commit-subjects.txt \
+            --comment-file guard-comment.md \
+            --result-file guard-result.json
+          {
+            echo "detected=$(jq -r '.detected' guard-result.json)"
+            echo "label_required=$(jq -r '.label_required' guard-result.json)"
+            echo "exempt=$(jq -r '.exempt' guard-result.json)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Add human-approval label
+        if: steps.guard.outputs.label_required == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: gh pr edit "$PR_NUMBER" --add-label "requires-human-approval"
+
+      - name: Upsert guard comment
+        if: steps.guard.outputs.label_required == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/upsert_guard_comment.py \
+            --repo "$GITHUB_REPOSITORY" \
+            --issue-number "$PR_NUMBER" \
+            --comment-file guard-comment.md \
+            --marker "<!-- harpia-guard:runtime-and-deps -->"
