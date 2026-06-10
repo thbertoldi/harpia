@@ -142,3 +142,7 @@ run = "helm template test deploy/harpia/ > /dev/null"
 [tasks.db-migrate]
 description = "Run database migrations"
 run = "cd database && atlas migrate apply --dir migrations --url \"$DATABASE_URL\""
+
+[tasks.dispatch]
+description = "Run the coding-agent dispatcher"
+run = "go run ./cmd/dispatch \"$@\""
