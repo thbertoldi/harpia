@@ -2,20 +2,10 @@ syntax = "proto3";
 
 package harpia.agents.v1;
 
-import "google/protobuf/struct.proto";
-
-// AgentType is the canonical manifest for a Harpia agent definition.
-message AgentType {
-  string id = 1;
-  string version = 2;
-  string display_name = 3;
-  string description = 4;
-  repeated string capabilities = 5;
-  string model_id = 6;
-  string system_prompt = 7;
-  repeated string allowed_tool_ids = 8;
-  google.protobuf.Struct input_schema = 9;
-  google.protobuf.Struct output_schema = 10;
-  double cost_estimate = 11;
-  google.protobuf.Struct metadata = 12;
-}
+// AgentType intentionally remains in agents.proto.
+//
+// This repository enforces Buf FILE-level breaking checks. Moving the existing
+// harpia.agents.v1.AgentType message into this file would break current
+// generated clients even if the fully-qualified message name stayed the same.
+// Keep this file as the manifest boundary marker until the next explicit proto
+// version can move the message without breaking consumers.

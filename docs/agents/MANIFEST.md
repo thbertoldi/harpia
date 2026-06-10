@@ -3,7 +3,13 @@
 The agent type manifest is the single source of truth for what an agent is in
 Harpia. Platform Engineers author one YAML file per immutable agent version,
 for example `agents/email-drafter/v1.yaml`. Runtime and control-plane code use
-the protobuf contract in `proto/harpia/agents/v1/agent_type.proto`.
+the protobuf contract on `harpia.agents.v1.AgentType`.
+
+`AgentType` currently remains in `proto/harpia/agents/v1/agents.proto` because
+the repository enforces Buf FILE-level breaking checks and existing clients
+already consume that message from that file. The sibling
+`proto/harpia/agents/v1/agent_type.proto` records this boundary decision for a
+future explicit proto version.
 
 ## Schema
 

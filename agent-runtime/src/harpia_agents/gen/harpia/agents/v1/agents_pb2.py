@@ -22,10 +22,10 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
-from harpia.agents.v1 import agent_type_pb2 as harpia_dot_agents_dot_v1_dot_agent__type__pb2
+from google.protobuf import struct_pb2 as google_dot_protobuf_dot_struct__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1dharpia/agents/v1/agents.proto\x12\x10harpia.agents.v1\x1a!harpia/agents/v1/agent_type.proto\"\x95\x02\n\rAgentInstance\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\"\n\ragent_type_id\x18\x02 \x01(\tR\x0b\x61gentTypeId\x12\x1b\n\ttenant_id\x18\x03 \x01(\tR\x08tenantId\x12\x17\n\x07task_id\x18\x04 \x01(\tR\x06taskId\x12\x1d\n\nsubtask_id\x18\x05 \x01(\tR\tsubtaskId\x12=\n\x06status\x18\x06 \x01(\x0e\x32%.harpia.agents.v1.AgentInstanceStatusR\x06status\x12\x1d\n\ncreated_at\x18\x07 \x01(\tR\tcreatedAt\x12\x1d\n\nupdated_at\x18\x08 \x01(\tR\tupdatedAt\"}\n\x18RegisterAgentTypeRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12 \n\x0b\x64\x65scription\x18\x02 \x01(\tR\x0b\x64\x65scription\x12+\n\x11\x63\x61pabilities_text\x18\x03 \x01(\tR\x10\x63\x61pabilitiesText\"W\n\x19RegisterAgentTypeResponse\x12:\n\nagent_type\x18\x01 \x01(\x0b\x32\x1b.harpia.agents.v1.AgentTypeR\tagentType\"\x9b\x01\n\x15ListAgentTypesRequest\x12\x30\n\x11\x63\x61pability_filter\x18\x01 \x01(\tH\x00R\x10\x63\x61pabilityFilter\x88\x01\x01\x12\x1b\n\tpage_size\x18\x02 \x01(\x05R\x08pageSize\x12\x1d\n\npage_token\x18\x03 \x01(\tR\tpageTokenB\x14\n\x12_capability_filter\"~\n\x16ListAgentTypesResponse\x12<\n\x0b\x61gent_types\x18\x01 \x03(\x0b\x32\x1b.harpia.agents.v1.AgentTypeR\nagentTypes\x12&\n\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"|\n\x11MatchAgentRequest\x12\x1b\n\ttenant_id\x18\x01 \x01(\tR\x08tenantId\x12)\n\x10task_description\x18\x02 \x01(\tR\x0ftaskDescription\x12\x1f\n\x0bmax_results\x18\x03 \x01(\x05R\nmaxResults\"L\n\x12MatchAgentResponse\x12\x36\n\x07matches\x18\x01 \x03(\x0b\x32\x1c.harpia.agents.v1.AgentMatchR\x07matches\"s\n\nAgentMatch\x12:\n\nagent_type\x18\x01 \x01(\x0b\x32\x1b.harpia.agents.v1.AgentTypeR\tagentType\x12)\n\x10similarity_score\x18\x02 \x01(\x02R\x0fsimilarityScore\"\xe3\x01\n\x12\x45xecuteTaskRequest\x12\x1b\n\ttenant_id\x18\x01 \x01(\tR\x08tenantId\x12\x17\n\x07task_id\x18\x02 \x01(\tR\x06taskId\x12\x1d\n\nsubtask_id\x18\x03 \x01(\tR\tsubtaskId\x12\"\n\ragent_type_id\x18\x04 \x01(\tR\x0b\x61gentTypeId\x12)\n\x10task_description\x18\x05 \x01(\tR\x0ftaskDescription\x12)\n\x10previous_results\x18\x06 \x03(\tR\x0fpreviousResults\"\xcf\x02\n\x13\x45xecuteTaskResponse\x12*\n\x11\x61gent_instance_id\x18\x01 \x01(\tR\x0f\x61gentInstanceId\x12=\n\x06status\x18\x02 \x01(\x0e\x32%.harpia.agents.v1.AgentInstanceStatusR\x06status\x12\x18\n\x07message\x18\x03 \x01(\tR\x07message\x12\x1b\n\x06output\x18\x04 \x01(\tH\x00R\x06output\x88\x01\x01\x12\x19\n\x05\x65rror\x18\x05 \x01(\tH\x01R\x05\x65rror\x88\x01\x01\x12Q\n\x10\x66\x65\x65\x64\x62\x61\x63k_request\x18\x06 \x01(\x0b\x32!.harpia.agents.v1.FeedbackRequestH\x02R\x0f\x66\x65\x65\x64\x62\x61\x63kRequest\x88\x01\x01\x42\t\n\x07_outputB\x08\n\x06_errorB\x13\n\x11_feedback_request\"f\n\x0f\x46\x65\x65\x64\x62\x61\x63kRequest\x12\x1d\n\nsubtask_id\x18\x01 \x01(\tR\tsubtaskId\x12\x1a\n\x08question\x18\x02 \x01(\tR\x08question\x12\x18\n\x07options\x18\x03 \x03(\tR\x07options\"\xaa\x01\n\x18\x43ontinueExecutionRequest\x12\x1b\n\ttenant_id\x18\x01 \x01(\tR\x08tenantId\x12*\n\x11\x61gent_instance_id\x18\x02 \x01(\tR\x0f\x61gentInstanceId\x12+\n\x11\x66\x65\x65\x64\x62\x61\x63k_decision\x18\x03 \x01(\tR\x10\x66\x65\x65\x64\x62\x61\x63kDecision\x12\x18\n\x07\x63omment\x18\x04 \x01(\tR\x07\x63omment\"\xa0\x01\n\x19\x43ontinueExecutionResponse\x12*\n\x11\x61gent_instance_id\x18\x01 \x01(\tR\x0f\x61gentInstanceId\x12=\n\x06status\x18\x02 \x01(\x0e\x32%.harpia.agents.v1.AgentInstanceStatusR\x06status\x12\x18\n\x07message\x18\x03 \x01(\tR\x07message*\x99\x02\n\x13\x41gentInstanceStatus\x12%\n!AGENT_INSTANCE_STATUS_UNSPECIFIED\x10\x00\x12\x1e\n\x1a\x41GENT_INSTANCE_STATUS_IDLE\x10\x01\x12\"\n\x1e\x41GENT_INSTANCE_STATUS_PLANNING\x10\x02\x12#\n\x1f\x41GENT_INSTANCE_STATUS_EXECUTING\x10\x03\x12+\n\'AGENT_INSTANCE_STATUS_AWAITING_FEEDBACK\x10\x04\x12#\n\x1f\x41GENT_INSTANCE_STATUS_COMPLETED\x10\x05\x12 \n\x1c\x41GENT_INSTANCE_STATUS_FAILED\x10\x06\x32\x88\x04\n\x0c\x41gentService\x12l\n\x11RegisterAgentType\x12*.harpia.agents.v1.RegisterAgentTypeRequest\x1a+.harpia.agents.v1.RegisterAgentTypeResponse\x12\x65\n\x0eListAgentTypes\x12\'.harpia.agents.v1.ListAgentTypesRequest\x1a(.harpia.agents.v1.ListAgentTypesResponse0\x01\x12W\n\nMatchAgent\x12#.harpia.agents.v1.MatchAgentRequest\x1a$.harpia.agents.v1.MatchAgentResponse\x12\\\n\x0b\x45xecuteTask\x12$.harpia.agents.v1.ExecuteTaskRequest\x1a%.harpia.agents.v1.ExecuteTaskResponse0\x01\x12l\n\x11\x43ontinueExecution\x12*.harpia.agents.v1.ContinueExecutionRequest\x1a+.harpia.agents.v1.ContinueExecutionResponseB\xc4\x01\n\x14\x63om.harpia.agents.v1B\x0b\x41gentsProtoP\x01Z=github.com/harpia/control-plane/gen/harpia/agents/v1;agentsv1\xa2\x02\x03HAX\xaa\x02\x10Harpia.Agents.V1\xca\x02\x10Harpia\\Agents\\V1\xe2\x02\x1cHarpia\\Agents\\V1\\GPBMetadata\xea\x02\x12Harpia::Agents::V1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1dharpia/agents/v1/agents.proto\x12\x10harpia.agents.v1\x1a\x1cgoogle/protobuf/struct.proto\"\xbc\x04\n\tAgentType\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n\x04name\x18\x02 \x01(\tR\x04name\x12 \n\x0b\x64\x65scription\x18\x03 \x01(\tR\x0b\x64\x65scription\x12+\n\x11\x63\x61pabilities_text\x18\x04 \x01(\tR\x10\x63\x61pabilitiesText\x12\x1d\n\ncreated_at\x18\x05 \x01(\tR\tcreatedAt\x12\x18\n\x07version\x18\x06 \x01(\tR\x07version\x12!\n\x0c\x64isplay_name\x18\x07 \x01(\tR\x0b\x64isplayName\x12\"\n\x0c\x63\x61pabilities\x18\x08 \x03(\tR\x0c\x63\x61pabilities\x12\x19\n\x08model_id\x18\t \x01(\tR\x07modelId\x12#\n\rsystem_prompt\x18\n \x01(\tR\x0csystemPrompt\x12(\n\x10\x61llowed_tool_ids\x18\x0b \x03(\tR\x0e\x61llowedToolIds\x12:\n\x0cinput_schema\x18\x0c \x01(\x0b\x32\x17.google.protobuf.StructR\x0binputSchema\x12<\n\routput_schema\x18\r \x01(\x0b\x32\x17.google.protobuf.StructR\x0coutputSchema\x12#\n\rcost_estimate\x18\x0e \x01(\x01R\x0c\x63ostEstimate\x12\x33\n\x08metadata\x18\x0f \x01(\x0b\x32\x17.google.protobuf.StructR\x08metadata\"\x95\x02\n\rAgentInstance\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\"\n\ragent_type_id\x18\x02 \x01(\tR\x0b\x61gentTypeId\x12\x1b\n\ttenant_id\x18\x03 \x01(\tR\x08tenantId\x12\x17\n\x07task_id\x18\x04 \x01(\tR\x06taskId\x12\x1d\n\nsubtask_id\x18\x05 \x01(\tR\tsubtaskId\x12=\n\x06status\x18\x06 \x01(\x0e\x32%.harpia.agents.v1.AgentInstanceStatusR\x06status\x12\x1d\n\ncreated_at\x18\x07 \x01(\tR\tcreatedAt\x12\x1d\n\nupdated_at\x18\x08 \x01(\tR\tupdatedAt\"}\n\x18RegisterAgentTypeRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12 \n\x0b\x64\x65scription\x18\x02 \x01(\tR\x0b\x64\x65scription\x12+\n\x11\x63\x61pabilities_text\x18\x03 \x01(\tR\x10\x63\x61pabilitiesText\"W\n\x19RegisterAgentTypeResponse\x12:\n\nagent_type\x18\x01 \x01(\x0b\x32\x1b.harpia.agents.v1.AgentTypeR\tagentType\"\x9b\x01\n\x15ListAgentTypesRequest\x12\x30\n\x11\x63\x61pability_filter\x18\x01 \x01(\tH\x00R\x10\x63\x61pabilityFilter\x88\x01\x01\x12\x1b\n\tpage_size\x18\x02 \x01(\x05R\x08pageSize\x12\x1d\n\npage_token\x18\x03 \x01(\tR\tpageTokenB\x14\n\x12_capability_filter\"~\n\x16ListAgentTypesResponse\x12<\n\x0b\x61gent_types\x18\x01 \x03(\x0b\x32\x1b.harpia.agents.v1.AgentTypeR\nagentTypes\x12&\n\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"|\n\x11MatchAgentRequest\x12\x1b\n\ttenant_id\x18\x01 \x01(\tR\x08tenantId\x12)\n\x10task_description\x18\x02 \x01(\tR\x0ftaskDescription\x12\x1f\n\x0bmax_results\x18\x03 \x01(\x05R\nmaxResults\"L\n\x12MatchAgentResponse\x12\x36\n\x07matches\x18\x01 \x03(\x0b\x32\x1c.harpia.agents.v1.AgentMatchR\x07matches\"s\n\nAgentMatch\x12:\n\nagent_type\x18\x01 \x01(\x0b\x32\x1b.harpia.agents.v1.AgentTypeR\tagentType\x12)\n\x10similarity_score\x18\x02 \x01(\x02R\x0fsimilarityScore\"\xe3\x01\n\x12\x45xecuteTaskRequest\x12\x1b\n\ttenant_id\x18\x01 \x01(\tR\x08tenantId\x12\x17\n\x07task_id\x18\x02 \x01(\tR\x06taskId\x12\x1d\n\nsubtask_id\x18\x03 \x01(\tR\tsubtaskId\x12\"\n\ragent_type_id\x18\x04 \x01(\tR\x0b\x61gentTypeId\x12)\n\x10task_description\x18\x05 \x01(\tR\x0ftaskDescription\x12)\n\x10previous_results\x18\x06 \x03(\tR\x0fpreviousResults\"\xcf\x02\n\x13\x45xecuteTaskResponse\x12*\n\x11\x61gent_instance_id\x18\x01 \x01(\tR\x0f\x61gentInstanceId\x12=\n\x06status\x18\x02 \x01(\x0e\x32%.harpia.agents.v1.AgentInstanceStatusR\x06status\x12\x18\n\x07message\x18\x03 \x01(\tR\x07message\x12\x1b\n\x06output\x18\x04 \x01(\tH\x00R\x06output\x88\x01\x01\x12\x19\n\x05\x65rror\x18\x05 \x01(\tH\x01R\x05\x65rror\x88\x01\x01\x12Q\n\x10\x66\x65\x65\x64\x62\x61\x63k_request\x18\x06 \x01(\x0b\x32!.harpia.agents.v1.FeedbackRequestH\x02R\x0f\x66\x65\x65\x64\x62\x61\x63kRequest\x88\x01\x01\x42\t\n\x07_outputB\x08\n\x06_errorB\x13\n\x11_feedback_request\"f\n\x0f\x46\x65\x65\x64\x62\x61\x63kRequest\x12\x1d\n\nsubtask_id\x18\x01 \x01(\tR\tsubtaskId\x12\x1a\n\x08question\x18\x02 \x01(\tR\x08question\x12\x18\n\x07options\x18\x03 \x03(\tR\x07options\"\xaa\x01\n\x18\x43ontinueExecutionRequest\x12\x1b\n\ttenant_id\x18\x01 \x01(\tR\x08tenantId\x12*\n\x11\x61gent_instance_id\x18\x02 \x01(\tR\x0f\x61gentInstanceId\x12+\n\x11\x66\x65\x65\x64\x62\x61\x63k_decision\x18\x03 \x01(\tR\x10\x66\x65\x65\x64\x62\x61\x63kDecision\x12\x18\n\x07\x63omment\x18\x04 \x01(\tR\x07\x63omment\"\xa0\x01\n\x19\x43ontinueExecutionResponse\x12*\n\x11\x61gent_instance_id\x18\x01 \x01(\tR\x0f\x61gentInstanceId\x12=\n\x06status\x18\x02 \x01(\x0e\x32%.harpia.agents.v1.AgentInstanceStatusR\x06status\x12\x18\n\x07message\x18\x03 \x01(\tR\x07message*\x99\x02\n\x13\x41gentInstanceStatus\x12%\n!AGENT_INSTANCE_STATUS_UNSPECIFIED\x10\x00\x12\x1e\n\x1a\x41GENT_INSTANCE_STATUS_IDLE\x10\x01\x12\"\n\x1e\x41GENT_INSTANCE_STATUS_PLANNING\x10\x02\x12#\n\x1f\x41GENT_INSTANCE_STATUS_EXECUTING\x10\x03\x12+\n\'AGENT_INSTANCE_STATUS_AWAITING_FEEDBACK\x10\x04\x12#\n\x1f\x41GENT_INSTANCE_STATUS_COMPLETED\x10\x05\x12 \n\x1c\x41GENT_INSTANCE_STATUS_FAILED\x10\x06\x32\x88\x04\n\x0c\x41gentService\x12l\n\x11RegisterAgentType\x12*.harpia.agents.v1.RegisterAgentTypeRequest\x1a+.harpia.agents.v1.RegisterAgentTypeResponse\x12\x65\n\x0eListAgentTypes\x12\'.harpia.agents.v1.ListAgentTypesRequest\x1a(.harpia.agents.v1.ListAgentTypesResponse0\x01\x12W\n\nMatchAgent\x12#.harpia.agents.v1.MatchAgentRequest\x1a$.harpia.agents.v1.MatchAgentResponse\x12\\\n\x0b\x45xecuteTask\x12$.harpia.agents.v1.ExecuteTaskRequest\x1a%.harpia.agents.v1.ExecuteTaskResponse0\x01\x12l\n\x11\x43ontinueExecution\x12*.harpia.agents.v1.ContinueExecutionRequest\x1a+.harpia.agents.v1.ContinueExecutionResponseB\xc4\x01\n\x14\x63om.harpia.agents.v1B\x0b\x41gentsProtoP\x01Z=github.com/harpia/control-plane/gen/harpia/agents/v1;agentsv1\xa2\x02\x03HAX\xaa\x02\x10Harpia.Agents.V1\xca\x02\x10Harpia\\Agents\\V1\xe2\x02\x1cHarpia\\Agents\\V1\\GPBMetadata\xea\x02\x12Harpia::Agents::V1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -33,34 +33,36 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'harpia.agents.v1.agents_pb2
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'\n\024com.harpia.agents.v1B\013AgentsProtoP\001Z=github.com/harpia/control-plane/gen/harpia/agents/v1;agentsv1\242\002\003HAX\252\002\020Harpia.Agents.V1\312\002\020Harpia\\Agents\\V1\342\002\034Harpia\\Agents\\V1\\GPBMetadata\352\002\022Harpia::Agents::V1'
-  _globals['_AGENTINSTANCESTATUS']._serialized_start=2198
-  _globals['_AGENTINSTANCESTATUS']._serialized_end=2479
-  _globals['_AGENTINSTANCE']._serialized_start=87
-  _globals['_AGENTINSTANCE']._serialized_end=364
-  _globals['_REGISTERAGENTTYPEREQUEST']._serialized_start=366
-  _globals['_REGISTERAGENTTYPEREQUEST']._serialized_end=491
-  _globals['_REGISTERAGENTTYPERESPONSE']._serialized_start=493
-  _globals['_REGISTERAGENTTYPERESPONSE']._serialized_end=580
-  _globals['_LISTAGENTTYPESREQUEST']._serialized_start=583
-  _globals['_LISTAGENTTYPESREQUEST']._serialized_end=738
-  _globals['_LISTAGENTTYPESRESPONSE']._serialized_start=740
-  _globals['_LISTAGENTTYPESRESPONSE']._serialized_end=866
-  _globals['_MATCHAGENTREQUEST']._serialized_start=868
-  _globals['_MATCHAGENTREQUEST']._serialized_end=992
-  _globals['_MATCHAGENTRESPONSE']._serialized_start=994
-  _globals['_MATCHAGENTRESPONSE']._serialized_end=1070
-  _globals['_AGENTMATCH']._serialized_start=1072
-  _globals['_AGENTMATCH']._serialized_end=1187
-  _globals['_EXECUTETASKREQUEST']._serialized_start=1190
-  _globals['_EXECUTETASKREQUEST']._serialized_end=1417
-  _globals['_EXECUTETASKRESPONSE']._serialized_start=1420
-  _globals['_EXECUTETASKRESPONSE']._serialized_end=1755
-  _globals['_FEEDBACKREQUEST']._serialized_start=1757
-  _globals['_FEEDBACKREQUEST']._serialized_end=1859
-  _globals['_CONTINUEEXECUTIONREQUEST']._serialized_start=1862
-  _globals['_CONTINUEEXECUTIONREQUEST']._serialized_end=2032
-  _globals['_CONTINUEEXECUTIONRESPONSE']._serialized_start=2035
-  _globals['_CONTINUEEXECUTIONRESPONSE']._serialized_end=2195
-  _globals['_AGENTSERVICE']._serialized_start=2482
-  _globals['_AGENTSERVICE']._serialized_end=3002
+  _globals['_AGENTINSTANCESTATUS']._serialized_start=2768
+  _globals['_AGENTINSTANCESTATUS']._serialized_end=3049
+  _globals['_AGENTTYPE']._serialized_start=82
+  _globals['_AGENTTYPE']._serialized_end=654
+  _globals['_AGENTINSTANCE']._serialized_start=657
+  _globals['_AGENTINSTANCE']._serialized_end=934
+  _globals['_REGISTERAGENTTYPEREQUEST']._serialized_start=936
+  _globals['_REGISTERAGENTTYPEREQUEST']._serialized_end=1061
+  _globals['_REGISTERAGENTTYPERESPONSE']._serialized_start=1063
+  _globals['_REGISTERAGENTTYPERESPONSE']._serialized_end=1150
+  _globals['_LISTAGENTTYPESREQUEST']._serialized_start=1153
+  _globals['_LISTAGENTTYPESREQUEST']._serialized_end=1308
+  _globals['_LISTAGENTTYPESRESPONSE']._serialized_start=1310
+  _globals['_LISTAGENTTYPESRESPONSE']._serialized_end=1436
+  _globals['_MATCHAGENTREQUEST']._serialized_start=1438
+  _globals['_MATCHAGENTREQUEST']._serialized_end=1562
+  _globals['_MATCHAGENTRESPONSE']._serialized_start=1564
+  _globals['_MATCHAGENTRESPONSE']._serialized_end=1640
+  _globals['_AGENTMATCH']._serialized_start=1642
+  _globals['_AGENTMATCH']._serialized_end=1757
+  _globals['_EXECUTETASKREQUEST']._serialized_start=1760
+  _globals['_EXECUTETASKREQUEST']._serialized_end=1987
+  _globals['_EXECUTETASKRESPONSE']._serialized_start=1990
+  _globals['_EXECUTETASKRESPONSE']._serialized_end=2325
+  _globals['_FEEDBACKREQUEST']._serialized_start=2327
+  _globals['_FEEDBACKREQUEST']._serialized_end=2429
+  _globals['_CONTINUEEXECUTIONREQUEST']._serialized_start=2432
+  _globals['_CONTINUEEXECUTIONREQUEST']._serialized_end=2602
+  _globals['_CONTINUEEXECUTIONRESPONSE']._serialized_start=2605
+  _globals['_CONTINUEEXECUTIONRESPONSE']._serialized_end=2765
+  _globals['_AGENTSERVICE']._serialized_start=3052
+  _globals['_AGENTSERVICE']._serialized_end=3572
 # @@protoc_insertion_point(module_scope)

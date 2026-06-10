@@ -5,10 +5,10 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
-from harpia.agents.v1.agent_type_pb2 import AgentType
 from harpia.agents.v1.agents_connect import AgentService
 from harpia.agents.v1.agents_pb2 import (
     AgentInstanceStatus,
+    AgentType,
     ContinueExecutionRequest,
     ContinueExecutionResponse,
     ExecuteTaskRequest,
@@ -39,8 +39,10 @@ class AgentServiceImpl(AgentService):
     ) -> RegisterAgentTypeResponse:
         require_selected_tenant(ctx)
         agent_type = AgentType(
+            name=request.name,
             display_name=request.name,
             description=request.description,
+            capabilities_text=request.capabilities_text,
             capabilities=[request.capabilities_text],
         )
         return RegisterAgentTypeResponse(agent_type=agent_type)

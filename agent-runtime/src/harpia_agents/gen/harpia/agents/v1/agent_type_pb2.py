@@ -22,10 +22,9 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
-from google.protobuf import struct_pb2 as google_dot_protobuf_dot_struct__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n!harpia/agents/v1/agent_type.proto\x12\x10harpia.agents.v1\x1a\x1cgoogle/protobuf/struct.proto\"\xdc\x03\n\tAgentType\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n\x07version\x18\x02 \x01(\tR\x07version\x12!\n\x0c\x64isplay_name\x18\x03 \x01(\tR\x0b\x64isplayName\x12 \n\x0b\x64\x65scription\x18\x04 \x01(\tR\x0b\x64\x65scription\x12\"\n\x0c\x63\x61pabilities\x18\x05 \x03(\tR\x0c\x63\x61pabilities\x12\x19\n\x08model_id\x18\x06 \x01(\tR\x07modelId\x12#\n\rsystem_prompt\x18\x07 \x01(\tR\x0csystemPrompt\x12(\n\x10\x61llowed_tool_ids\x18\x08 \x03(\tR\x0e\x61llowedToolIds\x12:\n\x0cinput_schema\x18\t \x01(\x0b\x32\x17.google.protobuf.StructR\x0binputSchema\x12<\n\routput_schema\x18\n \x01(\x0b\x32\x17.google.protobuf.StructR\x0coutputSchema\x12#\n\rcost_estimate\x18\x0b \x01(\x01R\x0c\x63ostEstimate\x12\x33\n\x08metadata\x18\x0c \x01(\x0b\x32\x17.google.protobuf.StructR\x08metadataB\xc7\x01\n\x14\x63om.harpia.agents.v1B\x0e\x41gentTypeProtoP\x01Z=github.com/harpia/control-plane/gen/harpia/agents/v1;agentsv1\xa2\x02\x03HAX\xaa\x02\x10Harpia.Agents.V1\xca\x02\x10Harpia\\Agents\\V1\xe2\x02\x1cHarpia\\Agents\\V1\\GPBMetadata\xea\x02\x12Harpia::Agents::V1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n!harpia/agents/v1/agent_type.proto\x12\x10harpia.agents.v1B\xc7\x01\n\x14\x63om.harpia.agents.v1B\x0e\x41gentTypeProtoP\x01Z=github.com/harpia/control-plane/gen/harpia/agents/v1;agentsv1\xa2\x02\x03HAX\xaa\x02\x10Harpia.Agents.V1\xca\x02\x10Harpia\\Agents\\V1\xe2\x02\x1cHarpia\\Agents\\V1\\GPBMetadata\xea\x02\x12Harpia::Agents::V1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -33,6 +32,4 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'harpia.agents.v1.agent_type
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'\n\024com.harpia.agents.v1B\016AgentTypeProtoP\001Z=github.com/harpia/control-plane/gen/harpia/agents/v1;agentsv1\242\002\003HAX\252\002\020Harpia.Agents.V1\312\002\020Harpia\\Agents\\V1\342\002\034Harpia\\Agents\\V1\\GPBMetadata\352\002\022Harpia::Agents::V1'
-  _globals['_AGENTTYPE']._serialized_start=86
-  _globals['_AGENTTYPE']._serialized_end=562
 # @@protoc_insertion_point(module_scope)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
@@ -51,9 +52,13 @@ func (h *AgentHandler) RegisterAgentType(ctx context.Context, req *connect.Reque
 
 	return connect.NewResponse(&agentsv1.RegisterAgentTypeResponse{
 		AgentType: &agentsv1.AgentType{
-			Id:          created.ID.String(),
-			DisplayName: created.Name,
-			Description: created.Description,
+			Id:               created.ID.String(),
+			Name:             created.Name,
+			Description:      created.Description,
+			CapabilitiesText: req.Msg.CapabilitiesText,
+			CreatedAt:        created.CreatedAt.Format(time.RFC3339),
+			DisplayName:      created.Name,
+			Capabilities:     []string{req.Msg.CapabilitiesText},
 		},
 	}), nil
 }
@@ -123,8 +128,10 @@ func (h *AgentHandler) MatchAgent(ctx context.Context, req *connect.Request[agen
 		matches = append(matches, &agentsv1.AgentMatch{
 			AgentType: &agentsv1.AgentType{
 				Id:          at.ID.String(),
-				DisplayName: at.Name,
+				Name:        at.Name,
 				Description: at.Description,
+				CreatedAt:   at.CreatedAt.Format(time.RFC3339),
+				DisplayName: at.Name,
 			},
 			SimilarityScore: at.Similarity,
 		})
@@ -144,8 +151,10 @@ func (h *AgentHandler) MatchAgent(ctx context.Context, req *connect.Request[agen
 func agentTypeToProto(agentType *AgentType) *agentsv1.AgentType {
 	return &agentsv1.AgentType{
 		Id:          agentType.ID.String(),
-		DisplayName: agentType.Name,
+		Name:        agentType.Name,
 		Description: agentType.Description,
+		CreatedAt:   agentType.CreatedAt.Format(time.RFC3339),
+		DisplayName: agentType.Name,
 	}
 }
 

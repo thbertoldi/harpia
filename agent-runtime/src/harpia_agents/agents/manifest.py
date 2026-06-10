@@ -11,7 +11,7 @@ from typing import Any, Self
 import yaml
 from google.protobuf.json_format import MessageToDict
 from google.protobuf.struct_pb2 import Struct
-from harpia.agents.v1 import agent_type_pb2
+from harpia.agents.v1 import agents_pb2
 
 
 class AgentManifestValidationError(ValueError):
@@ -63,8 +63,8 @@ class AgentType:
     )
     _JINJA_VARIABLE_PATTERN = re.compile(r"{{\s*([A-Za-z_][A-Za-z0-9_]*)\s*}}")
 
-    def __init__(self, proto: agent_type_pb2.AgentType) -> None:
-        self._proto = agent_type_pb2.AgentType()
+    def __init__(self, proto: agents_pb2.AgentType) -> None:
+        self._proto = agents_pb2.AgentType()
         self._proto.CopyFrom(proto)
 
     def __getattr__(self, name: str) -> Any:
@@ -115,7 +115,7 @@ class AgentType:
         tool_ids: Iterable[str] | None = None,
     ) -> Self:
         cls._validate_mapping_shape(payload, registry, model_ids, tool_ids)
-        proto = agent_type_pb2.AgentType(
+        proto = agents_pb2.AgentType(
             id=payload["id"],
             version=payload["version"],
             display_name=payload["display_name"],
@@ -134,7 +134,7 @@ class AgentType:
     @classmethod
     def from_proto(
         cls,
-        proto: agent_type_pb2.AgentType,
+        proto: agents_pb2.AgentType,
         *,
         registry: ManifestReferenceRegistry | None = None,
         model_ids: Iterable[str] | None = None,
@@ -144,8 +144,8 @@ class AgentType:
         cls._validate_mapping_shape(manifest.to_dict(), registry, model_ids, tool_ids)
         return manifest
 
-    def to_proto(self) -> agent_type_pb2.AgentType:
-        proto = agent_type_pb2.AgentType()
+    def to_proto(self) -> agents_pb2.AgentType:
+        proto = agents_pb2.AgentType()
         proto.CopyFrom(self._proto)
         return proto
 

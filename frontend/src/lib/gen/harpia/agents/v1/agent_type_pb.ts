@@ -2,87 +2,11 @@
 // @generated from file harpia/agents/v1/agent_type.proto (package harpia.agents.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
-import { file_google_protobuf_struct } from "@bufbuild/protobuf/wkt";
-import type { JsonObject, Message } from "@bufbuild/protobuf";
+import type { GenFile } from "@bufbuild/protobuf/codegenv2";
+import { fileDesc } from "@bufbuild/protobuf/codegenv2";
 
 /**
  * Describes the file harpia/agents/v1/agent_type.proto.
  */
 export const file_harpia_agents_v1_agent_type: GenFile = /*@__PURE__*/
-  fileDesc("CiFoYXJwaWEvYWdlbnRzL3YxL2FnZW50X3R5cGUucHJvdG8SEGhhcnBpYS5hZ2VudHMudjEizQIKCUFnZW50VHlwZRIKCgJpZBgBIAEoCRIPCgd2ZXJzaW9uGAIgASgJEhQKDGRpc3BsYXlfbmFtZRgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRIUCgxjYXBhYmlsaXRpZXMYBSADKAkSEAoIbW9kZWxfaWQYBiABKAkSFQoNc3lzdGVtX3Byb21wdBgHIAEoCRIYChBhbGxvd2VkX3Rvb2xfaWRzGAggAygJEi0KDGlucHV0X3NjaGVtYRgJIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSLgoNb3V0cHV0X3NjaGVtYRgKIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSFQoNY29zdF9lc3RpbWF0ZRgLIAEoARIpCghtZXRhZGF0YRgMIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3RCxwEKFGNvbS5oYXJwaWEuYWdlbnRzLnYxQg5BZ2VudFR5cGVQcm90b1ABWj1naXRodWIuY29tL2hhcnBpYS9jb250cm9sLXBsYW5lL2dlbi9oYXJwaWEvYWdlbnRzL3YxO2FnZW50c3YxogIDSEFYqgIQSGFycGlhLkFnZW50cy5WMcoCEEhhcnBpYVxBZ2VudHNcVjHiAhxIYXJwaWFcQWdlbnRzXFYxXEdQQk1ldGFkYXRh6gISSGFycGlhOjpBZ2VudHM6OlYxYgZwcm90bzM", [file_google_protobuf_struct]);
-
-/**
- * AgentType is the canonical manifest for a Harpia agent definition.
- *
- * @generated from message harpia.agents.v1.AgentType
- */
-export type AgentType = Message<"harpia.agents.v1.AgentType"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
-
-  /**
-   * @generated from field: string version = 2;
-   */
-  version: string;
-
-  /**
-   * @generated from field: string display_name = 3;
-   */
-  displayName: string;
-
-  /**
-   * @generated from field: string description = 4;
-   */
-  description: string;
-
-  /**
-   * @generated from field: repeated string capabilities = 5;
-   */
-  capabilities: string[];
-
-  /**
-   * @generated from field: string model_id = 6;
-   */
-  modelId: string;
-
-  /**
-   * @generated from field: string system_prompt = 7;
-   */
-  systemPrompt: string;
-
-  /**
-   * @generated from field: repeated string allowed_tool_ids = 8;
-   */
-  allowedToolIds: string[];
-
-  /**
-   * @generated from field: google.protobuf.Struct input_schema = 9;
-   */
-  inputSchema?: JsonObject | undefined;
-
-  /**
-   * @generated from field: google.protobuf.Struct output_schema = 10;
-   */
-  outputSchema?: JsonObject | undefined;
-
-  /**
-   * @generated from field: double cost_estimate = 11;
-   */
-  costEstimate: number;
-
-  /**
-   * @generated from field: google.protobuf.Struct metadata = 12;
-   */
-  metadata?: JsonObject | undefined;
-};
-
-/**
- * Describes the message harpia.agents.v1.AgentType.
- * Use `create(AgentTypeSchema)` to create a new message.
- */
-export const AgentTypeSchema: GenMessage<AgentType> = /*@__PURE__*/
-  messageDesc(file_harpia_agents_v1_agent_type, 0);
+  fileDesc("CiFoYXJwaWEvYWdlbnRzL3YxL2FnZW50X3R5cGUucHJvdG8SEGhhcnBpYS5hZ2VudHMudjFCxwEKFGNvbS5oYXJwaWEuYWdlbnRzLnYxQg5BZ2VudFR5cGVQcm90b1ABWj1naXRodWIuY29tL2hhcnBpYS9jb250cm9sLXBsYW5lL2dlbi9oYXJwaWEvYWdlbnRzL3YxO2FnZW50c3YxogIDSEFYqgIQSGFycGlhLkFnZW50cy5WMcoCEEhhcnBpYVxBZ2VudHNcVjHiAhxIYXJwaWFcQWdlbnRzXFYxXEdQQk1ldGFkYXRh6gISSGFycGlhOjpBZ2VudHM6OlYxYgZwcm90bzM");
