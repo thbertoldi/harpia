@@ -10,14 +10,17 @@
 mise run dev   # Tilt: infra, Zitadel port-forward, OIDC sync, host Vite
 ```
 
-Tilt applies `deploy/dev/kind/` (including the Zitadel and OpenFGA bootstrap Jobs),
-port-forwards Zitadel to localhost:8085 and OpenFGA to localhost:8086, waits for the
-OIDC/FGA ConfigMaps, syncs local `.env.local` files, and starts the Vite dev server
-on http://localhost:5173.
+Tilt applies `deploy/dev/kind/`, runs database migrations, bootstraps Zitadel
+and OpenFGA, port-forwards the API to localhost:19080, Zitadel to
+localhost:8085, and OpenFGA to localhost:8086, waits for the OIDC/FGA ConfigMaps,
+syncs local `.env.local` files, installs frontend dependencies when needed, and
+starts the Vite dev server on http://localhost:5173.
 
 Manual apply (without Tilt):
 
 ```bash
+kubectl apply -f deploy/dev/kind/postgres.yaml
+./scripts/apply-dev-db-migrations.sh
 kubectl apply -f deploy/dev/kind/
 kubectl wait --for=condition=Ready pod -l app=zitadel --timeout=120s
 kubectl wait --for=condition=Available deployment/openfga --timeout=120s
@@ -33,6 +36,7 @@ kubectl logs job/openfga-bootstrap -f
 | Service       | URL                                   |
 | ------------- | ------------------------------------- |
 | Frontend      | http://localhost:5173 (host Vite via Tilt) |
+| API           | http://localhost:19080                |
 | Zitadel       | http://localhost:8085                 |
 | Zitadel Console | http://localhost:8085/ui/console    |
 | OpenFGA       | http://localhost:8086                 |

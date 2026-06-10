@@ -19,7 +19,6 @@ docker_build(
     ],
 )
 k8s_yaml('deploy/dev/kind/api.yaml')
-k8s_resource('harpia-api', port_forwards=['8080:8080'])
 
 docker_build(
     'harpia-agent',
@@ -62,6 +61,21 @@ k8s_resource('openfga-bootstrap', resource_deps=['openfga'])
 
 # ---- Host-side dev helpers (Zitadel OIDC, OpenFGA, Vite) ----
 local_resource(
+    'db-migrate',
+    cmd='./scripts/apply-dev-db-migrations.sh',
+    resource_deps=['postgres'],
+    trigger_mode=TRIGGER_MODE_AUTO,
+    deps=[
+        './scripts/apply-dev-db-migrations.sh',
+        'database/migrations/000001_initial_schema.sql',
+        'database/migrations/000002_schema_sync.sql',
+    ],
+    labels=['infra'],
+)
+
+k8s_resource('harpia-api', resource_deps=['db-migrate'], port_forwards=['19080:8080'])
+
+local_resource(
     'zitadel-port-forward',
     serve_cmd='kubectl port-forward svc/zitadel 8085:8080',
     resource_deps=['zitadel'],
@@ -93,12 +107,21 @@ local_resource(
     labels=['infra'],
 )
 
+local_resource(
+    'frontend-install',
+    cmd='cd frontend && bun install --frozen-lockfile',
+    trigger_mode=TRIGGER_MODE_AUTO,
+    deps=['frontend/package.json', 'frontend/bun.lock'],
+    labels=['frontend'],
+)
+
 # Vite loads .env.local at startup only (no HMR for env vars). Restart after
 # the OIDC/FGA sync resources write frontend/.env.local.
 local_resource(
     'vite',
     serve_cmd='cd frontend && bun run dev --host',
     resource_deps=[
+        'frontend-install',
         'oidc-sync',
         'fga-sync',
         'zitadel-port-forward',
