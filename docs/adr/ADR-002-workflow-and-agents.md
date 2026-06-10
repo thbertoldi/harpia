@@ -50,6 +50,12 @@ The agent-runtime implements a supervisor pattern:
 - `human_feedback` node: blocks and waits for human input
 - Conditional edges based on task state
 
+### LangGraph State Model and Merge Semantics
+
+The supervisor state uses a Pydantic `TaskState` model in `agent-runtime/src/harpia_agents/graph.py`. Domain state carried inside LangGraph remains typed: subtasks are `Subtask` instances and worker outputs are `SubtaskResult` instances. Transport adapters may serialize these models at process boundaries, but graph nodes should not convert them to untyped dictionaries for intra-graph handoff.
+
+LangGraph node updates for this BaseModel-backed state replace the returned fields. We keep that explicit replacement convention instead of adding `TypedDict` reducers for now because the current graph is linear and only one worker updates aggregate state at a time. Nodes that extend aggregate fields, such as `results`, must copy the prior value and return the merged replacement.
+
 ### Agent Capability Matching
 
 Agent types declare capabilities as natural language. These are embedded (via pgvector) and stored. When dispatching, subtask descriptions are embedded and matched via cosine similarity against agent capabilities. Cached in Valkey to avoid repeated embedding queries.
