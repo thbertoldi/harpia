@@ -88,7 +88,7 @@ func (h *AgentHandler) MatchAgent(ctx context.Context, req *connect.Request[agen
 	}
 
 	if h.agentCache != nil {
-		cachedAgentID, err := h.agentCache.GetBestAgent(ctx, tenantID, req.Msg.TaskDescription)
+		cachedAgentID, err := h.agentCache.GetBestAgent(ctx, req.Msg.TaskDescription)
 		if err == nil && cachedAgentID != "" {
 			return connect.NewResponse(&agentsv1.MatchAgentResponse{
 				Matches: []*agentsv1.AgentMatch{
@@ -135,7 +135,7 @@ func (h *AgentHandler) MatchAgent(ctx context.Context, req *connect.Request[agen
 	}
 
 	if h.agentCache != nil && len(results) > 0 {
-		if err := h.agentCache.SetBestAgent(ctx, tenantID, req.Msg.TaskDescription, results[0].ID.String()); err != nil {
+		if err := h.agentCache.SetBestAgent(ctx, req.Msg.TaskDescription, results[0].ID.String()); err != nil {
 			slog.Warn("failed to cache best agent match", "error", err)
 		}
 	}
