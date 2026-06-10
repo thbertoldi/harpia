@@ -4,52 +4,15 @@
 
 import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { AgentType } from "./agent_type_pb";
+import { file_harpia_agents_v1_agent_type } from "./agent_type_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file harpia/agents/v1/agents.proto.
  */
 export const file_harpia_agents_v1_agents: GenFile = /*@__PURE__*/
-  fileDesc("Ch1oYXJwaWEvYWdlbnRzL3YxL2FnZW50cy5wcm90bxIQaGFycGlhLmFnZW50cy52MSJpCglBZ2VudFR5cGUSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRIZChFjYXBhYmlsaXRpZXNfdGV4dBgEIAEoCRISCgpjcmVhdGVkX2F0GAUgASgJIskBCg1BZ2VudEluc3RhbmNlEgoKAmlkGAEgASgJEhUKDWFnZW50X3R5cGVfaWQYAiABKAkSEQoJdGVuYW50X2lkGAMgASgJEg8KB3Rhc2tfaWQYBCABKAkSEgoKc3VidGFza19pZBgFIAEoCRI1CgZzdGF0dXMYBiABKA4yJS5oYXJwaWEuYWdlbnRzLnYxLkFnZW50SW5zdGFuY2VTdGF0dXMSEgoKY3JlYXRlZF9hdBgHIAEoCRISCgp1cGRhdGVkX2F0GAggASgJIlgKGFJlZ2lzdGVyQWdlbnRUeXBlUmVxdWVzdBIMCgRuYW1lGAEgASgJEhMKC2Rlc2NyaXB0aW9uGAIgASgJEhkKEWNhcGFiaWxpdGllc190ZXh0GAMgASgJIkwKGVJlZ2lzdGVyQWdlbnRUeXBlUmVzcG9uc2USLwoKYWdlbnRfdHlwZRgBIAEoCzIbLmhhcnBpYS5hZ2VudHMudjEuQWdlbnRUeXBlInQKFUxpc3RBZ2VudFR5cGVzUmVxdWVzdBIeChFjYXBhYmlsaXR5X2ZpbHRlchgBIAEoCUgAiAEBEhEKCXBhZ2Vfc2l6ZRgCIAEoBRISCgpwYWdlX3Rva2VuGAMgASgJQhQKEl9jYXBhYmlsaXR5X2ZpbHRlciJjChZMaXN0QWdlbnRUeXBlc1Jlc3BvbnNlEjAKC2FnZW50X3R5cGVzGAEgAygLMhsuaGFycGlhLmFnZW50cy52MS5BZ2VudFR5cGUSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIlUKEU1hdGNoQWdlbnRSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRIYChB0YXNrX2Rlc2NyaXB0aW9uGAIgASgJEhMKC21heF9yZXN1bHRzGAMgASgFIkMKEk1hdGNoQWdlbnRSZXNwb25zZRItCgdtYXRjaGVzGAEgAygLMhwuaGFycGlhLmFnZW50cy52MS5BZ2VudE1hdGNoIlcKCkFnZW50TWF0Y2gSLwoKYWdlbnRfdHlwZRgBIAEoCzIbLmhhcnBpYS5hZ2VudHMudjEuQWdlbnRUeXBlEhgKEHNpbWlsYXJpdHlfc2NvcmUYAiABKAIilwEKEkV4ZWN1dGVUYXNrUmVxdWVzdBIRCgl0ZW5hbnRfaWQYASABKAkSDwoHdGFza19pZBgCIAEoCRISCgpzdWJ0YXNrX2lkGAMgASgJEhUKDWFnZW50X3R5cGVfaWQYBCABKAkSGAoQdGFza19kZXNjcmlwdGlvbhgFIAEoCRIYChBwcmV2aW91c19yZXN1bHRzGAYgAygJIo0CChNFeGVjdXRlVGFza1Jlc3BvbnNlEhkKEWFnZW50X2luc3RhbmNlX2lkGAEgASgJEjUKBnN0YXR1cxgCIAEoDjIlLmhhcnBpYS5hZ2VudHMudjEuQWdlbnRJbnN0YW5jZVN0YXR1cxIPCgdtZXNzYWdlGAMgASgJEhMKBm91dHB1dBgEIAEoCUgAiAEBEhIKBWVycm9yGAUgASgJSAGIAQESQAoQZmVlZGJhY2tfcmVxdWVzdBgGIAEoCzIhLmhhcnBpYS5hZ2VudHMudjEuRmVlZGJhY2tSZXF1ZXN0SAKIAQFCCQoHX291dHB1dEIICgZfZXJyb3JCEwoRX2ZlZWRiYWNrX3JlcXVlc3QiSAoPRmVlZGJhY2tSZXF1ZXN0EhIKCnN1YnRhc2tfaWQYASABKAkSEAoIcXVlc3Rpb24YAiABKAkSDwoHb3B0aW9ucxgDIAMoCSJ0ChhDb250aW51ZUV4ZWN1dGlvblJlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgJEhkKEWFnZW50X2luc3RhbmNlX2lkGAIgASgJEhkKEWZlZWRiYWNrX2RlY2lzaW9uGAMgASgJEg8KB2NvbW1lbnQYBCABKAkifgoZQ29udGludWVFeGVjdXRpb25SZXNwb25zZRIZChFhZ2VudF9pbnN0YW5jZV9pZBgBIAEoCRI1CgZzdGF0dXMYAiABKA4yJS5oYXJwaWEuYWdlbnRzLnYxLkFnZW50SW5zdGFuY2VTdGF0dXMSDwoHbWVzc2FnZRgDIAEoCSqZAgoTQWdlbnRJbnN0YW5jZVN0YXR1cxIlCiFBR0VOVF9JTlNUQU5DRV9TVEFUVVNfVU5TUEVDSUZJRUQQABIeChpBR0VOVF9JTlNUQU5DRV9TVEFUVVNfSURMRRABEiIKHkFHRU5UX0lOU1RBTkNFX1NUQVRVU19QTEFOTklORxACEiMKH0FHRU5UX0lOU1RBTkNFX1NUQVRVU19FWEVDVVRJTkcQAxIrCidBR0VOVF9JTlNUQU5DRV9TVEFUVVNfQVdBSVRJTkdfRkVFREJBQ0sQBBIjCh9BR0VOVF9JTlNUQU5DRV9TVEFUVVNfQ09NUExFVEVEEAUSIAocQUdFTlRfSU5TVEFOQ0VfU1RBVFVTX0ZBSUxFRBAGMogECgxBZ2VudFNlcnZpY2USbAoRUmVnaXN0ZXJBZ2VudFR5cGUSKi5oYXJwaWEuYWdlbnRzLnYxLlJlZ2lzdGVyQWdlbnRUeXBlUmVxdWVzdBorLmhhcnBpYS5hZ2VudHMudjEuUmVnaXN0ZXJBZ2VudFR5cGVSZXNwb25zZRJlCg5MaXN0QWdlbnRUeXBlcxInLmhhcnBpYS5hZ2VudHMudjEuTGlzdEFnZW50VHlwZXNSZXF1ZXN0GiguaGFycGlhLmFnZW50cy52MS5MaXN0QWdlbnRUeXBlc1Jlc3BvbnNlMAESVwoKTWF0Y2hBZ2VudBIjLmhhcnBpYS5hZ2VudHMudjEuTWF0Y2hBZ2VudFJlcXVlc3QaJC5oYXJwaWEuYWdlbnRzLnYxLk1hdGNoQWdlbnRSZXNwb25zZRJcCgtFeGVjdXRlVGFzaxIkLmhhcnBpYS5hZ2VudHMudjEuRXhlY3V0ZVRhc2tSZXF1ZXN0GiUuaGFycGlhLmFnZW50cy52MS5FeGVjdXRlVGFza1Jlc3BvbnNlMAESbAoRQ29udGludWVFeGVjdXRpb24SKi5oYXJwaWEuYWdlbnRzLnYxLkNvbnRpbnVlRXhlY3V0aW9uUmVxdWVzdBorLmhhcnBpYS5hZ2VudHMudjEuQ29udGludWVFeGVjdXRpb25SZXNwb25zZULEAQoUY29tLmhhcnBpYS5hZ2VudHMudjFCC0FnZW50c1Byb3RvUAFaPWdpdGh1Yi5jb20vaGFycGlhL2NvbnRyb2wtcGxhbmUvZ2VuL2hhcnBpYS9hZ2VudHMvdjE7YWdlbnRzdjGiAgNIQViqAhBIYXJwaWEuQWdlbnRzLlYxygIQSGFycGlhXEFnZW50c1xWMeICHEhhcnBpYVxBZ2VudHNcVjFcR1BCTWV0YWRhdGHqAhJIYXJwaWE6OkFnZW50czo6VjFiBnByb3RvMw");
-
-/**
- * @generated from message harpia.agents.v1.AgentType
- */
-export type AgentType = Message<"harpia.agents.v1.AgentType"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
-
-  /**
-   * @generated from field: string name = 2;
-   */
-  name: string;
-
-  /**
-   * @generated from field: string description = 3;
-   */
-  description: string;
-
-  /**
-   * Natural language, embedded for similarity search
-   *
-   * @generated from field: string capabilities_text = 4;
-   */
-  capabilitiesText: string;
-
-  /**
-   * @generated from field: string created_at = 5;
-   */
-  createdAt: string;
-};
-
-/**
- * Describes the message harpia.agents.v1.AgentType.
- * Use `create(AgentTypeSchema)` to create a new message.
- */
-export const AgentTypeSchema: GenMessage<AgentType> = /*@__PURE__*/
-  messageDesc(file_harpia_agents_v1_agents, 0);
+  fileDesc("Ch1oYXJwaWEvYWdlbnRzL3YxL2FnZW50cy5wcm90bxIQaGFycGlhLmFnZW50cy52MSLJAQoNQWdlbnRJbnN0YW5jZRIKCgJpZBgBIAEoCRIVCg1hZ2VudF90eXBlX2lkGAIgASgJEhEKCXRlbmFudF9pZBgDIAEoCRIPCgd0YXNrX2lkGAQgASgJEhIKCnN1YnRhc2tfaWQYBSABKAkSNQoGc3RhdHVzGAYgASgOMiUuaGFycGlhLmFnZW50cy52MS5BZ2VudEluc3RhbmNlU3RhdHVzEhIKCmNyZWF0ZWRfYXQYByABKAkSEgoKdXBkYXRlZF9hdBgIIAEoCSJYChhSZWdpc3RlckFnZW50VHlwZVJlcXVlc3QSDAoEbmFtZRgBIAEoCRITCgtkZXNjcmlwdGlvbhgCIAEoCRIZChFjYXBhYmlsaXRpZXNfdGV4dBgDIAEoCSJMChlSZWdpc3RlckFnZW50VHlwZVJlc3BvbnNlEi8KCmFnZW50X3R5cGUYASABKAsyGy5oYXJwaWEuYWdlbnRzLnYxLkFnZW50VHlwZSJ0ChVMaXN0QWdlbnRUeXBlc1JlcXVlc3QSHgoRY2FwYWJpbGl0eV9maWx0ZXIYASABKAlIAIgBARIRCglwYWdlX3NpemUYAiABKAUSEgoKcGFnZV90b2tlbhgDIAEoCUIUChJfY2FwYWJpbGl0eV9maWx0ZXIiYwoWTGlzdEFnZW50VHlwZXNSZXNwb25zZRIwCgthZ2VudF90eXBlcxgBIAMoCzIbLmhhcnBpYS5hZ2VudHMudjEuQWdlbnRUeXBlEhcKD25leHRfcGFnZV90b2tlbhgCIAEoCSJVChFNYXRjaEFnZW50UmVxdWVzdBIRCgl0ZW5hbnRfaWQYASABKAkSGAoQdGFza19kZXNjcmlwdGlvbhgCIAEoCRITCgttYXhfcmVzdWx0cxgDIAEoBSJDChJNYXRjaEFnZW50UmVzcG9uc2USLQoHbWF0Y2hlcxgBIAMoCzIcLmhhcnBpYS5hZ2VudHMudjEuQWdlbnRNYXRjaCJXCgpBZ2VudE1hdGNoEi8KCmFnZW50X3R5cGUYASABKAsyGy5oYXJwaWEuYWdlbnRzLnYxLkFnZW50VHlwZRIYChBzaW1pbGFyaXR5X3Njb3JlGAIgASgCIpcBChJFeGVjdXRlVGFza1JlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgJEg8KB3Rhc2tfaWQYAiABKAkSEgoKc3VidGFza19pZBgDIAEoCRIVCg1hZ2VudF90eXBlX2lkGAQgASgJEhgKEHRhc2tfZGVzY3JpcHRpb24YBSABKAkSGAoQcHJldmlvdXNfcmVzdWx0cxgGIAMoCSKNAgoTRXhlY3V0ZVRhc2tSZXNwb25zZRIZChFhZ2VudF9pbnN0YW5jZV9pZBgBIAEoCRI1CgZzdGF0dXMYAiABKA4yJS5oYXJwaWEuYWdlbnRzLnYxLkFnZW50SW5zdGFuY2VTdGF0dXMSDwoHbWVzc2FnZRgDIAEoCRITCgZvdXRwdXQYBCABKAlIAIgBARISCgVlcnJvchgFIAEoCUgBiAEBEkAKEGZlZWRiYWNrX3JlcXVlc3QYBiABKAsyIS5oYXJwaWEuYWdlbnRzLnYxLkZlZWRiYWNrUmVxdWVzdEgCiAEBQgkKB19vdXRwdXRCCAoGX2Vycm9yQhMKEV9mZWVkYmFja19yZXF1ZXN0IkgKD0ZlZWRiYWNrUmVxdWVzdBISCgpzdWJ0YXNrX2lkGAEgASgJEhAKCHF1ZXN0aW9uGAIgASgJEg8KB29wdGlvbnMYAyADKAkidAoYQ29udGludWVFeGVjdXRpb25SZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRIZChFhZ2VudF9pbnN0YW5jZV9pZBgCIAEoCRIZChFmZWVkYmFja19kZWNpc2lvbhgDIAEoCRIPCgdjb21tZW50GAQgASgJIn4KGUNvbnRpbnVlRXhlY3V0aW9uUmVzcG9uc2USGQoRYWdlbnRfaW5zdGFuY2VfaWQYASABKAkSNQoGc3RhdHVzGAIgASgOMiUuaGFycGlhLmFnZW50cy52MS5BZ2VudEluc3RhbmNlU3RhdHVzEg8KB21lc3NhZ2UYAyABKAkqmQIKE0FnZW50SW5zdGFuY2VTdGF0dXMSJQohQUdFTlRfSU5TVEFOQ0VfU1RBVFVTX1VOU1BFQ0lGSUVEEAASHgoaQUdFTlRfSU5TVEFOQ0VfU1RBVFVTX0lETEUQARIiCh5BR0VOVF9JTlNUQU5DRV9TVEFUVVNfUExBTk5JTkcQAhIjCh9BR0VOVF9JTlNUQU5DRV9TVEFUVVNfRVhFQ1VUSU5HEAMSKwonQUdFTlRfSU5TVEFOQ0VfU1RBVFVTX0FXQUlUSU5HX0ZFRURCQUNLEAQSIwofQUdFTlRfSU5TVEFOQ0VfU1RBVFVTX0NPTVBMRVRFRBAFEiAKHEFHRU5UX0lOU1RBTkNFX1NUQVRVU19GQUlMRUQQBjKIBAoMQWdlbnRTZXJ2aWNlEmwKEVJlZ2lzdGVyQWdlbnRUeXBlEiouaGFycGlhLmFnZW50cy52MS5SZWdpc3RlckFnZW50VHlwZVJlcXVlc3QaKy5oYXJwaWEuYWdlbnRzLnYxLlJlZ2lzdGVyQWdlbnRUeXBlUmVzcG9uc2USZQoOTGlzdEFnZW50VHlwZXMSJy5oYXJwaWEuYWdlbnRzLnYxLkxpc3RBZ2VudFR5cGVzUmVxdWVzdBooLmhhcnBpYS5hZ2VudHMudjEuTGlzdEFnZW50VHlwZXNSZXNwb25zZTABElcKCk1hdGNoQWdlbnQSIy5oYXJwaWEuYWdlbnRzLnYxLk1hdGNoQWdlbnRSZXF1ZXN0GiQuaGFycGlhLmFnZW50cy52MS5NYXRjaEFnZW50UmVzcG9uc2USXAoLRXhlY3V0ZVRhc2sSJC5oYXJwaWEuYWdlbnRzLnYxLkV4ZWN1dGVUYXNrUmVxdWVzdBolLmhhcnBpYS5hZ2VudHMudjEuRXhlY3V0ZVRhc2tSZXNwb25zZTABEmwKEUNvbnRpbnVlRXhlY3V0aW9uEiouaGFycGlhLmFnZW50cy52MS5Db250aW51ZUV4ZWN1dGlvblJlcXVlc3QaKy5oYXJwaWEuYWdlbnRzLnYxLkNvbnRpbnVlRXhlY3V0aW9uUmVzcG9uc2VCxAEKFGNvbS5oYXJwaWEuYWdlbnRzLnYxQgtBZ2VudHNQcm90b1ABWj1naXRodWIuY29tL2hhcnBpYS9jb250cm9sLXBsYW5lL2dlbi9oYXJwaWEvYWdlbnRzL3YxO2FnZW50c3YxogIDSEFYqgIQSGFycGlhLkFnZW50cy5WMcoCEEhhcnBpYVxBZ2VudHNcVjHiAhxIYXJwaWFcQWdlbnRzXFYxXEdQQk1ldGFkYXRh6gISSGFycGlhOjpBZ2VudHM6OlYxYgZwcm90bzM", [file_harpia_agents_v1_agent_type]);
 
 /**
  * @generated from message harpia.agents.v1.AgentInstance
@@ -101,7 +64,7 @@ export type AgentInstance = Message<"harpia.agents.v1.AgentInstance"> & {
  * Use `create(AgentInstanceSchema)` to create a new message.
  */
 export const AgentInstanceSchema: GenMessage<AgentInstance> = /*@__PURE__*/
-  messageDesc(file_harpia_agents_v1_agents, 1);
+  messageDesc(file_harpia_agents_v1_agents, 0);
 
 /**
  * @generated from message harpia.agents.v1.RegisterAgentTypeRequest
@@ -128,7 +91,7 @@ export type RegisterAgentTypeRequest = Message<"harpia.agents.v1.RegisterAgentTy
  * Use `create(RegisterAgentTypeRequestSchema)` to create a new message.
  */
 export const RegisterAgentTypeRequestSchema: GenMessage<RegisterAgentTypeRequest> = /*@__PURE__*/
-  messageDesc(file_harpia_agents_v1_agents, 2);
+  messageDesc(file_harpia_agents_v1_agents, 1);
 
 /**
  * @generated from message harpia.agents.v1.RegisterAgentTypeResponse
@@ -145,7 +108,7 @@ export type RegisterAgentTypeResponse = Message<"harpia.agents.v1.RegisterAgentT
  * Use `create(RegisterAgentTypeResponseSchema)` to create a new message.
  */
 export const RegisterAgentTypeResponseSchema: GenMessage<RegisterAgentTypeResponse> = /*@__PURE__*/
-  messageDesc(file_harpia_agents_v1_agents, 3);
+  messageDesc(file_harpia_agents_v1_agents, 2);
 
 /**
  * @generated from message harpia.agents.v1.ListAgentTypesRequest
@@ -174,7 +137,7 @@ export type ListAgentTypesRequest = Message<"harpia.agents.v1.ListAgentTypesRequ
  * Use `create(ListAgentTypesRequestSchema)` to create a new message.
  */
 export const ListAgentTypesRequestSchema: GenMessage<ListAgentTypesRequest> = /*@__PURE__*/
-  messageDesc(file_harpia_agents_v1_agents, 4);
+  messageDesc(file_harpia_agents_v1_agents, 3);
 
 /**
  * @generated from message harpia.agents.v1.ListAgentTypesResponse
@@ -196,7 +159,7 @@ export type ListAgentTypesResponse = Message<"harpia.agents.v1.ListAgentTypesRes
  * Use `create(ListAgentTypesResponseSchema)` to create a new message.
  */
 export const ListAgentTypesResponseSchema: GenMessage<ListAgentTypesResponse> = /*@__PURE__*/
-  messageDesc(file_harpia_agents_v1_agents, 5);
+  messageDesc(file_harpia_agents_v1_agents, 4);
 
 /**
  * @generated from message harpia.agents.v1.MatchAgentRequest
@@ -223,7 +186,7 @@ export type MatchAgentRequest = Message<"harpia.agents.v1.MatchAgentRequest"> & 
  * Use `create(MatchAgentRequestSchema)` to create a new message.
  */
 export const MatchAgentRequestSchema: GenMessage<MatchAgentRequest> = /*@__PURE__*/
-  messageDesc(file_harpia_agents_v1_agents, 6);
+  messageDesc(file_harpia_agents_v1_agents, 5);
 
 /**
  * @generated from message harpia.agents.v1.MatchAgentResponse
@@ -240,7 +203,7 @@ export type MatchAgentResponse = Message<"harpia.agents.v1.MatchAgentResponse"> 
  * Use `create(MatchAgentResponseSchema)` to create a new message.
  */
 export const MatchAgentResponseSchema: GenMessage<MatchAgentResponse> = /*@__PURE__*/
-  messageDesc(file_harpia_agents_v1_agents, 7);
+  messageDesc(file_harpia_agents_v1_agents, 6);
 
 /**
  * @generated from message harpia.agents.v1.AgentMatch
@@ -262,7 +225,7 @@ export type AgentMatch = Message<"harpia.agents.v1.AgentMatch"> & {
  * Use `create(AgentMatchSchema)` to create a new message.
  */
 export const AgentMatchSchema: GenMessage<AgentMatch> = /*@__PURE__*/
-  messageDesc(file_harpia_agents_v1_agents, 8);
+  messageDesc(file_harpia_agents_v1_agents, 7);
 
 /**
  * @generated from message harpia.agents.v1.ExecuteTaskRequest
@@ -306,7 +269,7 @@ export type ExecuteTaskRequest = Message<"harpia.agents.v1.ExecuteTaskRequest"> 
  * Use `create(ExecuteTaskRequestSchema)` to create a new message.
  */
 export const ExecuteTaskRequestSchema: GenMessage<ExecuteTaskRequest> = /*@__PURE__*/
-  messageDesc(file_harpia_agents_v1_agents, 9);
+  messageDesc(file_harpia_agents_v1_agents, 8);
 
 /**
  * @generated from message harpia.agents.v1.ExecuteTaskResponse
@@ -348,7 +311,7 @@ export type ExecuteTaskResponse = Message<"harpia.agents.v1.ExecuteTaskResponse"
  * Use `create(ExecuteTaskResponseSchema)` to create a new message.
  */
 export const ExecuteTaskResponseSchema: GenMessage<ExecuteTaskResponse> = /*@__PURE__*/
-  messageDesc(file_harpia_agents_v1_agents, 10);
+  messageDesc(file_harpia_agents_v1_agents, 9);
 
 /**
  * @generated from message harpia.agents.v1.FeedbackRequest
@@ -375,7 +338,7 @@ export type FeedbackRequest = Message<"harpia.agents.v1.FeedbackRequest"> & {
  * Use `create(FeedbackRequestSchema)` to create a new message.
  */
 export const FeedbackRequestSchema: GenMessage<FeedbackRequest> = /*@__PURE__*/
-  messageDesc(file_harpia_agents_v1_agents, 11);
+  messageDesc(file_harpia_agents_v1_agents, 10);
 
 /**
  * @generated from message harpia.agents.v1.ContinueExecutionRequest
@@ -407,7 +370,7 @@ export type ContinueExecutionRequest = Message<"harpia.agents.v1.ContinueExecuti
  * Use `create(ContinueExecutionRequestSchema)` to create a new message.
  */
 export const ContinueExecutionRequestSchema: GenMessage<ContinueExecutionRequest> = /*@__PURE__*/
-  messageDesc(file_harpia_agents_v1_agents, 12);
+  messageDesc(file_harpia_agents_v1_agents, 11);
 
 /**
  * @generated from message harpia.agents.v1.ContinueExecutionResponse
@@ -434,7 +397,7 @@ export type ContinueExecutionResponse = Message<"harpia.agents.v1.ContinueExecut
  * Use `create(ContinueExecutionResponseSchema)` to create a new message.
  */
 export const ContinueExecutionResponseSchema: GenMessage<ContinueExecutionResponse> = /*@__PURE__*/
-  messageDesc(file_harpia_agents_v1_agents, 13);
+  messageDesc(file_harpia_agents_v1_agents, 12);
 
 /**
  * @generated from enum harpia.agents.v1.AgentInstanceStatus

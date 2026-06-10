@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package harpia.agents.v1;
 
+import "harpia/agents/v1/agent_type.proto";
 
 // AgentService handles agent type registration, capability discovery, and agent
 // instance lifecycle. This is the interface between the agent-runtime (Python/LangGraph)
@@ -23,14 +24,6 @@ service AgentService {
 
   // ContinueExecution resumes a paused agent execution (e.g., after human feedback).
   rpc ContinueExecution(ContinueExecutionRequest) returns (ContinueExecutionResponse);
-}
-
-message AgentType {
-  string id = 1;
-  string name = 2;
-  string description = 3;
-  string capabilities_text = 4;  // Natural language, embedded for similarity search
-  string created_at = 5;
 }
 
 message AgentInstance {
@@ -65,7 +58,7 @@ message RegisterAgentTypeResponse {
 }
 
 message ListAgentTypesRequest {
-  optional string capability_filter = 1;  // Search filter text
+  optional string capability_filter = 1; // Search filter text
   int32 page_size = 2;
   string page_token = 3;
 }
