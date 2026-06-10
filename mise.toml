@@ -90,7 +90,10 @@ run = "podman compose -f deploy/dev/compose.yaml up -d"
 
 [tasks.dev-infra-kind]
 description = "Deploy infrastructure to kind cluster"
-run = "kubectl apply -f deploy/dev/kind/"
+run = [
+    "./scripts/ensure-dev-kind-secrets.sh",
+    "kubectl apply -f deploy/dev/kind/",
+]
 
 [tasks.dev-down]
 description = "Tear down dev environment"
@@ -122,7 +125,7 @@ run = "cd agent-runtime && HARPIA_ROLE=worker uv run python -m harpia_agents.mai
 
 [tasks.dev-openfga-migrate]
 description = "Run OpenFGA database migrations"
-run = "podman compose -f deploy/dev/compose.yaml run --rm openfga migrate --datastore-engine postgres --datastore-uri 'postgres://harpia:harpia@postgres:5432/openfga?sslmode=disable'"
+run = "podman compose -f deploy/dev/compose.yaml run --rm openfga migrate --datastore-engine postgres --datastore-uri \"postgres://${HARPIA_DEV_POSTGRES_USERNAME:-harpia}:${HARPIA_DEV_POSTGRES_PASSWORD:-dev-postgres-password}@postgres:5432/openfga?sslmode=disable\""
 
 [tasks.dev-temporal]
 description = "Start Temporal dev server (single binary)"

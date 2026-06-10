@@ -4,7 +4,7 @@
 #
 # Services communicate on the internal compose network.
 # For local API development, connect via podman network:
-#   DATABASE_URL="postgres://harpia:harpia@localhost:15000/harpia?sslmode=disable"
+#   DATABASE_URL="postgres://<user>:<password>@localhost:15000/harpia?sslmode=disable"
 #   (access host-mapped ports after starting)
 #
 # To expose a service to the host, uncomment the ports: line.
@@ -16,8 +16,8 @@ services:
   postgres:
     image: docker.io/pgvector/pgvector:pg16
     environment:
-      POSTGRES_USER: harpia
-      POSTGRES_PASSWORD: harpia
+      POSTGRES_USER: ${HARPIA_DEV_POSTGRES_USERNAME:-harpia}
+      POSTGRES_PASSWORD: ${HARPIA_DEV_POSTGRES_PASSWORD:-dev-postgres-password}
       POSTGRES_DB: harpia
     expose:
       - "5432"
@@ -56,7 +56,12 @@ services:
 
   zitadel:
     image: ghcr.io/zitadel/zitadel:v2.62.0
-    command: ["start-from-init", "--masterkeyFromEnv", "--tlsMode", "disabled"]
+    command:
+      - "start-from-init"
+      - "--masterkey"
+      - "${HARPIA_DEV_ZITADEL_KEY:-00000000000000000000000000000000}"
+      - "--tlsMode"
+      - "disabled"
     expose:
       - "8080"
     # ports:
@@ -68,10 +73,10 @@ services:
       ZITADEL_DATABASE_POSTGRES_HOST: postgres
       ZITADEL_DATABASE_POSTGRES_PORT: "5432"
       ZITADEL_DATABASE_POSTGRES_DATABASE: zitadel
-      ZITADEL_DATABASE_POSTGRES_USER_USERNAME: harpia
-      ZITADEL_DATABASE_POSTGRES_USER_PASSWORD: harpia
-      ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME: harpia
-      ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD: harpia
+      ZITADEL_DATABASE_POSTGRES_USER_USERNAME: ${HARPIA_DEV_POSTGRES_USERNAME:-harpia}
+      ZITADEL_DATABASE_POSTGRES_USER_PASSWORD: ${HARPIA_DEV_POSTGRES_PASSWORD:-dev-postgres-password}
+      ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME: ${HARPIA_DEV_POSTGRES_USERNAME:-harpia}
+      ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD: ${HARPIA_DEV_POSTGRES_PASSWORD:-dev-postgres-password}
       ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE: disable
       ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE: disable
       ZITADEL_EXTERNALSECURE: "false"
@@ -80,7 +85,6 @@ services:
       ZITADEL_FIRSTINSTANCE_HUMAN_EMAIL: admin@harpia.local
       ZITADEL_FIRSTINSTANCE_HUMAN_USERNAME: admin
       ZITADEL_FIRSTINSTANCE_HUMAN_PASSWORD: HarpiaAdmin1!
-      ZITADEL_MASTERKEY: uLGG7IoNMEk58Ik942cZFRmaMnio/3oI
 
   openfga:
     image: docker.io/openfga/openfga:v1.8.0
@@ -89,7 +93,7 @@ services:
       - "8080"
     environment:
       OPENFGA_DATASTORE_ENGINE: postgres
-      OPENFGA_DATASTORE_URI: "postgres://harpia:harpia@postgres:5432/openfga?sslmode=disable"
+      OPENFGA_DATASTORE_URI: "postgres://${HARPIA_DEV_POSTGRES_USERNAME:-harpia}:${HARPIA_DEV_POSTGRES_PASSWORD:-dev-postgres-password}@postgres:5432/openfga?sslmode=disable"
       OPENFGA_LOG_LEVEL: info
       OPENFGA_PLAYGROUND_ENABLED: "true"
     depends_on:

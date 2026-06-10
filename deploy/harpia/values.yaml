@@ -14,8 +14,11 @@ postgres:
   enabled: true
   image: docker.io/library/postgres:16-alpine
   database: harpia
-  user: harpia
-  password: harpia
+  # Existing Secret that contains the database login material.
+  credentialsSecret:
+    name: postgres-credentials
+    usernameKey: username
+    passwordKey: password
   storage: 10Gi
 
 # Valkey
@@ -34,7 +37,10 @@ zitadel:
   image: ghcr.io/zitadel/zitadel:v2.62.0
   externalDomain: localhost
   externalPort: "8085"
-  masterkey: uLGG7IoNMEk58Ik942cZFRmaMnio/3oI
+  # Existing Secret that contains the Zitadel master key.
+  masterkeySecret:
+    name: zitadel-masterkey
+    key: masterkey
   adminEmail: admin@harpia.local
   adminPassword: HarpiaAdmin1!
 

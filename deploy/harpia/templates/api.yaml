@@ -4,6 +4,7 @@
 {{- $valkeyHost := include "harpia.serviceName" (dict "name" "valkey" "root" .) }}
 {{- $garageHost := include "harpia.serviceName" (dict "name" "garage" "root" .) }}
 {{- $zitadelHost := include "harpia.serviceName" (dict "name" "zitadel" "root" .) }}
+{{- $postgresCredentialsSecret := .Values.postgres.credentialsSecret }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -29,8 +30,18 @@ spec:
           ports:
             - containerPort: {{ .Values.api.port }}
           env:
+            - name: POSTGRES_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $postgresCredentialsSecret.name | quote }}
+                  key: {{ $postgresCredentialsSecret.usernameKey | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $postgresCredentialsSecret.name | quote }}
+                  key: {{ $postgresCredentialsSecret.passwordKey | quote }}
             - name: DATABASE_URL
-              value: {{ printf "postgres://%s:%s@%s:5432/%s?sslmode=disable" .Values.postgres.user .Values.postgres.password $postgresHost .Values.postgres.database | quote }}
+              value: {{ printf "postgres://$(POSTGRES_USERNAME):$(POSTGRES_PASSWORD)@%s:5432/%s?sslmode=disable" $postgresHost .Values.postgres.database | quote }}
             - name: VALKEY_URL
               value: {{ printf "valkey://%s:6379" $valkeyHost | quote }}
             - name: TEMPORAL_HOST

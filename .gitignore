@@ -49,6 +49,12 @@ Thumbs.db
 .env.*
 !.env.example
 
+# Local dev secret material
+deploy/dev/kind/secrets.local.env
+deploy/dev/kind/*secret*.local.yaml
+deploy/dev/kind/.secrets/
+deploy/dev/.env
+
 # Tilt
 .tilt/
 

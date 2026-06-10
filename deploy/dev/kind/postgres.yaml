@@ -37,9 +37,15 @@ spec:
             - containerPort: 5432
           env:
             - name: POSTGRES_USER
-              value: harpia
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: username
             - name: POSTGRES_PASSWORD
-              value: harpia
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: password
             - name: POSTGRES_DB
               value: harpia
           volumeMounts:
@@ -49,7 +55,7 @@ spec:
               mountPath: /docker-entrypoint-initdb.d
           readinessProbe:
             exec:
-              command: ["pg_isready", "-U", "harpia"]
+              command: ["sh", "-ec", "pg_isready -U \"$POSTGRES_USER\""]
             initialDelaySeconds: 3
             periodSeconds: 3
       volumes:
@@ -65,12 +71,20 @@ kind: ConfigMap
 metadata:
   name: postgres-init
 data:
-  01-create-dbs.sql: |
+  01-create-dbs.sh: |
+    set -eo pipefail
+
+    psql -v ON_ERROR_STOP=1 \
+      --username "$POSTGRES_USER" \
+      --dbname "$POSTGRES_DB" \
+      -v db_user="$POSTGRES_USER" <<'SQL'
     SELECT 'CREATE DATABASE zitadel'
     WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'zitadel')\gexec
-    GRANT ALL PRIVILEGES ON DATABASE zitadel TO harpia;
-    CREATE DATABASE openfga;
-    GRANT ALL PRIVILEGES ON DATABASE openfga TO harpia;
+    SELECT 'CREATE DATABASE openfga'
+    WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'openfga')\gexec
+    GRANT ALL PRIVILEGES ON DATABASE zitadel TO :"db_user";
+    GRANT ALL PRIVILEGES ON DATABASE openfga TO :"db_user";
+    SQL
 ---
 apiVersion: v1
 kind: Service
