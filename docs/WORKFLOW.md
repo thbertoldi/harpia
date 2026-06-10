@@ -199,6 +199,18 @@ GitHub Actions will handle:
 
 Container images: `ghcr.io/harpia/{control-plane,agent-runtime,frontend}:{tag}`
 
+### Agent PR Guards
+
+Three guard workflows compensate for known coding-agent failure modes before merge:
+
+| Workflow | Blocks? | Signal |
+|---|---:|---|
+| `guard-rule-disablement.yml` | Yes | New lint, type, or security suppressions |
+| `guard-runtime-and-deps.yml` | Yes | Runtime version changes or dependency pin movement outside dedicated dependency PRs |
+| `guard-scope-inflation.yml` | No | PR file scope appears broader than the linked issue |
+
+Blocking guards add `requires-human-approval` and upsert a PR comment listing the detected changes. The scope guard only comments because it is a review signal, not a merge gate.
+
 ## Communication
 
 - **Architecture discussions:** Open an issue with label `adr`, draft an ADR, discuss in PR.
