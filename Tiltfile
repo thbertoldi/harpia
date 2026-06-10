@@ -4,6 +4,8 @@
 # Tilt builds app images, injects them into k8s manifests,
 # applies to the kind cluster, and live-reloads on code changes.
 
+local('./scripts/ensure-dev-kind-secrets.sh')
+
 # ---- Application Images (built by Tilt with live reload) ----
 docker_build(
     'harpia-api',

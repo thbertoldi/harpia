@@ -1,5 +1,6 @@
 {{- if .Values.postgres.enabled }}
 {{- $svcName := include "harpia.serviceName" (dict "name" "postgres" "root" .) }}
+{{- $credentialsSecret := .Values.postgres.credentialsSecret }}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -23,12 +24,20 @@ metadata:
     {{- include "harpia.labels" . | nindent 4 }}
     app: {{ $svcName }}
 data:
-  01-create-dbs.sql: |
+  01-create-dbs.sh: |
+    set -eo pipefail
+
+    psql -v ON_ERROR_STOP=1 \
+      --username "$POSTGRES_USER" \
+      --dbname "$POSTGRES_DB" \
+      -v db_user="$POSTGRES_USER" <<'SQL'
     SELECT 'CREATE DATABASE zitadel'
     WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'zitadel')\gexec
-    GRANT ALL PRIVILEGES ON DATABASE zitadel TO {{ .Values.postgres.user }};
-    CREATE DATABASE openfga;
-    GRANT ALL PRIVILEGES ON DATABASE openfga TO {{ .Values.postgres.user }};
+    SELECT 'CREATE DATABASE openfga'
+    WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'openfga')\gexec
+    GRANT ALL PRIVILEGES ON DATABASE zitadel TO :"db_user";
+    GRANT ALL PRIVILEGES ON DATABASE openfga TO :"db_user";
+    SQL
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -55,9 +64,15 @@ spec:
             - containerPort: 5432
           env:
             - name: POSTGRES_USER
-              value: {{ .Values.postgres.user | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $credentialsSecret.name | quote }}
+                  key: {{ $credentialsSecret.usernameKey | quote }}
             - name: POSTGRES_PASSWORD
-              value: {{ .Values.postgres.password | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $credentialsSecret.name | quote }}
+                  key: {{ $credentialsSecret.passwordKey | quote }}
             - name: POSTGRES_DB
               value: {{ .Values.postgres.database | quote }}
           volumeMounts:
@@ -67,7 +82,7 @@ spec:
               mountPath: /docker-entrypoint-initdb.d
           readinessProbe:
             exec:
-              command: ["pg_isready", "-U", {{ .Values.postgres.user | quote }}]
+              command: ["sh", "-ec", "pg_isready -U \"$POSTGRES_USER\""]
             initialDelaySeconds: 3
             periodSeconds: 3
       volumes:

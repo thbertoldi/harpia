@@ -1,6 +1,7 @@
 {{- if .Values.openfga.enabled }}
 {{- $svcName := include "harpia.serviceName" (dict "name" "openfga" "root" .) }}
-{{- $datastoreURI := printf "postgres://%s:%s@%s:5432/openfga?sslmode=disable" .Values.postgres.user .Values.postgres.password (include "harpia.serviceName" (dict "name" "postgres" "root" .)) }}
+{{- $postgresHost := include "harpia.serviceName" (dict "name" "postgres" "root" .) }}
+{{- $postgresCredentialsSecret := .Values.postgres.credentialsSecret }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -28,7 +29,18 @@ spec:
             - "--datastore-engine"
             - "postgres"
             - "--datastore-uri"
-            - {{ $datastoreURI | quote }}
+            - {{ printf "postgres://$(POSTGRES_USERNAME):$(POSTGRES_PASSWORD)@%s:5432/openfga?sslmode=disable" $postgresHost | quote }}
+          env:
+            - name: POSTGRES_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $postgresCredentialsSecret.name | quote }}
+                  key: {{ $postgresCredentialsSecret.usernameKey | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $postgresCredentialsSecret.name | quote }}
+                  key: {{ $postgresCredentialsSecret.passwordKey | quote }}
       containers:
         - name: openfga
           image: {{ .Values.openfga.image | quote }}
@@ -37,10 +49,20 @@ spec:
           ports:
             - containerPort: 8080
           env:
+            - name: POSTGRES_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $postgresCredentialsSecret.name | quote }}
+                  key: {{ $postgresCredentialsSecret.usernameKey | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $postgresCredentialsSecret.name | quote }}
+                  key: {{ $postgresCredentialsSecret.passwordKey | quote }}
             - name: OPENFGA_DATASTORE_ENGINE
               value: "postgres"
             - name: OPENFGA_DATASTORE_URI
-              value: {{ $datastoreURI | quote }}
+              value: {{ printf "postgres://$(POSTGRES_USERNAME):$(POSTGRES_PASSWORD)@%s:5432/openfga?sslmode=disable" $postgresHost | quote }}
             - name: OPENFGA_LOG_LEVEL
               value: "info"
             - name: OPENFGA_PLAYGROUND_ENABLED

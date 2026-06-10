@@ -24,7 +24,18 @@ spec:
             - "--datastore-engine"
             - "postgres"
             - "--datastore-uri"
-            - "postgres://harpia:harpia@postgres:5432/openfga?sslmode=disable"
+            - "postgres://$(POSTGRES_USERNAME):$(POSTGRES_PASSWORD)@postgres:5432/openfga?sslmode=disable"
+          env:
+            - name: POSTGRES_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: password
       containers:
         - name: openfga
           image: docker.io/openfga/openfga:v1.8.0
@@ -32,10 +43,20 @@ spec:
           ports:
             - containerPort: 8080
           env:
+            - name: POSTGRES_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: password
             - name: OPENFGA_DATASTORE_ENGINE
               value: postgres
             - name: OPENFGA_DATASTORE_URI
-              value: "postgres://harpia:harpia@postgres:5432/openfga?sslmode=disable"
+              value: "postgres://$(POSTGRES_USERNAME):$(POSTGRES_PASSWORD)@postgres:5432/openfga?sslmode=disable"
             - name: OPENFGA_LOG_LEVEL
               value: info
             - name: OPENFGA_PLAYGROUND_ENABLED

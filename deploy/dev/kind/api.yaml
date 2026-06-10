@@ -24,8 +24,18 @@ spec:
           ports:
             - containerPort: 8080
           env:
+            - name: POSTGRES_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: password
             - name: DATABASE_URL
-              value: "postgres://harpia:harpia@postgres:5432/harpia?sslmode=disable"
+              value: "postgres://$(POSTGRES_USERNAME):$(POSTGRES_PASSWORD)@postgres:5432/harpia?sslmode=disable"
             - name: VALKEY_URL
               value: "valkey://valkey:6379"
             - name: TEMPORAL_HOST

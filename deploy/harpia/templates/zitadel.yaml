@@ -1,5 +1,7 @@
 {{- if .Values.zitadel.enabled }}
 {{- $svcName := include "harpia.serviceName" (dict "name" "zitadel" "root" .) }}
+{{- $postgresCredentialsSecret := .Values.postgres.credentialsSecret }}
+{{- $masterkeySecret := .Values.zitadel.masterkeySecret }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -25,11 +27,15 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - "start-from-init"
-            - "--masterkeyFromEnv"
+            - "--masterkey"
+            - {{ printf "$(%s)" $masterkeySecret.key | quote }}
             - "--tlsMode"
             - "disabled"
           ports:
             - containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: {{ $masterkeySecret.name | quote }}
           env:
             - name: ZITADEL_DATABASE_POSTGRES_HOST
               value: {{ include "harpia.serviceName" (dict "name" "postgres" "root" .) | quote }}
@@ -38,13 +44,25 @@ spec:
             - name: ZITADEL_DATABASE_POSTGRES_DATABASE
               value: "zitadel"
             - name: ZITADEL_DATABASE_POSTGRES_USER_USERNAME
-              value: {{ .Values.postgres.user | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $postgresCredentialsSecret.name | quote }}
+                  key: {{ $postgresCredentialsSecret.usernameKey | quote }}
             - name: ZITADEL_DATABASE_POSTGRES_USER_PASSWORD
-              value: {{ .Values.postgres.password | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $postgresCredentialsSecret.name | quote }}
+                  key: {{ $postgresCredentialsSecret.passwordKey | quote }}
             - name: ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME
-              value: {{ .Values.postgres.user | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $postgresCredentialsSecret.name | quote }}
+                  key: {{ $postgresCredentialsSecret.usernameKey | quote }}
             - name: ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD
-              value: {{ .Values.postgres.password | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $postgresCredentialsSecret.name | quote }}
+                  key: {{ $postgresCredentialsSecret.passwordKey | quote }}
             - name: ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE
               value: "disable"
             - name: ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE
@@ -65,8 +83,6 @@ spec:
               value: "admin"
             - name: ZITADEL_FIRSTINSTANCE_HUMAN_PASSWORD
               value: {{ .Values.zitadel.adminPassword | quote }}
-            - name: ZITADEL_MASTERKEY
-              value: {{ .Values.zitadel.masterkey | quote }}
 ---
 apiVersion: v1
 kind: Service

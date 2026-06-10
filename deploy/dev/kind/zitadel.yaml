@@ -48,7 +48,8 @@ spec:
           image: ghcr.io/zitadel/zitadel:v2.62.0
           args:
             - "start-from-init"
-            - "--masterkeyFromEnv"
+            - "--masterkey"
+            - "$(masterkey)"
             - "--tlsMode"
             - "disabled"
           ports:
@@ -56,6 +57,9 @@ spec:
           volumeMounts:
             - name: machinekey
               mountPath: /machinekey
+          envFrom:
+            - secretRef:
+                name: zitadel-masterkey
           env:
             # ---- Database ----
             - name: ZITADEL_DATABASE_POSTGRES_HOST
@@ -65,13 +69,25 @@ spec:
             - name: ZITADEL_DATABASE_POSTGRES_DATABASE
               value: zitadel
             - name: ZITADEL_DATABASE_POSTGRES_USER_USERNAME
-              value: harpia
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: username
             - name: ZITADEL_DATABASE_POSTGRES_USER_PASSWORD
-              value: harpia
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: password
             - name: ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME
-              value: harpia
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: username
             - name: ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD
-              value: harpia
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: password
             - name: ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE
               value: disable
             - name: ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE
@@ -104,9 +120,6 @@ spec:
               value: Admin Service Account
             - name: ZITADEL_FIRSTINSTANCE_ORG_MACHINE_PAT_EXPIRATIONDATE
               value: "2099-01-01T00:00:00Z"
-            # ---- Masterkey (DB encryption only, NOT for API auth) ----
-            - name: ZITADEL_MASTERKEY
-              value: uLGG7IoNMEk58Ik942cZFRmaMnio/3oI
 ---
 apiVersion: v1
 kind: Service

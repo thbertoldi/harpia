@@ -5,7 +5,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MIGRATIONS_DIR="$REPO_ROOT/database/migrations"
 PORT="${HARPIA_DEV_DB_PORT:-15432}"
-DATABASE_URL="${HARPIA_DEV_DATABASE_URL:-postgres://harpia:harpia@127.0.0.1:${PORT}/harpia?sslmode=disable}"
+NAMESPACE="${HARPIA_DEV_K8S_NAMESPACE:-default}"
 LOG_FILE="${TMPDIR:-/tmp}/harpia-postgres-port-forward.log"
 PF_PID=""
 
@@ -20,6 +20,16 @@ trap cleanup EXIT
 if ! command -v atlas >/dev/null 2>&1; then
   echo "ERROR: atlas is required. Run 'mise install' so the dev toolchain is available." >&2
   exit 1
+fi
+
+"$REPO_ROOT/scripts/ensure-dev-kind-secrets.sh" >/dev/null
+
+if [[ -n "${HARPIA_DEV_DATABASE_URL:-}" ]]; then
+  DATABASE_URL="$HARPIA_DEV_DATABASE_URL"
+else
+  DB_USER="$(kubectl -n "$NAMESPACE" get secret postgres-credentials -o jsonpath='{.data.username}' | base64 --decode)"
+  DB_PASSWORD="$(kubectl -n "$NAMESPACE" get secret postgres-credentials -o jsonpath='{.data.password}' | base64 --decode)"
+  DATABASE_URL="postgres://${DB_USER}:${DB_PASSWORD}@127.0.0.1:${PORT}/harpia?sslmode=disable"
 fi
 
 echo "Waiting for PostgreSQL pod..."
