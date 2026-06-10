@@ -1,7 +1,7 @@
 # Harpia Development Environment — Tilt + kind
 # Use: mise run dev  (starts tilt up)
 #
-# Tilt builds app images, injects them into k8s manifests,
+# Tilt builds backend app images, injects them into k8s manifests,
 # applies to the kind cluster, and live-reloads on code changes.
 
 local('./scripts/ensure-dev-kind-secrets.sh')
@@ -31,19 +31,6 @@ docker_build(
     ],
 )
 k8s_yaml('deploy/dev/kind/agent.yaml')
-
-docker_build(
-    'harpia-frontend',
-    context='./frontend',
-    dockerfile='./frontend/Containerfile',
-    live_update=[
-        sync('./frontend/src', '/app/src'),
-    ],
-)
-# Host Vite serves the frontend in dev (picks up frontend/.env.local for OIDC).
-# The k8s production build stays available but is not started by default.
-k8s_yaml('deploy/dev/kind/frontend.yaml')
-k8s_resource('harpia-frontend', auto_init=False)
 
 # ---- Infrastructure (pre-built images, no build needed) ----
 k8s_yaml([
