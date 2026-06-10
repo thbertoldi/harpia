@@ -1,0 +1,38 @@
+# Coding-agent dispatcher roster.
+#
+# Commands are argv arrays. The dispatcher replaces {prompt_file} with the
+# generated task or review prompt before printing or running the command.
+# Complexity labels are read from GitHub issue labels named complexity:<level>.
+
+[agents.opencode-deepseek]
+command = ["opencode", "run", "--model", "deepseek-v4", "--prompt-file", "{prompt_file}"]
+complexities = ["trivial", "routine"]
+authors = ["opencode-deepseek"]
+provider = "opencode"
+quota_hint = "DeepSeek usage is managed by opencode/provider credentials; check the configured provider dashboard."
+
+[agents.opencode-qwen]
+command = ["opencode", "run", "--model", "qwen-2.5-coder", "--prompt-file", "{prompt_file}"]
+complexities = ["routine", "substantive"]
+authors = ["opencode-qwen"]
+provider = "opencode"
+quota_hint = "Qwen usage is managed by opencode/provider credentials; check the configured provider dashboard."
+
+[agents.cursor]
+command = ["cursor", "--task-file", "{prompt_file}"]
+complexities = ["trivial", "routine"]
+authors = ["cursor"]
+provider = "cursor"
+quota_hint = "Cursor CLI quota is account-managed; check Cursor account usage when dispatch volume is high."
+
+[agents.codex]
+command = ["codex", "apply", "--task-file", "{prompt_file}"]
+complexities = ["routine", "substantive"]
+authors = ["codex"]
+provider = "codex"
+quota_hint = "Codex quota follows the configured OpenAI/Codex account budget."
+
+[quota]
+opencode = "No automatic quota command is configured; check the provider account used by opencode."
+cursor = "No automatic quota command is configured; check Cursor account usage."
+codex = "No automatic quota command is configured; check the Codex/OpenAI account budget."
