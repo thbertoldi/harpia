@@ -55,8 +55,10 @@ func (h *AgentHandler) RegisterAgentType(ctx context.Context, req *connect.Reque
 			Id:               created.ID.String(),
 			Name:             created.Name,
 			Description:      created.Description,
-			CapabilitiesText: "",
+			CapabilitiesText: req.Msg.CapabilitiesText,
 			CreatedAt:        created.CreatedAt.Format(time.RFC3339),
+			DisplayName:      created.Name,
+			Capabilities:     []string{req.Msg.CapabilitiesText},
 		},
 	}), nil
 }
@@ -129,6 +131,7 @@ func (h *AgentHandler) MatchAgent(ctx context.Context, req *connect.Request[agen
 				Name:        at.Name,
 				Description: at.Description,
 				CreatedAt:   at.CreatedAt.Format(time.RFC3339),
+				DisplayName: at.Name,
 			},
 			SimilarityScore: at.Similarity,
 		})
@@ -151,6 +154,7 @@ func agentTypeToProto(agentType *AgentType) *agentsv1.AgentType {
 		Name:        agentType.Name,
 		Description: agentType.Description,
 		CreatedAt:   agentType.CreatedAt.Format(time.RFC3339),
+		DisplayName: agentType.Name,
 	}
 }
 

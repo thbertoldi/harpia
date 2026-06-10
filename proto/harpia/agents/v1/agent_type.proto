@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package harpia.agents.v1;
+
+// AgentType intentionally remains in agents.proto.
+//
+// This repository enforces Buf FILE-level breaking checks. Moving the existing
+// harpia.agents.v1.AgentType message into this file would break current
+// generated clients even if the fully-qualified message name stayed the same.
+// Keep this file as the manifest boundary marker until the next explicit proto
+// version can move the message without breaking consumers.

@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package harpia.agents.v1;
 
+import "google/protobuf/struct.proto";
 
 // AgentService handles agent type registration, capability discovery, and agent
 // instance lifecycle. This is the interface between the agent-runtime (Python/LangGraph)
@@ -29,8 +30,22 @@ message AgentType {
   string id = 1;
   string name = 2;
   string description = 3;
-  string capabilities_text = 4;  // Natural language, embedded for similarity search
+  string capabilities_text = 4; // Natural language, embedded for similarity search
   string created_at = 5;
+
+  // Canonical manifest fields. The original fields above stay reserved for
+  // current clients and storage adapters; new manifest-aware code should prefer
+  // these additive fields where available.
+  string version = 6;
+  string display_name = 7;
+  repeated string capabilities = 8;
+  string model_id = 9;
+  string system_prompt = 10;
+  repeated string allowed_tool_ids = 11;
+  google.protobuf.Struct input_schema = 12;
+  google.protobuf.Struct output_schema = 13;
+  double cost_estimate = 14;
+  google.protobuf.Struct metadata = 15;
 }
 
 message AgentInstance {
@@ -65,7 +80,7 @@ message RegisterAgentTypeResponse {
 }
 
 message ListAgentTypesRequest {
-  optional string capability_filter = 1;  // Search filter text
+  optional string capability_filter = 1; // Search filter text
   int32 page_size = 2;
   string page_token = 3;
 }

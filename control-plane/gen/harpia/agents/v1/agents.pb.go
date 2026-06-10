@@ -9,6 +9,7 @@ package agentsv1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	structpb "google.golang.org/protobuf/types/known/structpb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -89,8 +90,21 @@ type AgentType struct {
 	Description      string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
 	CapabilitiesText string                 `protobuf:"bytes,4,opt,name=capabilities_text,json=capabilitiesText,proto3" json:"capabilities_text,omitempty"` // Natural language, embedded for similarity search
 	CreatedAt        string                 `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Canonical manifest fields. The original fields above stay reserved for
+	// current clients and storage adapters; new manifest-aware code should prefer
+	// these additive fields where available.
+	Version        string           `protobuf:"bytes,6,opt,name=version,proto3" json:"version,omitempty"`
+	DisplayName    string           `protobuf:"bytes,7,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Capabilities   []string         `protobuf:"bytes,8,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
+	ModelId        string           `protobuf:"bytes,9,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
+	SystemPrompt   string           `protobuf:"bytes,10,opt,name=system_prompt,json=systemPrompt,proto3" json:"system_prompt,omitempty"`
+	AllowedToolIds []string         `protobuf:"bytes,11,rep,name=allowed_tool_ids,json=allowedToolIds,proto3" json:"allowed_tool_ids,omitempty"`
+	InputSchema    *structpb.Struct `protobuf:"bytes,12,opt,name=input_schema,json=inputSchema,proto3" json:"input_schema,omitempty"`
+	OutputSchema   *structpb.Struct `protobuf:"bytes,13,opt,name=output_schema,json=outputSchema,proto3" json:"output_schema,omitempty"`
+	CostEstimate   float64          `protobuf:"fixed64,14,opt,name=cost_estimate,json=costEstimate,proto3" json:"cost_estimate,omitempty"`
+	Metadata       *structpb.Struct `protobuf:"bytes,15,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *AgentType) Reset() {
@@ -156,6 +170,76 @@ func (x *AgentType) GetCreatedAt() string {
 		return x.CreatedAt
 	}
 	return ""
+}
+
+func (x *AgentType) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *AgentType) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *AgentType) GetCapabilities() []string {
+	if x != nil {
+		return x.Capabilities
+	}
+	return nil
+}
+
+func (x *AgentType) GetModelId() string {
+	if x != nil {
+		return x.ModelId
+	}
+	return ""
+}
+
+func (x *AgentType) GetSystemPrompt() string {
+	if x != nil {
+		return x.SystemPrompt
+	}
+	return ""
+}
+
+func (x *AgentType) GetAllowedToolIds() []string {
+	if x != nil {
+		return x.AllowedToolIds
+	}
+	return nil
+}
+
+func (x *AgentType) GetInputSchema() *structpb.Struct {
+	if x != nil {
+		return x.InputSchema
+	}
+	return nil
+}
+
+func (x *AgentType) GetOutputSchema() *structpb.Struct {
+	if x != nil {
+		return x.OutputSchema
+	}
+	return nil
+}
+
+func (x *AgentType) GetCostEstimate() float64 {
+	if x != nil {
+		return x.CostEstimate
+	}
+	return 0
+}
+
+func (x *AgentType) GetMetadata() *structpb.Struct {
+	if x != nil {
+		return x.Metadata
+	}
+	return nil
 }
 
 type AgentInstance struct {
@@ -991,14 +1075,25 @@ var File_harpia_agents_v1_agents_proto protoreflect.FileDescriptor
 
 const file_harpia_agents_v1_agents_proto_rawDesc = "" +
 	"\n" +
-	"\x1dharpia/agents/v1/agents.proto\x12\x10harpia.agents.v1\"\x9d\x01\n" +
+	"\x1dharpia/agents/v1/agents.proto\x12\x10harpia.agents.v1\x1a\x1cgoogle/protobuf/struct.proto\"\xbc\x04\n" +
 	"\tAgentType\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12+\n" +
 	"\x11capabilities_text\x18\x04 \x01(\tR\x10capabilitiesText\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\x05 \x01(\tR\tcreatedAt\"\x95\x02\n" +
+	"created_at\x18\x05 \x01(\tR\tcreatedAt\x12\x18\n" +
+	"\aversion\x18\x06 \x01(\tR\aversion\x12!\n" +
+	"\fdisplay_name\x18\a \x01(\tR\vdisplayName\x12\"\n" +
+	"\fcapabilities\x18\b \x03(\tR\fcapabilities\x12\x19\n" +
+	"\bmodel_id\x18\t \x01(\tR\amodelId\x12#\n" +
+	"\rsystem_prompt\x18\n" +
+	" \x01(\tR\fsystemPrompt\x12(\n" +
+	"\x10allowed_tool_ids\x18\v \x03(\tR\x0eallowedToolIds\x12:\n" +
+	"\finput_schema\x18\f \x01(\v2\x17.google.protobuf.StructR\vinputSchema\x12<\n" +
+	"\routput_schema\x18\r \x01(\v2\x17.google.protobuf.StructR\foutputSchema\x12#\n" +
+	"\rcost_estimate\x18\x0e \x01(\x01R\fcostEstimate\x123\n" +
+	"\bmetadata\x18\x0f \x01(\v2\x17.google.protobuf.StructR\bmetadata\"\x95\x02\n" +
 	"\rAgentInstance\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\"\n" +
 	"\ragent_type_id\x18\x02 \x01(\tR\vagentTypeId\x12\x1b\n" +
@@ -1119,31 +1214,35 @@ var file_harpia_agents_v1_agents_proto_goTypes = []any{
 	(*FeedbackRequest)(nil),           // 12: harpia.agents.v1.FeedbackRequest
 	(*ContinueExecutionRequest)(nil),  // 13: harpia.agents.v1.ContinueExecutionRequest
 	(*ContinueExecutionResponse)(nil), // 14: harpia.agents.v1.ContinueExecutionResponse
+	(*structpb.Struct)(nil),           // 15: google.protobuf.Struct
 }
 var file_harpia_agents_v1_agents_proto_depIdxs = []int32{
-	0,  // 0: harpia.agents.v1.AgentInstance.status:type_name -> harpia.agents.v1.AgentInstanceStatus
-	1,  // 1: harpia.agents.v1.RegisterAgentTypeResponse.agent_type:type_name -> harpia.agents.v1.AgentType
-	1,  // 2: harpia.agents.v1.ListAgentTypesResponse.agent_types:type_name -> harpia.agents.v1.AgentType
-	9,  // 3: harpia.agents.v1.MatchAgentResponse.matches:type_name -> harpia.agents.v1.AgentMatch
-	1,  // 4: harpia.agents.v1.AgentMatch.agent_type:type_name -> harpia.agents.v1.AgentType
-	0,  // 5: harpia.agents.v1.ExecuteTaskResponse.status:type_name -> harpia.agents.v1.AgentInstanceStatus
-	12, // 6: harpia.agents.v1.ExecuteTaskResponse.feedback_request:type_name -> harpia.agents.v1.FeedbackRequest
-	0,  // 7: harpia.agents.v1.ContinueExecutionResponse.status:type_name -> harpia.agents.v1.AgentInstanceStatus
-	3,  // 8: harpia.agents.v1.AgentService.RegisterAgentType:input_type -> harpia.agents.v1.RegisterAgentTypeRequest
-	5,  // 9: harpia.agents.v1.AgentService.ListAgentTypes:input_type -> harpia.agents.v1.ListAgentTypesRequest
-	7,  // 10: harpia.agents.v1.AgentService.MatchAgent:input_type -> harpia.agents.v1.MatchAgentRequest
-	10, // 11: harpia.agents.v1.AgentService.ExecuteTask:input_type -> harpia.agents.v1.ExecuteTaskRequest
-	13, // 12: harpia.agents.v1.AgentService.ContinueExecution:input_type -> harpia.agents.v1.ContinueExecutionRequest
-	4,  // 13: harpia.agents.v1.AgentService.RegisterAgentType:output_type -> harpia.agents.v1.RegisterAgentTypeResponse
-	6,  // 14: harpia.agents.v1.AgentService.ListAgentTypes:output_type -> harpia.agents.v1.ListAgentTypesResponse
-	8,  // 15: harpia.agents.v1.AgentService.MatchAgent:output_type -> harpia.agents.v1.MatchAgentResponse
-	11, // 16: harpia.agents.v1.AgentService.ExecuteTask:output_type -> harpia.agents.v1.ExecuteTaskResponse
-	14, // 17: harpia.agents.v1.AgentService.ContinueExecution:output_type -> harpia.agents.v1.ContinueExecutionResponse
-	13, // [13:18] is the sub-list for method output_type
-	8,  // [8:13] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	15, // 0: harpia.agents.v1.AgentType.input_schema:type_name -> google.protobuf.Struct
+	15, // 1: harpia.agents.v1.AgentType.output_schema:type_name -> google.protobuf.Struct
+	15, // 2: harpia.agents.v1.AgentType.metadata:type_name -> google.protobuf.Struct
+	0,  // 3: harpia.agents.v1.AgentInstance.status:type_name -> harpia.agents.v1.AgentInstanceStatus
+	1,  // 4: harpia.agents.v1.RegisterAgentTypeResponse.agent_type:type_name -> harpia.agents.v1.AgentType
+	1,  // 5: harpia.agents.v1.ListAgentTypesResponse.agent_types:type_name -> harpia.agents.v1.AgentType
+	9,  // 6: harpia.agents.v1.MatchAgentResponse.matches:type_name -> harpia.agents.v1.AgentMatch
+	1,  // 7: harpia.agents.v1.AgentMatch.agent_type:type_name -> harpia.agents.v1.AgentType
+	0,  // 8: harpia.agents.v1.ExecuteTaskResponse.status:type_name -> harpia.agents.v1.AgentInstanceStatus
+	12, // 9: harpia.agents.v1.ExecuteTaskResponse.feedback_request:type_name -> harpia.agents.v1.FeedbackRequest
+	0,  // 10: harpia.agents.v1.ContinueExecutionResponse.status:type_name -> harpia.agents.v1.AgentInstanceStatus
+	3,  // 11: harpia.agents.v1.AgentService.RegisterAgentType:input_type -> harpia.agents.v1.RegisterAgentTypeRequest
+	5,  // 12: harpia.agents.v1.AgentService.ListAgentTypes:input_type -> harpia.agents.v1.ListAgentTypesRequest
+	7,  // 13: harpia.agents.v1.AgentService.MatchAgent:input_type -> harpia.agents.v1.MatchAgentRequest
+	10, // 14: harpia.agents.v1.AgentService.ExecuteTask:input_type -> harpia.agents.v1.ExecuteTaskRequest
+	13, // 15: harpia.agents.v1.AgentService.ContinueExecution:input_type -> harpia.agents.v1.ContinueExecutionRequest
+	4,  // 16: harpia.agents.v1.AgentService.RegisterAgentType:output_type -> harpia.agents.v1.RegisterAgentTypeResponse
+	6,  // 17: harpia.agents.v1.AgentService.ListAgentTypes:output_type -> harpia.agents.v1.ListAgentTypesResponse
+	8,  // 18: harpia.agents.v1.AgentService.MatchAgent:output_type -> harpia.agents.v1.MatchAgentResponse
+	11, // 19: harpia.agents.v1.AgentService.ExecuteTask:output_type -> harpia.agents.v1.ExecuteTaskResponse
+	14, // 20: harpia.agents.v1.AgentService.ContinueExecution:output_type -> harpia.agents.v1.ContinueExecutionResponse
+	16, // [16:21] is the sub-list for method output_type
+	11, // [11:16] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_harpia_agents_v1_agents_proto_init() }

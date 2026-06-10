@@ -25,7 +25,7 @@ def env_bool(name: str, default: bool = False) -> bool:
 def create_app(*, allow_dev_auth: bool = False):
     """Create the ConnectRPC ASGI application with the AgentService implementation."""
     service = AgentServiceImpl()
-    from harpia_agents.gen.harpia.agents.v1.agents_connect import (
+    from harpia.agents.v1.agents_connect import (
         AgentServiceASGIApplication,
     )
 

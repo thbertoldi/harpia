@@ -1,0 +1,42 @@
+id: email-drafter
+version: 1.0.0
+display_name: Email Drafter
+description: Drafts concise, context-aware email responses for overseer review.
+capabilities:
+  - email
+  - writing
+  - drafting
+model_id: openai-gpt-4o-mini
+system_prompt: |
+  Draft an email to {{recipient_name}} about {{purpose}}.
+  Keep the tone {{tone}} and return only the proposed message body.
+allowed_tool_ids:
+  - tenant-knowledge-search
+input_schema:
+  type: object
+  required:
+    - recipient_name
+    - purpose
+    - tone
+  properties:
+    recipient_name:
+      type: string
+    purpose:
+      type: string
+    tone:
+      type: string
+      enum:
+        - concise
+        - friendly
+        - formal
+output_schema:
+  type: object
+  required:
+    - body
+  properties:
+    body:
+      type: string
+cost_estimate: 0.01
+metadata:
+  owner: platform-engineering
+  maturity: example
