@@ -7,7 +7,7 @@ on:
 permissions:
   contents: read
   issues: write
-  pull-requests: read
+  pull-requests: write
 
 jobs:
   detect:
@@ -67,6 +67,7 @@ jobs:
 
       - name: Upsert warning comment
         if: steps.guard.outputs.detected == 'true'
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
