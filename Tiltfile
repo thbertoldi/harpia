@@ -69,6 +69,7 @@ local_resource(
         './scripts/apply-dev-db-migrations.sh',
         'database/migrations/000001_initial_schema.sql',
         'database/migrations/000002_schema_sync.sql',
+        'database/migrations/000003_tenant_rls_hardening.sql',
     ],
     labels=['infra'],
 )

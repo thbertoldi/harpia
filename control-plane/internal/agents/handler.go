@@ -31,17 +31,19 @@ func NewAgentHandler(repo *Repository, embedder Embedder, agentCache *cache.Agen
 }
 
 func (h *AgentHandler) RegisterAgentType(ctx context.Context, req *connect.Request[agentsv1.RegisterAgentTypeRequest]) (*connect.Response[agentsv1.RegisterAgentTypeResponse], error) {
-	if _, err := identity.RequireSelectedTenant(ctx); err != nil {
+	tenantID, err := identity.RequireSelectedTenant(ctx)
+	if err != nil {
 		return nil, err
 	}
 
 	agentType := &AgentType{
+		TenantID:    tenantID,
 		Name:        req.Msg.Name,
 		Description: req.Msg.Description,
 		Enabled:     true,
 	}
 
-	created, err := h.repo.Create(ctx, agentType)
+	created, err := h.repo.Create(ctx, tenantID, agentType)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -60,11 +62,12 @@ func (h *AgentHandler) RegisterAgentType(ctx context.Context, req *connect.Reque
 }
 
 func (h *AgentHandler) ListAgentTypes(ctx context.Context, req *connect.Request[agentsv1.ListAgentTypesRequest], stream *connect.ServerStream[agentsv1.ListAgentTypesResponse]) error {
-	if _, err := identity.RequireSelectedTenant(ctx); err != nil {
+	tenantID, err := identity.RequireSelectedTenant(ctx)
+	if err != nil {
 		return err
 	}
 
-	agentTypes, err := h.repo.List(ctx, true)
+	agentTypes, err := h.repo.List(ctx, tenantID, true)
 	if err != nil {
 		return connect.NewError(connect.CodeInternal, err)
 	}
@@ -79,7 +82,8 @@ func (h *AgentHandler) ListAgentTypes(ctx context.Context, req *connect.Request[
 }
 
 func (h *AgentHandler) MatchAgent(ctx context.Context, req *connect.Request[agentsv1.MatchAgentRequest]) (*connect.Response[agentsv1.MatchAgentResponse], error) {
-	if _, err := identity.RequireTenant(ctx, req.Msg.TenantId); err != nil {
+	tenantID, err := identity.RequireTenant(ctx, req.Msg.TenantId)
+	if err != nil {
 		return nil, err
 	}
 
@@ -112,7 +116,7 @@ func (h *AgentHandler) MatchAgent(ctx context.Context, req *connect.Request[agen
 		limit = 10
 	}
 
-	results, err := h.repo.MatchByCapability(ctx, embedding, limit)
+	results, err := h.repo.MatchByCapability(ctx, tenantID, embedding, limit)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
