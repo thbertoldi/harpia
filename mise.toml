@@ -50,6 +50,10 @@ run = [
     "cd frontend && bun test",
 ]
 
+[tasks."test:e2e"]
+description = "Run frontend Playwright E2E tests"
+run = "cd frontend && bun run test:e2e"
+
 [tasks.lint]
 description = "Lint all code"
 run = [
