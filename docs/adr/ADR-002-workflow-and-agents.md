@@ -56,6 +56,8 @@ The supervisor state uses a Pydantic `TaskState` model in `agent-runtime/src/har
 
 LangGraph node updates for this BaseModel-backed state replace the returned fields. We keep that explicit replacement convention instead of adding `TypedDict` reducers for now because the current graph is linear and only one worker updates aggregate state at a time. Nodes that extend aggregate fields, such as `results`, must copy the prior value and return the merged replacement.
 
+[ADR-009](ADR-009-langgraph-state-semantics.md) records this state-merge decision and the conditions that would force a future move to reducer-based state.
+
 ### Agent Capability Matching
 
 Agent types declare capabilities as natural language. These are embedded (via pgvector) and stored. When dispatching, subtask descriptions are embedded and matched via cosine similarity against agent capabilities. Cached in Valkey to avoid repeated embedding queries.
