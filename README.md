@@ -41,6 +41,9 @@ See [ADR-006](docs/adr/ADR-006-domain-driven-design.md).
 | [ADR-005](docs/adr/ADR-005-development-and-delivery.md) | mise, Tilt, Buf, trunk-based dev |
 | [ADR-006](docs/adr/ADR-006-domain-driven-design.md) | DDD for agentic architecture |
 | [ADR-007](docs/adr/ADR-007-agentic-architecture-patterns.md) | Agentic patterns (Arsanjani & Bustos) |
+| [ADR-008](docs/adr/ADR-008-tenant-safe-generic-infra-boundaries.md) | Tenant-safe generic infrastructure boundaries |
+| [ADR-009](docs/adr/ADR-009-langgraph-state-semantics.md) | LangGraph state semantics |
+| [ADR-013](docs/adr/ADR-013-connectrpc-python-adoption.md) | ConnectRPC Python adoption (`agent-runtime/`) |
 
 Workflow guide: [docs/WORKFLOW.md](docs/WORKFLOW.md)
 
