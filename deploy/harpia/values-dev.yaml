@@ -1,0 +1,26 @@
+# Dev overlay — aligns with deploy/dev/kind defaults.
+# Requires postgres-credentials and zitadel-masterkey Secrets in the release namespace.
+
+postgres:
+  storage: 1Gi
+
+api:
+  logLevel: debug
+  auth:
+    allowDevAuth: true
+    autoProvisionDefaultTenant: true
+
+agent:
+  auth:
+    allowDevAuth: true
+
+# Kind dev runs Vite on the host; disable the in-cluster frontend pod.
+frontend:
+  enabled: false
+
+openfga:
+  playgroundEnabled: true
+
+zitadel:
+  externalDomain: localhost
+  externalPort: "8085"

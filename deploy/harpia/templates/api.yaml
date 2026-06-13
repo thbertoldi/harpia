@@ -59,7 +59,7 @@ spec:
             - name: HARPIA_AUTH_CACHE_MAX_ENTRIES
               value: {{ .Values.api.auth.cacheMaxEntries | quote }}
             - name: LOG_LEVEL
-              value: "debug"
+              value: {{ .Values.api.logLevel | quote }}
           readinessProbe:
             httpGet:
               path: /api/v1/health

@@ -37,22 +37,36 @@ zitadel:
   image: ghcr.io/zitadel/zitadel:v2.62.0
   externalDomain: localhost
   externalPort: "8085"
+  externalSecure: "false"
+  tlsEnabled: "false"
+  orgName: Harpia
+  adminUsername: admin
+  adminEmail: admin@harpia.local
+  adminEmailVerified: "true"
+  adminPassword: HarpiaAdmin1!
   # Existing Secret that contains the Zitadel master key.
   masterkeySecret:
     name: zitadel-masterkey
     key: masterkey
-  adminEmail: admin@harpia.local
-  adminPassword: HarpiaAdmin1!
+  machinekey:
+    storage: 16Mi
+  machineUser:
+    username: zitadel-admin-sa
+    name: Admin Service Account
+    patExpirationDate: "2099-01-01T00:00:00Z"
 
 # OpenFGA
 openfga:
   enabled: true
   image: docker.io/openfga/openfga:v1.8.0
+  logLevel: info
+  playgroundEnabled: true
 
 # API
 api:
   enabled: true
   port: 8080
+  logLevel: info
   auth:
     allowDevAuth: false
     autoProvisionDefaultTenant: false
