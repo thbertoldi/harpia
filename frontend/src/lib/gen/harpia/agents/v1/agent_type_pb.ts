@@ -10,3 +10,4 @@ import { fileDesc } from "@bufbuild/protobuf/codegenv2";
  */
 export const file_harpia_agents_v1_agent_type: GenFile = /*@__PURE__*/
   fileDesc("CiFoYXJwaWEvYWdlbnRzL3YxL2FnZW50X3R5cGUucHJvdG8SEGhhcnBpYS5hZ2VudHMudjFCxwEKFGNvbS5oYXJwaWEuYWdlbnRzLnYxQg5BZ2VudFR5cGVQcm90b1ABWj1naXRodWIuY29tL2hhcnBpYS9jb250cm9sLXBsYW5lL2dlbi9oYXJwaWEvYWdlbnRzL3YxO2FnZW50c3YxogIDSEFYqgIQSGFycGlhLkFnZW50cy5WMcoCEEhhcnBpYVxBZ2VudHNcVjHiAhxIYXJwaWFcQWdlbnRzXFYxXEdQQk1ldGFkYXRh6gISSGFycGlhOjpBZ2VudHM6OlYxYgZwcm90bzM");
+

@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package harpia.tasks.v1;
 
+// DEPRECATED: Use harpia.plans.v1 for plan execution and harpia.artifacts.v1 for typed I/O.
 
 // TaskService manages the lifecycle of tasks and their decomposition into subtasks.
 // This is the primary API through which the Svelte UI and Temporal workflows interact
