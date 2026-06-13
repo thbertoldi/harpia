@@ -61,7 +61,9 @@ func NewClient(valkeyURL string) (*Client, error) {
 
 	db := parsed.Query().Get("db")
 	if db != "" {
-		fmt.Sscanf(db, "%d", &opts.DB)
+		if _, err := fmt.Sscanf(db, "%d", &opts.DB); err != nil {
+			return nil, fmt.Errorf("invalid db index in Valkey URL: %w", err)
+		}
 	}
 
 	if strings.EqualFold(parsed.Scheme, "valkeys") || parsed.Query().Get("tls") == "true" {

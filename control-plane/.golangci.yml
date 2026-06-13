@@ -1,0 +1,53 @@
+version: "2"
+run:
+  go: "1.25"
+  modules-download-mode: readonly
+linters:
+  enable:
+    - goconst
+    - gocritic
+    - gocyclo
+    - gosec
+    - prealloc
+    - revive
+    - unparam
+  disable:
+    - gochecknoglobals # Temporal worker registration uses package-level vars
+    - nlreturn
+    - wsl
+  settings:
+    gocyclo:
+      min-complexity: 15
+    gosec:
+      excludes:
+        - G115
+    revive:
+      severity: warning
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - errcheck
+          - gocyclo
+          - gosec
+          - goconst
+        path: _test\.go
+      - linters:
+          - all
+        path: gen/
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

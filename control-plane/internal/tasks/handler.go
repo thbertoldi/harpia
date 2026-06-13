@@ -40,7 +40,7 @@ func (h *TaskHandler) CreateTask(ctx context.Context, req *connect.Request[tasks
 	task := &Task{
 		Title:       req.Msg.Title,
 		Description: req.Msg.Description,
-		Status:      "pending",
+		Status:      TaskStatusPending,
 		Priority:    0,
 		TenantID:    tenantID,
 		CreatedBy:   h.devUserID,
@@ -180,19 +180,19 @@ func domainToProto(t *Task) *tasksv1.Task {
 func taskStatusToString(status tasksv1.TaskStatus) (string, error) {
 	switch status {
 	case tasksv1.TaskStatus_TASK_STATUS_PENDING:
-		return "pending", nil
+		return TaskStatusPending, nil
 	case tasksv1.TaskStatus_TASK_STATUS_PLANNING:
-		return "planning", nil
+		return TaskStatusPlanning, nil
 	case tasksv1.TaskStatus_TASK_STATUS_IN_PROGRESS:
-		return "in_progress", nil
+		return TaskStatusInProgress, nil
 	case tasksv1.TaskStatus_TASK_STATUS_AWAITING_FEEDBACK:
-		return "awaiting_feedback", nil
+		return TaskStatusAwaitingFeedback, nil
 	case tasksv1.TaskStatus_TASK_STATUS_COMPLETED:
-		return "completed", nil
+		return TaskStatusCompleted, nil
 	case tasksv1.TaskStatus_TASK_STATUS_FAILED:
-		return "failed", nil
+		return TaskStatusFailed, nil
 	case tasksv1.TaskStatus_TASK_STATUS_CANCELLED:
-		return "cancelled", nil
+		return TaskStatusCancelled, nil
 	default:
 		return "", fmt.Errorf("unsupported task status %s", status.String())
 	}
@@ -200,19 +200,19 @@ func taskStatusToString(status tasksv1.TaskStatus) (string, error) {
 
 func stringToTaskStatus(s string) tasksv1.TaskStatus {
 	switch s {
-	case "pending":
+	case TaskStatusPending:
 		return tasksv1.TaskStatus_TASK_STATUS_PENDING
-	case "planning":
+	case TaskStatusPlanning:
 		return tasksv1.TaskStatus_TASK_STATUS_PLANNING
-	case "in_progress":
+	case TaskStatusInProgress:
 		return tasksv1.TaskStatus_TASK_STATUS_IN_PROGRESS
-	case "awaiting_feedback":
+	case TaskStatusAwaitingFeedback:
 		return tasksv1.TaskStatus_TASK_STATUS_AWAITING_FEEDBACK
-	case "completed":
+	case TaskStatusCompleted:
 		return tasksv1.TaskStatus_TASK_STATUS_COMPLETED
-	case "failed":
+	case TaskStatusFailed:
 		return tasksv1.TaskStatus_TASK_STATUS_FAILED
-	case "cancelled":
+	case TaskStatusCancelled:
 		return tasksv1.TaskStatus_TASK_STATUS_CANCELLED
 	default:
 		return tasksv1.TaskStatus_TASK_STATUS_UNSPECIFIED
