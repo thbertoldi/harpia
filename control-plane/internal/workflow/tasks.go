@@ -44,6 +44,11 @@ const (
 	DecomposeTaskActivityName  = "DecomposeTaskActivity"
 	ExecuteSubtaskActivityName = "ExecuteSubtaskActivity"
 	HumanFeedbackSignalName    = "human-feedback-signal"
+
+	TaskResultStatusFailed    = "failed"
+	TaskResultStatusCompleted = "completed"
+	TaskResultStatusCancelled = "cancelled"
+	SubtaskResultStatusFailed = "failed"
 )
 
 func TaskOrchestration(ctx workflow.Context, input TaskInput) (TaskResult, error) {
@@ -59,7 +64,7 @@ func TaskOrchestration(ctx workflow.Context, input TaskInput) (TaskResult, error
 	var subtasks []Subtask
 	err := workflow.ExecuteActivity(ctx, DecomposeTaskActivity, input).Get(ctx, &subtasks)
 	if err != nil {
-		return TaskResult{Status: "failed", Error: fmt.Sprintf("decompose: %v", err)}, nil
+		return TaskResult{Status: TaskResultStatusFailed, Error: fmt.Sprintf("decompose: %v", err)}, nil
 	}
 
 	var finalOutput string
@@ -67,7 +72,7 @@ func TaskOrchestration(ctx workflow.Context, input TaskInput) (TaskResult, error
 		var result SubtaskResult
 		err := workflow.ExecuteActivity(ctx, ExecuteSubtaskActivity, subtask).Get(ctx, &result)
 		if err != nil {
-			return TaskResult{Status: "failed", Error: fmt.Sprintf("subtask %s: %v", subtask.ID, err)}, nil
+			return TaskResult{Status: TaskResultStatusFailed, Error: fmt.Sprintf("subtask %s: %v", subtask.ID, err)}, nil
 		}
 
 		if result.Status == "needs_approval" {
@@ -85,22 +90,22 @@ func TaskOrchestration(ctx workflow.Context, input TaskInput) (TaskResult, error
 			selector.Select(ctx)
 
 			if !received {
-				return TaskResult{Status: "cancelled", Error: "timed out waiting for human feedback"}, nil
+				return TaskResult{Status: TaskResultStatusCancelled, Error: "timed out waiting for human feedback"}, nil
 			}
 			if !signal.Approved {
-				return TaskResult{Status: "cancelled", Output: signal.Feedback}, nil
+				return TaskResult{Status: TaskResultStatusCancelled, Output: signal.Feedback}, nil
 			}
 		}
 
-		if result.Status == "failed" {
-			return TaskResult{Status: "failed", Error: fmt.Sprintf("subtask %s: %s", subtask.ID, result.Error)}, nil
+		if result.Status == SubtaskResultStatusFailed {
+			return TaskResult{Status: TaskResultStatusFailed, Error: fmt.Sprintf("subtask %s: %s", subtask.ID, result.Error)}, nil
 		}
 
 		finalOutput += result.Output + "\n"
 	}
 
 	logger.Info("task orchestration completed", "task_id", input.TaskID)
-	return TaskResult{Status: "completed", Output: finalOutput}, nil
+	return TaskResult{Status: TaskResultStatusCompleted, Output: finalOutput}, nil
 }
 
 func DecomposeTaskActivity(ctx context.Context, input TaskInput) ([]Subtask, error) {

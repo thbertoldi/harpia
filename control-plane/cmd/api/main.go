@@ -37,7 +37,7 @@ func main() {
 	ctx := context.Background()
 
 	if os.Getenv("HARPIA_ROLE") == "worker" {
-		runWorker(ctx, cfg, logger)
+		runWorker(ctx, cfg)
 		return
 	}
 
@@ -49,7 +49,7 @@ func fatal(msg string, args ...any) {
 	os.Exit(1)
 }
 
-func runWorker(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
+func runWorker(ctx context.Context, cfg *config.Config) {
 	if cfg.TemporalHost == "" {
 		fatal("HARPIA_ROLE=worker requires TEMPORAL_HOST to be set")
 	}
@@ -63,6 +63,50 @@ func runWorker(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	if err := workflow.StartWorker(ctx, c, workflow.TaskQueueName); err != nil {
 		fatal("temporal worker failed", "error", err)
 	}
+}
+
+type apiCacheResources struct {
+	client               *cache.Client
+	tenantStore          *cache.TenantStore
+	agentCapabilityCache *cache.AgentCapabilityCache
+	rateLimiter          *cache.RateLimiter
+}
+
+func setupAPICache(ctx context.Context, valkeyURL string, logger *slog.Logger) apiCacheResources {
+	var resources apiCacheResources
+	if valkeyURL == "" {
+		return resources
+	}
+
+	cacheClient, err := cache.NewClient(valkeyURL)
+	if err != nil {
+		logger.Warn("valkey connection failed, running without cache", "error", err)
+		return resources
+	}
+
+	if pingErr := cacheClient.Ping(ctx); pingErr != nil {
+		logger.Warn("valkey ping failed, running without cache", "error", pingErr)
+		return resources
+	}
+
+	resources.client = cacheClient
+	resources.tenantStore = cache.NewTenantStore(cacheClient)
+	resources.agentCapabilityCache = cache.NewAgentCapabilityCache(resources.tenantStore)
+	resources.rateLimiter = cache.NewRateLimiter(resources.tenantStore)
+	return resources
+}
+
+func setupTemporalClient(cfg *config.Config, logger *slog.Logger) *workflow.TemporalClient {
+	if cfg.TemporalHost == "" {
+		return nil
+	}
+
+	temporalClient, err := workflow.NewTemporalClient(cfg.TemporalHost)
+	if err != nil {
+		logger.Warn("temporal client failed, running without workflow engine", "error", err)
+		return nil
+	}
+	return temporalClient
 }
 
 func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
@@ -85,45 +129,21 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	taskRepo := tasks.NewRepository(pool)
 	agentRepo := agents.NewRepository(pool)
 
-	var (
-		cacheClient          *cache.Client
-		tenantCache          *cache.TenantStore
-		agentCapabilityCache *cache.AgentCapabilityCache
-		rateLimiter          *cache.RateLimiter
-	)
-
-	if cfg.ValkeyURL != "" {
-		cacheClient, err = cache.NewClient(cfg.ValkeyURL)
-		if err != nil {
-			logger.Warn("valkey connection failed, running without cache", "error", err)
-		} else {
-			if pingErr := cacheClient.Ping(ctx); pingErr != nil {
-				logger.Warn("valkey ping failed, running without cache", "error", pingErr)
-			} else {
-				tenantCache = cache.NewTenantStore(cacheClient)
-				agentCapabilityCache = cache.NewAgentCapabilityCache(tenantCache)
-				rateLimiter = cache.NewRateLimiter(tenantCache)
-				defer cacheClient.Close()
-			}
-		}
+	cacheResources := setupAPICache(ctx, cfg.ValkeyURL, logger)
+	if cacheResources.client != nil {
+		defer cacheResources.client.Close()
+	}
+	temporalClient := setupTemporalClient(cfg, logger)
+	if temporalClient != nil {
+		defer temporalClient.Close()
 	}
 
-	var temporalClient *workflow.TemporalClient
-	if cfg.TemporalHost != "" {
-		temporalClient, err = workflow.NewTemporalClient(cfg.TemporalHost)
-		if err != nil {
-			logger.Warn("temporal client failed, running without workflow engine", "error", err)
-		} else {
-			defer temporalClient.Close()
-		}
-	}
-
-	taskHandler, err := tasks.NewTaskHandler(taskRepo, temporalClient, tenantCache, userID)
+	taskHandler, err := tasks.NewTaskHandler(taskRepo, temporalClient, cacheResources.tenantStore, userID)
 	if err != nil {
 		fatal("create task handler failed", "error", err)
 	}
 
-	agentHandler, err := agents.NewAgentHandler(agentRepo, agents.NewNoopEmbedder(), agentCapabilityCache)
+	agentHandler, err := agents.NewAgentHandler(agentRepo, agents.NewNoopEmbedder(), cacheResources.agentCapabilityCache)
 	if err != nil {
 		fatal("create agent handler failed", "error", err)
 	}
@@ -132,11 +152,13 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 
 	mux.HandleFunc("/api/v1/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{
+		if err := json.NewEncoder(w).Encode(map[string]string{
 			"status":    "ok",
 			"service":   "harpia-api",
 			"timestamp": time.Now().UTC().Format(time.RFC3339),
-		})
+		}); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	})
 
 	interceptors := []connect.Interceptor{identity.NewRequestContextInterceptor(identity.AuthOptions{
@@ -148,8 +170,8 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 			AutoProvisionDefaultTenant: cfg.AutoProvisionDefaultTenant,
 		}),
 	})}
-	if rateLimiter != nil {
-		interceptors = append(interceptors, server.NewRateLimitInterceptor(rateLimiter, 100))
+	if cacheResources.rateLimiter != nil {
+		interceptors = append(interceptors, server.NewRateLimitInterceptor(cacheResources.rateLimiter, 100))
 	}
 	requestContext := connect.WithInterceptors(interceptors...)
 
