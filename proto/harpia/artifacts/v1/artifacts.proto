@@ -1,0 +1,103 @@
+syntax = "proto3";
+
+package harpia.artifacts.v1;
+
+// ArtifactService manages artifact type registration and artifact metadata.
+// Payload bytes live in Garage; the control plane stores schema refs and content hashes.
+service ArtifactService {
+  rpc RegisterArtifactType(RegisterArtifactTypeRequest) returns (RegisterArtifactTypeResponse);
+  rpc GetArtifactType(GetArtifactTypeRequest) returns (GetArtifactTypeResponse);
+  rpc CreateArtifact(CreateArtifactRequest) returns (CreateArtifactResponse);
+  rpc GetArtifact(GetArtifactRequest) returns (GetArtifactResponse);
+}
+
+message ArtifactType {
+  string id = 1;
+  string key = 2;
+  string schema_ref = 3;
+  int32 version = 4;
+  string description = 5;
+}
+
+message Artifact {
+  string id = 1;
+  string artifact_type_id = 2;
+  string tenant_id = 3;
+  string storage_uri = 4;
+  string content_hash = 5;
+  string created_at = 6;
+}
+
+message DateRange {
+  string start_date = 1;
+  string end_date = 2;
+}
+
+message NewsArticle {
+  string title = 1;
+  string url = 2;
+  string summary = 3;
+  string source = 4;
+  string published_at = 5;
+}
+
+message NewsList {
+  repeated NewsArticle articles = 1;
+}
+
+message TextDraft {
+  string title = 1;
+  string body = 2;
+}
+
+message LinkedInPostDraft {
+  string text = 1;
+  string hook = 2;
+  repeated string hashtags = 3;
+}
+
+message PublishConfirmation {
+  string platform = 1;
+  string external_id = 2;
+  string url = 3;
+  string published_at = 4;
+}
+
+message RegisterArtifactTypeRequest {
+  string key = 1;
+  string schema_ref = 2;
+  int32 version = 3;
+  string description = 4;
+}
+
+message RegisterArtifactTypeResponse {
+  ArtifactType artifact_type = 1;
+}
+
+message GetArtifactTypeRequest {
+  string artifact_type_id = 1;
+}
+
+message GetArtifactTypeResponse {
+  ArtifactType artifact_type = 1;
+}
+
+message CreateArtifactRequest {
+  string tenant_id = 1;
+  string artifact_type_id = 2;
+  string storage_uri = 3;
+  string content_hash = 4;
+}
+
+message CreateArtifactResponse {
+  Artifact artifact = 1;
+}
+
+message GetArtifactRequest {
+  string tenant_id = 1;
+  string artifact_id = 2;
+}
+
+message GetArtifactResponse {
+  Artifact artifact = 1;
+}
