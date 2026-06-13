@@ -30,6 +30,8 @@ node_modules/
 frontend/.svelte-kit/
 frontend/build/
 frontend/.output/
+frontend/playwright-report/
+frontend/test-results/
 
 # Bun
 bun.lockb
