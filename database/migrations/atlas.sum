@@ -1,4 +1,5 @@
-h1:dfN6H62saGhYxB6HV/d+HLu8YHX0ock/VNuyoWLYIjU=
+h1:DbFI4CpsBR1E2iytYroI9cXDWr8pHId+aGjQq01Mgy8=
 000001_initial_schema.sql h1:ftqC16BXTrfe3uzdOQErFk7uYG44t+M5PPhk0pRkHe4=
 000002_schema_sync.sql h1:M7nTp8ww9G1Dd+KzZdbYkaTqjMhbh2cp1reW3yGqE7Q=
 000003_tenant_rls_hardening.sql h1:SsBdrSPxoIsOkuT0yXRnVskct+H0fenhJZ/24Eu4F4k=
+000004_plan_tables.sql h1:EpfSc8fwhmgA9qgBjrbLuF83EmYl8oo/1VwCCW9iiXE=

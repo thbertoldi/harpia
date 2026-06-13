@@ -17,6 +17,7 @@ import (
 	"github.com/harpia/control-plane/gen/harpia/agents/v1/agentsv1connect"
 	"github.com/harpia/control-plane/gen/harpia/feedback/v1/feedbackv1connect"
 	"github.com/harpia/control-plane/gen/harpia/identity/v1/identityv1connect"
+	"github.com/harpia/control-plane/gen/harpia/plans/v1/plansv1connect"
 	"github.com/harpia/control-plane/gen/harpia/tasks/v1/tasksv1connect"
 	"github.com/harpia/control-plane/internal/agents"
 	"github.com/harpia/control-plane/internal/cache"
@@ -24,6 +25,7 @@ import (
 	"github.com/harpia/control-plane/internal/database"
 	"github.com/harpia/control-plane/internal/feedback"
 	"github.com/harpia/control-plane/internal/identity"
+	"github.com/harpia/control-plane/internal/plans"
 	"github.com/harpia/control-plane/internal/server"
 	"github.com/harpia/control-plane/internal/tasks"
 	"github.com/harpia/control-plane/internal/workflow"
@@ -127,6 +129,7 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	logger.Info("dev data ensured", "tenant_id", tenantID.String(), "user_id", userID.String())
 
 	taskRepo := tasks.NewRepository(pool)
+	planRepo := plans.NewRepository(pool)
 	agentRepo := agents.NewRepository(pool)
 
 	cacheResources := setupAPICache(ctx, cfg.ValkeyURL, logger)
@@ -146,6 +149,11 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	agentHandler, err := agents.NewAgentHandler(agentRepo, agents.NewNoopEmbedder(), cacheResources.agentCapabilityCache)
 	if err != nil {
 		fatal("create agent handler failed", "error", err)
+	}
+
+	planHandler, err := plans.NewPlanHandler(planRepo)
+	if err != nil {
+		fatal("create plan handler failed", "error", err)
 	}
 
 	mux := http.NewServeMux()
@@ -177,11 +185,13 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 
 	agentsPath, agentsHandler := agentsv1connect.NewAgentServiceHandler(agentHandler, requestContext)
 	tasksPath, tasksHandler := tasksv1connect.NewTaskServiceHandler(taskHandler, requestContext)
+	plansPath, plansHandler := plansv1connect.NewPlanServiceHandler(planHandler, requestContext)
 	identityPath, identityHandler := identityv1connect.NewIdentityServiceHandler(identity.NewIdentityHandler(), requestContext)
 	feedbackPath, feedbackHandler := feedbackv1connect.NewFeedbackServiceHandler(feedback.NewFeedbackHandler(), requestContext)
 
 	mux.Handle(agentsPath, agentsHandler)
 	mux.Handle(tasksPath, tasksHandler)
+	mux.Handle(plansPath, plansHandler)
 	mux.Handle(identityPath, identityHandler)
 	mux.Handle(feedbackPath, feedbackHandler)
 

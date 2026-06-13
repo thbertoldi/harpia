@@ -1,0 +1,312 @@
+syntax = "proto3";
+
+package harpia.plans.v1;
+
+// PlanService manages plan templates, tenant configurations, and executions.
+// Template plans use the plan-centric model defined in ADR-012.
+service PlanService {
+  // Template catalog (global, read-only for tenants).
+  rpc GetPlanTemplate(GetPlanTemplateRequest) returns (GetPlanTemplateResponse);
+  rpc GetPlanTemplateByKey(GetPlanTemplateByKeyRequest) returns (GetPlanTemplateByKeyResponse);
+  rpc ListPlanTemplates(ListPlanTemplatesRequest) returns (stream ListPlanTemplatesResponse);
+
+  // Tenant plan configuration lifecycle.
+  rpc CreatePlanConfiguration(CreatePlanConfigurationRequest) returns (CreatePlanConfigurationResponse);
+  rpc GetPlanConfiguration(GetPlanConfigurationRequest) returns (GetPlanConfigurationResponse);
+  rpc UpdatePlanConfiguration(UpdatePlanConfigurationRequest) returns (UpdatePlanConfigurationResponse);
+  rpc ListPlanConfigurations(ListPlanConfigurationsRequest) returns (stream ListPlanConfigurationsResponse);
+
+  // Execution (MVP stubs — messages defined for downstream workflow wiring).
+  rpc CreatePlanExecution(CreatePlanExecutionRequest) returns (CreatePlanExecutionResponse);
+  rpc GetPlanExecution(GetPlanExecutionRequest) returns (GetPlanExecutionResponse);
+  rpc ListPlanExecutions(ListPlanExecutionsRequest) returns (stream ListPlanExecutionsResponse);
+  rpc GetStepExecution(GetStepExecutionRequest) returns (GetStepExecutionResponse);
+  rpc ListStepExecutions(ListStepExecutionsRequest) returns (stream ListStepExecutionsResponse);
+}
+
+message PlanTemplate {
+  string id = 1;
+  string key = 2;
+  string name = 3;
+  string description = 4;
+  string vertical = 5;
+  int32 version = 6;
+  repeated PlanStep steps = 7;
+  repeated PlanStepDependency edges = 8;
+  string created_at = 9;
+  string updated_at = 10;
+}
+
+message PlanStep {
+  string id = 1;
+  string key = 2;
+  string title = 3;
+  string description = 4;
+  string input_artifact_type_id = 5;
+  string output_artifact_type_id = 6;
+  ExecutorRequirement executor_requirement = 7;
+  string default_executor_sku_key = 8;
+}
+
+message PlanStepDependency {
+  string from_step_key = 1;
+  string to_step_key = 2;
+}
+
+message ExecutorRequirement {
+  ExecutorKind executor_kind = 1;
+  repeated string required_capabilities = 2;
+  string connection_type = 3;
+}
+
+enum ExecutorKind {
+  EXECUTOR_KIND_UNSPECIFIED = 0;
+  EXECUTOR_KIND_AGENT = 1;
+  EXECUTOR_KIND_INTEGRATION = 2;
+}
+
+message PlanConfiguration {
+  string id = 1;
+  string tenant_id = 2;
+  string workspace_id = 3;
+  string plan_template_id = 4;
+  int32 plan_template_version = 5;
+  PlanConfigurationStatus status = 6;
+  repeated SeedArtifactBinding seed_artifacts = 7;
+  repeated SlotBinding slot_bindings = 8;
+  repeated OverseerBinding overseer_bindings = 9;
+  PlanBehaviorPolicies behavior_policies = 10;
+  PlanSchedule schedule = 11;
+  string created_at = 12;
+  string updated_at = 13;
+}
+
+enum PlanConfigurationStatus {
+  PLAN_CONFIGURATION_STATUS_UNSPECIFIED = 0;
+  PLAN_CONFIGURATION_STATUS_DRAFT = 1;
+  PLAN_CONFIGURATION_STATUS_RUNNABLE = 2;
+  PLAN_CONFIGURATION_STATUS_SCHEDULED = 3;
+  PLAN_CONFIGURATION_STATUS_DISABLED = 4;
+  PLAN_CONFIGURATION_STATUS_ARCHIVED = 5;
+}
+
+message SeedArtifactBinding {
+  string step_key = 1;
+  string input_name = 2;
+  string artifact_id = 3;
+  string literal_json = 4;
+}
+
+message SlotBinding {
+  string step_key = 1;
+  ExecutorKind executor_kind = 2;
+  string executor_sku_id = 3;
+  string executor_installation_id = 4;
+}
+
+message OverseerBinding {
+  string step_key = 1;
+  string overseer_user_id = 2;
+}
+
+message PlanBehaviorPolicies {
+  ElicitationTimeoutBehavior elicitation_timeout_behavior = 1;
+  int32 elicitation_timeout_hours = 2;
+  PublishApprovalMode publish_approval_mode = 3;
+}
+
+enum ElicitationTimeoutBehavior {
+  ELICITATION_TIMEOUT_BEHAVIOR_UNSPECIFIED = 0;
+  ELICITATION_TIMEOUT_BEHAVIOR_PAUSE_UNTIL_ANSWERED = 1;
+  ELICITATION_TIMEOUT_BEHAVIOR_FAIL_STEP = 2;
+  ELICITATION_TIMEOUT_BEHAVIOR_SKIP_WITH_DEFAULT = 3;
+}
+
+enum PublishApprovalMode {
+  PUBLISH_APPROVAL_MODE_UNSPECIFIED = 0;
+  PUBLISH_APPROVAL_MODE_REQUIRE_APPROVAL = 1;
+  PUBLISH_APPROVAL_MODE_AUTO_PUBLISH = 2;
+}
+
+message PlanSchedule {
+  string cron_expression = 1;
+  string timezone = 2;
+}
+
+message PlanExecution {
+  string id = 1;
+  string tenant_id = 2;
+  string plan_configuration_id = 3;
+  PlanConfiguration plan_configuration_snapshot = 4;
+  PlanExecutionStatus status = 5;
+  repeated StepExecution step_executions = 6;
+  string triggered_at = 7;
+  string completed_at = 8;
+  string created_at = 9;
+  string updated_at = 10;
+}
+
+enum PlanExecutionStatus {
+  PLAN_EXECUTION_STATUS_UNSPECIFIED = 0;
+  PLAN_EXECUTION_STATUS_PENDING = 1;
+  PLAN_EXECUTION_STATUS_RUNNING = 2;
+  PLAN_EXECUTION_STATUS_COMPLETED = 3;
+  PLAN_EXECUTION_STATUS_FAILED = 4;
+  PLAN_EXECUTION_STATUS_CANCELLED = 5;
+}
+
+message StepExecution {
+  string id = 1;
+  string plan_execution_id = 2;
+  string plan_step_key = 3;
+  StepExecutionStatus status = 4;
+  string input_artifact_id = 5;
+  string output_artifact_id = 6;
+  string executor_installation_snapshot = 7;
+  int32 attempt = 8;
+  string elicitation_thread_id = 9;
+  string approval_request_id = 10;
+  string created_at = 11;
+  string updated_at = 12;
+}
+
+enum StepExecutionStatus {
+  STEP_EXECUTION_STATUS_UNSPECIFIED = 0;
+  STEP_EXECUTION_STATUS_PENDING = 1;
+  STEP_EXECUTION_STATUS_RUNNING = 2;
+  STEP_EXECUTION_STATUS_AWAITING_ELICITATION = 3;
+  STEP_EXECUTION_STATUS_AWAITING_APPROVAL = 4;
+  STEP_EXECUTION_STATUS_COMPLETED = 5;
+  STEP_EXECUTION_STATUS_FAILED = 6;
+}
+
+message GetPlanTemplateRequest {
+  string plan_template_id = 1;
+}
+
+message GetPlanTemplateResponse {
+  PlanTemplate plan_template = 1;
+}
+
+message GetPlanTemplateByKeyRequest {
+  string key = 1;
+}
+
+message GetPlanTemplateByKeyResponse {
+  PlanTemplate plan_template = 1;
+}
+
+message ListPlanTemplatesRequest {
+  optional string vertical = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListPlanTemplatesResponse {
+  repeated PlanTemplate plan_templates = 1;
+  string next_page_token = 2;
+}
+
+message CreatePlanConfigurationRequest {
+  string tenant_id = 1;
+  string workspace_id = 2;
+  string plan_template_id = 3;
+  PlanConfigurationStatus status = 4;
+  repeated SeedArtifactBinding seed_artifacts = 5;
+  repeated SlotBinding slot_bindings = 6;
+  repeated OverseerBinding overseer_bindings = 7;
+  PlanBehaviorPolicies behavior_policies = 8;
+  PlanSchedule schedule = 9;
+}
+
+message CreatePlanConfigurationResponse {
+  PlanConfiguration plan_configuration = 1;
+}
+
+message GetPlanConfigurationRequest {
+  string tenant_id = 1;
+  string plan_configuration_id = 2;
+}
+
+message GetPlanConfigurationResponse {
+  PlanConfiguration plan_configuration = 1;
+}
+
+message UpdatePlanConfigurationRequest {
+  string tenant_id = 1;
+  string plan_configuration_id = 2;
+  PlanConfigurationStatus status = 3;
+  repeated SeedArtifactBinding seed_artifacts = 4;
+  repeated SlotBinding slot_bindings = 5;
+  repeated OverseerBinding overseer_bindings = 6;
+  PlanBehaviorPolicies behavior_policies = 7;
+  PlanSchedule schedule = 8;
+}
+
+message UpdatePlanConfigurationResponse {
+  PlanConfiguration plan_configuration = 1;
+}
+
+message ListPlanConfigurationsRequest {
+  string tenant_id = 1;
+  optional string workspace_id = 2;
+  optional PlanConfigurationStatus status = 3;
+  int32 page_size = 4;
+  string page_token = 5;
+}
+
+message ListPlanConfigurationsResponse {
+  repeated PlanConfiguration plan_configurations = 1;
+  string next_page_token = 2;
+}
+
+message CreatePlanExecutionRequest {
+  string tenant_id = 1;
+  string plan_configuration_id = 2;
+}
+
+message CreatePlanExecutionResponse {
+  PlanExecution plan_execution = 1;
+}
+
+message GetPlanExecutionRequest {
+  string tenant_id = 1;
+  string plan_execution_id = 2;
+}
+
+message GetPlanExecutionResponse {
+  PlanExecution plan_execution = 1;
+}
+
+message ListPlanExecutionsRequest {
+  string tenant_id = 1;
+  optional string plan_configuration_id = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListPlanExecutionsResponse {
+  repeated PlanExecution plan_executions = 1;
+  string next_page_token = 2;
+}
+
+message GetStepExecutionRequest {
+  string tenant_id = 1;
+  string step_execution_id = 2;
+}
+
+message GetStepExecutionResponse {
+  StepExecution step_execution = 1;
+}
+
+message ListStepExecutionsRequest {
+  string tenant_id = 1;
+  string plan_execution_id = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListStepExecutionsResponse {
+  repeated StepExecution step_executions = 1;
+  string next_page_token = 2;
+}
