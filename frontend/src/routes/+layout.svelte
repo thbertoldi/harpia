@@ -6,6 +6,7 @@
   import { logout } from "$lib/auth";
   import { page } from "$app/state";
   import { resolve } from "$app/paths";
+  import { applyColorScheme, initTheme, resolveColorScheme } from "$lib/themes";
 
   let { data, children } = $props();
 
@@ -13,19 +14,13 @@
   let dark = $state(false);
 
   $effect(() => {
-    const stored = localStorage.getItem("harpia-theme");
-    const prefersDark = window.matchMedia(
-      "(prefers-color-scheme: dark)",
-    ).matches;
-    const isDark = stored === "dark" || (stored !== "light" && prefersDark);
-    dark = isDark;
-    document.documentElement.classList.toggle("dark", isDark);
+    initTheme();
+    dark = resolveColorScheme() === "dark";
   });
 
   function toggleDark() {
     dark = !dark;
-    document.documentElement.classList.toggle("dark", dark);
-    localStorage.setItem("harpia-theme", dark ? "dark" : "light");
+    applyColorScheme(dark ? "dark" : "light");
   }
 
   const sections = [
@@ -44,11 +39,25 @@
 <svelte:head>
   <script>
     (() => {
-      const theme = localStorage.getItem("harpia-theme");
+      const themeKey = "aiuna-theme";
+      const schemeKey = "aiuna-color-scheme";
+      const legacyKey = "harpia-theme";
+      const themes = ["default", "aiuna", "tenant-base"];
+
+      const theme = localStorage.getItem(themeKey);
+      if (theme && themes.includes(theme)) {
+        document.documentElement.setAttribute("data-theme", theme);
+      } else {
+        document.documentElement.setAttribute("data-theme", "default");
+      }
+
+      const storedScheme =
+        localStorage.getItem(schemeKey) ?? localStorage.getItem(legacyKey);
       const prefersDark = window.matchMedia(
         "(prefers-color-scheme: dark)",
       ).matches;
-      const isDark = theme === "dark" || (theme !== "light" && prefersDark);
+      const isDark =
+        storedScheme === "dark" || (storedScheme !== "light" && prefersDark);
       document.documentElement.classList.toggle("dark", isDark);
     })();
   </script>

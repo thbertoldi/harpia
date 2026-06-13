@@ -1,0 +1,52 @@
+/*
+ * Tenant base theme — white-label scaffold.
+ *
+ * Tenants override semantic tokens below; all UI reads from these variables
+ * via tokens.css @theme mappings. Do not reference raw hex in components.
+ *
+ * Overridable tokens:
+ *   --token-primary              Brand primary / CTA
+ *   --token-primary-bright       Primary hover / emphasis
+ *   --token-on-primary           Text on primary backgrounds
+ *   --token-surface              Page background
+ *   --token-surface-elevated     Cards, panels, inputs
+ *   --token-text                 Primary body text
+ *   --token-text-muted           Secondary text, labels
+ *   --token-text-muted-dark      Placeholders, disabled text
+ *   --token-border               Borders, dividers
+ *   --token-accent               Accent highlights
+ *   --token-accent-gradient-*    Left stripe / hero gradients
+ *
+ * Apply with: applyTheme('tenant-base') or data-theme="tenant-base"
+ */
+
+[data-theme="tenant-base"] {
+  --token-primary: var(--tenant-primary, #6366f1);
+  --token-primary-bright: var(--tenant-primary-bright, #818cf8);
+  --token-on-primary: var(--tenant-on-primary, #ffffff);
+  --token-accent: var(--tenant-accent, var(--token-primary));
+  --token-accent-gradient-from: var(--tenant-accent-gradient-from, #818cf8);
+  --token-accent-gradient-via: var(--tenant-accent-gradient-via, #6366f1);
+  --token-accent-gradient-to: var(
+    --tenant-accent-gradient-to,
+    rgba(99, 102, 241, 0.25)
+  );
+}
+
+[data-theme="tenant-base"]:not(.dark) {
+  --token-surface: var(--tenant-surface, #fafafa);
+  --token-surface-elevated: var(--tenant-surface-elevated, #ffffff);
+  --token-text: var(--tenant-text, #171717);
+  --token-text-muted: var(--tenant-text-muted, #737373);
+  --token-text-muted-dark: var(--tenant-text-muted-dark, #a3a3a3);
+  --token-border: var(--tenant-border, #e5e5e5);
+}
+
+[data-theme="tenant-base"].dark {
+  --token-surface: var(--tenant-surface-dark, #171717);
+  --token-surface-elevated: var(--tenant-surface-elevated-dark, #262626);
+  --token-text: var(--tenant-text-dark, #fafafa);
+  --token-text-muted: var(--tenant-text-muted-dark, #a3a3a3);
+  --token-text-muted-dark: var(--tenant-text-muted-dark-muted, #737373);
+  --token-border: var(--tenant-border-dark, #404040);
+}

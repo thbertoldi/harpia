@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+/*
+ * Semantic design tokens — values are supplied by theme packages
+ * (default.css, aiuna.css, tenant-base.css) via data-theme on :root.
+ */
+:root {
+  --token-primary: #c8920f;
+  --token-primary-bright: #e0a512;
+  --token-surface: #121318;
+  --token-surface-elevated: #1a1b24;
+  --token-text: #f5f2eb;
+  --token-text-muted: #9da1ab;
+  --token-text-muted-dark: #6b7080;
+  --token-border: #2a2d3a;
+  --token-accent: #c8920f;
+  --token-accent-gradient-from: #e0a512;
+  --token-accent-gradient-via: #c8920f;
+  --token-accent-gradient-to: rgba(200, 146, 15, 0.3);
+  --token-on-primary: #121318;
+}
+
+@theme {
+  /* Semantic color tokens */
+  --color-primary: var(--token-primary);
+  --color-primary-bright: var(--token-primary-bright);
+  --color-primary-foreground: var(--token-on-primary);
+  --color-surface: var(--token-surface);
+  --color-surface-elevated: var(--token-surface-elevated);
+  --color-text: var(--token-text);
+  --color-text-muted: var(--token-text-muted);
+  --color-text-muted-dark: var(--token-text-muted-dark);
+  --color-border: var(--token-border);
+  --color-accent: var(--token-accent);
+
+  /* shadcn-style aliases used by shared UI primitives */
+  --color-background: var(--token-surface);
+  --color-foreground: var(--token-text);
+  --color-input: var(--token-border);
+  --color-ring: var(--token-primary);
+  --color-accent-foreground: var(--token-text);
+
+  /*
+   * Harpia palette aliases — backward compatibility for existing components.
+   * Prefer semantic names (primary, surface, text, etc.) in new code.
+   */
+  --color-obsidian: var(--token-surface);
+  --color-obsidian-light: var(--token-surface-elevated);
+  --color-plumage: var(--token-border);
+  --color-talon-gold: var(--token-primary);
+  --color-talon-gold-bright: var(--token-primary-bright);
+  --color-cream: var(--token-text);
+  --color-crown-ash: var(--token-text-muted);
+  --color-crown-ash-dark: var(--token-text-muted-dark);
+
+  --font-heading: "Manrope", system-ui, sans-serif;
+  --font-body: "DM Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-wordmark: "Bodoni Moda", serif;
+}

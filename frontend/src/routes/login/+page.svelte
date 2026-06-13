@@ -8,6 +8,7 @@
     isDevLoginEnabled,
     isZitadelConfigured,
   } from "$lib/auth";
+  import { applyColorScheme, initTheme, resolveColorScheme } from "$lib/themes";
 
   const zitadelReady = isZitadelConfigured();
   const devLoginEnabled = isDevLoginEnabled();
@@ -17,6 +18,11 @@
   let dark = $state(true);
 
   $effect(() => {
+    initTheme();
+    dark = resolveColorScheme() === "dark";
+  });
+
+  $effect(() => {
     if (getSession()) {
       goto(resolve("/"));
     }
@@ -24,8 +30,7 @@
 
   function toggleDark() {
     dark = !dark;
-    document.documentElement.classList.toggle("dark", dark);
-    localStorage.setItem("harpia-theme", dark ? "dark" : "light");
+    applyColorScheme(dark ? "dark" : "light");
   }
 
   async function handleLogin() {
