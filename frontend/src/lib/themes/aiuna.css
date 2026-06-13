@@ -1,0 +1,32 @@
+/*
+ * AIUNA theme — placeholder palette until brand assets arrive.
+ * TBD: replace hex values with official AIUNA brand tokens.
+ */
+
+[data-theme="aiuna"] {
+  --token-primary: #2563eb;
+  --token-primary-bright: #3b82f6;
+  --token-on-primary: #ffffff;
+  --token-accent: #2563eb;
+  --token-accent-gradient-from: #60a5fa;
+  --token-accent-gradient-via: #2563eb;
+  --token-accent-gradient-to: rgba(37, 99, 235, 0.25);
+}
+
+[data-theme="aiuna"]:not(.dark) {
+  --token-surface: #f8fafc;
+  --token-surface-elevated: #ffffff;
+  --token-text: #0f172a;
+  --token-text-muted: #64748b;
+  --token-text-muted-dark: #94a3b8;
+  --token-border: #e2e8f0;
+}
+
+[data-theme="aiuna"].dark {
+  --token-surface: #0f172a;
+  --token-surface-elevated: #1e293b;
+  --token-text: #f1f5f9;
+  --token-text-muted: #94a3b8;
+  --token-text-muted-dark: #64748b;
+  --token-border: #334155;
+}

@@ -1,0 +1,32 @@
+/*
+ * Default theme — preserves the current Harpia obsidian + talon-gold palette.
+ * Dark mode matches today's production look; light mode is a softer variant.
+ */
+
+[data-theme="default"] {
+  --token-primary: #c8920f;
+  --token-primary-bright: #e0a512;
+  --token-on-primary: #121318;
+  --token-accent: #c8920f;
+  --token-accent-gradient-from: #e0a512;
+  --token-accent-gradient-via: #c8920f;
+  --token-accent-gradient-to: rgba(200, 146, 15, 0.3);
+}
+
+[data-theme="default"]:not(.dark) {
+  --token-surface: #f5f2eb;
+  --token-surface-elevated: #ebe6dc;
+  --token-text: #121318;
+  --token-text-muted: #6b7080;
+  --token-text-muted-dark: #9da1ab;
+  --token-border: #d4d0c8;
+}
+
+[data-theme="default"].dark {
+  --token-surface: #121318;
+  --token-surface-elevated: #1a1b24;
+  --token-text: #f5f2eb;
+  --token-text-muted: #9da1ab;
+  --token-text-muted-dark: #6b7080;
+  --token-border: #2a2d3a;
+}
