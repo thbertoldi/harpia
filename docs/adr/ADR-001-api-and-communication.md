@@ -29,6 +29,8 @@ We originally considered NATS JetStream for async messaging, but decided against
 
 **Use Buf for schema management.** A shared `proto/` directory at repo root, managed by `buf.yaml`. Code generated for Go, Python, and TypeScript from the same `.proto` files.
 
+**Python adoption details:** see [ADR-013: ConnectRPC Python Adoption](ADR-013-connectrpc-python-adoption.md) for library pinning, ASGI server layout, transport defaults, and adapter isolation in `agent-runtime/`.
+
 ### Proto Organization
 
 ```
@@ -59,4 +61,4 @@ ConnectRPC unifies patterns we'd otherwise need three tools for (gRPC, REST, Web
 
 - **Easier:** Single schema source of truth. Type-safe clients generated automatically. Real-time UI without WebSocket infrastructure.
 - **Harder:** Need to manage proto breaking changes carefully. Buf tooling (buf breaking) addresses this.
-- **Next:** Set up `buf.yaml`, `buf.gen.yaml`, and generate initial code for all three services.
+- **Next:** Keep proto and generated clients in sync across Go, Python, and TypeScript per [ADR-013](ADR-013-connectrpc-python-adoption.md).
