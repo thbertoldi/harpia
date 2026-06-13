@@ -17,6 +17,17 @@ syncs local `.env.local` files, installs frontend dependencies when needed, and
 starts the Vite dev server on http://localhost:5173. Tilt creates missing
 dev-only Kubernetes Secrets before applying manifests.
 
+The dev kind environment intentionally does not create a `harpia-frontend` pod.
+Frontend development runs on the host through Vite so HMR and synced
+`frontend/.env.local` values stay fast and visible. A dev-cluster frontend
+container path can be added later when it is needed for prod-parity testing.
+If an older dev cluster already has the removed frontend deployment, delete the
+stale resources once:
+
+```bash
+kubectl delete deployment,service harpia-frontend --ignore-not-found
+```
+
 Manual apply (without Tilt):
 
 ```bash
