@@ -1,8 +1,10 @@
 import { createClient } from "@connectrpc/connect";
 import { AgentService } from "$lib/gen/harpia/agents/v1/agents_pb";
 import { ArtifactService } from "$lib/gen/harpia/artifacts/v1/artifacts_pb";
+import { ExecutorService } from "$lib/gen/harpia/executors/v1/executors_pb";
 import { FeedbackService } from "$lib/gen/harpia/feedback/v1/feedback_pb";
 import { IdentityService } from "$lib/gen/harpia/identity/v1/identity_pb";
+import { PlanService } from "$lib/gen/harpia/plans/v1/plans_pb";
 import { TaskService } from "$lib/gen/harpia/tasks/v1/tasks_pb";
 import { transport } from "$lib/transport";
 
@@ -11,6 +13,8 @@ export const identityClient = createClient(IdentityService, transport);
 export const feedbackClient = createClient(FeedbackService, transport);
 export const agentClient = createClient(AgentService, transport);
 export const artifactClient = createClient(ArtifactService, transport);
+export const planClient = createClient(PlanService, transport);
+export const executorClient = createClient(ExecutorService, transport);
 
 export type {
   FeedbackRequest,
@@ -38,3 +42,12 @@ export type {
   AgentType,
   ListAgentTypesResponse,
 } from "$lib/gen/harpia/agents/v1/agents_pb";
+export type {
+  ExecutorEntitlement,
+  ExecutorInstallation,
+  ExecutorSKU,
+} from "$lib/gen/harpia/executors/v1/executors_pb";
+export type {
+  ListPlanTemplatesResponse,
+  PlanTemplate,
+} from "$lib/gen/harpia/plans/v1/plans_pb";
