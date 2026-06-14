@@ -61,7 +61,7 @@
     <div class="artifact-preview artifact-preview--list">
       <p>{preview.listSummary.articleCount} articles</p>
       <ul>
-        {#each preview.listSummary.titles as title}
+        {#each preview.listSummary.titles as title, i (i)}
           <li>{title}</li>
         {/each}
       </ul>
