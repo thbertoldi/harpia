@@ -9,6 +9,7 @@
     isZitadelConfigured,
   } from "$lib/auth";
   import { applyColorScheme, initTheme, resolveColorScheme } from "$lib/themes";
+  import { initLocale, locale, translate } from "$lib/i18n";
 
   const zitadelReady = isZitadelConfigured();
   const devLoginEnabled = isDevLoginEnabled();
@@ -19,11 +20,12 @@
 
   $effect(() => {
     initTheme();
+    initLocale();
     dark = resolveColorScheme() === "dark";
   });
 
   $effect(() => {
-    if (getSession()) {
+    if (!devLoginEnabled && getSession()) {
       goto(resolve("/"));
     }
   });
@@ -42,26 +44,26 @@
     goto(resolve("/"));
   }
 
-  const personas = [
+  const personas = $derived([
     {
       role: "Leader" as const,
-      label: "Leader",
-      subtitle: "Direct tasks",
+      labelKey: "login.persona.leader.label",
+      subtitleKey: "login.persona.leader.subtitle",
       icon: Crown,
     },
     {
       role: "Overseer" as const,
-      label: "Overseer",
-      subtitle: "Approve & feedback",
+      labelKey: "login.persona.overseer.label",
+      subtitleKey: "login.persona.overseer.subtitle",
       icon: Eye,
     },
     {
       role: "Engineer" as const,
-      label: "Platform Engineer",
-      subtitle: "Configure agents",
+      labelKey: "login.persona.engineer.label",
+      subtitleKey: "login.persona.engineer.subtitle",
       icon: Wrench,
     },
-  ];
+  ]);
 </script>
 
 <div class="flex min-h-screen items-center justify-center bg-obsidian">
@@ -72,7 +74,7 @@
   <button
     onclick={toggleDark}
     class="fixed top-4 right-4 z-50 cursor-pointer rounded-md border border-plumage p-2 text-crown-ash transition-colors hover:border-talon-gold hover:text-cream"
-    aria-label="Toggle dark mode"
+    aria-label={translate("nav.toggleDark", $locale)}
   >
     {#if dark}
       <Sun class="size-4" />
@@ -93,7 +95,7 @@
         class="mt-3 font-body text-cream/70"
         style="font-family: 'DM Sans', sans-serif"
       >
-        AI operations for your business
+        {translate("login.tagline", $locale)}
       </p>
     </div>
 
@@ -103,11 +105,13 @@
         disabled={!zitadelReady}
         title={zitadelReady
           ? ""
-          : "Sign-in is not configured. Contact your administrator."}
+          : translate("login.signInNotConfiguredTitle", $locale)}
         class="w-full cursor-pointer rounded-lg bg-talon-gold px-6 py-3 font-medium text-obsidian transition-all hover:bg-talon-gold-bright disabled:cursor-not-allowed disabled:bg-talon-gold/30 disabled:text-obsidian/60"
         style="font-family: 'DM Sans', sans-serif"
       >
-        Sign in with Zitadel{zitadelReady ? "" : " (not configured)"}
+        {zitadelReady
+          ? translate("login.signInZitadel", $locale)
+          : translate("login.signInZitadelNotConfigured", $locale)}
       </button>
 
       <div class="relative">
@@ -119,7 +123,7 @@
             class="bg-obsidian px-2 font-mono tracking-wider text-crown-ash uppercase"
             style="font-family: 'JetBrains Mono', monospace"
           >
-            or
+            {translate("login.or", $locale)}
           </span>
         </div>
       </div>
@@ -145,7 +149,7 @@
           class="w-full cursor-pointer rounded-lg border border-plumage px-6 py-3 font-body text-sm text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-plumage disabled:hover:text-crown-ash"
           style="font-family: 'DM Sans', sans-serif"
         >
-          Continue with email
+          {translate("login.continueEmail", $locale)}
         </button>
       </form>
 
@@ -159,7 +163,7 @@
               class="bg-obsidian px-2 font-mono tracking-wider text-crown-ash-dark uppercase"
               style="font-family: 'JetBrains Mono', monospace"
             >
-              dev login
+              {translate("login.devLogin", $locale)}
             </span>
           </div>
         </div>
@@ -178,13 +182,13 @@
                   class="font-body text-sm font-medium text-cream"
                   style="font-family: 'DM Sans', sans-serif"
                 >
-                  {persona.label}
+                  {translate(persona.labelKey, $locale)}
                 </div>
                 <div
                   class="font-mono text-[10px] tracking-wider text-crown-ash-dark uppercase"
                   style="font-family: 'JetBrains Mono', monospace"
                 >
-                  {persona.subtitle}
+                  {translate(persona.subtitleKey, $locale)}
                 </div>
               </div>
             </button>

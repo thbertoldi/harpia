@@ -15,6 +15,14 @@
   import { page } from "$app/state";
   import { resolve } from "$app/paths";
   import { applyColorScheme, initTheme, resolveColorScheme } from "$lib/themes";
+  import {
+    initLocale,
+    locale,
+    setLocale,
+    translate,
+    translateRole,
+    type Locale,
+  } from "$lib/i18n";
 
   let { data, children } = $props();
 
@@ -23,6 +31,7 @@
 
   $effect(() => {
     initTheme();
+    initLocale();
     dark = resolveColorScheme() === "dark";
   });
 
@@ -31,22 +40,34 @@
     applyColorScheme(dark ? "dark" : "light");
   }
 
-  const baseSections = [
-    { label: "Tasks", href: "/", icon: LayoutDashboard },
-    { label: "Oversee", href: "/oversee", icon: Eye },
-  ] as const;
+  const sections = $derived.by(() => {
+    const base = [
+      {
+        label: translate("nav.tasks", $locale),
+        href: "/",
+        icon: LayoutDashboard,
+      },
+      {
+        label: translate("nav.oversee", $locale),
+        href: "/oversee",
+        icon: Eye,
+      },
+    ] as const;
 
-  const auditSection = {
-    label: "Audit Log",
-    href: "/audit",
-    icon: ScrollText,
-  } as const;
+    const role = data?.user?.role;
+    if (role === "Overseer" || role === "Engineer") {
+      return [
+        ...base,
+        {
+          label: translate("nav.audit", $locale),
+          href: "/audit",
+          icon: ScrollText,
+        },
+      ] as const;
+    }
 
-  const sections = $derived(
-    data?.user?.role === "Overseer" || data?.user?.role === "Engineer"
-      ? [...baseSections, auditSection]
-      : [...baseSections],
-  );
+    return base;
+  });
 
   function isActive(path: string) {
     return (
@@ -128,7 +149,7 @@
                 class="text-sm font-medium"
                 style="font-family: 'DM Sans', sans-serif">{section.label}</span
               >
-              {#if section.label === "Oversee"}
+              {#if section.href === "/oversee"}
                 <FeedbackBadge />
               {/if}
             </a>
@@ -140,13 +161,13 @@
             class="font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
             style="font-family: 'JetBrains Mono', monospace"
           >
-            Role
+            {translate("nav.role", $locale)}
           </p>
           <p
             class="mt-1 text-sm text-cream"
             style="font-family: 'DM Sans', sans-serif"
           >
-            {data?.user?.role ?? "Leader"}
+            {translateRole(data?.user?.role ?? "Leader", $locale)}
           </p>
         </div>
       </nav>
@@ -168,7 +189,7 @@
             <button
               onclick={() => (navOpen = !navOpen)}
               class="cursor-pointer rounded-md p-1.5 text-crown-ash transition-colors hover:text-cream"
-              aria-label="Toggle navigation"
+              aria-label={translate("nav.toggleNav", $locale)}
             >
               <Menu class="size-5" />
             </button>
@@ -181,10 +202,23 @@
           </div>
 
           <div class="flex items-center gap-4">
+            <label class="sr-only" for="locale-switcher">
+              {translate("nav.language", $locale)}
+            </label>
+            <select
+              id="locale-switcher"
+              value={$locale}
+              onchange={(e) => setLocale(e.currentTarget.value as Locale)}
+              class="cursor-pointer rounded-md border border-plumage bg-obsidian px-2 py-1 text-xs text-crown-ash transition-colors hover:border-talon-gold hover:text-cream"
+              style="font-family: 'DM Sans', sans-serif"
+            >
+              <option value="en">EN</option>
+              <option value="pt-BR">PT</option>
+            </select>
             <button
               onclick={toggleDark}
               class="cursor-pointer rounded-md border border-plumage p-1.5 text-crown-ash transition-colors hover:border-talon-gold hover:text-cream"
-              aria-label="Toggle dark mode"
+              aria-label={translate("nav.toggleDark", $locale)}
             >
               {#if dark}
                 <Sun class="size-4" />
@@ -202,7 +236,7 @@
               class="cursor-pointer rounded-md border border-plumage px-3 py-1 text-xs text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
               style="font-family: 'DM Sans', sans-serif"
             >
-              Log out
+              {translate("nav.logout", $locale)}
             </button>
           </div>
         </div>
