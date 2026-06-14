@@ -27,7 +27,13 @@ class ArtifactService(Protocol):
     async def create_artifact(self, request: harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.CreateArtifactRequest, ctx: RequestContext) -> harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.CreateArtifactResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def create_artifact_with_payload(self, request: harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.CreateArtifactWithPayloadRequest, ctx: RequestContext) -> harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.CreateArtifactWithPayloadResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def get_artifact(self, request: harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactRequest, ctx: RequestContext) -> harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def get_artifact_payload(self, request: harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactPayloadRequest, ctx: RequestContext) -> harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactPayloadResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -66,6 +72,16 @@ class ArtifactServiceASGIApplication(ConnectASGIApplication[ArtifactService]):
                     ),
                     function=svc.create_artifact,
                 ),
+                "/harpia.artifacts.v1.ArtifactService/CreateArtifactWithPayload": Endpoint.unary(
+                    method=MethodInfo(
+                        name="CreateArtifactWithPayload",
+                        service_name="harpia.artifacts.v1.ArtifactService",
+                        input=harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.CreateArtifactWithPayloadRequest,
+                        output=harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.CreateArtifactWithPayloadResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.create_artifact_with_payload,
+                ),
                 "/harpia.artifacts.v1.ArtifactService/GetArtifact": Endpoint.unary(
                     method=MethodInfo(
                         name="GetArtifact",
@@ -75,6 +91,16 @@ class ArtifactServiceASGIApplication(ConnectASGIApplication[ArtifactService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_artifact,
+                ),
+                "/harpia.artifacts.v1.ArtifactService/GetArtifactPayload": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetArtifactPayload",
+                        service_name="harpia.artifacts.v1.ArtifactService",
+                        input=harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactPayloadRequest,
+                        output=harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactPayloadResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_artifact_payload,
                 ),
             },
             interceptors=interceptors,
@@ -150,6 +176,26 @@ class ArtifactServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def create_artifact_with_payload(
+        self,
+        request: harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.CreateArtifactWithPayloadRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.CreateArtifactWithPayloadResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CreateArtifactWithPayload",
+                service_name="harpia.artifacts.v1.ArtifactService",
+                input=harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.CreateArtifactWithPayloadRequest,
+                output=harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.CreateArtifactWithPayloadResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def get_artifact(
         self,
         request: harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactRequest,
@@ -170,6 +216,26 @@ class ArtifactServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def get_artifact_payload(
+        self,
+        request: harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactPayloadRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactPayloadResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetArtifactPayload",
+                service_name="harpia.artifacts.v1.ArtifactService",
+                input=harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactPayloadRequest,
+                output=harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactPayloadResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 
 
 
@@ -181,7 +247,11 @@ class ArtifactServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def create_artifact(self, request: harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.CreateArtifactRequest, ctx: RequestContext) -> harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.CreateArtifactResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def create_artifact_with_payload(self, request: harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.CreateArtifactWithPayloadRequest, ctx: RequestContext) -> harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.CreateArtifactWithPayloadResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_artifact(self, request: harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactRequest, ctx: RequestContext) -> harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def get_artifact_payload(self, request: harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactPayloadRequest, ctx: RequestContext) -> harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactPayloadResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -219,6 +289,16 @@ class ArtifactServiceWSGIApplication(ConnectWSGIApplication):
                     ),
                     function=service.create_artifact,
                 ),
+                "/harpia.artifacts.v1.ArtifactService/CreateArtifactWithPayload": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="CreateArtifactWithPayload",
+                        service_name="harpia.artifacts.v1.ArtifactService",
+                        input=harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.CreateArtifactWithPayloadRequest,
+                        output=harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.CreateArtifactWithPayloadResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.create_artifact_with_payload,
+                ),
                 "/harpia.artifacts.v1.ArtifactService/GetArtifact": EndpointSync.unary(
                     method=MethodInfo(
                         name="GetArtifact",
@@ -228,6 +308,16 @@ class ArtifactServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_artifact,
+                ),
+                "/harpia.artifacts.v1.ArtifactService/GetArtifactPayload": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetArtifactPayload",
+                        service_name="harpia.artifacts.v1.ArtifactService",
+                        input=harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactPayloadRequest,
+                        output=harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactPayloadResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_artifact_payload,
                 ),
             },
             interceptors=interceptors,
@@ -303,6 +393,26 @@ class ArtifactServiceClientSync(ConnectClientSync):
             timeout_ms=timeout_ms,
         )
 
+    def create_artifact_with_payload(
+        self,
+        request: harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.CreateArtifactWithPayloadRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.CreateArtifactWithPayloadResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CreateArtifactWithPayload",
+                service_name="harpia.artifacts.v1.ArtifactService",
+                input=harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.CreateArtifactWithPayloadRequest,
+                output=harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.CreateArtifactWithPayloadResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     def get_artifact(
         self,
         request: harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactRequest,
@@ -317,6 +427,26 @@ class ArtifactServiceClientSync(ConnectClientSync):
                 service_name="harpia.artifacts.v1.ArtifactService",
                 input=harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactRequest,
                 output=harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def get_artifact_payload(
+        self,
+        request: harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactPayloadRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactPayloadResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetArtifactPayload",
+                service_name="harpia.artifacts.v1.ArtifactService",
+                input=harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactPayloadRequest,
+                output=harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactPayloadResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

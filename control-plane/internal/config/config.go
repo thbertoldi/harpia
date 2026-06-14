@@ -14,7 +14,11 @@ type Config struct {
 	DatabaseURL  string
 	ValkeyURL    string
 	TemporalHost string
-	GarageURL    string
+	GarageURL       string
+	GarageBucket    string
+	GarageAccessKey string
+	GarageSecretKey string
+	GarageRegion    string
 	ZitadelURL   string
 	OpenFGAURL   string
 
@@ -35,7 +39,11 @@ func Load() *Config {
 		DatabaseURL:  envStr("DATABASE_URL", "postgres://harpia:harpia@localhost:15000/harpia?sslmode=disable"),
 		ValkeyURL:    envStr("VALKEY_URL", "valkey://localhost:15001"),
 		TemporalHost: envStr("TEMPORAL_HOST", "localhost:7233"),
-		GarageURL:    envStr("GARAGE_URL", "http://localhost:15002"),
+		GarageURL:       envStr("GARAGE_URL", "http://localhost:15002"),
+		GarageBucket:    envStr("GARAGE_BUCKET", "harpia"),
+		GarageAccessKey: envStr("GARAGE_ACCESS_KEY", ""),
+		GarageSecretKey: envStr("GARAGE_SECRET_KEY", ""),
+		GarageRegion:    envStr("GARAGE_REGION", "garage"),
 		ZitadelURL:   envStr("ZITADEL_URL", "http://localhost:9980"),
 		OpenFGAURL:   envStr("OPENFGA_API_URL", "http://localhost:8086"),
 

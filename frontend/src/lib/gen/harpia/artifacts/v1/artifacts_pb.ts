@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file harpia/artifacts/v1/artifacts.proto.
  */
 export const file_harpia_artifacts_v1_artifacts: GenFile = /*@__PURE__*/
-  fileDesc("CiNoYXJwaWEvYXJ0aWZhY3RzL3YxL2FydGlmYWN0cy5wcm90bxITaGFycGlhLmFydGlmYWN0cy52MSJhCgxBcnRpZmFjdFR5cGUSCgoCaWQYASABKAkSCwoDa2V5GAIgASgJEhIKCnNjaGVtYV9yZWYYAyABKAkSDwoHdmVyc2lvbhgEIAEoBRITCgtkZXNjcmlwdGlvbhgFIAEoCSKCAQoIQXJ0aWZhY3QSCgoCaWQYASABKAkSGAoQYXJ0aWZhY3RfdHlwZV9pZBgCIAEoCRIRCgl0ZW5hbnRfaWQYAyABKAkSEwoLc3RvcmFnZV91cmkYBCABKAkSFAoMY29udGVudF9oYXNoGAUgASgJEhIKCmNyZWF0ZWRfYXQYBiABKAkiMQoJRGF0ZVJhbmdlEhIKCnN0YXJ0X2RhdGUYASABKAkSEAoIZW5kX2RhdGUYAiABKAkiYAoLTmV3c0FydGljbGUSDQoFdGl0bGUYASABKAkSCwoDdXJsGAIgASgJEg8KB3N1bW1hcnkYAyABKAkSDgoGc291cmNlGAQgASgJEhQKDHB1Ymxpc2hlZF9hdBgFIAEoCSI+CghOZXdzTGlzdBIyCghhcnRpY2xlcxgBIAMoCzIgLmhhcnBpYS5hcnRpZmFjdHMudjEuTmV3c0FydGljbGUiKAoJVGV4dERyYWZ0Eg0KBXRpdGxlGAEgASgJEgwKBGJvZHkYAiABKAkiQQoRTGlua2VkSW5Qb3N0RHJhZnQSDAoEdGV4dBgBIAEoCRIMCgRob29rGAIgASgJEhAKCGhhc2h0YWdzGAMgAygJIl8KE1B1Ymxpc2hDb25maXJtYXRpb24SEAoIcGxhdGZvcm0YASABKAkSEwoLZXh0ZXJuYWxfaWQYAiABKAkSCwoDdXJsGAMgASgJEhQKDHB1Ymxpc2hlZF9hdBgEIAEoCSJkChtSZWdpc3RlckFydGlmYWN0VHlwZVJlcXVlc3QSCwoDa2V5GAEgASgJEhIKCnNjaGVtYV9yZWYYAiABKAkSDwoHdmVyc2lvbhgDIAEoBRITCgtkZXNjcmlwdGlvbhgEIAEoCSJYChxSZWdpc3RlckFydGlmYWN0VHlwZVJlc3BvbnNlEjgKDWFydGlmYWN0X3R5cGUYASABKAsyIS5oYXJwaWEuYXJ0aWZhY3RzLnYxLkFydGlmYWN0VHlwZSIyChZHZXRBcnRpZmFjdFR5cGVSZXF1ZXN0EhgKEGFydGlmYWN0X3R5cGVfaWQYASABKAkiUwoXR2V0QXJ0aWZhY3RUeXBlUmVzcG9uc2USOAoNYXJ0aWZhY3RfdHlwZRgBIAEoCzIhLmhhcnBpYS5hcnRpZmFjdHMudjEuQXJ0aWZhY3RUeXBlIm8KFUNyZWF0ZUFydGlmYWN0UmVxdWVzdBIRCgl0ZW5hbnRfaWQYASABKAkSGAoQYXJ0aWZhY3RfdHlwZV9pZBgCIAEoCRITCgtzdG9yYWdlX3VyaRgDIAEoCRIUCgxjb250ZW50X2hhc2gYBCABKAkiSQoWQ3JlYXRlQXJ0aWZhY3RSZXNwb25zZRIvCghhcnRpZmFjdBgBIAEoCzIdLmhhcnBpYS5hcnRpZmFjdHMudjEuQXJ0aWZhY3QiPAoSR2V0QXJ0aWZhY3RSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRITCgthcnRpZmFjdF9pZBgCIAEoCSJGChNHZXRBcnRpZmFjdFJlc3BvbnNlEi8KCGFydGlmYWN0GAEgASgLMh0uaGFycGlhLmFydGlmYWN0cy52MS5BcnRpZmFjdDLJAwoPQXJ0aWZhY3RTZXJ2aWNlEnsKFFJlZ2lzdGVyQXJ0aWZhY3RUeXBlEjAuaGFycGlhLmFydGlmYWN0cy52MS5SZWdpc3RlckFydGlmYWN0VHlwZVJlcXVlc3QaMS5oYXJwaWEuYXJ0aWZhY3RzLnYxLlJlZ2lzdGVyQXJ0aWZhY3RUeXBlUmVzcG9uc2USbAoPR2V0QXJ0aWZhY3RUeXBlEisuaGFycGlhLmFydGlmYWN0cy52MS5HZXRBcnRpZmFjdFR5cGVSZXF1ZXN0GiwuaGFycGlhLmFydGlmYWN0cy52MS5HZXRBcnRpZmFjdFR5cGVSZXNwb25zZRJpCg5DcmVhdGVBcnRpZmFjdBIqLmhhcnBpYS5hcnRpZmFjdHMudjEuQ3JlYXRlQXJ0aWZhY3RSZXF1ZXN0GisuaGFycGlhLmFydGlmYWN0cy52MS5DcmVhdGVBcnRpZmFjdFJlc3BvbnNlEmAKC0dldEFydGlmYWN0EicuaGFycGlhLmFydGlmYWN0cy52MS5HZXRBcnRpZmFjdFJlcXVlc3QaKC5oYXJwaWEuYXJ0aWZhY3RzLnYxLkdldEFydGlmYWN0UmVzcG9uc2VC3AEKF2NvbS5oYXJwaWEuYXJ0aWZhY3RzLnYxQg5BcnRpZmFjdHNQcm90b1ABWkNnaXRodWIuY29tL2hhcnBpYS9jb250cm9sLXBsYW5lL2dlbi9oYXJwaWEvYXJ0aWZhY3RzL3YxO2FydGlmYWN0c3YxogIDSEFYqgITSGFycGlhLkFydGlmYWN0cy5WMcoCE0hhcnBpYVxBcnRpZmFjdHNcVjHiAh9IYXJwaWFcQXJ0aWZhY3RzXFYxXEdQQk1ldGFkYXRh6gIVSGFycGlhOjpBcnRpZmFjdHM6OlYxYgZwcm90bzM");
+  fileDesc("CiNoYXJwaWEvYXJ0aWZhY3RzL3YxL2FydGlmYWN0cy5wcm90bxITaGFycGlhLmFydGlmYWN0cy52MSJhCgxBcnRpZmFjdFR5cGUSCgoCaWQYASABKAkSCwoDa2V5GAIgASgJEhIKCnNjaGVtYV9yZWYYAyABKAkSDwoHdmVyc2lvbhgEIAEoBRITCgtkZXNjcmlwdGlvbhgFIAEoCSKCAQoIQXJ0aWZhY3QSCgoCaWQYASABKAkSGAoQYXJ0aWZhY3RfdHlwZV9pZBgCIAEoCRIRCgl0ZW5hbnRfaWQYAyABKAkSEwoLc3RvcmFnZV91cmkYBCABKAkSFAoMY29udGVudF9oYXNoGAUgASgJEhIKCmNyZWF0ZWRfYXQYBiABKAkiMQoJRGF0ZVJhbmdlEhIKCnN0YXJ0X2RhdGUYASABKAkSEAoIZW5kX2RhdGUYAiABKAkiYAoLTmV3c0FydGljbGUSDQoFdGl0bGUYASABKAkSCwoDdXJsGAIgASgJEg8KB3N1bW1hcnkYAyABKAkSDgoGc291cmNlGAQgASgJEhQKDHB1Ymxpc2hlZF9hdBgFIAEoCSI+CghOZXdzTGlzdBIyCghhcnRpY2xlcxgBIAMoCzIgLmhhcnBpYS5hcnRpZmFjdHMudjEuTmV3c0FydGljbGUiKAoJVGV4dERyYWZ0Eg0KBXRpdGxlGAEgASgJEgwKBGJvZHkYAiABKAkiQQoRTGlua2VkSW5Qb3N0RHJhZnQSDAoEdGV4dBgBIAEoCRIMCgRob29rGAIgASgJEhAKCGhhc2h0YWdzGAMgAygJIl8KE1B1Ymxpc2hDb25maXJtYXRpb24SEAoIcGxhdGZvcm0YASABKAkSEwoLZXh0ZXJuYWxfaWQYAiABKAkSCwoDdXJsGAMgASgJEhQKDHB1Ymxpc2hlZF9hdBgEIAEoCSJkChtSZWdpc3RlckFydGlmYWN0VHlwZVJlcXVlc3QSCwoDa2V5GAEgASgJEhIKCnNjaGVtYV9yZWYYAiABKAkSDwoHdmVyc2lvbhgDIAEoBRITCgtkZXNjcmlwdGlvbhgEIAEoCSJYChxSZWdpc3RlckFydGlmYWN0VHlwZVJlc3BvbnNlEjgKDWFydGlmYWN0X3R5cGUYASABKAsyIS5oYXJwaWEuYXJ0aWZhY3RzLnYxLkFydGlmYWN0VHlwZSI/ChZHZXRBcnRpZmFjdFR5cGVSZXF1ZXN0EhgKEGFydGlmYWN0X3R5cGVfaWQYASABKAkSCwoDa2V5GAIgASgJIlMKF0dldEFydGlmYWN0VHlwZVJlc3BvbnNlEjgKDWFydGlmYWN0X3R5cGUYASABKAsyIS5oYXJwaWEuYXJ0aWZhY3RzLnYxLkFydGlmYWN0VHlwZSJvChVDcmVhdGVBcnRpZmFjdFJlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgJEhgKEGFydGlmYWN0X3R5cGVfaWQYAiABKAkSEwoLc3RvcmFnZV91cmkYAyABKAkSFAoMY29udGVudF9oYXNoGAQgASgJIkkKFkNyZWF0ZUFydGlmYWN0UmVzcG9uc2USLwoIYXJ0aWZhY3QYASABKAsyHS5oYXJwaWEuYXJ0aWZhY3RzLnYxLkFydGlmYWN0IrYBCiBDcmVhdGVBcnRpZmFjdFdpdGhQYXlsb2FkUmVxdWVzdBIRCgl0ZW5hbnRfaWQYASABKAkSGAoQYXJ0aWZhY3RfdHlwZV9pZBgCIAEoCRIZChFhcnRpZmFjdF90eXBlX2tleRgDIAEoCRIUCgxwYXlsb2FkX2pzb24YBCABKAwSHgoRc3RlcF9leGVjdXRpb25faWQYBSABKAlIAIgBAUIUChJfc3RlcF9leGVjdXRpb25faWQiVAohQ3JlYXRlQXJ0aWZhY3RXaXRoUGF5bG9hZFJlc3BvbnNlEi8KCGFydGlmYWN0GAEgASgLMh0uaGFycGlhLmFydGlmYWN0cy52MS5BcnRpZmFjdCI8ChJHZXRBcnRpZmFjdFJlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgJEhMKC2FydGlmYWN0X2lkGAIgASgJIkYKE0dldEFydGlmYWN0UmVzcG9uc2USLwoIYXJ0aWZhY3QYASABKAsyHS5oYXJwaWEuYXJ0aWZhY3RzLnYxLkFydGlmYWN0IkMKGUdldEFydGlmYWN0UGF5bG9hZFJlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgJEhMKC2FydGlmYWN0X2lkGAIgASgJIkgKGkdldEFydGlmYWN0UGF5bG9hZFJlc3BvbnNlEhQKDHBheWxvYWRfanNvbhgBIAEoDBIUCgxjb250ZW50X2hhc2gYAiABKAkyzQUKD0FydGlmYWN0U2VydmljZRJ7ChRSZWdpc3RlckFydGlmYWN0VHlwZRIwLmhhcnBpYS5hcnRpZmFjdHMudjEuUmVnaXN0ZXJBcnRpZmFjdFR5cGVSZXF1ZXN0GjEuaGFycGlhLmFydGlmYWN0cy52MS5SZWdpc3RlckFydGlmYWN0VHlwZVJlc3BvbnNlEmwKD0dldEFydGlmYWN0VHlwZRIrLmhhcnBpYS5hcnRpZmFjdHMudjEuR2V0QXJ0aWZhY3RUeXBlUmVxdWVzdBosLmhhcnBpYS5hcnRpZmFjdHMudjEuR2V0QXJ0aWZhY3RUeXBlUmVzcG9uc2USaQoOQ3JlYXRlQXJ0aWZhY3QSKi5oYXJwaWEuYXJ0aWZhY3RzLnYxLkNyZWF0ZUFydGlmYWN0UmVxdWVzdBorLmhhcnBpYS5hcnRpZmFjdHMudjEuQ3JlYXRlQXJ0aWZhY3RSZXNwb25zZRKKAQoZQ3JlYXRlQXJ0aWZhY3RXaXRoUGF5bG9hZBI1LmhhcnBpYS5hcnRpZmFjdHMudjEuQ3JlYXRlQXJ0aWZhY3RXaXRoUGF5bG9hZFJlcXVlc3QaNi5oYXJwaWEuYXJ0aWZhY3RzLnYxLkNyZWF0ZUFydGlmYWN0V2l0aFBheWxvYWRSZXNwb25zZRJgCgtHZXRBcnRpZmFjdBInLmhhcnBpYS5hcnRpZmFjdHMudjEuR2V0QXJ0aWZhY3RSZXF1ZXN0GiguaGFycGlhLmFydGlmYWN0cy52MS5HZXRBcnRpZmFjdFJlc3BvbnNlEnUKEkdldEFydGlmYWN0UGF5bG9hZBIuLmhhcnBpYS5hcnRpZmFjdHMudjEuR2V0QXJ0aWZhY3RQYXlsb2FkUmVxdWVzdBovLmhhcnBpYS5hcnRpZmFjdHMudjEuR2V0QXJ0aWZhY3RQYXlsb2FkUmVzcG9uc2VC3AEKF2NvbS5oYXJwaWEuYXJ0aWZhY3RzLnYxQg5BcnRpZmFjdHNQcm90b1ABWkNnaXRodWIuY29tL2hhcnBpYS9jb250cm9sLXBsYW5lL2dlbi9oYXJwaWEvYXJ0aWZhY3RzL3YxO2FydGlmYWN0c3YxogIDSEFYqgITSGFycGlhLkFydGlmYWN0cy5WMcoCE0hhcnBpYVxBcnRpZmFjdHNcVjHiAh9IYXJwaWFcQXJ0aWZhY3RzXFYxXEdQQk1ldGFkYXRh6gIVSGFycGlhOjpBcnRpZmFjdHM6OlYxYgZwcm90bzM");
 
 /**
  * @generated from message harpia.artifacts.v1.ArtifactType
@@ -305,6 +305,11 @@ export type GetArtifactTypeRequest = Message<"harpia.artifacts.v1.GetArtifactTyp
    * @generated from field: string artifact_type_id = 1;
    */
   artifactTypeId: string;
+
+  /**
+   * @generated from field: string key = 2;
+   */
+  key: string;
 };
 
 /**
@@ -381,6 +386,60 @@ export const CreateArtifactResponseSchema: GenMessage<CreateArtifactResponse> = 
   messageDesc(file_harpia_artifacts_v1_artifacts, 13);
 
 /**
+ * @generated from message harpia.artifacts.v1.CreateArtifactWithPayloadRequest
+ */
+export type CreateArtifactWithPayloadRequest = Message<"harpia.artifacts.v1.CreateArtifactWithPayloadRequest"> & {
+  /**
+   * @generated from field: string tenant_id = 1;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: string artifact_type_id = 2;
+   */
+  artifactTypeId: string;
+
+  /**
+   * @generated from field: string artifact_type_key = 3;
+   */
+  artifactTypeKey: string;
+
+  /**
+   * @generated from field: bytes payload_json = 4;
+   */
+  payloadJson: Uint8Array;
+
+  /**
+   * @generated from field: optional string step_execution_id = 5;
+   */
+  stepExecutionId?: string | undefined;
+};
+
+/**
+ * Describes the message harpia.artifacts.v1.CreateArtifactWithPayloadRequest.
+ * Use `create(CreateArtifactWithPayloadRequestSchema)` to create a new message.
+ */
+export const CreateArtifactWithPayloadRequestSchema: GenMessage<CreateArtifactWithPayloadRequest> = /*@__PURE__*/
+  messageDesc(file_harpia_artifacts_v1_artifacts, 14);
+
+/**
+ * @generated from message harpia.artifacts.v1.CreateArtifactWithPayloadResponse
+ */
+export type CreateArtifactWithPayloadResponse = Message<"harpia.artifacts.v1.CreateArtifactWithPayloadResponse"> & {
+  /**
+   * @generated from field: harpia.artifacts.v1.Artifact artifact = 1;
+   */
+  artifact?: Artifact | undefined;
+};
+
+/**
+ * Describes the message harpia.artifacts.v1.CreateArtifactWithPayloadResponse.
+ * Use `create(CreateArtifactWithPayloadResponseSchema)` to create a new message.
+ */
+export const CreateArtifactWithPayloadResponseSchema: GenMessage<CreateArtifactWithPayloadResponse> = /*@__PURE__*/
+  messageDesc(file_harpia_artifacts_v1_artifacts, 15);
+
+/**
  * @generated from message harpia.artifacts.v1.GetArtifactRequest
  */
 export type GetArtifactRequest = Message<"harpia.artifacts.v1.GetArtifactRequest"> & {
@@ -400,7 +459,7 @@ export type GetArtifactRequest = Message<"harpia.artifacts.v1.GetArtifactRequest
  * Use `create(GetArtifactRequestSchema)` to create a new message.
  */
 export const GetArtifactRequestSchema: GenMessage<GetArtifactRequest> = /*@__PURE__*/
-  messageDesc(file_harpia_artifacts_v1_artifacts, 14);
+  messageDesc(file_harpia_artifacts_v1_artifacts, 16);
 
 /**
  * @generated from message harpia.artifacts.v1.GetArtifactResponse
@@ -417,7 +476,51 @@ export type GetArtifactResponse = Message<"harpia.artifacts.v1.GetArtifactRespon
  * Use `create(GetArtifactResponseSchema)` to create a new message.
  */
 export const GetArtifactResponseSchema: GenMessage<GetArtifactResponse> = /*@__PURE__*/
-  messageDesc(file_harpia_artifacts_v1_artifacts, 15);
+  messageDesc(file_harpia_artifacts_v1_artifacts, 17);
+
+/**
+ * @generated from message harpia.artifacts.v1.GetArtifactPayloadRequest
+ */
+export type GetArtifactPayloadRequest = Message<"harpia.artifacts.v1.GetArtifactPayloadRequest"> & {
+  /**
+   * @generated from field: string tenant_id = 1;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: string artifact_id = 2;
+   */
+  artifactId: string;
+};
+
+/**
+ * Describes the message harpia.artifacts.v1.GetArtifactPayloadRequest.
+ * Use `create(GetArtifactPayloadRequestSchema)` to create a new message.
+ */
+export const GetArtifactPayloadRequestSchema: GenMessage<GetArtifactPayloadRequest> = /*@__PURE__*/
+  messageDesc(file_harpia_artifacts_v1_artifacts, 18);
+
+/**
+ * @generated from message harpia.artifacts.v1.GetArtifactPayloadResponse
+ */
+export type GetArtifactPayloadResponse = Message<"harpia.artifacts.v1.GetArtifactPayloadResponse"> & {
+  /**
+   * @generated from field: bytes payload_json = 1;
+   */
+  payloadJson: Uint8Array;
+
+  /**
+   * @generated from field: string content_hash = 2;
+   */
+  contentHash: string;
+};
+
+/**
+ * Describes the message harpia.artifacts.v1.GetArtifactPayloadResponse.
+ * Use `create(GetArtifactPayloadResponseSchema)` to create a new message.
+ */
+export const GetArtifactPayloadResponseSchema: GenMessage<GetArtifactPayloadResponse> = /*@__PURE__*/
+  messageDesc(file_harpia_artifacts_v1_artifacts, 19);
 
 /**
  * ArtifactService manages artifact type registration and artifact metadata.
@@ -451,12 +554,28 @@ export const ArtifactService: GenService<{
     output: typeof CreateArtifactResponseSchema;
   },
   /**
+   * @generated from rpc harpia.artifacts.v1.ArtifactService.CreateArtifactWithPayload
+   */
+  createArtifactWithPayload: {
+    methodKind: "unary";
+    input: typeof CreateArtifactWithPayloadRequestSchema;
+    output: typeof CreateArtifactWithPayloadResponseSchema;
+  },
+  /**
    * @generated from rpc harpia.artifacts.v1.ArtifactService.GetArtifact
    */
   getArtifact: {
     methodKind: "unary";
     input: typeof GetArtifactRequestSchema;
     output: typeof GetArtifactResponseSchema;
+  },
+  /**
+   * @generated from rpc harpia.artifacts.v1.ArtifactService.GetArtifactPayload
+   */
+  getArtifactPayload: {
+    methodKind: "unary";
+    input: typeof GetArtifactPayloadRequestSchema;
+    output: typeof GetArtifactPayloadResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_harpia_artifacts_v1_artifacts, 0);

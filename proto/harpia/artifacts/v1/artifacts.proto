@@ -8,7 +8,9 @@ service ArtifactService {
   rpc RegisterArtifactType(RegisterArtifactTypeRequest) returns (RegisterArtifactTypeResponse);
   rpc GetArtifactType(GetArtifactTypeRequest) returns (GetArtifactTypeResponse);
   rpc CreateArtifact(CreateArtifactRequest) returns (CreateArtifactResponse);
+  rpc CreateArtifactWithPayload(CreateArtifactWithPayloadRequest) returns (CreateArtifactWithPayloadResponse);
   rpc GetArtifact(GetArtifactRequest) returns (GetArtifactResponse);
+  rpc GetArtifactPayload(GetArtifactPayloadRequest) returns (GetArtifactPayloadResponse);
 }
 
 message ArtifactType {
@@ -76,6 +78,7 @@ message RegisterArtifactTypeResponse {
 
 message GetArtifactTypeRequest {
   string artifact_type_id = 1;
+  string key = 2;
 }
 
 message GetArtifactTypeResponse {
@@ -93,6 +96,18 @@ message CreateArtifactResponse {
   Artifact artifact = 1;
 }
 
+message CreateArtifactWithPayloadRequest {
+  string tenant_id = 1;
+  string artifact_type_id = 2;
+  string artifact_type_key = 3;
+  bytes payload_json = 4;
+  optional string step_execution_id = 5;
+}
+
+message CreateArtifactWithPayloadResponse {
+  Artifact artifact = 1;
+}
+
 message GetArtifactRequest {
   string tenant_id = 1;
   string artifact_id = 2;
@@ -100,4 +115,14 @@ message GetArtifactRequest {
 
 message GetArtifactResponse {
   Artifact artifact = 1;
+}
+
+message GetArtifactPayloadRequest {
+  string tenant_id = 1;
+  string artifact_id = 2;
+}
+
+message GetArtifactPayloadResponse {
+  bytes payload_json = 1;
+  string content_hash = 2;
 }

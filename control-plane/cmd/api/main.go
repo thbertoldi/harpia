@@ -15,12 +15,14 @@ import (
 	"go.temporal.io/sdk/client"
 
 	"github.com/harpia/control-plane/gen/harpia/agents/v1/agentsv1connect"
+	"github.com/harpia/control-plane/gen/harpia/artifacts/v1/artifactsv1connect"
 	"github.com/harpia/control-plane/gen/harpia/executors/v1/executorsv1connect"
 	"github.com/harpia/control-plane/gen/harpia/feedback/v1/feedbackv1connect"
 	"github.com/harpia/control-plane/gen/harpia/identity/v1/identityv1connect"
 	"github.com/harpia/control-plane/gen/harpia/plans/v1/plansv1connect"
 	"github.com/harpia/control-plane/gen/harpia/tasks/v1/tasksv1connect"
 	"github.com/harpia/control-plane/internal/agents"
+	"github.com/harpia/control-plane/internal/artifacts"
 	"github.com/harpia/control-plane/internal/cache"
 	"github.com/harpia/control-plane/internal/config"
 	"github.com/harpia/control-plane/internal/database"
@@ -29,6 +31,7 @@ import (
 	"github.com/harpia/control-plane/internal/identity"
 	"github.com/harpia/control-plane/internal/plans"
 	"github.com/harpia/control-plane/internal/server"
+	"github.com/harpia/control-plane/internal/storage"
 	"github.com/harpia/control-plane/internal/tasks"
 	"github.com/harpia/control-plane/internal/workflow"
 )
@@ -172,6 +175,22 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 		fatal("create executor handler failed", "error", err)
 	}
 
+	artifactRepo := artifacts.NewRepository(pool)
+	garageStore, err := artifacts.NewGarageStore(artifacts.GarageConfig{
+		Endpoint:  cfg.GarageURL,
+		Bucket:    cfg.GarageBucket,
+		Region:    cfg.GarageRegion,
+		AccessKey: cfg.GarageAccessKey,
+		SecretKey: cfg.GarageSecretKey,
+	}, storage.NewTenantObjectStore(cfg.GarageBucket))
+	if err != nil {
+		fatal("create garage store failed", "error", err)
+	}
+	artifactHandler, err := artifacts.NewHandler(artifactRepo, garageStore)
+	if err != nil {
+		fatal("create artifact handler failed", "error", err)
+	}
+
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/api/v1/health", func(w http.ResponseWriter, r *http.Request) {
@@ -203,6 +222,7 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	executorsPath, executorsHandler := executorsv1connect.NewExecutorServiceHandler(executorHandler, requestContext)
 	tasksPath, tasksHandler := tasksv1connect.NewTaskServiceHandler(taskHandler, requestContext)
 	plansPath, plansHandler := plansv1connect.NewPlanServiceHandler(planHandler, requestContext)
+	artifactsPath, artifactsHandler := artifactsv1connect.NewArtifactServiceHandler(artifactHandler, requestContext)
 	identityPath, identityHandler := identityv1connect.NewIdentityServiceHandler(identity.NewIdentityHandler(), requestContext)
 	feedbackPath, feedbackHandler := feedbackv1connect.NewFeedbackServiceHandler(feedback.NewFeedbackHandler(), requestContext)
 
@@ -210,6 +230,7 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	mux.Handle(executorsPath, executorsHandler)
 	mux.Handle(tasksPath, tasksHandler)
 	mux.Handle(plansPath, plansHandler)
+	mux.Handle(artifactsPath, artifactsHandler)
 	mux.Handle(identityPath, identityHandler)
 	mux.Handle(feedbackPath, feedbackHandler)
 
