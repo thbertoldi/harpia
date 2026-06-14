@@ -18,9 +18,10 @@ import (
 type PlanHandler struct {
 	repo      *Repository
 	validator *BindingValidator
+	schedule  *ScheduleManager
 }
 
-func NewPlanHandler(repo *Repository, executors ExecutorLookup) (*PlanHandler, error) {
+func NewPlanHandler(repo *Repository, executors ExecutorLookup, schedule *ScheduleManager) (*PlanHandler, error) {
 	if repo == nil {
 		return nil, errors.New("plans: repository is required")
 	}
@@ -30,6 +31,7 @@ func NewPlanHandler(repo *Repository, executors ExecutorLookup) (*PlanHandler, e
 	return &PlanHandler{
 		repo:      repo,
 		validator: NewBindingValidator(executors),
+		schedule:  schedule,
 	}, nil
 }
 
@@ -136,6 +138,10 @@ func (h *PlanHandler) CreatePlanConfiguration(ctx context.Context, req *connect.
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
+	if err := h.syncSchedule(ctx, created); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
 	return connect.NewResponse(&plansv1.CreatePlanConfigurationResponse{
 		PlanConfiguration: configurationToProto(created),
 	}), nil
@@ -213,6 +219,10 @@ func (h *PlanHandler) UpdatePlanConfiguration(ctx context.Context, req *connect.
 
 	updated, err := h.repo.UpdateConfiguration(ctx, config)
 	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	if err := h.syncSchedule(ctx, updated); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
@@ -513,6 +523,9 @@ func (h *PlanHandler) buildConfigurationFromRequest(
 	if err != nil {
 		return nil, err
 	}
+	if err := validateScheduleForStatus(statusStr, scheduleJSON); err != nil {
+		return nil, err
+	}
 
 	return &PlanConfiguration{
 		TenantID:            tenantID,
@@ -670,6 +683,13 @@ func stepExecutionToProto(s *StepExecution) *plansv1.StepExecution {
 		CreatedAt:                    s.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:                    s.UpdatedAt.Format(time.RFC3339),
 	}
+}
+
+func (h *PlanHandler) syncSchedule(ctx context.Context, config *PlanConfiguration) error {
+	if h.schedule == nil {
+		return nil
+	}
+	return h.schedule.Sync(ctx, config)
 }
 
 func configurationStatusToString(status plansv1.PlanConfigurationStatus) (string, error) {

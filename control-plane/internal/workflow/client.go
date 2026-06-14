@@ -33,6 +33,10 @@ func (tc *TemporalClient) SignalFeedback(ctx context.Context, workflowID string,
 	return tc.client.SignalWorkflow(ctx, workflowID, runID, HumanFeedbackSignalName, signal)
 }
 
+func (tc *TemporalClient) RawClient() client.Client {
+	return tc.client
+}
+
 func (tc *TemporalClient) Close() {
 	tc.client.Close()
 }
