@@ -23,7 +23,7 @@
   });
 
   $effect(() => {
-    if (getSession()) {
+    if (!devLoginEnabled && getSession()) {
       goto(resolve("/"));
     }
   });
