@@ -15,6 +15,7 @@ import (
 	"go.temporal.io/sdk/client"
 
 	"github.com/harpia/control-plane/gen/harpia/agents/v1/agentsv1connect"
+	"github.com/harpia/control-plane/gen/harpia/executors/v1/executorsv1connect"
 	"github.com/harpia/control-plane/gen/harpia/feedback/v1/feedbackv1connect"
 	"github.com/harpia/control-plane/gen/harpia/identity/v1/identityv1connect"
 	"github.com/harpia/control-plane/gen/harpia/plans/v1/plansv1connect"
@@ -23,6 +24,7 @@ import (
 	"github.com/harpia/control-plane/internal/cache"
 	"github.com/harpia/control-plane/internal/config"
 	"github.com/harpia/control-plane/internal/database"
+	"github.com/harpia/control-plane/internal/executors"
 	"github.com/harpia/control-plane/internal/feedback"
 	"github.com/harpia/control-plane/internal/identity"
 	"github.com/harpia/control-plane/internal/plans"
@@ -128,9 +130,18 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	}
 	logger.Info("dev data ensured", "tenant_id", tenantID.String(), "user_id", userID.String())
 
+	if err := executors.EnsureCatalog(ctx, pool); err != nil {
+		fatal("seed executor catalog failed", "error", err)
+	}
+	if err := executors.EnsureDevEntitlements(ctx, pool, tenantID); err != nil {
+		fatal("seed dev executor entitlements failed", "error", err)
+	}
+	logger.Info("executor catalog and dev entitlements ensured")
+
 	taskRepo := tasks.NewRepository(pool)
 	planRepo := plans.NewRepository(pool)
 	agentRepo := agents.NewRepository(pool)
+	executorRepo := executors.NewRepository(pool)
 
 	cacheResources := setupAPICache(ctx, cfg.ValkeyURL, logger)
 	if cacheResources.client != nil {
@@ -154,6 +165,11 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	planHandler, err := plans.NewPlanHandler(planRepo)
 	if err != nil {
 		fatal("create plan handler failed", "error", err)
+	}
+
+	executorHandler, err := executors.NewHandler(executorRepo)
+	if err != nil {
+		fatal("create executor handler failed", "error", err)
 	}
 
 	mux := http.NewServeMux()
@@ -184,12 +200,14 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	requestContext := connect.WithInterceptors(interceptors...)
 
 	agentsPath, agentsHandler := agentsv1connect.NewAgentServiceHandler(agentHandler, requestContext)
+	executorsPath, executorsHandler := executorsv1connect.NewExecutorServiceHandler(executorHandler, requestContext)
 	tasksPath, tasksHandler := tasksv1connect.NewTaskServiceHandler(taskHandler, requestContext)
 	plansPath, plansHandler := plansv1connect.NewPlanServiceHandler(planHandler, requestContext)
 	identityPath, identityHandler := identityv1connect.NewIdentityServiceHandler(identity.NewIdentityHandler(), requestContext)
 	feedbackPath, feedbackHandler := feedbackv1connect.NewFeedbackServiceHandler(feedback.NewFeedbackHandler(), requestContext)
 
 	mux.Handle(agentsPath, agentsHandler)
+	mux.Handle(executorsPath, executorsHandler)
 	mux.Handle(tasksPath, tasksHandler)
 	mux.Handle(plansPath, plansHandler)
 	mux.Handle(identityPath, identityHandler)

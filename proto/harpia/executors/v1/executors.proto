@@ -1,0 +1,192 @@
+syntax = "proto3";
+
+package harpia.executors.v1;
+
+// ExecutorService manages the commercial executor catalog, tenant entitlements,
+// and tenant-scoped executable installations used by plan slot bindings.
+service ExecutorService {
+  // ListExecutorSKUs returns the global commercial catalog.
+  rpc ListExecutorSKUs(ListExecutorSKUsRequest) returns (stream ListExecutorSKUsResponse);
+
+  // GetExecutorSKU returns one catalog SKU by id or key.
+  rpc GetExecutorSKU(GetExecutorSKURequest) returns (GetExecutorSKUResponse);
+
+  // ListExecutorEntitlements returns SKUs a tenant may use.
+  rpc ListExecutorEntitlements(ListExecutorEntitlementsRequest) returns (stream ListExecutorEntitlementsResponse);
+
+  // GetExecutorEntitlement returns one tenant entitlement.
+  rpc GetExecutorEntitlement(GetExecutorEntitlementRequest) returns (GetExecutorEntitlementResponse);
+
+  // CreateExecutorEntitlement provisions manual tenant access to a SKU (MVP).
+  rpc CreateExecutorEntitlement(CreateExecutorEntitlementRequest) returns (CreateExecutorEntitlementResponse);
+
+  // ListExecutorInstallations returns tenant-scoped executable instances.
+  rpc ListExecutorInstallations(ListExecutorInstallationsRequest) returns (stream ListExecutorInstallationsResponse);
+
+  // GetExecutorInstallation returns one tenant installation.
+  rpc GetExecutorInstallation(GetExecutorInstallationRequest) returns (GetExecutorInstallationResponse);
+
+  // CreateExecutorInstallation creates a tenant-scoped executable instance.
+  rpc CreateExecutorInstallation(CreateExecutorInstallationRequest) returns (CreateExecutorInstallationResponse);
+}
+
+enum ExecutorKind {
+  EXECUTOR_KIND_UNSPECIFIED = 0;
+  EXECUTOR_KIND_INTEGRATION = 1;
+  EXECUTOR_KIND_AGENT = 2;
+}
+
+enum ConnectionStatus {
+  CONNECTION_STATUS_UNSPECIFIED = 0;
+  CONNECTION_STATUS_DISCONNECTED = 1;
+  CONNECTION_STATUS_CONNECTING = 2;
+  CONNECTION_STATUS_CONNECTED = 3;
+  CONNECTION_STATUS_ERROR = 4;
+}
+
+message ListPrice {
+  int64 price_cents = 1;
+  string currency = 2;
+}
+
+message CompatibilityMetadata {
+  repeated string input_artifact_type_keys = 1;
+  repeated string output_artifact_type_keys = 2;
+  string connection_type = 3;
+  string manifest_id = 4;
+  string manifest_version = 5;
+}
+
+message ExecutorSKU {
+  string id = 1;
+  string key = 2;
+  string display_name = 3;
+  string description = 4;
+  ExecutorKind kind = 5;
+  ListPrice list_price = 6;
+  CompatibilityMetadata compatibility = 7;
+  string created_at = 8;
+  string updated_at = 9;
+}
+
+message ExecutorEntitlement {
+  string id = 1;
+  string tenant_id = 2;
+  string executor_sku_id = 3;
+  string granted_at = 4;
+  optional string granted_by = 5;
+}
+
+message IntegrationInstallation {
+  ConnectionStatus connection_status = 1;
+  string config_json = 2;
+}
+
+message AgentInstallation {
+  string manifest_id = 1;
+  string manifest_version = 2;
+}
+
+message ExecutorInstallation {
+  string id = 1;
+  string tenant_id = 2;
+  string executor_sku_id = 3;
+  ExecutorKind kind = 4;
+  string display_name = 5;
+  bool enabled = 6;
+  string created_at = 7;
+  string updated_at = 8;
+  oneof detail {
+    IntegrationInstallation integration = 9;
+    AgentInstallation agent = 10;
+  }
+}
+
+message ListExecutorSKUsRequest {
+  optional ExecutorKind kind_filter = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListExecutorSKUsResponse {
+  repeated ExecutorSKU executor_skus = 1;
+  string next_page_token = 2;
+}
+
+message GetExecutorSKURequest {
+  oneof selector {
+    string executor_sku_id = 1;
+    string key = 2;
+  }
+}
+
+message GetExecutorSKUResponse {
+  ExecutorSKU executor_sku = 1;
+}
+
+message ListExecutorEntitlementsRequest {
+  string tenant_id = 1;
+  optional string executor_sku_id = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListExecutorEntitlementsResponse {
+  repeated ExecutorEntitlement entitlements = 1;
+  string next_page_token = 2;
+}
+
+message GetExecutorEntitlementRequest {
+  string tenant_id = 1;
+  string entitlement_id = 2;
+}
+
+message GetExecutorEntitlementResponse {
+  ExecutorEntitlement entitlement = 1;
+}
+
+message CreateExecutorEntitlementRequest {
+  string tenant_id = 1;
+  string executor_sku_id = 2;
+}
+
+message CreateExecutorEntitlementResponse {
+  ExecutorEntitlement entitlement = 1;
+}
+
+message ListExecutorInstallationsRequest {
+  string tenant_id = 1;
+  optional ExecutorKind kind_filter = 2;
+  optional string executor_sku_id = 3;
+  int32 page_size = 4;
+  string page_token = 5;
+}
+
+message ListExecutorInstallationsResponse {
+  repeated ExecutorInstallation installations = 1;
+  string next_page_token = 2;
+}
+
+message GetExecutorInstallationRequest {
+  string tenant_id = 1;
+  string installation_id = 2;
+}
+
+message GetExecutorInstallationResponse {
+  ExecutorInstallation installation = 1;
+}
+
+message CreateExecutorInstallationRequest {
+  string tenant_id = 1;
+  string executor_sku_id = 2;
+  string display_name = 3;
+  optional bool enabled = 4;
+  oneof initial_detail {
+    IntegrationInstallation integration = 5;
+    AgentInstallation agent = 6;
+  }
+}
+
+message CreateExecutorInstallationResponse {
+  ExecutorInstallation installation = 1;
+}
