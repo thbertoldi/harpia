@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Plus, Loader2, Sparkles, Bot, AlertTriangle } from "lucide-svelte";
   import { goto } from "$app/navigation";
+  import { page } from "$app/state";
   import { resolve } from "$app/paths";
   import { onDestroy } from "svelte";
   import { requireTenantId } from "$lib/auth";
@@ -20,6 +21,18 @@
 
   $effect(() => {
     fetchTasks();
+  });
+
+  $effect(() => {
+    const taskId = page.url.searchParams.get("id");
+    if (!taskId || loading || tasks.length === 0) {
+      return;
+    }
+
+    const match = tasks.find((task) => task.id === taskId);
+    if (match && selectedTask?.id !== match.id) {
+      selectTask(match);
+    }
   });
 
   async function fetchTasks() {
