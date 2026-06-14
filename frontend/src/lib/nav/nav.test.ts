@@ -8,21 +8,21 @@ import {
 
 describe("nav sections registry", () => {
   it("includes base sections for all roles", () => {
-    expect(filterNavSections("Leader")).toHaveLength(2);
-    expect(filterNavSections(undefined)).toHaveLength(2);
+    expect(filterNavSections("Leader")).toHaveLength(3);
+    expect(filterNavSections(undefined)).toHaveLength(3);
   });
 
   it("shows audit log to overseer and engineer", () => {
-    expect(filterNavSections("Overseer")).toHaveLength(3);
-    expect(filterNavSections("Engineer")).toHaveLength(3);
-    expect(filterNavSections("Leader")).toHaveLength(2);
+    expect(filterNavSections("Overseer")).toHaveLength(4);
+    expect(filterNavSections("Engineer")).toHaveLength(4);
+    expect(filterNavSections("Leader")).toHaveLength(3);
   });
 
   it("resolves labels via translate callback", () => {
     const labels = resolveNavSections("Leader", (key) => `t:${key}`).map(
       (s) => s.label,
     );
-    expect(labels).toEqual(["t:nav.tasks", "t:nav.oversee"]);
+    expect(labels).toEqual(["t:nav.tasks", "t:nav.ongoing", "t:nav.oversee"]);
   });
 });
 
@@ -43,6 +43,7 @@ describe("navSectionDefs", () => {
   it("lists audit after base sections", () => {
     expect(navSectionDefs.map((d) => d.href)).toEqual([
       "/",
+      "/tasks/ongoing",
       "/oversee",
       "/audit",
     ]);

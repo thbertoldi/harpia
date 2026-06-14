@@ -1,5 +1,6 @@
 {
   "nav.tasks": "Tasks",
+  "nav.ongoing": "Ongoing",
   "nav.oversee": "Oversee",
   "nav.audit": "Audit Log",
   "nav.logout": "Log out",
