@@ -1,12 +1,14 @@
 <script lang="ts">
-  import { AlertTriangle, Loader2, Map } from "lucide-svelte";
+  import { AlertTriangle, Loader2, Map, UserCheck } from "lucide-svelte";
   import { page } from "$app/state";
+  import { resolve } from "$app/paths";
   import {
     loadPlanTemplate,
     type PlanTemplateSource,
   } from "$lib/plans/plan-template";
   import type { PlanTemplate } from "$lib/gen/harpia/plans/v1/plans_pb";
   import { formatArtifactTypeLabel } from "$lib/plans/artifact-flow";
+  import { getAgentBackedSteps } from "$lib/plans/overseer-binding";
   import PlanDagDiagram from "$lib/components/PlanDagDiagram.svelte";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
   import { locale, translate } from "$lib/i18n";
@@ -100,6 +102,32 @@
           {loadError}
         </p>
       </div>
+    {/if}
+
+    {#if getAgentBackedSteps(template).length > 0}
+      <section class="mb-8">
+        <div
+          class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-plumage bg-obsidian-light/40 px-4 py-3"
+        >
+          <div>
+            <p class="font-heading text-sm font-semibold text-cream">
+              {translate("plans.overseer.configureLinkTitle", $locale)}
+            </p>
+            <p class="mt-1 font-body text-xs text-crown-ash">
+              {translate("plans.overseer.configureLinkDescription", $locale)}
+            </p>
+          </div>
+          <a
+            href={resolve(
+              `/plans/${page.params.templateId}/configure/overseer`,
+            )}
+            class="inline-flex items-center gap-2 rounded-md border border-talon-gold/40 bg-talon-gold/10 px-3 py-1.5 font-body text-xs text-talon-gold transition-colors hover:border-talon-gold"
+          >
+            <UserCheck class="size-3.5" />
+            {translate("plans.overseer.configureLinkAction", $locale)}
+          </a>
+        </div>
+      </section>
     {/if}
 
     <section class="mb-8">
