@@ -2,6 +2,21 @@
 {{- $svcName := include "harpia.serviceName" (dict "name" "zitadel" "root" .) }}
 {{- $postgresCredentialsSecret := .Values.postgres.credentialsSecret }}
 {{- $masterkeySecret := .Values.zitadel.masterkeySecret }}
+{{- $machinekeyPVC := printf "%s-machinekey" $svcName }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $machinekeyPVC }}
+  labels:
+    {{- include "harpia.labels" . | nindent 4 }}
+    app: {{ $svcName }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.zitadel.machinekey.storage }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -12,6 +27,8 @@ metadata:
     app: {{ $svcName }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: {{ $svcName }}
@@ -21,6 +38,10 @@ spec:
         app: {{ $svcName }}
     spec:
       enableServiceLinks: false
+      volumes:
+        - name: machinekey
+          persistentVolumeClaim:
+            claimName: {{ $machinekeyPVC }}
       containers:
         - name: zitadel
           image: {{ .Values.zitadel.image | quote }}
@@ -33,6 +54,9 @@ spec:
             - "disabled"
           ports:
             - containerPort: 8080
+          volumeMounts:
+            - name: machinekey
+              mountPath: /machinekey
           envFrom:
             - secretRef:
                 name: {{ $masterkeySecret.name | quote }}
@@ -67,22 +91,36 @@ spec:
               value: "disable"
             - name: ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE
               value: "disable"
-            - name: ZITADEL_EXTERNALSECURE
-              value: "false"
             - name: ZITADEL_EXTERNALDOMAIN
               value: {{ .Values.zitadel.externalDomain | quote }}
             - name: ZITADEL_EXTERNALPORT
               value: {{ .Values.zitadel.externalPort | quote }}
+            - name: ZITADEL_EXTERNALSECURE
+              value: {{ .Values.zitadel.externalSecure | quote }}
             - name: ZITADEL_TLS_ENABLED
-              value: "false"
+              value: {{ .Values.zitadel.tlsEnabled | quote }}
+            - name: ZITADEL_FIRSTINSTANCE_PATPATH
+              value: /machinekey/zitadel-admin-sa.pat
             - name: ZITADEL_FIRSTINSTANCE_ORG_NAME
-              value: "Harpia"
-            - name: ZITADEL_FIRSTINSTANCE_HUMAN_EMAIL
-              value: {{ .Values.zitadel.adminEmail | quote }}
-            - name: ZITADEL_FIRSTINSTANCE_HUMAN_USERNAME
-              value: "admin"
-            - name: ZITADEL_FIRSTINSTANCE_HUMAN_PASSWORD
+              value: {{ .Values.zitadel.orgName | quote }}
+            - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME
+              value: {{ .Values.zitadel.adminUsername | quote }}
+            - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD
               value: {{ .Values.zitadel.adminPassword | quote }}
+            - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_ADDRESS
+              value: {{ .Values.zitadel.adminEmail | quote }}
+            - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_VERIFIED
+              value: {{ .Values.zitadel.adminEmailVerified | quote }}
+            - name: ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_USERNAME
+              value: {{ .Values.zitadel.machineUser.username | quote }}
+            - name: ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_NAME
+              value: {{ .Values.zitadel.machineUser.name | quote }}
+            - name: ZITADEL_FIRSTINSTANCE_ORG_MACHINE_PAT_EXPIRATIONDATE
+              value: {{ .Values.zitadel.machineUser.patExpirationDate | quote }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
 ---
 apiVersion: v1
 kind: Service
