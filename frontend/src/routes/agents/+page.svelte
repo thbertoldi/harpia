@@ -1,14 +1,6 @@
 <script lang="ts">
-  import {
-    AlertTriangle,
-    Bot,
-    Loader2,
-    Shield,
-  } from "lucide-svelte";
-  import {
-    loadAgentCatalog,
-    type AgentCatalogEntry,
-  } from "$lib/agent-catalog";
+  import { AlertTriangle, Bot, Loader2, Shield } from "lucide-svelte";
+  import { loadAgentCatalog, type AgentCatalogEntry } from "$lib/agent-catalog";
   import AgentCatalogDetail from "$lib/components/AgentCatalogDetail.svelte";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
 

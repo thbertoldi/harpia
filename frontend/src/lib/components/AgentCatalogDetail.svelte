@@ -78,7 +78,9 @@
       <HarpyHeading tag="h2" class="truncate text-xl text-cream">
         {entry.agentType.displayName || entry.agentType.name}
       </HarpyHeading>
-      <p class="mt-0.5 font-mono text-[10px] tracking-wider text-crown-ash-dark">
+      <p
+        class="mt-0.5 font-mono text-[10px] tracking-wider text-crown-ash-dark"
+      >
         {entry.agentType.id}
       </p>
     </div>
@@ -162,15 +164,15 @@
         >
           Manifest
         </h3>
-        <a
-          href={entry.yamlSourceUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          class="inline-flex items-center gap-1 font-body text-xs text-talon-gold transition-colors hover:text-talon-gold-bright"
+        <button
+          type="button"
+          onclick={() =>
+            window.open(entry.yamlSourceUrl, "_blank", "noopener,noreferrer")}
+          class="inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 font-body text-xs text-talon-gold transition-colors hover:text-talon-gold-bright"
         >
           YAML source
           <ExternalLink class="size-3" />
-        </a>
+        </button>
       </div>
       <pre
         class="max-h-64 overflow-auto rounded-lg border border-plumage bg-obsidian p-3 font-mono text-[11px] leading-relaxed text-crown-ash">{JSON.stringify(
@@ -235,7 +237,8 @@
             class="flex items-center justify-between rounded-md border border-plumage/60 px-3 py-2"
           >
             <div>
-              <span class="font-mono text-sm text-cream">{version.version}</span>
+              <span class="font-mono text-sm text-cream">{version.version}</span
+              >
               <span
                 class="ml-2 font-mono text-[10px] uppercase {versionStatusClass(
                   version.status,
@@ -265,8 +268,7 @@
               class="flex items-center justify-between rounded-md border border-plumage/60 px-3 py-2"
             >
               <div>
-                <span class="font-mono text-xs text-cream"
-                  >{invocation.id}</span
+                <span class="font-mono text-xs text-cream">{invocation.id}</span
                 >
                 <span class="ml-2 font-mono text-[10px] text-crown-ash-dark"
                   >task {invocation.taskId.slice(0, 8)}</span
