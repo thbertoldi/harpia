@@ -44,6 +44,7 @@ See [ADR-006](docs/adr/ADR-006-domain-driven-design.md).
 | [ADR-008](docs/adr/ADR-008-tenant-safe-generic-infra-boundaries.md) | Tenant-safe generic infrastructure boundaries |
 | [ADR-009](docs/adr/ADR-009-langgraph-state-semantics.md) | LangGraph state semantics |
 | [ADR-010](docs/adr/ADR-010-budget-policy-service.md) | Budget Policy Service (Agent Orchestration capability) |
+| [ADR-011](docs/adr/ADR-011-mcp-capability-gating.md) | MCP capability gating + out-of-process workers |
 | [ADR-013](docs/adr/ADR-013-connectrpc-python-adoption.md) | ConnectRPC Python adoption (`agent-runtime/`) |
 
 Workflow guide: [docs/WORKFLOW.md](docs/WORKFLOW.md)
