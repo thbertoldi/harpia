@@ -1,4 +1,10 @@
-import { Activity, Eye, LayoutDashboard, Plug } from "lucide-svelte";
+import {
+  Activity,
+  Eye,
+  LayoutDashboard,
+  Plug,
+  ScrollText,
+} from "lucide-svelte";
 import type { HarpiaRole, NavSectionDef, ResolvedNavSection } from "./types";
 
 /**
@@ -29,6 +35,12 @@ export const navSectionDefs: NavSectionDef[] = [
     href: "/integrations",
     icon: Plug,
     visibleTo: ["Engineer"],
+  },
+  {
+    i18nKey: "nav.audit",
+    href: "/audit",
+    icon: ScrollText,
+    visibleTo: ["Overseer", "Engineer"],
   },
 ];
 
