@@ -37,6 +37,7 @@ kubectl apply -f deploy/dev/kind/postgres.yaml
 kubectl apply -f deploy/dev/kind/
 kubectl wait --for=condition=Ready pod -l app=zitadel --timeout=120s
 kubectl wait --for=condition=Available deployment/openfga --timeout=120s
+kubectl apply -f deploy/dev/kind/zitadel-branding-configmap.yaml
 kubectl apply -f deploy/dev/kind/zitadel-init.yaml
 kubectl logs job/zitadel-register-client -f
 ./scripts/sync-oidc-config.sh
@@ -142,6 +143,51 @@ kubectl logs job/zitadel-register-client
 
 Tilt syncs the generated `Client ID` to `frontend/.env.local`. Outside Tilt, run
 `./scripts/sync-oidc-config.sh` after the Job publishes `ConfigMap/harpia-oidc-config`.
+
+### Harpia Branding (login + console theme)
+
+The `zitadel-init.yaml` Job also applies Harpia branding after OIDC registration:
+
+1. Uploads `logo.svg` and `icon.svg` from `ConfigMap/zitadel-branding` via the Zitadel Assets API
+2. Sets the instance label policy palette (primary `#C8920F`, background `#121318`, text `#F5F2EB`)
+3. Activates the label policy so `/ui/login` and `/ui/console` inherit the theme
+
+Source assets and the apply script live in `deploy/dev/kind/zitadel-branding/`. The ConfigMap
+manifest is generated from those files:
+
+```bash
+kubectl create configmap zitadel-branding --dry-run=client -o yaml \
+  --from-file=logo.svg=deploy/dev/kind/zitadel-branding/logo.svg \
+  --from-file=icon.svg=deploy/dev/kind/zitadel-branding/icon.svg \
+  --from-file=apply-branding.sh=deploy/dev/kind/zitadel-branding/apply-branding.sh \
+  > deploy/dev/kind/zitadel-branding-configmap.yaml
+```
+
+No secrets are stored in the repo. The Job reads the admin PAT from the `zitadel-machinekey` PVC
+at `/machinekey/zitadel-admin-sa.pat` (same volume Zitadel writes during first-instance bootstrap).
+
+Check branding in Job logs:
+
+```bash
+kubectl logs job/zitadel-register-client | grep -E '\[branding\]|\[6/8\]'
+```
+
+#### Verify locally
+
+With Zitadel port-forwarded to `localhost:8085`:
+
+1. Open http://localhost:8085/ui/login — background should be obsidian (`#121318`), accents gold (`#C8920F`), Harpia wordmark visible
+2. Open http://localhost:8085/ui/console — same palette and logo after signing in as `admin@harpia.local`
+3. From Harpia frontend http://localhost:5173/login, click **Sign in with Zitadel** — redirected login should match Harpia colors
+
+Re-apply branding without re-running the full init Job (e.g. after editing palette assets):
+
+```bash
+mise run apply-zitadel-branding
+# or: ./scripts/apply-zitadel-branding.sh
+```
+
+The helper script reads the PAT from `deployment/zitadel` when `PAT` / `PAT_FILE` are unset.
 
 #### Manual Registration
 
