@@ -1,4 +1,4 @@
-import { Bot, Eye, LayoutDashboard } from "lucide-svelte";
+import { Activity, Bot, Eye, LayoutDashboard } from "lucide-svelte";
 import type { HarpiaRole, NavSectionDef, ResolvedNavSection } from "./types";
 
 /**
@@ -10,6 +10,12 @@ export const navSectionDefs: NavSectionDef[] = [
     i18nKey: "nav.tasks",
     href: "/",
     icon: LayoutDashboard,
+    visibleTo: "all",
+  },
+  {
+    i18nKey: "nav.ongoing",
+    href: "/tasks/ongoing",
+    icon: Activity,
     visibleTo: "all",
   },
   {
