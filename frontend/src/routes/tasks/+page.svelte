@@ -103,7 +103,10 @@
     try {
       const d = new Date(dateStr);
       const localeTag = $locale === "pt-BR" ? "pt-BR" : "en-US";
-      return d.toLocaleDateString(localeTag, { month: "short", day: "numeric" });
+      return d.toLocaleDateString(localeTag, {
+        month: "short",
+        day: "numeric",
+      });
     } catch {
       return dateStr;
     }
@@ -149,7 +152,9 @@
       <div class="flex flex-1 items-center justify-center">
         <div class="flex items-center gap-2 text-crown-ash">
           <Loader2 class="size-5 animate-spin" />
-          <span class="font-body text-sm">{translate("tasks.loading", $locale)}</span>
+          <span class="font-body text-sm"
+            >{translate("tasks.loading", $locale)}</span
+          >
         </div>
       </div>
     {:else if loadError}

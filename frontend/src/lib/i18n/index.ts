@@ -2,11 +2,7 @@ import { get, writable } from "svelte/store";
 import en from "./en.json";
 import ptBR from "./pt-BR.json";
 import { detectLocale, isSupportedLocale } from "./detect";
-import {
-  LOCALE_STORAGE_KEY,
-  SUPPORTED_LOCALES,
-  type Locale,
-} from "./types";
+import { LOCALE_STORAGE_KEY, type Locale } from "./types";
 
 export { detectLocale, isSupportedLocale, normalizeLocaleTag } from "./detect";
 export { LOCALE_STORAGE_KEY, SUPPORTED_LOCALES, type Locale } from "./types";
