@@ -60,6 +60,18 @@ func runWorker(ctx context.Context, cfg *config.Config) {
 	if cfg.TemporalHost == "" {
 		fatal("HARPIA_ROLE=worker requires TEMPORAL_HOST to be set")
 	}
+	if cfg.DatabaseURL == "" {
+		fatal("HARPIA_ROLE=worker requires DATABASE_URL to be set")
+	}
+
+	pool, err := database.NewPool(ctx, cfg.DatabaseURL)
+	if err != nil {
+		fatal("database connection failed", "error", err)
+	}
+	defer pool.Close()
+
+	planRepo := plans.NewRepository(pool)
+	planActivities := &workflow.PlanActivities{Creator: planRepo}
 
 	c, err := client.Dial(client.Options{HostPort: cfg.TemporalHost})
 	if err != nil {
@@ -67,7 +79,7 @@ func runWorker(ctx context.Context, cfg *config.Config) {
 	}
 	defer c.Close()
 
-	if err := workflow.StartWorker(ctx, c, workflow.TaskQueueName); err != nil {
+	if err := workflow.StartWorker(ctx, c, workflow.TaskQueueName, planActivities); err != nil {
 		fatal("temporal worker failed", "error", err)
 	}
 }
@@ -165,7 +177,8 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 		fatal("create agent handler failed", "error", err)
 	}
 
-	planHandler, err := plans.NewPlanHandler(planRepo, executorRepo)
+	scheduleManager := plans.NewScheduleManager(temporalClient, logger)
+	planHandler, err := plans.NewPlanHandler(planRepo, executorRepo, scheduleManager)
 	if err != nil {
 		fatal("create plan handler failed", "error", err)
 	}
