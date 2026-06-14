@@ -12,9 +12,17 @@ describe("nav sections registry", () => {
     expect(filterNavSections(undefined)).toHaveLength(3);
   });
 
+  it("shows integrations to engineers only", () => {
+    expect(filterNavSections("Engineer")).toHaveLength(5);
+    expect(
+      filterNavSections("Engineer").some((d) => d.href === "/integrations"),
+    ).toBe(true);
+    expect(filterNavSections("Leader")).toHaveLength(3);
+  });
+
   it("shows audit log to overseer and engineer", () => {
     expect(filterNavSections("Overseer")).toHaveLength(4);
-    expect(filterNavSections("Engineer")).toHaveLength(4);
+    expect(filterNavSections("Engineer")).toHaveLength(5);
     expect(filterNavSections("Leader")).toHaveLength(3);
   });
 
@@ -40,11 +48,12 @@ describe("isNavSectionActive", () => {
 });
 
 describe("navSectionDefs", () => {
-  it("lists audit after base sections", () => {
+  it("lists role-gated sections after base sections", () => {
     expect(navSectionDefs.map((d) => d.href)).toEqual([
       "/",
       "/tasks/ongoing",
       "/oversee",
+      "/integrations",
       "/audit",
     ]);
   });
