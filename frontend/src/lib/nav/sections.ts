@@ -1,5 +1,6 @@
 import {
   Activity,
+  BookOpen,
   Bot,
   Eye,
   LayoutDashboard,
@@ -29,6 +30,12 @@ export const navSectionDefs: NavSectionDef[] = [
     i18nKey: "nav.oversee",
     href: "/oversee",
     icon: Eye,
+    visibleTo: "all",
+  },
+  {
+    i18nKey: "nav.plans",
+    href: "/plans",
+    icon: BookOpen,
     visibleTo: "all",
   },
   {
