@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: zitadel-branding
+data:
+  logo.svg: "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 72\" role=\"\
+    img\" aria-label=\"Harpia\">\n  <rect width=\"320\" height=\"72\" fill=\"none\"\
+    />\n  <text x=\"160\" y=\"52\" text-anchor=\"middle\"\n        font-family=\"\
+    Georgia, 'Times New Roman', serif\"\n        font-size=\"48\" font-weight=\"700\"\
+    \ letter-spacing=\"1\"\n        fill=\"#C8920F\">Harpia</text>\n</svg>\n"
+  icon.svg: "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\" role=\"\
+    img\" aria-label=\"Harpia\">\n  <rect width=\"64\" height=\"64\" rx=\"12\" fill=\"\
+    #121318\"/>\n  <text x=\"32\" y=\"44\" text-anchor=\"middle\"\n        font-family=\"\
+    Georgia, 'Times New Roman', serif\"\n        font-size=\"34\" font-weight=\"700\"\
+    \n        fill=\"#C8920F\">H</text>\n</svg>\n"
+  apply-branding.sh: "#!/bin/sh\n# Apply Harpia branding to a Zitadel instance via\
+    \ Admin + Assets APIs.\n# Idempotent: safe to re-run after asset or palette changes.\n\
+    #\n# Required env:\n#   PAT          — IAM_OWNER personal access token\n# Optional\
+    \ env:\n#   ZITADEL_URL  — base URL (default http://zitadel:8080)\n#   ZITADEL_HOST\
+    \ — Host header for external domain (default localhost:8085)\n#   BRANDING_DIR\
+    \ — directory with logo.svg and icon.svg (default /branding)\nset -eu\n\nZITADEL_URL=\"\
+    ${ZITADEL_URL:-http://zitadel:8080}\"\nZITADEL_HOST=\"${ZITADEL_HOST:-localhost:8085}\"\
+    \nBRANDING_DIR=\"${BRANDING_DIR:-/branding}\"\n\nPRIMARY_COLOR=\"#C8920F\"\nBACKGROUND_COLOR=\"\
+    #121318\"\nFONT_COLOR=\"#F5F2EB\"\nWARN_COLOR=\"#CD3D56\"\n\nif [ -z \"${PAT:-}\"\
+    \ ]; then\n  echo \"ERROR: PAT is required\" >&2\n  exit 1\nfi\n\nLOGO_FILE=\"\
+    $BRANDING_DIR/logo.svg\"\nICON_FILE=\"$BRANDING_DIR/icon.svg\"\nfor asset in \"\
+    $LOGO_FILE\" \"$ICON_FILE\"; do\n  if [ ! -f \"$asset\" ]; then\n    echo \"ERROR:\
+    \ branding asset not found: $asset\" >&2\n    exit 1\n  fi\ndone\n\napi_json()\
+    \ {\n  method=$1\n  path=$2\n  body=${3:-}\n  if [ -n \"$body\" ]; then\n    curl\
+    \ -sfS -X \"$method\" \"$ZITADEL_URL$path\" \\\n      -H \"Authorization: Bearer\
+    \ $PAT\" \\\n      -H \"Content-Type: application/json\" \\\n      -H \"Host:\
+    \ $ZITADEL_HOST\" \\\n      -d \"$body\"\n  else\n    curl -sfS -X \"$method\"\
+    \ \"$ZITADEL_URL$path\" \\\n      -H \"Authorization: Bearer $PAT\" \\\n     \
+    \ -H \"Host: $ZITADEL_HOST\"\n  fi\n}\n\nupload_instance_asset() {\n  endpoint=$1\n\
+    \  file=$2\n  label=$3\n  echo \"  uploading $label...\"\n  status=$(curl -sS\
+    \ -o /tmp/zitadel-asset-response.txt -w \"%{http_code}\" \\\n    -X POST \"$ZITADEL_URL/assets/v1/instance/policy/label/$endpoint\"\
+    \ \\\n    -H \"Authorization: Bearer $PAT\" \\\n    -H \"Host: $ZITADEL_HOST\"\
+    \ \\\n    -F \"file=@$file\" || true)\n  case \"$status\" in\n    200|201|204)\n\
+    \      echo \"  $label uploaded (HTTP $status)\"\n      ;;\n    *)\n      echo\
+    \ \"ERROR: $label upload failed with HTTP $status\" >&2\n      cat /tmp/zitadel-asset-response.txt\
+    \ >&2 || true\n      exit 1\n      ;;\n  esac\n}\n\nLABEL_POLICY_BODY=$(cat <<EOF\n\
+    {\n  \"primaryColor\": \"$PRIMARY_COLOR\",\n  \"backgroundColor\": \"$BACKGROUND_COLOR\"\
+    ,\n  \"fontColor\": \"$FONT_COLOR\",\n  \"warnColor\": \"$WARN_COLOR\",\n  \"\
+    primaryColorDark\": \"$PRIMARY_COLOR\",\n  \"backgroundColorDark\": \"$BACKGROUND_COLOR\"\
+    ,\n  \"fontColorDark\": \"$FONT_COLOR\",\n  \"warnColorDark\": \"$WARN_COLOR\"\
+    ,\n  \"hideLoginNameSuffix\": true,\n  \"disableWatermark\": true,\n  \"themeMode\"\
+    : \"THEME_MODE_DARK\"\n}\nEOF\n)\n\necho \"[branding] Uploading Harpia assets\
+    \ to instance label policy...\"\nupload_instance_asset \"logo\" \"$LOGO_FILE\"\
+    \ \"logo\"\nupload_instance_asset \"logo/dark\" \"$LOGO_FILE\" \"logo (dark)\"\
+    \nupload_instance_asset \"icon\" \"$ICON_FILE\" \"icon\"\nupload_instance_asset\
+    \ \"icon/dark\" \"$ICON_FILE\" \"icon (dark)\"\n\necho \"[branding] Updating instance\
+    \ label policy palette...\"\napi_json PUT /admin/v1/policies/label \"$LABEL_POLICY_BODY\"\
+    \ >/dev/null\necho \"  label policy updated\"\n\necho \"[branding] Activating\
+    \ instance label policy...\"\napi_json POST /admin/v1/policies/label/_activate\
+    \ '{}' >/dev/null\necho \"  label policy activated\"\n\nPOLICY_CHECK=$(api_json\
+    \ GET /admin/v1/policies/label)\nif ! printf '%s' \"$POLICY_CHECK\" | grep -Fq\
+    \ \"$PRIMARY_COLOR\"; then\n  echo \"ERROR: label policy verification failed —\
+    \ primary color not present\" >&2\n  exit 1\nfi\nif ! printf '%s' \"$POLICY_CHECK\"\
+    \ | grep -Fq \"$BACKGROUND_COLOR\"; then\n  echo \"ERROR: label policy verification\
+    \ failed — background color not present\" >&2\n  exit 1\nfi\n\necho \"[branding]\
+    \ Harpia theme applied (primary=$PRIMARY_COLOR background=$BACKGROUND_COLOR text=$FONT_COLOR)\"\
+    \n"

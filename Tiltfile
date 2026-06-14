@@ -38,6 +38,7 @@ k8s_yaml([
     'deploy/dev/kind/valkey.yaml',
     'deploy/dev/kind/garage.yaml',
     'deploy/dev/kind/zitadel.yaml',
+    'deploy/dev/kind/zitadel-branding-configmap.yaml',
     'deploy/dev/kind/zitadel-init.yaml',
     'deploy/dev/kind/openfga.yaml',
     'deploy/dev/kind/openfga-bootstrap.yaml',

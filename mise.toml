@@ -84,6 +84,10 @@ run = "cd proto && buf lint"
 description = "Check for breaking changes in protobuf schemas"
 run = "cd proto && buf breaking --against '.git#branch=trunk'"
 
+[tasks.apply-zitadel-branding]
+description = "Apply Harpia branding to a running Zitadel dev instance"
+run = "./scripts/apply-zitadel-branding.sh"
+
 [tasks.dev]
 description = "Start dev environment (Tilt: compose infra + image builds)"
 run = "tilt up"

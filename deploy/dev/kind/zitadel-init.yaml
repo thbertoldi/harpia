@@ -1,9 +1,11 @@
-# Harpia Dev — Zitadel post-init: register Harpia Web OIDC application.
+# Harpia Dev — Zitadel post-init: register Harpia Web OIDC application and apply branding.
 #
 # Reads the admin PAT written by Zitadel's first-instance bootstrap (see zitadel.yaml),
 # waits for OIDC discovery to come up, then calls the Management API to create:
 #   - Project "Harpia"
 #   - OIDC App "Harpia Web" (PKCE, no client secret, redirect localhost:5173)
+# After OIDC registration, uploads Harpia logo/icon assets and applies the instance
+# label policy (palette + activation) so /ui/login and /ui/console match Harpia.
 #
 # App type: OIDC_APP_TYPE_NATIVE (not USER_AGENT). The SPA runs in a browser but
 # dev redirect URIs use http://localhost — loopback HTTP is OIDC-compliant for
@@ -54,12 +56,19 @@ spec:
         - name: machinekey
           persistentVolumeClaim:
             claimName: zitadel-machinekey
+        - name: branding
+          configMap:
+            name: zitadel-branding
+            defaultMode: 0555
       containers:
         - name: register
           image: alpine/k8s:1.31.0
           volumeMounts:
             - name: machinekey
               mountPath: /machinekey
+              readOnly: true
+            - name: branding
+              mountPath: /branding
               readOnly: true
           command: ["/bin/sh", "-eu", "-c"]
           args:
@@ -69,7 +78,7 @@ spec:
               REDIRECT_URI="http://localhost:5173/auth/callback"
               LOGOUT_URI="http://localhost:5173"
 
-              echo "[1/5] Waiting for PAT file..."
+              echo "[1/8] Waiting for PAT file..."
               for i in $(seq 1 120); do
                 [ -s "$PAT_FILE" ] && break
                 sleep 2
@@ -78,7 +87,7 @@ spec:
               PAT=$(cat "$PAT_FILE")
               echo "  PAT loaded (len=${#PAT})"
 
-              echo "[2/5] Waiting for Zitadel OIDC discovery..."
+              echo "[2/8] Waiting for Zitadel OIDC discovery..."
               for i in $(seq 1 120); do
                 curl -sf -H "Host: localhost:8085" "$ZITADEL_URL/.well-known/openid-configuration" >/dev/null 2>&1 && break
                 sleep 2
@@ -138,7 +147,7 @@ spec:
                 require_response_contains "$resp" "OIDC_AUTH_METHOD_TYPE_NONE" "$context"
               }
 
-              echo "[3/5] Creating project 'Harpia' (idempotent)..."
+              echo "[3/8] Creating project 'Harpia' (idempotent)..."
               EXISTING=$(api POST /management/v1/projects/_search '{"queries":[{"nameQuery":{"name":"Harpia","method":"TEXT_QUERY_METHOD_EQUALS"}}]}')
               PROJECT_ID=$(echo "$EXISTING" | grep -oE '"id":"[0-9]+"' | head -1 | sed 's/.*"\([0-9]*\)"$/\1/')
               if [ -z "$PROJECT_ID" ]; then
@@ -149,7 +158,7 @@ spec:
               [ -n "$PROJECT_ID" ] || { echo "ERROR: could not resolve project id"; exit 1; }
               echo "  project_id=$PROJECT_ID"
 
-              echo "[4/5] Creating OIDC app 'Harpia Web' (idempotent)..."
+              echo "[4/8] Creating OIDC app 'Harpia Web' (idempotent)..."
               OIDC_CONFIG='{
                 "redirectUris":["'"$REDIRECT_URI"'"],
                 "responseTypes":["OIDC_RESPONSE_TYPE_CODE"],
@@ -206,7 +215,7 @@ spec:
               [ -n "$CLIENT_ID" ] || { echo "ERROR: could not resolve clientId"; exit 1; }
               echo "  app_id=$APP_ID client_id=$CLIENT_ID"
 
-              echo "[5/5] Publishing client_id to ConfigMap 'harpia-oidc-config'..."
+              echo "[5/8] Publishing client_id to ConfigMap 'harpia-oidc-config'..."
               kubectl create configmap harpia-oidc-config \
                 --from-literal=clientId="$CLIENT_ID" \
                 --from-literal=issuer="http://localhost:8085" \
@@ -214,10 +223,18 @@ spec:
                 --from-literal=appId="$APP_ID" \
                 --dry-run=client -o yaml | kubectl apply -f -
 
+              echo "[6/8] Applying Harpia branding (assets + label policy)..."
+              export PAT
+              export BRANDING_DIR=/branding
+              /branding/apply-branding.sh
+
               echo ""
               echo "========================================"
-              echo "OIDC client registered."
+              echo "OIDC client registered and branding applied."
               echo "  clientId = $CLIENT_ID"
               echo "  issuer   = http://localhost:8085"
+              echo "  theme    = primary #C8920F, background #121318, text #F5F2EB"
               echo "Tilt oidc-sync local_resource writes frontend/.env.local automatically."
+              echo "Verify login UI: http://localhost:8085/ui/login"
+              echo "Verify console:  http://localhost:8085/ui/console"
               echo "========================================"
