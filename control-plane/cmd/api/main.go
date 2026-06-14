@@ -165,7 +165,7 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 		fatal("create agent handler failed", "error", err)
 	}
 
-	planHandler, err := plans.NewPlanHandler(planRepo)
+	planHandler, err := plans.NewPlanHandler(planRepo, executorRepo)
 	if err != nil {
 		fatal("create plan handler failed", "error", err)
 	}

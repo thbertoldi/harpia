@@ -16,14 +16,21 @@ import (
 )
 
 type PlanHandler struct {
-	repo *Repository
+	repo      *Repository
+	validator *BindingValidator
 }
 
-func NewPlanHandler(repo *Repository) (*PlanHandler, error) {
+func NewPlanHandler(repo *Repository, executors ExecutorLookup) (*PlanHandler, error) {
 	if repo == nil {
 		return nil, errors.New("plans: repository is required")
 	}
-	return &PlanHandler{repo: repo}, nil
+	if executors == nil {
+		return nil, errors.New("plans: executor lookup is required")
+	}
+	return &PlanHandler{
+		repo:      repo,
+		validator: NewBindingValidator(executors),
+	}, nil
 }
 
 func (h *PlanHandler) GetPlanTemplate(ctx context.Context, req *connect.Request[plansv1.GetPlanTemplateRequest]) (*connect.Response[plansv1.GetPlanTemplateResponse], error) {
@@ -113,6 +120,10 @@ func (h *PlanHandler) CreatePlanConfiguration(ctx context.Context, req *connect.
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("plan template not found: %w", err))
 	}
 
+	if err := h.validator.ValidateSlotBindings(ctx, tenantID, template, req.Msg.Status, req.Msg.SlotBindings); err != nil {
+		return nil, connectErrorFromBinding(err)
+	}
+
 	config, err := h.buildConfigurationFromRequest(tenantID, template, req.Msg.WorkspaceId, req.Msg.Status,
 		req.Msg.SeedArtifacts, req.Msg.SlotBindings, req.Msg.OverseerBindings,
 		req.Msg.BehaviorPolicies, req.Msg.Schedule)
@@ -183,6 +194,10 @@ func (h *PlanHandler) UpdatePlanConfiguration(ctx context.Context, req *connect.
 	}
 	if !existing.WorkspaceID.Valid {
 		updatedInput.WorkspaceId = ""
+	}
+
+	if err := h.validator.ValidateSlotBindings(ctx, tenantID, template, updatedInput.Status, updatedInput.SlotBindings); err != nil {
+		return nil, connectErrorFromBinding(err)
 	}
 
 	config, err := h.buildConfigurationFromRequest(tenantID, template, updatedInput.WorkspaceId, updatedInput.Status,
@@ -279,6 +294,15 @@ func (h *PlanHandler) CreatePlanExecution(ctx context.Context, req *connect.Requ
 	config, err := h.repo.GetConfiguration(ctx, tenantID, configID)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, err)
+	}
+
+	template, err := h.repo.GetTemplateByID(ctx, config.PlanTemplateID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	if err := h.validator.ValidateConfigurationForExecution(ctx, tenantID, template, config); err != nil {
+		return nil, connectErrorFromBinding(err)
 	}
 
 	snapshot, err := json.Marshal(configurationToProto(config))
