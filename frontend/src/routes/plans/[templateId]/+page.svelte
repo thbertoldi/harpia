@@ -4,6 +4,7 @@
     Loader2,
     Map,
     Receipt,
+    Settings2,
     UserCheck,
   } from "lucide-svelte";
   import { page } from "$app/state";
@@ -98,6 +99,13 @@
             ? translate("plans.detail.liveApi", $locale)
             : translate("plans.detail.mockData", $locale)}
         </span>
+        <a
+          href={resolve(`/plans/${page.params.templateId}/configure/policies`)}
+          class="inline-flex items-center gap-2 rounded-md border border-talon-gold/60 bg-talon-gold/10 px-3 py-1.5 font-body text-xs text-talon-gold transition-colors hover:bg-talon-gold/20"
+        >
+          <Settings2 class="size-3.5" />
+          {translate("plans.detail.configurePolicies", $locale)}
+        </a>
         <a
           href={resolve(`/plans/${page.params.templateId}/configure/summary`)}
           class="inline-flex items-center gap-1.5 rounded-md border border-plumage px-3 py-1.5 font-body text-xs text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
