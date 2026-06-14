@@ -59,7 +59,7 @@
   }
 
   function openTask(task: Task) {
-    goto(`${resolve("/tasks")}?id=${encodeURIComponent(task.id)}`);
+    goto(resolve(`/tasks?id=${encodeURIComponent(task.id)}`));
   }
 
   function emptyMessage(sectionId: OngoingSectionId): string {
@@ -147,13 +147,13 @@
         <section
           class="flex min-h-[280px] flex-col rounded-lg border border-plumage bg-obsidian-light/20"
         >
-          <header
-            class="border-b border-plumage/60 px-4 py-3"
-          >
+          <header class="border-b border-plumage/60 px-4 py-3">
             <h2 class="font-heading text-sm font-semibold text-cream">
               {ONGOING_SECTION_LABELS[sectionId]}
             </h2>
-            <p class="mt-0.5 font-mono text-[10px] tracking-wider text-crown-ash uppercase">
+            <p
+              class="mt-0.5 font-mono text-[10px] tracking-wider text-crown-ash uppercase"
+            >
               {sections[sectionId].length} task{sections[sectionId].length === 1
                 ? ""
                 : "s"}
@@ -162,12 +162,14 @@
 
           <div class="flex-1 space-y-2 overflow-y-auto p-3">
             {#if sections[sectionId].length === 0}
-              <p class="px-1 py-6 text-center font-body text-xs text-crown-ash-dark">
+              <p
+                class="px-1 py-6 text-center font-body text-xs text-crown-ash-dark"
+              >
                 {emptyMessage(sectionId)}
               </p>
             {:else}
               {#each sections[sectionId] as task (task.id)}
-                <OngoingTaskCard task={task} onclick={() => openTask(task)} />
+                <OngoingTaskCard {task} onclick={() => openTask(task)} />
               {/each}
             {/if}
           </div>

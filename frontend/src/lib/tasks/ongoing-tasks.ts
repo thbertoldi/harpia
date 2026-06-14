@@ -1,9 +1,4 @@
-import {
-  SubtaskStatus,
-  TaskStatus,
-  type Subtask,
-  type Task,
-} from "$lib/rpc";
+import { SubtaskStatus, TaskStatus, type Subtask, type Task } from "$lib/rpc";
 
 export type OngoingSectionId =
   | "planning"

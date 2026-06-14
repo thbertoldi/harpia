@@ -38,9 +38,9 @@ function makeTask(overrides: Partial<Task> & { id: string }): Task {
 
 describe("isOngoingTask", () => {
   it("includes active lifecycle statuses", () => {
-    expect(isOngoingTask(makeTask({ id: "1", status: TaskStatus.PLANNING }))).toBe(
-      true,
-    );
+    expect(
+      isOngoingTask(makeTask({ id: "1", status: TaskStatus.PLANNING })),
+    ).toBe(true);
     expect(
       isOngoingTask(makeTask({ id: "2", status: TaskStatus.IN_PROGRESS })),
     ).toBe(true);
@@ -52,15 +52,15 @@ describe("isOngoingTask", () => {
   });
 
   it("excludes terminal and pending tasks", () => {
-    expect(isOngoingTask(makeTask({ id: "4", status: TaskStatus.PENDING }))).toBe(
-      false,
-    );
+    expect(
+      isOngoingTask(makeTask({ id: "4", status: TaskStatus.PENDING })),
+    ).toBe(false);
     expect(
       isOngoingTask(makeTask({ id: "5", status: TaskStatus.COMPLETED })),
     ).toBe(false);
-    expect(isOngoingTask(makeTask({ id: "6", status: TaskStatus.FAILED }))).toBe(
-      false,
-    );
+    expect(
+      isOngoingTask(makeTask({ id: "6", status: TaskStatus.FAILED })),
+    ).toBe(false);
     expect(
       isOngoingTask(makeTask({ id: "7", status: TaskStatus.CANCELLED })),
     ).toBe(false);
@@ -145,7 +145,9 @@ describe("groupOngoingTasks", () => {
 
     expect(grouped.planning.map((task) => task.id)).toEqual(["planning"]);
     expect(grouped.in_progress.map((task) => task.id)).toEqual(["running"]);
-    expect(grouped.awaiting_approval.map((task) => task.id)).toEqual(["gate-1"]);
+    expect(grouped.awaiting_approval.map((task) => task.id)).toEqual([
+      "gate-1",
+    ]);
     expect(grouped.awaiting_review.map((task) => task.id)).toEqual(["gate-2"]);
   });
 });
