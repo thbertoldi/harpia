@@ -81,8 +81,9 @@ k8s_resource('harpia-api', resource_deps=['db-migrate'], port_forwards=['19080:8
 
 local_resource(
     'zitadel-port-forward',
-    serve_cmd='kubectl port-forward svc/zitadel 8085:8080',
+    serve_cmd='./scripts/port-forward-zitadel.sh',
     resource_deps=['zitadel'],
+    deps=['./scripts/port-forward-zitadel.sh'],
     labels=['infra'],
 )
 

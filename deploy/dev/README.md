@@ -60,11 +60,18 @@ kubectl logs job/openfga-bootstrap -f
 Port-forward commands (only needed outside Tilt):
 
 ```bash
-kubectl port-forward svc/zitadel 8085:8080 &
+./scripts/port-forward-zitadel.sh &
 ./scripts/port-forward-openfga.sh &
 ```
 
-If `18086` is already occupied, choose another host port:
+The port-forward scripts verify the host port before invoking `kubectl`. If a
+healthy forward already exists, they reuse it; if a stale or unrelated listener
+owns the port, they print the listener details and exit before starting another
+`kubectl port-forward`.
+
+Zitadel stays on `8085` because the dev OIDC issuer is configured as
+`http://localhost:8085`. If OpenFGA's default `18086` is occupied, choose
+another host port:
 
 ```bash
 HARPIA_DEV_OPENFGA_PORT=28086 ./scripts/port-forward-openfga.sh
