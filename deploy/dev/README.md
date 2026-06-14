@@ -12,10 +12,11 @@ mise run dev   # Tilt: infra, Zitadel port-forward, OIDC sync, host Vite
 
 Tilt applies `deploy/dev/kind/`, runs database migrations, bootstraps Zitadel
 and OpenFGA, port-forwards the API to localhost:19080, Zitadel to
-localhost:8085, and OpenFGA to localhost:8086, waits for the OIDC/FGA ConfigMaps,
-syncs local `.env.local` files, installs frontend dependencies when needed, and
-starts the Vite dev server on http://localhost:5173. Tilt creates missing
-dev-only Kubernetes Secrets before applying manifests.
+localhost:8085, and OpenFGA to localhost:18086 by default, waits for the
+OIDC/FGA ConfigMaps, syncs local `.env.local` files, installs frontend
+dependencies when needed, and starts the Vite dev server on
+http://localhost:5173. Tilt creates missing dev-only Kubernetes Secrets before
+applying manifests.
 
 The dev kind environment intentionally does not create a `harpia-frontend` pod.
 Frontend development runs on the host through Vite so HMR and synced
@@ -53,14 +54,20 @@ kubectl logs job/openfga-bootstrap -f
 | API           | http://localhost:19080                |
 | Zitadel       | http://localhost:8085                 |
 | Zitadel Console | http://localhost:8085/ui/console    |
-| OpenFGA       | http://localhost:8086                 |
-| OpenFGA Playground | http://localhost:8086/playground |
+| OpenFGA       | http://localhost:18086                |
+| OpenFGA Playground | http://localhost:18086/playground |
 
 Port-forward commands (only needed outside Tilt):
 
 ```bash
 kubectl port-forward svc/zitadel 8085:8080 &
-kubectl port-forward svc/openfga 8086:8080 &
+./scripts/port-forward-openfga.sh &
+```
+
+If `18086` is already occupied, choose another host port:
+
+```bash
+HARPIA_DEV_OPENFGA_PORT=28086 ./scripts/port-forward-openfga.sh
 ```
 
 ## Dev Secrets
@@ -245,5 +252,5 @@ Verify the model with the OpenFGA CLI:
 
 ```bash
 STORE_ID=$(kubectl get configmap harpia-fga-config -o jsonpath='{.data.storeId}')
-fga model list --api-url http://localhost:8086 --store-id "$STORE_ID"
+fga model list --api-url http://localhost:18086 --store-id "$STORE_ID"
 ```
