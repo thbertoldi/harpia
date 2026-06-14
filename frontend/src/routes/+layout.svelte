@@ -1,6 +1,14 @@
 <script lang="ts">
   import "../app.css";
-  import { Menu, X, Sun, Moon, LayoutDashboard, Eye, Plug } from "lucide-svelte";
+  import {
+    Menu,
+    X,
+    Sun,
+    Moon,
+    LayoutDashboard,
+    Eye,
+    Plug,
+  } from "lucide-svelte";
   import TenantSelector from "$lib/components/TenantSelector.svelte";
   import FeedbackBadge from "$lib/components/FeedbackBadge.svelte";
   import { logout, isEngineer } from "$lib/auth";

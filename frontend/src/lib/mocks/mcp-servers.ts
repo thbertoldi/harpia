@@ -117,7 +117,10 @@ export function getMcpServerById(id: string): McpServer | undefined {
   return structuredClone(servers.find((server) => server.id === id));
 }
 
-export function countToolsForStatus(status: McpServerStatus, tools: McpTool[]): number {
+export function countToolsForStatus(
+  status: McpServerStatus,
+  tools: McpTool[],
+): number {
   if (status === "connected") {
     return tools.length;
   }
@@ -180,7 +183,10 @@ export async function testMockConnection(
   } else {
     const config = input.config as StreamableHttpConfig;
     if (!config.url.trim()) {
-      return { ok: false, message: "URL is required for streamable HTTP servers." };
+      return {
+        ok: false,
+        message: "URL is required for streamable HTTP servers.",
+      };
     }
     if (!/^https?:\/\//.test(config.url)) {
       return { ok: false, message: "URL must start with http:// or https://." };
@@ -195,7 +201,9 @@ export async function testMockConnection(
   };
 }
 
-export async function addMockMcpServer(input: AddMcpServerInput): Promise<McpServer> {
+export async function addMockMcpServer(
+  input: AddMcpServerInput,
+): Promise<McpServer> {
   await delay(300);
 
   const discoveredTools = mockToolsForKind(input.kind);
@@ -213,7 +221,9 @@ export async function addMockMcpServer(input: AddMcpServerInput): Promise<McpSer
   return structuredClone(server);
 }
 
-export async function connectMockOAuthServer(serverId: string): Promise<McpServer> {
+export async function connectMockOAuthServer(
+  serverId: string,
+): Promise<McpServer> {
   await delay(800);
 
   const index = servers.findIndex((server) => server.id === serverId);
@@ -249,7 +259,9 @@ export async function connectMockOAuthServer(serverId: string): Promise<McpServe
     lastError: undefined,
   };
 
-  servers = servers.map((server) => (server.id === serverId ? updated : server));
+  servers = servers.map((server) =>
+    server.id === serverId ? updated : server,
+  );
   return structuredClone(updated);
 }
 

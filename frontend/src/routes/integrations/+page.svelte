@@ -33,7 +33,7 @@
   const engineerAccess = $derived(isEngineer(user));
 
   let servers = $state<McpServer[]>([]);
-  let expandedServerIds = $state<Set<string>>(new Set());
+  let expandedServerIds = $state<string[]>([]);
   let showAddForm = $state(false);
   let addKind = $state<McpServerKind>("stdio");
   let addName = $state("");
@@ -55,14 +55,16 @@
     }
   });
 
+  function isExpanded(serverId: string): boolean {
+    return expandedServerIds.includes(serverId);
+  }
+
   function toggleExpanded(serverId: string) {
-    const next = new Set(expandedServerIds);
-    if (next.has(serverId)) {
-      next.delete(serverId);
+    if (isExpanded(serverId)) {
+      expandedServerIds = expandedServerIds.filter((id) => id !== serverId);
     } else {
-      next.add(serverId);
+      expandedServerIds = [...expandedServerIds, serverId];
     }
-    expandedServerIds = next;
   }
 
   function resetAddForm() {
@@ -162,7 +164,7 @@
     try {
       const created = await addMockMcpServer(buildAddInput());
       servers = getMockMcpServers();
-      expandedServerIds = new Set([...expandedServerIds, created.id]);
+      expandedServerIds = [...expandedServerIds, created.id];
       closeAddForm();
     } catch (e) {
       actionError = e instanceof Error ? e.message : "Failed to add server";
@@ -178,7 +180,7 @@
     try {
       await connectMockOAuthServer(serverId);
       servers = getMockMcpServers();
-      expandedServerIds = new Set([...expandedServerIds, serverId]);
+      expandedServerIds = [...expandedServerIds, serverId];
     } catch (e) {
       actionError = e instanceof Error ? e.message : "OAuth connection failed";
     } finally {
@@ -403,7 +405,9 @@
                 </p>
               {:else}
                 <AlertTriangle class="mt-0.5 size-4 shrink-0 text-red-400" />
-                <p class="font-body text-sm text-red-300">{testResult.message}</p>
+                <p class="font-body text-sm text-red-300">
+                  {testResult.message}
+                </p>
               {/if}
             </div>
           {/if}
@@ -449,7 +453,7 @@
               onclick={() => toggleExpanded(server.id)}
               class="flex min-w-0 flex-1 cursor-pointer items-start gap-3 text-left"
             >
-              {#if expandedServerIds.has(server.id)}
+              {#if isExpanded(server.id)}
                 <ChevronDown class="mt-1 size-4 shrink-0 text-talon-gold" />
               {:else}
                 <ChevronRight class="mt-1 size-4 shrink-0 text-crown-ash" />
@@ -465,7 +469,9 @@
                     {kindLabel(server.kind)}
                   </span>
                 </div>
-                <p class="mt-1 font-mono text-[10px] tracking-wider text-crown-ash-dark uppercase">
+                <p
+                  class="mt-1 font-mono text-[10px] tracking-wider text-crown-ash-dark uppercase"
+                >
                   {server.toolCount} tool{server.toolCount === 1 ? "" : "s"}
                 </p>
                 {#if server.lastError}
@@ -495,7 +501,7 @@
             </div>
           </div>
 
-          {#if expandedServerIds.has(server.id)}
+          {#if isExpanded(server.id)}
             <div class="border-t border-plumage/60 px-4 py-4">
               <div class="mb-3 flex items-center gap-2">
                 <Wrench class="size-4 text-talon-gold" />
