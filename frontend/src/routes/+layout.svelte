@@ -1,6 +1,6 @@
 <script lang="ts">
   import "../app.css";
-  import { Menu, X, Sun, Moon, LayoutDashboard, Eye } from "lucide-svelte";
+  import { Menu, X, Sun, Moon, LayoutDashboard, Eye, Bot } from "lucide-svelte";
   import TenantSelector from "$lib/components/TenantSelector.svelte";
   import FeedbackBadge from "$lib/components/FeedbackBadge.svelte";
   import { logout } from "$lib/auth";
@@ -23,10 +23,22 @@
     applyColorScheme(dark ? "dark" : "light");
   }
 
-  const sections = [
+  type NavSection = {
+    label: string;
+    href: "/" | "/oversee" | "/agents";
+    icon: typeof LayoutDashboard | typeof Eye | typeof Bot;
+  };
+
+  const baseSections: NavSection[] = [
     { label: "Tasks", href: "/", icon: LayoutDashboard },
     { label: "Oversee", href: "/oversee", icon: Eye },
-  ] as const;
+  ];
+
+  const sections = $derived<NavSection[]>(
+    data?.user?.role === "Engineer"
+      ? [...baseSections, { label: "Agents", href: "/agents", icon: Bot }]
+      : baseSections,
+  );
 
   function isActive(path: string) {
     return (
