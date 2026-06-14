@@ -1,5 +1,11 @@
 <script lang="ts">
-  import { AlertTriangle, Loader2, Map, UserCheck } from "lucide-svelte";
+  import {
+    AlertTriangle,
+    Loader2,
+    Map,
+    Receipt,
+    UserCheck,
+  } from "lucide-svelte";
   import { page } from "$app/state";
   import { resolve } from "$app/paths";
   import {
@@ -84,13 +90,22 @@
           {template.key} · v{template.version} · {template.vertical}
         </p>
       </div>
-      <span
-        class="rounded-full border border-plumage px-2.5 py-1 font-mono text-[10px] tracking-wider text-crown-ash uppercase"
-      >
-        {dataSource === "api"
-          ? translate("plans.detail.liveApi", $locale)
-          : translate("plans.detail.mockData", $locale)}
-      </span>
+      <div class="flex flex-col items-end gap-2">
+        <span
+          class="rounded-full border border-plumage px-2.5 py-1 font-mono text-[10px] tracking-wider text-crown-ash uppercase"
+        >
+          {dataSource === "api"
+            ? translate("plans.detail.liveApi", $locale)
+            : translate("plans.detail.mockData", $locale)}
+        </span>
+        <a
+          href={resolve(`/plans/${page.params.templateId}/configure/summary`)}
+          class="inline-flex items-center gap-1.5 rounded-md border border-plumage px-3 py-1.5 font-body text-xs text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
+        >
+          <Receipt class="size-3.5" />
+          {translate("plans.detail.viewSummary", $locale)}
+        </a>
+      </div>
     </div>
 
     {#if loadError}
