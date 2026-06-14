@@ -8,15 +8,15 @@ import {
 
 describe("nav sections registry", () => {
   it("includes base sections for all roles", () => {
-    expect(filterNavSections("Leader")).toHaveLength(2);
-    expect(filterNavSections(undefined)).toHaveLength(2);
+    expect(filterNavSections("Leader")).toHaveLength(3);
+    expect(filterNavSections(undefined)).toHaveLength(3);
   });
 
   it("resolves labels via translate callback", () => {
     const labels = resolveNavSections("Leader", (key) => `t:${key}`).map(
       (s) => s.label,
     );
-    expect(labels).toEqual(["t:nav.tasks", "t:nav.oversee"]);
+    expect(labels).toEqual(["t:nav.tasks", "t:nav.ongoing", "t:nav.oversee"]);
   });
 });
 
@@ -35,6 +35,10 @@ describe("isNavSectionActive", () => {
 
 describe("navSectionDefs", () => {
   it("keeps tasks before oversee", () => {
-    expect(navSectionDefs.map((d) => d.href)).toEqual(["/", "/oversee"]);
+    expect(navSectionDefs.map((d) => d.href)).toEqual([
+      "/",
+      "/tasks/ongoing",
+      "/oversee",
+    ]);
   });
 });
