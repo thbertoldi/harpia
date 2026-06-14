@@ -36,6 +36,9 @@ class ArtifactService(Protocol):
     async def get_artifact_payload(self, request: harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactPayloadRequest, ctx: RequestContext) -> harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactPayloadResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def preview_artifact(self, request: harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.PreviewArtifactRequest, ctx: RequestContext) -> harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.PreviewArtifactResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
 
 class ArtifactServiceASGIApplication(ConnectASGIApplication[ArtifactService]):
     def __init__(self, service: ArtifactService | AsyncGenerator[ArtifactService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
@@ -101,6 +104,16 @@ class ArtifactServiceASGIApplication(ConnectASGIApplication[ArtifactService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_artifact_payload,
+                ),
+                "/harpia.artifacts.v1.ArtifactService/PreviewArtifact": Endpoint.unary(
+                    method=MethodInfo(
+                        name="PreviewArtifact",
+                        service_name="harpia.artifacts.v1.ArtifactService",
+                        input=harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.PreviewArtifactRequest,
+                        output=harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.PreviewArtifactResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.preview_artifact,
                 ),
             },
             interceptors=interceptors,
@@ -236,6 +249,26 @@ class ArtifactServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def preview_artifact(
+        self,
+        request: harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.PreviewArtifactRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.PreviewArtifactResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="PreviewArtifact",
+                service_name="harpia.artifacts.v1.ArtifactService",
+                input=harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.PreviewArtifactRequest,
+                output=harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.PreviewArtifactResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 
 
 
@@ -252,6 +285,8 @@ class ArtifactServiceSync(Protocol):
     def get_artifact(self, request: harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactRequest, ctx: RequestContext) -> harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_artifact_payload(self, request: harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactPayloadRequest, ctx: RequestContext) -> harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactPayloadResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def preview_artifact(self, request: harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.PreviewArtifactRequest, ctx: RequestContext) -> harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.PreviewArtifactResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -318,6 +353,16 @@ class ArtifactServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_artifact_payload,
+                ),
+                "/harpia.artifacts.v1.ArtifactService/PreviewArtifact": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="PreviewArtifact",
+                        service_name="harpia.artifacts.v1.ArtifactService",
+                        input=harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.PreviewArtifactRequest,
+                        output=harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.PreviewArtifactResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.preview_artifact,
                 ),
             },
             interceptors=interceptors,
@@ -447,6 +492,26 @@ class ArtifactServiceClientSync(ConnectClientSync):
                 service_name="harpia.artifacts.v1.ArtifactService",
                 input=harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactPayloadRequest,
                 output=harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.GetArtifactPayloadResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def preview_artifact(
+        self,
+        request: harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.PreviewArtifactRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.PreviewArtifactResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="PreviewArtifact",
+                service_name="harpia.artifacts.v1.ArtifactService",
+                input=harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.PreviewArtifactRequest,
+                output=harpia_dot_artifacts_dot_v1_dot_artifacts__pb2.PreviewArtifactResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

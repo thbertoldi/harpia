@@ -15,11 +15,19 @@ import (
 )
 
 type Handler struct {
-	repo  *Repository
+	repo  RepositoryAPI
 	store PayloadStore
 }
 
-func NewHandler(repo *Repository, store PayloadStore) (*Handler, error) {
+type RepositoryAPI interface {
+	RegisterType(ctx context.Context, artifactType *ArtifactType) (*ArtifactType, error)
+	GetTypeByID(ctx context.Context, typeID uuid.UUID) (*ArtifactType, error)
+	GetTypeByKey(ctx context.Context, key string) (*ArtifactType, error)
+	CreateArtifact(ctx context.Context, artifact *Artifact) (*Artifact, error)
+	GetArtifact(ctx context.Context, tenantID, artifactID uuid.UUID) (*Artifact, error)
+}
+
+func NewHandler(repo RepositoryAPI, store PayloadStore) (*Handler, error) {
 	if repo == nil {
 		return nil, errors.New("artifacts: repository is required")
 	}
@@ -223,6 +231,49 @@ func (h *Handler) GetArtifactPayload(ctx context.Context, req *connect.Request[a
 		PayloadJson: payload,
 		ContentHash: artifact.ContentHash,
 	}), nil
+}
+
+func (h *Handler) PreviewArtifact(ctx context.Context, req *connect.Request[artifactsv1.PreviewArtifactRequest]) (*connect.Response[artifactsv1.PreviewArtifactResponse], error) {
+	tenantID, err := identity.RequireTenant(ctx, req.Msg.TenantId)
+	if err != nil {
+		return nil, err
+	}
+
+	artifactID, err := uuid.Parse(req.Msg.ArtifactId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	artifact, err := h.repo.GetArtifact(ctx, tenantID, artifactID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, err)
+		}
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	artifactType, err := h.repo.GetTypeByID(ctx, artifact.ArtifactTypeID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("artifact type not found: %w", err))
+		}
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	payload, err := h.store.Get(ctx, artifact.StorageURI)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	preview, err := BuildPreview(artifactType.Key, payload)
+	if err != nil {
+		if errors.Is(err, ErrInvalidPayload) {
+			return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		}
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	return connect.NewResponse(preview), nil
 }
 
 func (h *Handler) resolveArtifactType(ctx context.Context, typeID, typeKey string) (*ArtifactType, error) {

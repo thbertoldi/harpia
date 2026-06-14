@@ -11,6 +11,7 @@ service ArtifactService {
   rpc CreateArtifactWithPayload(CreateArtifactWithPayloadRequest) returns (CreateArtifactWithPayloadResponse);
   rpc GetArtifact(GetArtifactRequest) returns (GetArtifactResponse);
   rpc GetArtifactPayload(GetArtifactPayloadRequest) returns (GetArtifactPayloadResponse);
+  rpc PreviewArtifact(PreviewArtifactRequest) returns (PreviewArtifactResponse);
 }
 
 message ArtifactType {
@@ -125,4 +126,22 @@ message GetArtifactPayloadRequest {
 message GetArtifactPayloadResponse {
   bytes payload_json = 1;
   string content_hash = 2;
+}
+
+message ArtifactListSummary {
+  int32 article_count = 1;
+  repeated string titles = 2;
+}
+
+message PreviewArtifactRequest {
+  string tenant_id = 1;
+  string artifact_id = 2;
+}
+
+message PreviewArtifactResponse {
+  oneof preview {
+    string text_preview = 1;
+    ArtifactListSummary list_summary = 2;
+    string json_preview = 3;
+  }
 }

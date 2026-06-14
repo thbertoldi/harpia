@@ -51,6 +51,9 @@ const (
 	// ArtifactServiceGetArtifactPayloadProcedure is the fully-qualified name of the ArtifactService's
 	// GetArtifactPayload RPC.
 	ArtifactServiceGetArtifactPayloadProcedure = "/harpia.artifacts.v1.ArtifactService/GetArtifactPayload"
+	// ArtifactServicePreviewArtifactProcedure is the fully-qualified name of the ArtifactService's
+	// PreviewArtifact RPC.
+	ArtifactServicePreviewArtifactProcedure = "/harpia.artifacts.v1.ArtifactService/PreviewArtifact"
 )
 
 // ArtifactServiceClient is a client for the harpia.artifacts.v1.ArtifactService service.
@@ -61,6 +64,7 @@ type ArtifactServiceClient interface {
 	CreateArtifactWithPayload(context.Context, *connect.Request[v1.CreateArtifactWithPayloadRequest]) (*connect.Response[v1.CreateArtifactWithPayloadResponse], error)
 	GetArtifact(context.Context, *connect.Request[v1.GetArtifactRequest]) (*connect.Response[v1.GetArtifactResponse], error)
 	GetArtifactPayload(context.Context, *connect.Request[v1.GetArtifactPayloadRequest]) (*connect.Response[v1.GetArtifactPayloadResponse], error)
+	PreviewArtifact(context.Context, *connect.Request[v1.PreviewArtifactRequest]) (*connect.Response[v1.PreviewArtifactResponse], error)
 }
 
 // NewArtifactServiceClient constructs a client for the harpia.artifacts.v1.ArtifactService service.
@@ -110,6 +114,12 @@ func NewArtifactServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(artifactServiceMethods.ByName("GetArtifactPayload")),
 			connect.WithClientOptions(opts...),
 		),
+		previewArtifact: connect.NewClient[v1.PreviewArtifactRequest, v1.PreviewArtifactResponse](
+			httpClient,
+			baseURL+ArtifactServicePreviewArtifactProcedure,
+			connect.WithSchema(artifactServiceMethods.ByName("PreviewArtifact")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -121,6 +131,7 @@ type artifactServiceClient struct {
 	createArtifactWithPayload *connect.Client[v1.CreateArtifactWithPayloadRequest, v1.CreateArtifactWithPayloadResponse]
 	getArtifact               *connect.Client[v1.GetArtifactRequest, v1.GetArtifactResponse]
 	getArtifactPayload        *connect.Client[v1.GetArtifactPayloadRequest, v1.GetArtifactPayloadResponse]
+	previewArtifact           *connect.Client[v1.PreviewArtifactRequest, v1.PreviewArtifactResponse]
 }
 
 // RegisterArtifactType calls harpia.artifacts.v1.ArtifactService.RegisterArtifactType.
@@ -153,6 +164,11 @@ func (c *artifactServiceClient) GetArtifactPayload(ctx context.Context, req *con
 	return c.getArtifactPayload.CallUnary(ctx, req)
 }
 
+// PreviewArtifact calls harpia.artifacts.v1.ArtifactService.PreviewArtifact.
+func (c *artifactServiceClient) PreviewArtifact(ctx context.Context, req *connect.Request[v1.PreviewArtifactRequest]) (*connect.Response[v1.PreviewArtifactResponse], error) {
+	return c.previewArtifact.CallUnary(ctx, req)
+}
+
 // ArtifactServiceHandler is an implementation of the harpia.artifacts.v1.ArtifactService service.
 type ArtifactServiceHandler interface {
 	RegisterArtifactType(context.Context, *connect.Request[v1.RegisterArtifactTypeRequest]) (*connect.Response[v1.RegisterArtifactTypeResponse], error)
@@ -161,6 +177,7 @@ type ArtifactServiceHandler interface {
 	CreateArtifactWithPayload(context.Context, *connect.Request[v1.CreateArtifactWithPayloadRequest]) (*connect.Response[v1.CreateArtifactWithPayloadResponse], error)
 	GetArtifact(context.Context, *connect.Request[v1.GetArtifactRequest]) (*connect.Response[v1.GetArtifactResponse], error)
 	GetArtifactPayload(context.Context, *connect.Request[v1.GetArtifactPayloadRequest]) (*connect.Response[v1.GetArtifactPayloadResponse], error)
+	PreviewArtifact(context.Context, *connect.Request[v1.PreviewArtifactRequest]) (*connect.Response[v1.PreviewArtifactResponse], error)
 }
 
 // NewArtifactServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -206,6 +223,12 @@ func NewArtifactServiceHandler(svc ArtifactServiceHandler, opts ...connect.Handl
 		connect.WithSchema(artifactServiceMethods.ByName("GetArtifactPayload")),
 		connect.WithHandlerOptions(opts...),
 	)
+	artifactServicePreviewArtifactHandler := connect.NewUnaryHandler(
+		ArtifactServicePreviewArtifactProcedure,
+		svc.PreviewArtifact,
+		connect.WithSchema(artifactServiceMethods.ByName("PreviewArtifact")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/harpia.artifacts.v1.ArtifactService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ArtifactServiceRegisterArtifactTypeProcedure:
@@ -220,6 +243,8 @@ func NewArtifactServiceHandler(svc ArtifactServiceHandler, opts ...connect.Handl
 			artifactServiceGetArtifactHandler.ServeHTTP(w, r)
 		case ArtifactServiceGetArtifactPayloadProcedure:
 			artifactServiceGetArtifactPayloadHandler.ServeHTTP(w, r)
+		case ArtifactServicePreviewArtifactProcedure:
+			artifactServicePreviewArtifactHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -251,4 +276,8 @@ func (UnimplementedArtifactServiceHandler) GetArtifact(context.Context, *connect
 
 func (UnimplementedArtifactServiceHandler) GetArtifactPayload(context.Context, *connect.Request[v1.GetArtifactPayloadRequest]) (*connect.Response[v1.GetArtifactPayloadResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("harpia.artifacts.v1.ArtifactService.GetArtifactPayload is not implemented"))
+}
+
+func (UnimplementedArtifactServiceHandler) PreviewArtifact(context.Context, *connect.Request[v1.PreviewArtifactRequest]) (*connect.Response[v1.PreviewArtifactResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("harpia.artifacts.v1.ArtifactService.PreviewArtifact is not implemented"))
 }
