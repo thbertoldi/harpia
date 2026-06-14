@@ -62,5 +62,17 @@
   "plans.goIntegrations": "Open Integrations",
   "plans.action.configure": "Configure plan",
   "plans.action.locked": "Locked",
-  "plans.action.soon": "Plan configuration UI coming in a later story."
+  "plans.action.soon": "Plan configuration UI coming in a later story.",
+  "plans.detail.loading": "Loading plan template...",
+  "plans.detail.loadError": "Failed to load plan template",
+  "plans.detail.retry": "Retry",
+  "plans.detail.liveApi": "Live API",
+  "plans.detail.mockData": "Mock data",
+  "plans.detail.mockFallback": "API unavailable — showing mock template.",
+  "plans.detail.dagHeading": "Artifact flow",
+  "plans.detail.dagDescription": "Linear dependency chain showing how artifacts pass between steps.",
+  "plans.detail.stepsHeading": "Steps",
+  "plans.detail.stepTitle": "Step",
+  "plans.detail.stepInput": "Input artifact",
+  "plans.detail.stepOutput": "Output artifact"
 }

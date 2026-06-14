@@ -11,7 +11,7 @@
   "nav.toggleNav": "Alternar navegação",
   "nav.toggleDark": "Alternar modo escuro",
   "nav.language": "Idioma",
-  "role.Leader": "Líder",
+  "role.Leader": "Leader",
   "role.Overseer": "Supervisor",
   "role.Engineer": "Engenheiro de Plataforma",
   "login.tagline": "Operações de IA para o seu negócio",
@@ -62,5 +62,17 @@
   "plans.goIntegrations": "Abrir integrações",
   "plans.action.configure": "Configurar plano",
   "plans.action.locked": "Bloqueado",
-  "plans.action.soon": "A UI de configuração de planos chegará em uma história futura."
+  "plans.action.soon": "A UI de configuração de planos chegará em uma história futura.",
+  "plans.detail.loading": "Carregando modelo de plano...",
+  "plans.detail.loadError": "Falha ao carregar modelo de plano",
+  "plans.detail.retry": "Tentar novamente",
+  "plans.detail.liveApi": "API ao vivo",
+  "plans.detail.mockData": "Dados simulados",
+  "plans.detail.mockFallback": "API indisponível — exibindo modelo simulado.",
+  "plans.detail.dagHeading": "Fluxo de artefatos",
+  "plans.detail.dagDescription": "Cadeia linear de dependências mostrando como os artefatos passam entre as etapas.",
+  "plans.detail.stepsHeading": "Etapas",
+  "plans.detail.stepTitle": "Etapa",
+  "plans.detail.stepInput": "Artefato de entrada",
+  "plans.detail.stepOutput": "Artefato de saída"
 }
