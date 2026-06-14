@@ -48,6 +48,10 @@ export type {
   ExecutorSKU,
 } from "$lib/gen/harpia/executors/v1/executors_pb";
 export type {
+  GetPlanTemplateByKeyResponse,
+  GetPlanTemplateResponse,
   ListPlanTemplatesResponse,
+  PlanStep,
+  PlanStepDependency,
   PlanTemplate,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
