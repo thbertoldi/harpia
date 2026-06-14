@@ -9,6 +9,7 @@
   import StatusBadge from "$lib/components/StatusBadge.svelte";
   import TaskDetail from "$lib/components/TaskDetail.svelte";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
+  import { locale, translate } from "$lib/i18n";
 
   let tasks = $state<Task[]>([]);
   let selectedTask = $state<Task | null>(null);
@@ -101,10 +102,18 @@
   function formattedDate(dateStr: string): string {
     try {
       const d = new Date(dateStr);
-      return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      const localeTag = $locale === "pt-BR" ? "pt-BR" : "en-US";
+      return d.toLocaleDateString(localeTag, { month: "short", day: "numeric" });
     } catch {
       return dateStr;
     }
+  }
+
+  function subtaskLabel(count: number): string {
+    if (count === 1) {
+      return translate("tasks.subtask.one", $locale);
+    }
+    return translate("tasks.subtask.other", $locale, { count });
   }
 
   function descriptionPreview(desc: string): string {
@@ -124,13 +133,15 @@
       : 'lg:w-full'}"
   >
     <div class="flex items-center justify-between px-4 py-3 lg:px-6">
-      <HarpyHeading tag="h1" class="text-2xl text-cream">Tasks</HarpyHeading>
+      <HarpyHeading tag="h1" class="text-2xl text-cream"
+        >{translate("tasks.heading", $locale)}</HarpyHeading
+      >
       <button
         onclick={handleNewTask}
         class="inline-flex cursor-pointer items-center gap-2 rounded-md bg-talon-gold px-4 py-2 font-body text-sm font-medium text-obsidian transition-all hover:bg-talon-gold-bright"
       >
         <Plus class="size-4" />
-        New Task
+        {translate("tasks.newTask", $locale)}
       </button>
     </div>
 
@@ -138,20 +149,22 @@
       <div class="flex flex-1 items-center justify-center">
         <div class="flex items-center gap-2 text-crown-ash">
           <Loader2 class="size-5 animate-spin" />
-          <span class="font-body text-sm">Loading tasks...</span>
+          <span class="font-body text-sm">{translate("tasks.loading", $locale)}</span>
         </div>
       </div>
     {:else if loadError}
       <div class="flex flex-1 items-center justify-center">
         <div class="text-center">
           <AlertTriangle class="mx-auto mb-3 size-10 text-red-400" />
-          <p class="font-body text-sm text-red-400">Failed to load tasks</p>
+          <p class="font-body text-sm text-red-400">
+            {translate("tasks.loadError", $locale)}
+          </p>
           <p class="mt-1 font-mono text-xs text-crown-ash">{loadError}</p>
           <button
             onclick={() => fetchTasks()}
             class="mt-4 rounded-md border border-plumage px-4 py-2 font-body text-sm text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
           >
-            Retry
+            {translate("tasks.retry", $locale)}
           </button>
         </div>
       </div>
@@ -161,18 +174,17 @@
           <Bot class="size-12" />
         </div>
         <HarpyHeading tag="h2" class="mb-2 text-center text-xl text-cream">
-          No tasks yet. What do you want to get done?
+          {translate("tasks.empty.title", $locale)}
         </HarpyHeading>
         <p class="mb-6 max-w-md text-center font-body text-sm text-crown-ash">
-          Describe your task in natural language and let Harpia's agents handle
-          the execution.
+          {translate("tasks.empty.description", $locale)}
         </p>
         <button
           onclick={handleNewTask}
           class="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-talon-gold px-6 py-3 font-heading text-lg font-bold text-obsidian transition-all hover:scale-105 hover:bg-talon-gold-bright"
         >
           <Sparkles class="size-5" />
-          Create Your First Task
+          {translate("tasks.empty.cta", $locale)}
         </button>
       </div>
     {:else}
@@ -208,11 +220,7 @@
               >
                 <span>{formattedDate(task.createdAt)}</span>
                 {#if task.subtasks?.length}
-                  <span
-                    >{task.subtasks.length} subtask{task.subtasks.length !== 1
-                      ? "s"
-                      : ""}</span
-                  >
+                  <span>{subtaskLabel(task.subtasks.length)}</span>
                 {/if}
               </div>
             </button>
