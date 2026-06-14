@@ -1,17 +1,9 @@
 <script lang="ts">
   import "../app.css";
-  import {
-    Menu,
-    X,
-    Sun,
-    Moon,
-    LayoutDashboard,
-    Eye,
-    Plug,
-  } from "lucide-svelte";
+  import { Menu, X, Sun, Moon } from "lucide-svelte";
   import TenantSelector from "$lib/components/TenantSelector.svelte";
   import FeedbackBadge from "$lib/components/FeedbackBadge.svelte";
-  import { logout, isEngineer } from "$lib/auth";
+  import { logout } from "$lib/auth";
   import { page } from "$app/state";
   import { resolve } from "$app/paths";
   import { applyColorScheme, initTheme, resolveColorScheme } from "$lib/themes";
@@ -23,6 +15,8 @@
     translateRole,
     type Locale,
   } from "$lib/i18n";
+  import { isNavSectionActive } from "$lib/nav/active";
+  import { resolveNavSections } from "$lib/nav/sections";
 
   let { data, children } = $props();
 
@@ -40,39 +34,12 @@
     applyColorScheme(dark ? "dark" : "light");
   }
 
-  const sections = $derived.by(() => {
-    const base = [
-      {
-        label: translate("nav.tasks", $locale),
-        href: "/",
-        icon: LayoutDashboard,
-      },
-      {
-        label: translate("nav.oversee", $locale),
-        href: "/oversee",
-        icon: Eye,
-      },
-    ] as const;
-
-    if (isEngineer(data?.user)) {
-      return [
-        ...base,
-        {
-          label: translate("nav.integrations", $locale),
-          href: "/integrations",
-          icon: Plug,
-        },
-      ] as const;
-    }
-
-    return base;
-  });
+  const sections = $derived(
+    resolveNavSections(data?.user?.role, (key) => translate(key, $locale)),
+  );
 
   function isActive(path: string) {
-    return (
-      page.url.pathname === path ||
-      (path === "/" && page.url.pathname === "/tasks")
-    );
+    return isNavSectionActive(path, page.url.pathname);
   }
 </script>
 
