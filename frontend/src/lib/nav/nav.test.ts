@@ -12,6 +12,14 @@ describe("nav sections registry", () => {
     expect(filterNavSections(undefined)).toHaveLength(3);
   });
 
+  it("shows integrations to engineers only", () => {
+    expect(filterNavSections("Engineer")).toHaveLength(4);
+    expect(
+      filterNavSections("Engineer").some((d) => d.href === "/integrations"),
+    ).toBe(true);
+    expect(filterNavSections("Leader")).toHaveLength(3);
+  });
+
   it("resolves labels via translate callback", () => {
     const labels = resolveNavSections("Leader", (key) => `t:${key}`).map(
       (s) => s.label,
@@ -34,11 +42,12 @@ describe("isNavSectionActive", () => {
 });
 
 describe("navSectionDefs", () => {
-  it("keeps tasks before oversee", () => {
+  it("lists integrations after base sections", () => {
     expect(navSectionDefs.map((d) => d.href)).toEqual([
       "/",
       "/tasks/ongoing",
       "/oversee",
+      "/integrations",
     ]);
   });
 });

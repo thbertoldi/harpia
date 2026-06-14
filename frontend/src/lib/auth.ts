@@ -244,3 +244,6 @@ export function setTenant(tenant: Tenant): void {
   session.tenant = tenant;
   localStorage.setItem("harpia_session", JSON.stringify(session));
 }
+
+export type { HarpiaRole } from "$lib/auth-roles";
+export { getUserRole, isEngineer } from "$lib/auth-roles";
