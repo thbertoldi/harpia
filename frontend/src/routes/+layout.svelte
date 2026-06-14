@@ -1,6 +1,14 @@
 <script lang="ts">
   import "../app.css";
-  import { Menu, X, Sun, Moon, LayoutDashboard, Eye } from "lucide-svelte";
+  import {
+    Menu,
+    X,
+    Sun,
+    Moon,
+    LayoutDashboard,
+    Eye,
+    ScrollText,
+  } from "lucide-svelte";
   import TenantSelector from "$lib/components/TenantSelector.svelte";
   import FeedbackBadge from "$lib/components/FeedbackBadge.svelte";
   import { logout } from "$lib/auth";
@@ -23,10 +31,22 @@
     applyColorScheme(dark ? "dark" : "light");
   }
 
-  const sections = [
+  const baseSections = [
     { label: "Tasks", href: "/", icon: LayoutDashboard },
     { label: "Oversee", href: "/oversee", icon: Eye },
   ] as const;
+
+  const auditSection = {
+    label: "Audit Log",
+    href: "/audit",
+    icon: ScrollText,
+  } as const;
+
+  const sections = $derived(
+    data?.user?.role === "Overseer" || data?.user?.role === "Engineer"
+      ? [...baseSections, auditSection]
+      : [...baseSections],
+  );
 
   function isActive(path: string) {
     return (
