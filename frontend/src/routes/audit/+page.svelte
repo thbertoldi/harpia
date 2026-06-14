@@ -150,7 +150,9 @@
 
 <div class="p-6 lg:p-8">
   <div class="mx-auto max-w-6xl">
-    <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div
+      class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
+    >
       <div>
         <div class="mb-2 flex items-center gap-2">
           <ScrollText class="size-6 text-talon-gold" />
@@ -191,7 +193,8 @@
 
       <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <label class="block">
-          <span class="mb-1 block font-mono text-[10px] tracking-wider text-crown-ash-dark uppercase"
+          <span
+            class="mb-1 block font-mono text-[10px] tracking-wider text-crown-ash-dark uppercase"
             >Task ID</span
           >
           <input
@@ -203,7 +206,8 @@
         </label>
 
         <label class="block">
-          <span class="mb-1 block font-mono text-[10px] tracking-wider text-crown-ash-dark uppercase"
+          <span
+            class="mb-1 block font-mono text-[10px] tracking-wider text-crown-ash-dark uppercase"
             >User</span
           >
           <input
@@ -215,7 +219,8 @@
         </label>
 
         <label class="block">
-          <span class="mb-1 block font-mono text-[10px] tracking-wider text-crown-ash-dark uppercase"
+          <span
+            class="mb-1 block font-mono text-[10px] tracking-wider text-crown-ash-dark uppercase"
             >Agent Type</span
           >
           <select
@@ -230,7 +235,8 @@
         </label>
 
         <label class="block">
-          <span class="mb-1 block font-mono text-[10px] tracking-wider text-crown-ash-dark uppercase"
+          <span
+            class="mb-1 block font-mono text-[10px] tracking-wider text-crown-ash-dark uppercase"
             >Decision</span
           >
           <select
@@ -245,7 +251,8 @@
         </label>
 
         <label class="block">
-          <span class="mb-1 block font-mono text-[10px] tracking-wider text-crown-ash-dark uppercase"
+          <span
+            class="mb-1 block font-mono text-[10px] tracking-wider text-crown-ash-dark uppercase"
             >From</span
           >
           <input
@@ -256,7 +263,8 @@
         </label>
 
         <label class="block">
-          <span class="mb-1 block font-mono text-[10px] tracking-wider text-crown-ash-dark uppercase"
+          <span
+            class="mb-1 block font-mono text-[10px] tracking-wider text-crown-ash-dark uppercase"
             >To</span
           >
           <input
@@ -334,7 +342,9 @@
               </div>
             </div>
 
-            <div class="grid gap-4 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+            <div
+              class="grid gap-4 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]"
+            >
               <div>
                 <p
                   class="mb-1 font-mono text-[10px] tracking-wider text-crown-ash-dark uppercase"

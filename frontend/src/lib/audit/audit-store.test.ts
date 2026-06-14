@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  MOCK_AUDIT_EVENTS,
-  type AuditEvent,
-} from "$lib/mocks/audit-events";
+import { MOCK_AUDIT_EVENTS, type AuditEvent } from "$lib/mocks/audit-events";
 import {
   compareAuditEvents,
   decodePageToken,
@@ -62,9 +59,7 @@ describe("filterAuditEvents", () => {
       dateTo: day,
     });
     expect(result.length).toBeGreaterThan(0);
-    expect(
-      result.every((e) => e.timestamp.slice(0, 10) === day),
-    ).toBe(true);
+    expect(result.every((e) => e.timestamp.slice(0, 10) === day)).toBe(true);
   });
 
   it("combines multiple filters", () => {
@@ -140,9 +135,7 @@ describe("getAuditEvents", () => {
   it("applies filters and pagination together", async () => {
     const page = await getAuditEvents({ taskId: "a1b2c3d4" }, null, 3);
     expect(page.events.length).toBeLessThanOrEqual(3);
-    expect(page.events.every((e) => e.taskId.includes("a1b2c3d4"))).toBe(
-      true,
-    );
+    expect(page.events.every((e) => e.taskId.includes("a1b2c3d4"))).toBe(true);
 
     if (page.nextPageToken) {
       const next = await getAuditEvents(

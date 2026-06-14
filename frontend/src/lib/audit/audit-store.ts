@@ -117,9 +117,10 @@ export function paginateAuditEvents(
 
   return {
     events: page,
-    nextPageToken: hasMore && last
-      ? encodePageToken({ ts: last.timestamp, eventId: last.eventId })
-      : null,
+    nextPageToken:
+      hasMore && last
+        ? encodePageToken({ ts: last.timestamp, eventId: last.eventId })
+        : null,
   };
 }
 

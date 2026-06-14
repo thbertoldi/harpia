@@ -11,7 +11,10 @@ export const load: PageServerLoad = async ({ parent }) => {
   }
 
   if (!user.role || !AUDIT_ROLES.has(user.role)) {
-    throw error(403, "Audit log is available to Overseer and Engineer roles only.");
+    throw error(
+      403,
+      "Audit log is available to Overseer and Engineer roles only.",
+    );
   }
 
   return {};
