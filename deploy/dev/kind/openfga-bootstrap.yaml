@@ -484,7 +484,7 @@ spec:
           args:
             - |
               OPENFGA_URL="http://openfga:8080"
-              HOST_OPENFGA_URL="http://localhost:8086"
+              HOST_OPENFGA_URL="http://localhost:18086"
               STORE_NAME="Harpia"
               CONFIGMAP_NAME="harpia-fga-config"
               MODEL_JSON="/model/openfga-model.json"

@@ -90,7 +90,7 @@ write_env_values() {
 STORE_ID=""
 AUTH_MODEL_ID=""
 API_URL=""
-HOST_API_URL=""
+CONFIGMAP_HOST_API_URL=""
 DEADLINE=$(( $(date +%s) + 10#$WAIT_SECONDS ))
 
 echo "Waiting up to ${WAIT_SECONDS}s for ConfigMap '$CONFIGMAP_NAME' to publish storeId and authorizationModelId..."
@@ -99,7 +99,7 @@ while [[ -z "$STORE_ID" || -z "$AUTH_MODEL_ID" ]]; do
   AUTH_MODEL_ID=$(kubectl get configmap "$CONFIGMAP_NAME" -o jsonpath='{.data.authorizationModelId}' 2>/dev/null || true)
   if [[ -n "$STORE_ID" && -n "$AUTH_MODEL_ID" ]]; then
     API_URL=$(kubectl get configmap "$CONFIGMAP_NAME" -o jsonpath='{.data.apiUrl}' 2>/dev/null || true)
-    HOST_API_URL=$(kubectl get configmap "$CONFIGMAP_NAME" -o jsonpath='{.data.hostApiUrl}' 2>/dev/null || true)
+    CONFIGMAP_HOST_API_URL=$(kubectl get configmap "$CONFIGMAP_NAME" -o jsonpath='{.data.hostApiUrl}' 2>/dev/null || true)
     break
   fi
 
@@ -112,7 +112,8 @@ while [[ -z "$STORE_ID" || -z "$AUTH_MODEL_ID" ]]; do
   sleep "$POLL_SECONDS"
 done
 
-HOST_API_URL=${HOST_API_URL:-http://localhost:8086}
+OPENFGA_HOST_PORT="${HARPIA_DEV_OPENFGA_PORT:-18086}"
+HOST_API_URL="${HOST_API_URL:-http://localhost:${OPENFGA_HOST_PORT}}"
 API_URL=${API_URL:-http://openfga:8080}
 
 write_env_values "$FRONTEND_ENV_FILE" "scripts/sync-fga-config.sh" \
@@ -133,3 +134,6 @@ echo "  OPENFGA_STORE_ID=$STORE_ID"
 echo "  OPENFGA_AUTHORIZATION_MODEL_ID=$AUTH_MODEL_ID"
 echo "  OPENFGA_API_URL=$HOST_API_URL"
 echo "Cluster API URL from ConfigMap: $API_URL"
+if [[ -n "$CONFIGMAP_HOST_API_URL" && "$CONFIGMAP_HOST_API_URL" != "$HOST_API_URL" ]]; then
+  echo "Host API URL from ConfigMap ignored for local dev: $CONFIGMAP_HOST_API_URL"
+fi

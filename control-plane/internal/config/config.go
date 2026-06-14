@@ -45,7 +45,7 @@ func Load() *Config {
 		GarageSecretKey: envStr("GARAGE_SECRET_KEY", ""),
 		GarageRegion:    envStr("GARAGE_REGION", "garage"),
 		ZitadelURL:   envStr("ZITADEL_URL", "http://localhost:9980"),
-		OpenFGAURL:   envStr("OPENFGA_API_URL", "http://localhost:8086"),
+		OpenFGAURL:   envStr("OPENFGA_API_URL", "http://localhost:18086"),
 
 		OpenFGAStoreID:              envStr("OPENFGA_STORE_ID", ""),
 		OpenFGAAuthorizationModelID: envStr("OPENFGA_AUTHORIZATION_MODEL_ID", ""),

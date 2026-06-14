@@ -88,8 +88,9 @@ local_resource(
 
 local_resource(
     'openfga-port-forward',
-    serve_cmd='kubectl port-forward svc/openfga 8086:8080',
+    serve_cmd='./scripts/port-forward-openfga.sh',
     resource_deps=['openfga'],
+    deps=['./scripts/port-forward-openfga.sh'],
     labels=['infra'],
 )
 
