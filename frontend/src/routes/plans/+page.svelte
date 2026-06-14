@@ -254,14 +254,12 @@
               <p class="font-body text-xs text-crown-ash">
                 {translate("plans.readyHint", $locale)}
               </p>
-              <button
-                type="button"
-                disabled
-                class="shrink-0 cursor-not-allowed rounded-md border border-plumage/60 px-3 py-1.5 font-body text-xs text-crown-ash-dark"
-                title={translate("plans.action.soon", $locale)}
+              <a
+                href={resolve(`/plans/${entry.template.id}/configure`)}
+                class="shrink-0 rounded-md border border-talon-gold/60 bg-talon-gold/10 px-3 py-1.5 font-body text-xs text-talon-gold transition-colors hover:border-talon-gold hover:bg-talon-gold/20"
               >
                 {planActionLabel(entry)}
-              </button>
+              </a>
             {/if}
           </div>
         </article>
