@@ -1,5 +1,6 @@
 import {
   Activity,
+  Bot,
   Eye,
   LayoutDashboard,
   Plug,
@@ -41,6 +42,12 @@ export const navSectionDefs: NavSectionDef[] = [
     href: "/audit",
     icon: ScrollText,
     visibleTo: ["Overseer", "Engineer"],
+  },
+  {
+    i18nKey: "nav.agents",
+    href: "/agents",
+    icon: Bot,
+    visibleTo: ["Engineer"],
   },
 ];
 

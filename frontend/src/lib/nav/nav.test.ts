@@ -13,7 +13,7 @@ describe("nav sections registry", () => {
   });
 
   it("shows integrations to engineers only", () => {
-    expect(filterNavSections("Engineer")).toHaveLength(5);
+    expect(filterNavSections("Engineer")).toHaveLength(6);
     expect(
       filterNavSections("Engineer").some((d) => d.href === "/integrations"),
     ).toBe(true);
@@ -22,7 +22,15 @@ describe("nav sections registry", () => {
 
   it("shows audit log to overseer and engineer", () => {
     expect(filterNavSections("Overseer")).toHaveLength(4);
-    expect(filterNavSections("Engineer")).toHaveLength(5);
+    expect(filterNavSections("Engineer")).toHaveLength(6);
+    expect(filterNavSections("Leader")).toHaveLength(3);
+  });
+
+  it("shows agents catalog to engineers only", () => {
+    expect(filterNavSections("Engineer")).toHaveLength(6);
+    expect(
+      filterNavSections("Engineer").some((d) => d.href === "/agents"),
+    ).toBe(true);
     expect(filterNavSections("Leader")).toHaveLength(3);
   });
 
@@ -55,6 +63,7 @@ describe("navSectionDefs", () => {
       "/oversee",
       "/integrations",
       "/audit",
+      "/agents",
     ]);
   });
 });
