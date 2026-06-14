@@ -45,6 +45,7 @@ See [ADR-006](docs/adr/ADR-006-domain-driven-design.md).
 | [ADR-009](docs/adr/ADR-009-langgraph-state-semantics.md) | LangGraph state semantics |
 | [ADR-010](docs/adr/ADR-010-budget-policy-service.md) | Budget Policy Service (Agent Orchestration capability) |
 | [ADR-011](docs/adr/ADR-011-mcp-capability-gating.md) | MCP capability gating + out-of-process workers |
+| [ADR-012](docs/adr/ADR-012-plan-centric-task-model.md) | Plan-centric task model (templates, steps, executors) |
 | [ADR-013](docs/adr/ADR-013-connectrpc-python-adoption.md) | ConnectRPC Python adoption (`agent-runtime/`) |
 | [ADR-014](docs/adr/ADR-014-agent-memory-boundary.md) | Agent memory boundary |
 
