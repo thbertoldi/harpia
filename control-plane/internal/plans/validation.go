@@ -1,0 +1,324 @@
+package plans
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"strings"
+
+	"connectrpc.com/connect"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+
+	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
+	"github.com/harpia/control-plane/internal/executors"
+)
+
+var (
+	ErrBindingValidation = errors.New("slot binding validation failed")
+)
+
+type ExecutorLookup interface {
+	GetInstallationByID(ctx context.Context, tenantID, id uuid.UUID) (*executors.ExecutorInstallation, error)
+	GetSKUByID(ctx context.Context, id uuid.UUID) (*executors.ExecutorSKU, error)
+	ListEntitlements(ctx context.Context, tenantID uuid.UUID, skuID *uuid.UUID, limit, offset int) ([]executors.ExecutorEntitlement, error)
+}
+
+type BindingValidationError struct {
+	StepKey            string
+	ExecutorSKUID      string
+	ExecutorSKUKey     string
+	ExecutorInstallationID string
+	Reason             string
+	Code               connect.Code
+}
+
+func (e *BindingValidationError) Error() string {
+	details := make([]string, 0, 4)
+	if e.StepKey != "" {
+		details = append(details, fmt.Sprintf("step_key=%q", e.StepKey))
+	}
+	if e.ExecutorSKUKey != "" {
+		details = append(details, fmt.Sprintf("sku_key=%q", e.ExecutorSKUKey))
+	}
+	if e.ExecutorSKUID != "" {
+		details = append(details, fmt.Sprintf("sku_id=%s", e.ExecutorSKUID))
+	}
+	if e.ExecutorInstallationID != "" {
+		details = append(details, fmt.Sprintf("installation_id=%s", e.ExecutorInstallationID))
+	}
+	prefix := "slot binding invalid"
+	if len(details) > 0 {
+		prefix = fmt.Sprintf("%s (%s)", prefix, strings.Join(details, ", "))
+	}
+	return fmt.Sprintf("%s: %s", prefix, e.Reason)
+}
+
+func (e *BindingValidationError) Unwrap() error {
+	return ErrBindingValidation
+}
+
+type BindingValidator struct {
+	executors ExecutorLookup
+}
+
+func NewBindingValidator(executors ExecutorLookup) *BindingValidator {
+	return &BindingValidator{executors: executors}
+}
+
+func (v *BindingValidator) ValidateSlotBindings(
+	ctx context.Context,
+	tenantID uuid.UUID,
+	template *PlanTemplate,
+	status plansv1.PlanConfigurationStatus,
+	slotBindings []*plansv1.SlotBinding,
+) error {
+	if v == nil || v.executors == nil {
+		return errors.New("plans: binding validator is required")
+	}
+	if template == nil {
+		return connect.NewError(connect.CodeInvalidArgument, errors.New("plan template is required"))
+	}
+
+	statusStr, err := configurationStatusToString(status)
+	if err != nil {
+		return connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	if statusStr == "" {
+		statusStr = ConfigurationStatusDraft
+	}
+
+	strict := statusStr == ConfigurationStatusRunnable || statusStr == ConfigurationStatusScheduled
+	stepKeys := templateStepKeys(template)
+	bindingsByStep := make(map[string]*plansv1.SlotBinding, len(slotBindings))
+
+	for _, binding := range slotBindings {
+		if binding == nil {
+			return bindingError("", "", "", connect.CodeInvalidArgument, "slot binding entry is required")
+		}
+		stepKey := strings.TrimSpace(binding.StepKey)
+		if stepKey == "" {
+			return bindingError("", binding.ExecutorSkuId, binding.ExecutorInstallationId, connect.CodeInvalidArgument, "step_key is required")
+		}
+		if _, ok := stepKeys[stepKey]; !ok {
+			return bindingError(stepKey, binding.ExecutorSkuId, binding.ExecutorInstallationId, connect.CodeInvalidArgument, "step_key does not exist in plan template")
+		}
+		if existing, ok := bindingsByStep[stepKey]; ok {
+			return bindingError(stepKey, existing.ExecutorSkuId, existing.ExecutorInstallationId, connect.CodeInvalidArgument, "duplicate slot binding for step")
+		}
+		bindingsByStep[stepKey] = binding
+	}
+
+	if strict {
+		for stepKey := range stepKeys {
+			binding, ok := bindingsByStep[stepKey]
+			if !ok {
+				return bindingError(stepKey, "", "", connect.CodeFailedPrecondition, "slot binding is required for runnable or scheduled configuration")
+			}
+			if err := v.validateBinding(ctx, tenantID, binding, true); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	for _, binding := range bindingsByStep {
+		if err := v.validateBinding(ctx, tenantID, binding, false); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (v *BindingValidator) ValidateConfigurationForExecution(
+	ctx context.Context,
+	tenantID uuid.UUID,
+	template *PlanTemplate,
+	config *PlanConfiguration,
+) error {
+	if config == nil {
+		return connect.NewError(connect.CodeInvalidArgument, errors.New("plan configuration is required"))
+	}
+
+	var slotBindings []*plansv1.SlotBinding
+	if len(config.SlotBindings) > 0 {
+		if err := json.Unmarshal(config.SlotBindings, &slotBindings); err != nil {
+			return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid stored slot bindings: %w", err))
+		}
+	}
+
+	return v.ValidateSlotBindings(ctx, tenantID, template, plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE, slotBindings)
+}
+
+func (v *BindingValidator) validateBinding(
+	ctx context.Context,
+	tenantID uuid.UUID,
+	binding *plansv1.SlotBinding,
+	requireReadiness bool,
+) error {
+	stepKey := strings.TrimSpace(binding.StepKey)
+	installationID := strings.TrimSpace(binding.ExecutorInstallationId)
+	skuID := strings.TrimSpace(binding.ExecutorSkuId)
+
+	if installationID == "" {
+		if requireReadiness {
+			return bindingError(stepKey, skuID, "", connect.CodeFailedPrecondition, "executor_installation_id is required")
+		}
+		if skuID != "" {
+			if _, err := uuid.Parse(skuID); err != nil {
+				return bindingError(stepKey, skuID, "", connect.CodeInvalidArgument, "executor_sku_id must be a valid UUID")
+			}
+		}
+		return nil
+	}
+
+	parsedInstallationID, err := uuid.Parse(installationID)
+	if err != nil {
+		return bindingError(stepKey, skuID, installationID, connect.CodeInvalidArgument, "executor_installation_id must be a valid UUID")
+	}
+
+	installation, err := v.executors.GetInstallationByID(ctx, tenantID, parsedInstallationID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return bindingError(stepKey, skuID, installationID, connect.CodeFailedPrecondition, "executor installation not found for tenant")
+		}
+		return connect.NewError(connect.CodeInternal, fmt.Errorf("lookup executor installation: %w", err))
+	}
+	if installation.TenantID != tenantID {
+		return bindingError(stepKey, skuID, installationID, connect.CodeFailedPrecondition, "executor installation does not belong to tenant")
+	}
+
+	sku, err := v.executors.GetSKUByID(ctx, installation.ExecutorSKUID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return bindingError(stepKey, installation.ExecutorSKUID.String(), installationID, connect.CodeFailedPrecondition, "executor sku not found for installation")
+		}
+		return connect.NewError(connect.CodeInternal, fmt.Errorf("lookup executor sku: %w", err))
+	}
+
+	if skuID != "" {
+		parsedSKUID, parseErr := uuid.Parse(skuID)
+		if parseErr != nil {
+			return bindingError(stepKey, skuID, installationID, connect.CodeInvalidArgument, "executor_sku_id must be a valid UUID")
+		}
+		if parsedSKUID != installation.ExecutorSKUID {
+			return bindingErrorWithSKU(stepKey, sku, installationID, connect.CodeFailedPrecondition, "executor_sku_id does not match installation")
+		}
+	}
+
+	if binding.ExecutorKind != plansv1.ExecutorKind_EXECUTOR_KIND_UNSPECIFIED {
+		expectedKind, kindErr := plansExecutorKindToDB(binding.ExecutorKind)
+		if kindErr != nil {
+			return bindingErrorWithSKU(stepKey, sku, installationID, connect.CodeInvalidArgument, kindErr.Error())
+		}
+		if installation.Kind != expectedKind {
+			return bindingErrorWithSKU(stepKey, sku, installationID, connect.CodeFailedPrecondition, fmt.Sprintf("executor kind mismatch: installation is %q", installation.Kind))
+		}
+	}
+
+	entitlements, err := v.executors.ListEntitlements(ctx, tenantID, &installation.ExecutorSKUID, 1, 0)
+	if err != nil {
+		return connect.NewError(connect.CodeInternal, fmt.Errorf("lookup executor entitlement: %w", err))
+	}
+	if len(entitlements) == 0 {
+		return bindingErrorWithSKU(stepKey, sku, installationID, connect.CodeFailedPrecondition, "tenant is not entitled to executor sku")
+	}
+
+	if requireReadiness {
+		if !installation.Enabled {
+			return bindingErrorWithSKU(stepKey, sku, installationID, connect.CodeFailedPrecondition, "executor installation is disabled")
+		}
+		switch installation.Kind {
+		case executors.KindIntegration:
+			if err := validateIntegrationReadiness(installation); err != nil {
+				return bindingErrorWithSKU(stepKey, sku, installationID, connect.CodeFailedPrecondition, err.Error())
+			}
+		case executors.KindAgent:
+			if installation.ManifestID == nil || strings.TrimSpace(*installation.ManifestID) == "" ||
+				installation.ManifestVersion == nil || strings.TrimSpace(*installation.ManifestVersion) == "" {
+				return bindingErrorWithSKU(stepKey, sku, installationID, connect.CodeFailedPrecondition, "agent installation requires manifest_id and manifest_version")
+			}
+		}
+	}
+
+	return nil
+}
+
+func validateIntegrationReadiness(installation *executors.ExecutorInstallation) error {
+	status := "disconnected"
+	if installation.ConnectionStatus != nil {
+		status = strings.TrimSpace(*installation.ConnectionStatus)
+	}
+	if status != "connected" {
+		return fmt.Errorf("integration installation is not connected (status=%q)", status)
+	}
+
+	config := strings.TrimSpace(string(installation.ConfigJSON))
+	if config == "" || config == "{}" || config == "null" {
+		return errors.New("integration installation is not configured")
+	}
+	if !json.Valid(installation.ConfigJSON) {
+		return errors.New("integration installation config_json is invalid")
+	}
+	return nil
+}
+
+func templateStepKeys(template *PlanTemplate) map[string]struct{} {
+	keys := make(map[string]struct{}, len(template.Steps))
+	for i := range template.Steps {
+		keys[template.Steps[i].Key] = struct{}{}
+	}
+	return keys
+}
+
+func plansExecutorKindToDB(kind plansv1.ExecutorKind) (string, error) {
+	switch kind {
+	case plansv1.ExecutorKind_EXECUTOR_KIND_INTEGRATION:
+		return executors.KindIntegration, nil
+	case plansv1.ExecutorKind_EXECUTOR_KIND_AGENT:
+		return executors.KindAgent, nil
+	default:
+		return "", fmt.Errorf("unsupported executor kind %s", kind.String())
+	}
+}
+
+func bindingError(stepKey, skuID, installationID string, code connect.Code, reason string) error {
+	return &BindingValidationError{
+		StepKey:                stepKey,
+		ExecutorSKUID:          skuID,
+		ExecutorInstallationID: installationID,
+		Reason:                 reason,
+		Code:                   code,
+	}
+}
+
+func bindingErrorWithSKU(stepKey string, sku *executors.ExecutorSKU, installationID string, code connect.Code, reason string) error {
+	return &BindingValidationError{
+		StepKey:                stepKey,
+		ExecutorSKUID:          sku.ID.String(),
+		ExecutorSKUKey:         sku.Key,
+		ExecutorInstallationID: installationID,
+		Reason:                 reason,
+		Code:                   code,
+	}
+}
+
+func connectErrorFromBinding(err error) error {
+	if err == nil {
+		return nil
+	}
+	var connectErr *connect.Error
+	if errors.As(err, &connectErr) {
+		return connectErr
+	}
+	var bindingErr *BindingValidationError
+	if errors.As(err, &bindingErr) {
+		code := bindingErr.Code
+		if code == 0 {
+			code = connect.CodeInvalidArgument
+		}
+		return connect.NewError(code, bindingErr)
+	}
+	return connect.NewError(connect.CodeInternal, err)
+}
