@@ -9,6 +9,7 @@
 - Khononov, V. (2021) *Learning Domain-Driven Design*. O'Reilly Media.
 - ADR-002: Temporal + LangGraph Boundary
 - ADR-006: Domain-Driven Design for Agentic Architecture
+- ADR-011: MCP Capability Gating and Out-of-Process Worker Discipline (refines §7 below)
 
 ## Context
 
@@ -39,7 +40,7 @@ Task completed
 
 Agents are **stateless**. They do not remember previous tasks. Context comes from:
 1. **Task context** — the supervisor passes down the task description, parent subtask results, and constraints
-2. **MCP tools** — agents call external systems (files, calendar, CRM, database, APIs, tenant knowledge artifacts) for domain-specific context
+2. **MCP tools** — agents call external systems via the **capability-gated MCP adapter** ([ADR-011](ADR-011-mcp-capability-gating.md)): request by capability, never by server name; servers run out-of-process; bindings come from the execution snapshot
 3. **Overseer feedback** — human corrections, guidance, and agent type overrides
 
 This is a **function-as-a-service** model, not a persistent service mesh.
@@ -127,6 +128,22 @@ Per Arsanjani & Bustos's GenAI Maturity Model (Ch.12):
 | **4** | **Resilient Collaborative Team** | **Current — multi-agent with Temporal durability** |
 | 5 | Self-Correcting Ecosystem | Target — scorer node, trust tracking, canary testing |
 | 6 | Self-Improving | Post-MVP — coevolved training |
+
+### 7. MCP Integration Discipline (Refined by ADR-011)
+
+This section records the agent-runtime boundary for MCP that ADR-011 formalizes. Ephemeral agents (§1) MUST obtain domain context through MCP, but with strict discipline:
+
+| Rule | Rationale |
+|---|---|
+| Request by **capability**, not server name | Prevents agent logic from coupling to tenant infrastructure topology |
+| MCP servers run **out-of-process** | Crash isolation, independent scaling, aligns with MCP spec and ADR-011 §4 |
+| Authorization via manifest `required_mcp_capabilities` + `allowed_tool_ids` | Separates pgvector routing hints from tool authorization (ADR-011 §1) |
+| Resolve bindings from **execution snapshot** | ADR-012 — live registry edits must not change in-flight runs |
+| Audit every attempt/completion | Overseer trust substrate; fail-closed on attempt (ADR-011 §8) |
+
+Agent code never embeds MCP server implementations or passes `server_alias`. The capability-gated client in `agent-runtime/src/harpia_agents/mcp/` is the sole MCP entry point for LangGraph workers.
+
+Cost-aware model usage remains governed separately by [ADR-010](ADR-010-budget-policy-service.md) at the LLM invocation boundary.
 
 ## Consequences
 

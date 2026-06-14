@@ -37,11 +37,19 @@ Core messages:
 | Message | Purpose |
 |---|---|
 | `Capability` | Identifies a logical tool domain (e.g. `read_files`, `search_knowledge`, `post_slack`) |
-| `MCPServerConfig` | Per-tenant server registration: transport, endpoint, declared capabilities, optional server alias |
+| `MCPServerConfig` | Per-tenant server registration: transport, endpoint, declared capabilities, server alias (admin-only), `is_default`, `priority` |
 | `MCPServerRegistryService` | CRUD for tenant MCP server configs (#43) |
-| `ResolveCapabilityRequest/Response` | Maps `(tenant, capability[, server_alias])` → concrete server connection params |
+| `ResolveCapabilityRequest/Response` | Maps `(tenant, capability, binding_ref)` → concrete server connection params — **control-plane / adapter only** |
 
-Agent type manifests (#42) declare **required capabilities** via the existing `AgentType.capabilities` field. The router validates that every required capability is satisfied by the tenant's configured servers **before** dispatch (AND semantics — see §5).
+**Manifest fields are not interchangeable:**
+
+| Field | Purpose | Authorization? |
+|---|---|---|
+| `capabilities_text` / routing hints | Natural-language description embedded for **pgvector agent routing** (ADR-002) | No |
+| `required_mcp_capabilities` | MCP capability strings the agent may request at runtime (e.g. `read_files`) | Yes — adapter gate |
+| `allowed_tool_ids` | Concrete tool bindings from the tool manifest (#41) | Yes — dispatch + adapter gate |
+
+Agent type manifests (#42) declare **`required_mcp_capabilities`** and **`allowed_tool_ids`**. The router validates that every required capability is satisfied by the tenant's configured servers **before** dispatch (AND semantics — see §5). Semantic routing text MUST NOT be treated as an authorization contract.
 
 ### 2. Capability-Gated Client Adapter
 
@@ -51,15 +59,18 @@ All agent-runtime MCP access flows through a **capability-gated client adapter**
 Agent code
   → mcp.request(capability="read_files", tool="read", args={...})
   → CapabilityGatedClient
-      1. Validate capability ∈ agent_type.required_capabilities
-      2. Resolve capability → tenant MCPServerConfig (control-plane)
-      3. Fetch credentials via GetMCPCredentials (if OAuth — §7)
-      4. Connect via MCP transport (stdio / HTTP / SSE)
-      5. Emit AuditEvent (§8)
-      6. Route tool call to resolved server
+      1. Read execution snapshot MCP bindings (ADR-012) — not live registry
+      2. Validate capability ∈ manifest.required_mcp_capabilities
+      3. Validate tool ∈ manifest.allowed_tool_ids (when tool-level binding exists)
+      4. Resolve capability → snapshotted MCPServerConfig via binding_ref
+      5. Fetch credentials via GetMCPCredentials (if OAuth — §7)
+      6. Emit mcp.tool.attempt audit event (§8) — fail-closed if not durable
+      7. Connect via MCP transport (stdio / HTTP / SSE)
+      8. Emit mcp.tool.completed audit event (best-effort, retried)
+      9. Route tool call to resolved server
 ```
 
-**Hard rule:** agent code MUST NOT call `mcp.connect("filesystem-server")` or reference server names directly. Server names are infrastructure identifiers visible only to platform engineers and tenant admins — not to agent logic.
+**Hard rule:** agent code MUST NOT call `mcp.connect("filesystem-server")`, pass `server_alias`, or reference server names directly. Server names and aliases are infrastructure identifiers for platform engineers and tenant admins — not agent logic. Disambiguation when multiple servers provide the same capability is resolved from **tenant config defaults, executor installation, or plan slot binding** captured in the execution snapshot (§4.1).
 
 The adapter wraps `langchain-mcp-adapters` (already in `agent-runtime/pyproject.toml`) behind this resolution layer.
 
@@ -67,9 +78,10 @@ The adapter wraps `langchain-mcp-adapters` (already in `agent-runtime/pyproject.
 
 | Layer | Requests by | Example |
 |---|---|---|
-| Agent logic / LangGraph tools | **Capability** | `capability="read_files"` |
-| Capability-gated client | Capability → server resolution | Looks up tenant config |
+| Agent logic / LangGraph tools | **Capability only** | `capability="read_files"` |
+| Capability-gated client | Capability + **snapshotted binding_ref** | Resolved from execution context |
 | Platform engineer / tenant admin | **Server name / alias** | `filesystem-local`, `gdrive-prod` |
+| Plan slot / ExecutorInstallation binding | **Pinned server config ID** | Frozen in PlanExecution snapshot |
 | MCP transport | Server endpoint | `stdio://...`, `https://mcp.example.com` |
 
 This separation ensures a compromised or misconfigured third-party MCP server cannot expand its reach: the adapter only routes calls for capabilities the server declared **and** the agent type was authorized to use.
@@ -101,10 +113,30 @@ MCP servers **always** run as separate processes. Agent-runtime connects via MCP
 
 **Production:**
 - Each MCP server is a **sibling Deployment** in the Helm chart (same release, separate pods).
-- Agent-runtime receives server endpoints via tenant config resolved at runtime — not hardcoded in the chart.
+- Agent-runtime receives server endpoints from the **execution snapshot** (§4.1) — not hardcoded in the chart and not from live registry reads mid-run.
 - Network policies restrict agent-runtime pods to egress only to configured MCP server services (see §6).
 
 The existing `agent-runtime/src/harpia_agents/mcp_servers/` package may contain server **implementations**, but those implementations are executed as separate processes — never imported by the LangGraph worker at runtime.
+
+#### 4.1 Execution Snapshot (ADR-012 Alignment)
+
+Per ADR-012, a `PlanExecution` (or legacy task run) materializes a **frozen snapshot** at start: plan configuration, executor installations, and MCP bindings. MCP resolution during execution MUST read from this snapshot, not the live tenant registry.
+
+Snapshot fields (conceptual):
+
+```text
+McpBindingSnapshot {
+  server_config_id
+  server_config_version
+  server_alias          // admin label; not passed to agent code
+  capabilities[]        // declared at registration time
+  transport, endpoint_ref
+  oauth_secret_ref
+  is_default, priority  // disambiguation metadata copied at snapshot time
+}
+```
+
+Live CRUD on tenant MCP configs affects **future** runs only. Audit events (§8) include `server_config_id` + version from the snapshot for tamper-evident replay.
 
 ### 5. Resolved Open Questions
 
@@ -125,9 +157,12 @@ Naming convention: `snake_case`, verb-noun pattern, registered in a `capabilitie
 
 When a tenant configures two servers for the same capability (e.g. local filesystem + cloud storage):
 
-1. Agent code may pass an optional `server_alias` to disambiguate.
-2. If omitted, the adapter uses the **first-configured** server for that capability (stable ordering from registry).
-3. Platform engineers SHOULD document alias choices in agent type manifests when ambiguity is expected.
+1. Exactly one registration SHOULD set `is_default = true` per `(tenant, capability)`; the adapter uses that server when no slot binding overrides exist.
+2. `priority` (lower = preferred) breaks ties when importing configs or when no default is set — **stable ordering must not depend on CRUD/import sequence alone**.
+3. **Plan slot bindings** and **ExecutorInstallation** records MAY pin a specific `server_config_id` for a step; the snapshot carries that pin for the run.
+4. Agent code never passes disambiguation hints; platform engineers document expected pins in manifest metadata and plan templates.
+
+If multiple servers match and no default, pin, or priority winner exists, resolution fails with `FailedPrecondition` (configuration error surfaced to the Overseer).
 
 #### 5.3 Capability Composition
 
@@ -149,21 +184,25 @@ If the requested capability is not configured for the tenant:
 
 **Decision:** formalize in the agent type manifest (#42).
 
-`AgentType.capabilities` is the contract. The router rejects dispatch when the tenant's MCP registry does not satisfy the agent's required set. Dynamic capability discovery at runtime is out of scope for MVP.
+`required_mcp_capabilities` and `allowed_tool_ids` are the authorization contracts. `capabilities_text` remains a routing hint only (pgvector). The router rejects dispatch when the tenant's MCP registry does not satisfy the required capability set **at snapshot time**. Dynamic capability discovery at runtime is out of scope for MVP.
 
 #### 5.6 Audit Granularity
 
 **Decision:** log **every** MCP tool call. The audit log is the trust substrate for Overseer visibility and incident response. Sampling is deferred to post-MVP optimization only with explicit policy approval.
 
-### 6. Production Network Policy (Recommendation)
+### 6. Production Network Policy (Coarse Defense-in-Depth)
 
-In production Kubernetes, apply NetworkPolicy resources that:
+Static Kubernetes `NetworkPolicy` objects **cannot** track per-tenant MCP server registrations at runtime. MVP network controls are **coarse defense-in-depth** by deployment, not dynamic authorization.
 
-1. **Agent-runtime egress:** allow ConnectRPC to control-plane; allow MCP transport only to MCP server Services registered for the tenant's namespace.
-2. **MCP server egress:** allow only to the external provider endpoints that server requires (e.g. `api.github.com`, `slack.com`). Deny lateral movement to other MCP servers or databases.
-3. **Default deny:** namespaces housing MCP servers use default-deny ingress/egress with explicit allowlists.
+**MVP (Helm chart):**
 
-This is a **recommendation** for Helm chart authors (#43, deploy work) — not enforced by agent-runtime code. Document in `deploy/` README when MCP workloads land.
+1. **Agent-runtime egress:** allow ConnectRPC to control-plane; allow MCP transport to the **known MCP server Services** declared in the chart (one Service per bundled server type).
+2. **MCP server egress:** allow only to the external provider endpoints that server type requires (e.g. `api.github.com`, `slack.com`).
+3. **Default deny** inside the MCP namespace for lateral movement between unrelated server pods.
+
+**Explicit non-goal:** generating per-tenant NetworkPolicies from live registry state. That requires a controller or policy generator (open follow-up: dynamic egress policy workstream). Until then, tenant isolation for MCP is enforced in software by the capability-gated adapter (§2) and execution snapshots (§4.1), not by kube-proxy rules alone.
+
+Document baseline policies in `deploy/` README when MCP workloads land.
 
 ### 7. OAuth Helper (Issue #48)
 
@@ -184,17 +223,30 @@ Agent-runtime receives short-lived connection credentials; it does not store or 
 
 ### 8. Audit Trail (Issue #65)
 
-Every MCP tool invocation emits a `common.v1.AuditEvent` (#65) via control-plane:
+Every MCP tool invocation produces **two audit phases** via `common.v1.AuditEvent` (#65):
+
+| Phase | Action | When | Required? |
+|---|---|---|---|
+| Attempt | `mcp.tool.attempt` | Before MCP connect / tool invoke | **Yes — fail-closed** |
+| Completed | `mcp.tool.completed` | After success or error | Best-effort with retry |
+| Denied | `mcp.tool.denied` | Capability or tool not authorized | **Yes — fail-closed** |
+
+**Delivery semantics:**
+
+1. Adapter writes attempt/denied events to a **durable outbox** in control-plane (Postgres) synchronously before invoking the tool.
+2. If the outbox write fails or times out, the tool call **does not proceed** (fail-closed).
+3. Completion events enqueue asynchronously; a background worker retries delivery. Missing completions are flagged for reconciliation (Overseer UI may show "attempt without completion").
+4. Payloads exclude secrets and raw tool arguments; include snapshot `server_config_id`, capability, tool name, latency, status.
 
 | Field | Value |
 |---|---|
 | `tenant_id` | From `identity.RequestContext` |
 | `actor` | Agent instance ID + agent type ID |
-| `action` | `mcp.tool.invoke` |
+| `action` | `mcp.tool.attempt` / `mcp.tool.completed` / `mcp.tool.denied` |
 | `resource` | `{capability}/{tool_name}` |
-| `metadata` | Server alias, latency, success/failure (no secrets, no payload contents) |
+| `metadata` | Snapshotted server config ID + version, latency, success/failure (no secrets) |
 
-Audit events enable Overseer-side visibility into which tools agents reach for during subtask execution. Cross-capability access attempts (capability not in agent's allowed set) are logged as `mcp.tool.denied`.
+Cross-capability access attempts (capability not in `required_mcp_capabilities` or tool not in `allowed_tool_ids`) emit `mcp.tool.denied` and return `PermissionDenied` without connecting.
 
 ## Rationale
 
@@ -246,17 +298,20 @@ MCP spec assumes separate server processes. Embedding breaks: independent scalin
 5. Add sibling MCP server Deployments to Helm chart
 6. Integrate `common.v1.AuditEvent` emission on every MCP tool call (#65)
 7. Add `capabilities.yaml` reference file and CI lint for capability namespace
-8. Extend agent type manifest validation to cross-check capabilities against tenant registry (#41, #42)
+8. Extend agent type manifest validation: `required_mcp_capabilities` + `allowed_tool_ids` cross-checked against tenant registry (#41, #42)
+9. Add `is_default` + `priority` fields to `MCPServerConfig`; document disambiguation rules in #43
+10. Update [ADR-007](ADR-007-agentic-architecture-patterns.md) §7 with MCP capability-gating cross-reference
 
 ## Related ADRs and Issues
 
 | Link | Relationship |
 |---|---|
 | [ADR-006](ADR-006-domain-driven-design.md) | Capability registry lives in Agent Orchestration bounded context |
-| [ADR-007](ADR-007-agentic-architecture-patterns.md) | Refines — MCP is the canonical context source for ephemeral agents |
+| [ADR-007](ADR-007-agentic-architecture-patterns.md) | Refines — MCP is the canonical context source for ephemeral agents; see §7 cross-update |
+| [ADR-012](ADR-012-plan-centric-task-model.md) | Aligns — MCP bindings snapshotted on PlanExecution start |
 | [ADR-008](ADR-008-tenant-safe-generic-infra-boundaries.md) | Aligns — no platform-default servers; tenant isolation at MCP boundary |
 | #41 | Tool manifest + agent↔tool binding (absorbs registry client scope) |
-| #42 | Agent type manifest — `capabilities` field is the required-capability contract |
+| #42 | Agent type manifest — `required_mcp_capabilities` + `allowed_tool_ids` are authorization contracts; routing text is not |
 | #43 | Per-tenant MCP server config |
 | #45 | MCP client infra in agent-runtime |
 | #48 | OAuth helper — `GetMCPCredentials` |
