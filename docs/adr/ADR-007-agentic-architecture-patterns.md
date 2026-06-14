@@ -10,12 +10,13 @@
 - ADR-002: Temporal + LangGraph Boundary
 - ADR-006: Domain-Driven Design for Agentic Architecture
 - ADR-011: MCP Capability Gating and Out-of-Process Worker Discipline (refines §7 below)
+- ADR-014: Agent Memory Boundary
 
 ## Context
 
 Arsanjani & Bustos catalog 40+ architectural patterns for multi-agent systems across coordination (Ch.5), fault tolerance (Ch.7), human interaction (Ch.8), agent-level behavior (Ch.9), and production readiness (Ch.10). Their model assumes **persistent agent ecosystems** — agents that live forever, accumulate knowledge, negotiate with peers, and self-organize.
 
-Harpia's architecture is fundamentally different. Agents are **ephemeral executors** instantiated per-subtask within a task's bounded lifecycle (beginning → middle → end). Context comes from the task definition, parent results, MCP tools, and human feedback — not from persistent agent memory. The human Overseer owns all escalation decisions. This ADR identifies which patterns apply and which are actively rejected.
+Harpia's architecture is fundamentally different. Agents are **ephemeral executors** instantiated per-subtask within a task's bounded lifecycle (beginning → middle → end). Context comes from the task definition, parent results, MCP tools, explicit memory resources, and human feedback — not from persistent agent memory. The human Overseer owns all escalation decisions. This ADR identifies which patterns apply and which are actively rejected. ADR-014 defines the sharper memory boundary for plan execution.
 
 ## Decision
 
@@ -40,7 +41,7 @@ Task completed
 
 Agents are **stateless**. They do not remember previous tasks. Context comes from:
 1. **Task context** — the supervisor passes down the task description, parent subtask results, and constraints
-2. **MCP tools** — agents call external systems via the **capability-gated MCP adapter** ([ADR-011](ADR-011-mcp-capability-gating.md)): request by capability, never by server name; servers run out-of-process; bindings come from the execution snapshot
+2. **Tools and memory resources** — agents call external systems and explicit memory resources via declared tools, including the **capability-gated MCP adapter** ([ADR-011](ADR-011-mcp-capability-gating.md)): request by capability, never by server name; servers run out-of-process; bindings come from the execution snapshot
 3. **Overseer feedback** — human corrections, guidance, and agent type overrides
 
 This is a **function-as-a-service** model, not a persistent service mesh.
@@ -61,10 +62,10 @@ This is a **function-as-a-service** model, not a persistent service mesh.
 | Pattern | Source | Reason |
 |---|---|---|
 | Fallback Model Invocation | Ch.7 | Harpia does not automate model escalation. The human Overseer decides when to switch agent types. Automation removes the human from the loop, which violates our core premise. |
-| Blackboard Knowledge Hub | Ch.5 | Tasks are tenant-isolated and task-bound. Cross-task knowledge sharing, if needed, goes through MCP tools (tenant knowledge artifacts), not a shared agent memory space. |
+| Blackboard Knowledge Hub | Ch.5 | Tasks are tenant-isolated and task-bound. Cross-task knowledge sharing, if needed, goes through explicit tenant-owned memory resources exposed through tools, not a shared agent memory space. |
 | Agent Negotiation / Consensus | Ch.5 | Workers are isolated executors. The supervisor owns all decomposition decisions. The Overseer owns all approval decisions. No peer-to-peer agent communication exists. |
 | Supervision Tree / Formation Control | Ch.5 | Flat supervisor → workers structure is correct for MVP. Hierarchical supervisors may emerge naturally when tasks contain nested subtasks, but that complexity is deferred. Drone swarm analogies do not apply. |
-| Agent-Level Persistent Memory | Ch.9 | Agents are ephemeral per subtask. Memory lives in MCP tools, not in the agent instance. If an agent needs history, it queries the relevant tool. |
+| Agent-Level Persistent Memory | Ch.9 | Agents are ephemeral per subtask. Durable memory belongs to tenant-owned resources and execution records, not the agent instance. If an agent needs history, it queries the relevant tool; see ADR-014. |
 | Coevolved Agent Training | Ch.11 | Requires a feedback pipeline and model training infrastructure. Post-MVP. |
 
 ### 4. LangGraph Graph — Revised Structure
