@@ -44,19 +44,32 @@ k8s_yaml([
     'deploy/dev/kind/openfga-bootstrap.yaml',
 ])
 
-k8s_resource('zitadel', resource_deps=['postgres'])
-k8s_resource('zitadel-register-client', resource_deps=['zitadel'])
-k8s_resource('openfga', resource_deps=['postgres'])
-k8s_resource('openfga-bootstrap', resource_deps=['openfga'])
-
 # ---- Host-side dev helpers (Zitadel OIDC, OpenFGA, Vite) ----
 local_resource(
-    'db-migrate',
-    cmd='./scripts/apply-dev-db-migrations.sh',
+    'postgres-credentials-sync',
+    cmd='./scripts/sync-dev-postgres-credentials.sh',
     resource_deps=['postgres'],
     trigger_mode=TRIGGER_MODE_AUTO,
     deps=[
+        './scripts/sync-dev-postgres-credentials.sh',
+        './scripts/ensure-dev-kind-secrets.sh',
+    ],
+    labels=['infra'],
+)
+
+k8s_resource('zitadel', resource_deps=['postgres-credentials-sync'])
+k8s_resource('zitadel-register-client', resource_deps=['zitadel'])
+k8s_resource('openfga', resource_deps=['postgres-credentials-sync'])
+k8s_resource('openfga-bootstrap', resource_deps=['openfga'])
+
+local_resource(
+    'db-migrate',
+    cmd='./scripts/apply-dev-db-migrations.sh',
+    resource_deps=['postgres-credentials-sync'],
+    trigger_mode=TRIGGER_MODE_AUTO,
+    deps=[
         './scripts/apply-dev-db-migrations.sh',
+        './scripts/sync-dev-postgres-credentials.sh',
         'database/migrations/000001_initial_schema.sql',
         'database/migrations/000002_schema_sync.sql',
         'database/migrations/000003_tenant_rls_hardening.sql',

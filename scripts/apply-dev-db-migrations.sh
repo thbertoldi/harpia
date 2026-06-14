@@ -22,7 +22,7 @@ if ! command -v atlas >/dev/null 2>&1; then
   exit 1
 fi
 
-"$REPO_ROOT/scripts/ensure-dev-kind-secrets.sh" >/dev/null
+"$REPO_ROOT/scripts/sync-dev-postgres-credentials.sh" >/dev/null
 
 if [[ -n "${HARPIA_DEV_DATABASE_URL:-}" ]]; then
   DATABASE_URL="$HARPIA_DEV_DATABASE_URL"
