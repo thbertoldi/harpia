@@ -7,9 +7,11 @@ import {
   ExecutorSKUSchema,
   IntegrationInstallationSchema,
   AgentInstallationSchema,
+  ListPriceSchema,
   type ExecutorEntitlement,
   type ExecutorInstallation,
   type ExecutorSKU,
+  type ListPrice,
 } from "$lib/gen/harpia/executors/v1/executors_pb";
 import {
   ExecutorKind as PlanExecutorKind,
@@ -26,53 +28,82 @@ export interface MockExecutorContext {
   installations: ExecutorInstallation[];
 }
 
-const SKU_IDS = {
+export const SKU_IDS = {
   rssNewsFeed: "b1000000-0000-4000-8000-000000000001",
   newsletterWriter: "b1000000-0000-4000-8000-000000000002",
   linkedinVoice: "b1000000-0000-4000-8000-000000000003",
   linkedinPublish: "b1000000-0000-4000-8000-000000000004",
 } as const;
 
+/** List prices aligned with control-plane executor catalog seeds. */
+export const MOCK_SKU_LIST_PRICES: Record<
+  string,
+  { priceCents: number; currency: string }
+> = {
+  "rss-news-feed": { priceCents: 500, currency: "USD" },
+  "newsletter-writer-senior": { priceCents: 200, currency: "USD" },
+  "linkedin-voice-senior": { priceCents: 150, currency: "USD" },
+  "linkedin-publish": { priceCents: 1000, currency: "USD" },
+};
+
+export function getMockSkuListPrice(skuKey: string): ListPrice | undefined {
+  const price = MOCK_SKU_LIST_PRICES[skuKey];
+  if (!price) return undefined;
+
+  return create(ListPriceSchema, {
+    priceCents: BigInt(price.priceCents),
+    currency: price.currency,
+  });
+}
+
+function mockSku(
+  id: string,
+  key: string,
+  displayName: string,
+  description: string,
+  kind: ExecutorCatalogKind,
+): ExecutorSKU {
+  return create(ExecutorSKUSchema, {
+    id,
+    key,
+    displayName,
+    description,
+    kind,
+    listPrice: getMockSkuListPrice(key),
+    createdAt: "2026-06-01T10:00:00Z",
+    updatedAt: "2026-06-01T10:00:00Z",
+  });
+}
+
 const MOCK_SKUS: ExecutorSKU[] = [
-  create(ExecutorSKUSchema, {
-    id: SKU_IDS.rssNewsFeed,
-    key: "rss-news-feed",
-    displayName: "RSS News Feed",
-    description: "Fetches curated news articles from configured RSS feeds.",
-    kind: ExecutorCatalogKind.INTEGRATION,
-    createdAt: "2026-06-01T10:00:00Z",
-    updatedAt: "2026-06-01T10:00:00Z",
-  }),
-  create(ExecutorSKUSchema, {
-    id: SKU_IDS.newsletterWriter,
-    key: "newsletter-writer-senior",
-    displayName: "Newsletter Writer (Senior)",
-    description:
-      "Senior agent that synthesizes a platform-neutral newsletter draft from curated news.",
-    kind: ExecutorCatalogKind.AGENT,
-    createdAt: "2026-06-01T10:00:00Z",
-    updatedAt: "2026-06-01T10:00:00Z",
-  }),
-  create(ExecutorSKUSchema, {
-    id: SKU_IDS.linkedinVoice,
-    key: "linkedin-voice-senior",
-    displayName: "LinkedIn Voice (Senior)",
-    description:
-      "Senior agent that adapts a neutral text draft into a LinkedIn-ready post.",
-    kind: ExecutorCatalogKind.AGENT,
-    createdAt: "2026-06-01T10:00:00Z",
-    updatedAt: "2026-06-01T10:00:00Z",
-  }),
-  create(ExecutorSKUSchema, {
-    id: SKU_IDS.linkedinPublish,
-    key: "linkedin-publish",
-    displayName: "LinkedIn Publish",
-    description:
-      "Publishes a LinkedIn post draft through the tenant OAuth connection.",
-    kind: ExecutorCatalogKind.INTEGRATION,
-    createdAt: "2026-06-01T10:00:00Z",
-    updatedAt: "2026-06-01T10:00:00Z",
-  }),
+  mockSku(
+    SKU_IDS.rssNewsFeed,
+    "rss-news-feed",
+    "RSS News Feed",
+    "Fetches curated news articles from configured RSS feeds.",
+    ExecutorCatalogKind.INTEGRATION,
+  ),
+  mockSku(
+    SKU_IDS.newsletterWriter,
+    "newsletter-writer-senior",
+    "Newsletter Writer (Senior)",
+    "Senior agent that synthesizes a platform-neutral newsletter draft from curated news.",
+    ExecutorCatalogKind.AGENT,
+  ),
+  mockSku(
+    SKU_IDS.linkedinVoice,
+    "linkedin-voice-senior",
+    "LinkedIn Voice (Senior)",
+    "Senior agent that adapts a neutral text draft into a LinkedIn-ready post.",
+    ExecutorCatalogKind.AGENT,
+  ),
+  mockSku(
+    SKU_IDS.linkedinPublish,
+    "linkedin-publish",
+    "LinkedIn Publish",
+    "Publishes a LinkedIn post draft through the tenant OAuth connection.",
+    ExecutorCatalogKind.INTEGRATION,
+  ),
 ];
 
 export const WEEKLY_NEWSLETTER_TEMPLATE: PlanTemplate = create(
