@@ -76,6 +76,11 @@ Run `./scripts/ensure-dev-kind-secrets.sh` before applying `deploy/dev/kind/`.
 The helper creates missing Secrets with generated dev values and keeps existing
 Secrets unchanged on later runs.
 
+Tilt also runs `./scripts/sync-dev-postgres-credentials.sh` after Postgres is
+ready and before DB consumers start. That script reconciles the Postgres role
+password to `Secret/postgres-credentials` and verifies that service-path
+connections to `harpia` and `openfga` authenticate successfully.
+
 To choose local values, create ignored file `deploy/dev/kind/secrets.local.env`:
 
 ```bash
@@ -103,11 +108,11 @@ kubectl get secret zitadel-masterkey -o yaml > /secure/path/zitadel-masterkey.ya
 Postgres password rotation without data loss:
 
 1. Generate a new URL-safe password.
-2. Connect with the current password and run `ALTER ROLE` for the Secret's
-   `username`.
-3. Apply `Secret/postgres-credentials` with the same `username` and new
+2. Apply `Secret/postgres-credentials` with the same `username` and new
    `password`.
-4. Restart consumers: `kubectl rollout restart deploy/postgres deploy/zitadel deploy/harpia-api deploy/openfga`.
+3. Run `./scripts/sync-dev-postgres-credentials.sh` to update the role password
+   inside the existing Postgres PVC.
+4. Restart consumers: `kubectl rollout restart deploy/zitadel deploy/harpia-api deploy/openfga`.
 5. Run `./scripts/apply-dev-db-migrations.sh` and verify API/OpenFGA/Zitadel
    readiness.
 
