@@ -1,6 +1,14 @@
 <script lang="ts">
   import "../app.css";
-  import { Menu, X, Sun, Moon, LayoutDashboard, Eye } from "lucide-svelte";
+  import {
+    Menu,
+    X,
+    Sun,
+    Moon,
+    LayoutDashboard,
+    Eye,
+    Activity,
+  } from "lucide-svelte";
   import TenantSelector from "$lib/components/TenantSelector.svelte";
   import FeedbackBadge from "$lib/components/FeedbackBadge.svelte";
   import { logout } from "$lib/auth";
@@ -25,13 +33,17 @@
 
   const sections = [
     { label: "Tasks", href: "/", icon: LayoutDashboard },
+    { label: "Ongoing", href: "/tasks/ongoing", icon: Activity },
     { label: "Oversee", href: "/oversee", icon: Eye },
   ] as const;
 
   function isActive(path: string) {
     return (
       page.url.pathname === path ||
-      (path === "/" && page.url.pathname === "/tasks")
+      (path === "/" &&
+        (page.url.pathname === "/tasks" ||
+          (page.url.pathname.startsWith("/tasks/") &&
+            page.url.pathname !== "/tasks/ongoing")))
     );
   }
 </script>
