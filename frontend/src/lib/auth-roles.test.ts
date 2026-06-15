@@ -7,26 +7,41 @@ import {
   getUserRole,
   hasPermission,
   isEngineer,
-  normalizeRole,
+  resolvePermissionRole,
+  roleFromBackendRoles,
 } from "./auth-roles";
 
-describe("normalizeRole", () => {
-  it("maps unset and backend admin aliases to Leader", () => {
-    expect(normalizeRole(undefined)).toBe("Leader");
-    expect(normalizeRole("")).toBe("Leader");
-    expect(normalizeRole("Leader")).toBe("Leader");
-    expect(normalizeRole("admin")).toBe("Leader");
-    expect(normalizeRole("owner")).toBe("Leader");
+describe("resolvePermissionRole", () => {
+  it("returns null when role is missing", () => {
+    expect(resolvePermissionRole(undefined)).toBeNull();
+    expect(resolvePermissionRole("")).toBeNull();
+  });
+
+  it("maps trusted Leader aliases", () => {
+    expect(resolvePermissionRole("Leader")).toBe("Leader");
+    expect(resolvePermissionRole("admin")).toBe("Leader");
+    expect(resolvePermissionRole("owner")).toBe("Leader");
   });
 
   it("preserves explicit product roles", () => {
-    expect(normalizeRole("Engineer")).toBe("Engineer");
-    expect(normalizeRole("Overseer")).toBe("Overseer");
+    expect(resolvePermissionRole("Engineer")).toBe("Engineer");
+    expect(resolvePermissionRole("Overseer")).toBe("Overseer");
   });
 
   it("returns null for unknown explicit roles", () => {
-    expect(normalizeRole("member")).toBeNull();
-    expect(normalizeRole("guest")).toBeNull();
+    expect(resolvePermissionRole("member")).toBeNull();
+    expect(resolvePermissionRole("guest")).toBeNull();
+  });
+});
+
+describe("roleFromBackendRoles", () => {
+  it("maps backend admin to Leader", () => {
+    expect(roleFromBackendRoles(["admin"])).toBe("Leader");
+  });
+
+  it("returns undefined when backend sends no roles", () => {
+    expect(roleFromBackendRoles(undefined)).toBeUndefined();
+    expect(roleFromBackendRoles([])).toBeUndefined();
   });
 });
 
@@ -67,12 +82,46 @@ describe("permission matrix", () => {
     expect(canConfigurePlans(null)).toBe(false);
     expect(canConfigurePlans(undefined)).toBe(false);
   });
+
+  it("denies permissions when role is missing from authenticated user", () => {
+    const cookieUser = {
+      sub: "user-1",
+      email: "user@harpia.local",
+      name: "User",
+    };
+    expect(canConfigurePlans(cookieUser)).toBe(false);
+    expect(canConfigurePlans({})).toBe(false);
+    expect(canManageIntegrations(cookieUser)).toBe(false);
+    expect(canManageAgents(cookieUser)).toBe(false);
+    expect(canViewAudit(cookieUser)).toBe(false);
+  });
+});
+
+describe("route guard expectations", () => {
+  it("blocks Overseer from integrations, agents, and plan configuration", () => {
+    const overseer = { role: "Overseer" };
+    expect(canManageIntegrations(overseer)).toBe(false);
+    expect(canManageAgents(overseer)).toBe(false);
+    expect(canConfigurePlans(overseer)).toBe(false);
+    expect(canViewAudit(overseer)).toBe(true);
+  });
+
+  it("blocks cookie users without role from gated routes", () => {
+    const userWithoutRole = {
+      sub: "zitadel-subject",
+      email: "admin@harpia.local",
+      name: "Admin",
+    };
+    expect(canConfigurePlans(userWithoutRole)).toBe(false);
+    expect(canManageAgents(userWithoutRole)).toBe(false);
+  });
 });
 
 describe("getUserRole", () => {
-  it("defaults unset roles to Leader for display", () => {
+  it("defaults missing roles to Leader for display only", () => {
     expect(getUserRole(undefined)).toBe("Leader");
     expect(getUserRole({})).toBe("Leader");
+    expect(canConfigurePlans({})).toBe(false);
   });
 
   it("labels unknown explicit roles as Leader without granting access", () => {

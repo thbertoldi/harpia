@@ -24,9 +24,12 @@ const ROLE_PERMISSIONS: Record<HarpiaRole, ReadonlySet<HarpiaPermission>> = {
 
 const LEADER_ALIASES = new Set(["Leader", "admin", "owner"]);
 
-export function normalizeRole(role: string | undefined): HarpiaRole | null {
+/** Maps an explicit role string to a permission-bearing product role, if trusted. */
+export function resolvePermissionRole(
+  role: string | undefined,
+): HarpiaRole | null {
   if (!role) {
-    return "Leader";
+    return null;
   }
   if (LEADER_ALIASES.has(role)) {
     return "Leader";
@@ -37,10 +40,27 @@ export function normalizeRole(role: string | undefined): HarpiaRole | null {
   return null;
 }
 
+/** Display label fallback; does not grant permissions by itself. */
 export function getUserRole(
   user: { role?: string } | null | undefined,
 ): HarpiaRole {
-  return normalizeRole(user?.role) ?? "Leader";
+  return resolvePermissionRole(user?.role) ?? "Leader";
+}
+
+export function roleFromBackendRoles(
+  roles: string[] | undefined,
+): string | undefined {
+  if (!roles?.length) {
+    return undefined;
+  }
+  const role = roles[0];
+  if (LEADER_ALIASES.has(role)) {
+    return "Leader";
+  }
+  if (role === "Engineer" || role === "Overseer") {
+    return role;
+  }
+  return role;
 }
 
 export function hasPermission(
@@ -50,7 +70,7 @@ export function hasPermission(
   if (!user) {
     return false;
   }
-  const role = normalizeRole(user.role);
+  const role = resolvePermissionRole(user.role);
   if (!role) {
     return false;
   }
@@ -85,5 +105,5 @@ export function canConfigurePlans(
 export function isEngineer(
   user: { role?: string } | null | undefined,
 ): boolean {
-  return normalizeRole(user?.role) === "Engineer";
+  return resolvePermissionRole(user?.role) === "Engineer";
 }

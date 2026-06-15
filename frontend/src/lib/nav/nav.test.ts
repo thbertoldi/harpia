@@ -9,7 +9,7 @@ import {
 describe("nav sections registry", () => {
   it("includes base sections for all roles", () => {
     expect(filterNavSections("Leader")).toHaveLength(7);
-    expect(filterNavSections(undefined)).toHaveLength(7);
+    expect(filterNavSections(undefined)).toHaveLength(4);
   });
 
   it("shows integrations to leaders and engineers", () => {

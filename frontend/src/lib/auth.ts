@@ -77,9 +77,37 @@ function persistSession(session: Session): void {
       sub: session.user.sub,
       email: session.user.email,
       name: session.user.name,
+      role: session.user.role,
       tenant_id: session.tenant?.id,
     }),
   )}; path=/; SameSite=Lax`;
+}
+
+export async function syncSessionRole(session: Session): Promise<Session> {
+  if (session.user.role || session.tokens.access_token === "dev-token") {
+    return session;
+  }
+
+  persistSession(session);
+
+  try {
+    const { identityClient } = await import("$lib/rpc");
+    const { roleFromBackendRoles } = await import("$lib/auth-roles");
+    const response = await identityClient.getCurrentUser({});
+    const role = roleFromBackendRoles(response.user?.roles);
+    if (!role) {
+      return session;
+    }
+    return {
+      ...session,
+      user: {
+        ...session.user,
+        role,
+      },
+    };
+  } catch {
+    return session;
+  }
 }
 
 export async function syncSessionTenant(session: Session): Promise<Session> {
@@ -189,12 +217,13 @@ export async function handleCallback(code: string): Promise<Session> {
   };
 
   const resolved = await syncSessionTenant(session);
-  persistSession(resolved);
+  const withRole = await syncSessionRole(resolved);
+  persistSession(withRole);
 
   sessionStorage.removeItem("code_verifier");
   sessionStorage.removeItem("oauth_state");
 
-  return resolved;
+  return withRole;
 }
 
 export function logout(): void {
