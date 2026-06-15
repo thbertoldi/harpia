@@ -1,12 +1,16 @@
 import { create } from "@bufbuild/protobuf";
 import {
+  PlanConfigurationSchema,
   PlanExecutionSchema,
   PlanExecutionStatus,
   StepExecutionSchema,
   StepExecutionStatus,
+  type PlanConfiguration,
   type PlanExecution,
   type StepExecution,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
+
+export const MOCK_PLAN_EXECUTION_ID = "e2000000-0000-4000-8000-000000000132";
 
 const DEMO_TENANT_ID = "dev";
 const DEMO_PLAN_CONFIGURATION_ID = "demo-plan-configuration";
@@ -18,6 +22,17 @@ type StepProgress = {
   status: StepExecutionStatus;
   createdOffsetSec: number;
   updatedOffsetSec: number;
+};
+
+type SnapshotStep = {
+  key: string;
+  title: string;
+};
+
+type PlanConfigurationWithTemplateSnapshot = PlanConfiguration & {
+  planTemplateSnapshot?: {
+    steps?: SnapshotStep[];
+  };
 };
 
 const MOCK_STEP_SEQUENCE: StepProgress[][] = [
@@ -191,6 +206,15 @@ function buildExecutionFromSequence(
   });
 }
 
+function withTemplateSnapshot(
+  configuration: PlanConfiguration,
+  steps: SnapshotStep[],
+): PlanConfiguration {
+  const snapshot = configuration as PlanConfigurationWithTemplateSnapshot;
+  snapshot.planTemplateSnapshot = { steps };
+  return snapshot;
+}
+
 export function mockPlanExecution(
   executionId = DEMO_EXECUTION_ID,
 ): PlanExecution {
@@ -232,4 +256,79 @@ export function mockPlanExecutionsList(): PlanExecution[] {
       ),
     }),
   ];
+}
+
+export function mockPlanExecutionDetail(): {
+  execution: PlanExecution;
+  stepExecutions: StepExecution[];
+} {
+  const configuration = withTemplateSnapshot(
+    create(PlanConfigurationSchema, {
+      id: "c2000000-0000-4000-8000-000000000001",
+      tenantId: "dev",
+      workspaceId: "workspace-dev",
+      planTemplateId: "a1000000-0000-4000-8000-000000000001",
+      planTemplateVersion: 1,
+      createdAt: "2026-06-14T15:00:00Z",
+      updatedAt: "2026-06-14T15:00:00Z",
+    }),
+    [
+      { key: "fetch-news", title: "Fetch News" },
+      { key: "write-draft", title: "Write Draft" },
+      { key: "adapt-for-linkedin", title: "Adapt for LinkedIn" },
+      { key: "publish-linkedin", title: "Publish LinkedIn" },
+    ],
+  );
+
+  const stepExecutions = [
+    create(StepExecutionSchema, {
+      id: "s2000000-0000-4000-8000-000000000001",
+      planExecutionId: MOCK_PLAN_EXECUTION_ID,
+      planStepKey: "fetch-news",
+      status: StepExecutionStatus.COMPLETED,
+      inputArtifactId: "artifact-date-range",
+      outputArtifactId: "artifact-news-list",
+      attempt: 1,
+      createdAt: "2026-06-14T15:01:00Z",
+      updatedAt: "2026-06-14T15:01:45Z",
+    }),
+    create(StepExecutionSchema, {
+      id: "s2000000-0000-4000-8000-000000000002",
+      planExecutionId: MOCK_PLAN_EXECUTION_ID,
+      planStepKey: "write-draft",
+      status: StepExecutionStatus.COMPLETED,
+      inputArtifactId: "artifact-news-list",
+      outputArtifactId: "artifact-text-draft",
+      attempt: 1,
+      createdAt: "2026-06-14T15:02:00Z",
+      updatedAt: "2026-06-14T15:03:10Z",
+    }),
+    create(StepExecutionSchema, {
+      id: "s2000000-0000-4000-8000-000000000003",
+      planExecutionId: MOCK_PLAN_EXECUTION_ID,
+      planStepKey: "adapt-for-linkedin",
+      status: StepExecutionStatus.FAILED,
+      inputArtifactId: "artifact-text-draft",
+      outputArtifactId: "",
+      attempt: 1,
+      createdAt: "2026-06-14T15:03:20Z",
+      updatedAt: "2026-06-14T15:04:05Z",
+    }),
+  ];
+
+  return {
+    execution: create(PlanExecutionSchema, {
+      id: MOCK_PLAN_EXECUTION_ID,
+      tenantId: "dev",
+      planConfigurationId: configuration.id,
+      planConfigurationSnapshot: configuration,
+      status: PlanExecutionStatus.FAILED,
+      stepExecutions,
+      triggeredAt: "2026-06-14T15:01:00Z",
+      completedAt: "2026-06-14T15:04:05Z",
+      createdAt: "2026-06-14T15:01:00Z",
+      updatedAt: "2026-06-14T15:04:05Z",
+    }),
+    stepExecutions,
+  };
 }
