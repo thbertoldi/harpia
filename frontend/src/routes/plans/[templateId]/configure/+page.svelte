@@ -274,7 +274,11 @@
           {#each validation.draftWarnings as warning, index (index)}
             <li class="flex items-start gap-2 font-body text-xs text-crown-ash">
               <Info class="mt-0.5 size-3 shrink-0 text-talon-gold" />
-              <span>{warning}</span>
+              <span
+                >{warning.startsWith("plans.")
+                  ? translate(warning, $locale)
+                  : warning}</span
+              >
             </li>
           {/each}
         </ul>
@@ -305,11 +309,11 @@
             <div class="text-right font-mono text-[10px] text-crown-ash">
               <p>
                 {translate("plans.detail.stepInput", $locale)}:
-                {formatArtifactTypeLabel(step.inputArtifactTypeId)}
+                {formatArtifactTypeLabel(step.inputArtifactTypeId, $locale)}
               </p>
               <p class="text-talon-gold">
                 {translate("plans.detail.stepOutput", $locale)}:
-                {formatArtifactTypeLabel(step.outputArtifactTypeId)}
+                {formatArtifactTypeLabel(step.outputArtifactTypeId, $locale)}
               </p>
             </div>
           </div>
@@ -388,10 +392,16 @@
                   {skuStatusLabel(selectedOption.lockReason)}
                 </span>
               </div>
-              {#if selectedOption.lockMessage}
+              {#if selectedOption.lockMessageKey}
                 <p class="mt-2 flex items-start gap-1 font-body text-xs">
                   <Info class="mt-0.5 size-3 shrink-0" />
-                  <span>{selectedOption.lockMessage}</span>
+                  <span
+                    >{translate(
+                      selectedOption.lockMessageKey,
+                      $locale,
+                      selectedOption.lockMessageParams,
+                    )}</span
+                  >
                 </p>
               {/if}
             </div>

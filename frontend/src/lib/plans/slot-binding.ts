@@ -33,7 +33,8 @@ export interface CompatibleInstallationOption {
   installation: ExecutorInstallation;
   sku: ExecutorSKU;
   lockReason: SkuLockReason;
-  lockMessage: string;
+  lockMessageKey: string;
+  lockMessageParams?: Record<string, string>;
   ready: boolean;
 }
 
@@ -161,7 +162,10 @@ export function resolveInstallationLockState(
   installation: ExecutorInstallation,
   sku: ExecutorSKU,
   entitlements: ExecutorEntitlement[],
-): Pick<CompatibleInstallationOption, "lockReason" | "lockMessage" | "ready"> {
+): Pick<
+  CompatibleInstallationOption,
+  "lockReason" | "lockMessageKey" | "lockMessageParams" | "ready"
+> {
   const entitled = entitlements.some(
     (entitlement) => entitlement.executorSkuId === sku.id,
   );
@@ -169,7 +173,8 @@ export function resolveInstallationLockState(
   if (!entitled) {
     return {
       lockReason: "missing_entitlement",
-      lockMessage: `Missing SKU entitlement for ${sku.displayName} (${sku.key}).`,
+      lockMessageKey: "plans.lock.message.missing_entitlement",
+      lockMessageParams: { name: sku.displayName, key: sku.key },
       ready: false,
     };
   }
@@ -177,19 +182,25 @@ export function resolveInstallationLockState(
   if (!installation.enabled) {
     return {
       lockReason: "not_configured",
-      lockMessage: `${installation.displayName} is disabled.`,
+      lockMessageKey: "plans.lock.message.installation_disabled",
+      lockMessageParams: { name: installation.displayName },
       ready: false,
     };
   }
 
   if (isInstallationReady(installation)) {
-    return { lockReason: "available", lockMessage: "", ready: true };
+    return {
+      lockReason: "available",
+      lockMessageKey: "plans.lock.message.available",
+      ready: true,
+    };
   }
 
   const skuLock = resolveSkuLockState(sku, entitlements, [installation]);
   return {
     lockReason: skuLock.reason,
-    lockMessage: skuLock.message,
+    lockMessageKey: skuLock.messageKey,
+    lockMessageParams: skuLock.messageParams,
     ready: false,
   };
 }
@@ -367,15 +378,12 @@ export function validateSlotBindings(
       ? resolveInstallationLockState(installation, sku, context.entitlements)
       : {
           lockReason: "not_configured" as SkuLockReason,
-          lockMessage: "Executor SKU metadata is unavailable.",
+          lockMessageKey: "plans.lock.message.sku_metadata_unavailable",
           ready: false,
         };
 
     if (!lock.ready) {
-      warnings.push(
-        lock.lockMessage ||
-          `Installation for step "${step.title}" is not ready to run.`,
-      );
+      warnings.push(lock.lockMessageKey);
     }
 
     steps.push({

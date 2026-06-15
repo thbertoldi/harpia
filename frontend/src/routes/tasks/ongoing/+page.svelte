@@ -10,11 +10,12 @@
   import { taskClient, type Task } from "$lib/rpc";
   import {
     groupOngoingTasks,
-    ONGOING_SECTION_LABELS,
+    ONGOING_SECTION_LABEL_KEYS,
     ONGOING_SECTION_ORDER,
     type OngoingSectionId,
   } from "$lib/tasks/ongoing-tasks";
   import { startTaskPoller } from "$lib/tasks/task-refresh";
+  import { locale, translate } from "$lib/i18n";
 
   let tasks = $state<Task[]>([]);
   let loading = $state(true);
@@ -65,13 +66,13 @@
   function emptyMessage(sectionId: OngoingSectionId): string {
     switch (sectionId) {
       case "in_progress":
-        return "No tasks are executing right now.";
+        return translate("ongoing.empty.inProgress", $locale);
       case "awaiting_approval":
-        return "No tasks waiting for plan or agent approval.";
+        return translate("ongoing.empty.awaitingApproval", $locale);
       case "awaiting_review":
-        return "No tasks waiting for output review.";
+        return translate("ongoing.empty.awaitingReview", $locale);
       case "planning":
-        return "No tasks are being planned.";
+        return translate("ongoing.empty.planning", $locale);
     }
   }
 
@@ -90,10 +91,10 @@
   <div class="mb-6 flex items-center justify-between gap-4">
     <div>
       <HarpyHeading tag="h1" class="text-2xl text-cream">
-        Ongoing Tasks
+        {translate("ongoing.heading", $locale)}
       </HarpyHeading>
       <p class="mt-1 font-body text-sm text-crown-ash">
-        Live view of in-flight work across your workspace.
+        {translate("ongoing.subheading", $locale)}
       </p>
     </div>
     {#if refreshing}
@@ -101,7 +102,7 @@
         class="inline-flex items-center gap-2 font-mono text-[10px] tracking-wider text-crown-ash uppercase"
       >
         <Loader2 class="size-3 animate-spin" />
-        Refreshing
+        {translate("ongoing.refreshing", $locale)}
       </span>
     {/if}
   </div>
@@ -110,21 +111,25 @@
     <div class="flex min-h-[40vh] items-center justify-center">
       <div class="flex items-center gap-2 text-crown-ash">
         <Loader2 class="size-5 animate-spin" />
-        <span class="font-body text-sm">Loading ongoing tasks...</span>
+        <span class="font-body text-sm"
+          >{translate("ongoing.loading", $locale)}</span
+        >
       </div>
     </div>
   {:else if loadError}
     <div class="flex min-h-[40vh] items-center justify-center">
       <div class="text-center">
         <AlertTriangle class="mx-auto mb-3 size-10 text-red-400" />
-        <p class="font-body text-sm text-red-400">Failed to load tasks</p>
+        <p class="font-body text-sm text-red-400">
+          {translate("tasks.loadError", $locale)}
+        </p>
         <p class="mt-1 font-mono text-xs text-crown-ash">{loadError}</p>
         <button
           type="button"
           onclick={() => fetchTasks()}
           class="mt-4 rounded-md border border-plumage px-4 py-2 font-body text-sm text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
         >
-          Retry
+          {translate("common.retry", $locale)}
         </button>
       </div>
     </div>
@@ -134,11 +139,10 @@
     >
       <Radar class="mb-4 size-12 text-talon-gold" />
       <HarpyHeading tag="h2" class="mb-2 text-xl text-cream">
-        Nothing in flight
+        {translate("ongoing.empty.title", $locale)}
       </HarpyHeading>
       <p class="max-w-md font-body text-sm text-crown-ash">
-        When tasks are planning, executing, or waiting on your feedback, they
-        will appear here.
+        {translate("ongoing.empty.description", $locale)}
       </p>
     </div>
   {:else}
@@ -149,14 +153,14 @@
         >
           <header class="border-b border-plumage/60 px-4 py-3">
             <h2 class="font-heading text-sm font-semibold text-cream">
-              {ONGOING_SECTION_LABELS[sectionId]}
+              {translate(ONGOING_SECTION_LABEL_KEYS[sectionId], $locale)}
             </h2>
             <p
               class="mt-0.5 font-mono text-[10px] tracking-wider text-crown-ash uppercase"
             >
-              {sections[sectionId].length} task{sections[sectionId].length === 1
-                ? ""
-                : "s"}
+              {translate("ongoing.taskCount", $locale, {
+                count: sections[sectionId].length,
+              })}
             </p>
           </header>
 

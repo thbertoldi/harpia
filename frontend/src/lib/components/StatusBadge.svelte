@@ -1,5 +1,6 @@
 <script lang="ts">
   import { TaskStatus } from "$lib/rpc";
+  import { locale, translate } from "$lib/i18n";
 
   let {
     status,
@@ -11,46 +12,46 @@
 
   const statusConfig: Record<
     number,
-    { label: string; bg: string; text: string; dot: string }
+    { key: string; bg: string; text: string; dot: string }
   > = {
     [TaskStatus.PENDING]: {
-      label: "Pending",
+      key: "taskStatus.pending",
       bg: "bg-crown-ash/20",
       text: "text-crown-ash",
       dot: "bg-crown-ash",
     },
     [TaskStatus.PLANNING]: {
-      label: "Planning",
+      key: "taskStatus.planning",
       bg: "bg-talon-gold/20",
       text: "text-obsidian",
       dot: "bg-talon-gold",
     },
     [TaskStatus.IN_PROGRESS]: {
-      label: "Running",
+      key: "taskStatus.inProgress",
       bg: "bg-blue-500/20",
       text: "text-blue-300",
       dot: "bg-blue-400",
     },
     [TaskStatus.AWAITING_FEEDBACK]: {
-      label: "Awaiting You",
+      key: "taskStatus.awaitingFeedback",
       bg: "bg-amber-500/20",
       text: "text-amber-300",
       dot: "bg-amber-400",
     },
     [TaskStatus.COMPLETED]: {
-      label: "Done",
+      key: "taskStatus.completed",
       bg: "bg-green-500/20",
       text: "text-green-300",
       dot: "bg-green-400",
     },
     [TaskStatus.FAILED]: {
-      label: "Failed",
+      key: "taskStatus.failed",
       bg: "bg-red-500/20",
       text: "text-white",
       dot: "bg-red-400",
     },
     [TaskStatus.CANCELLED]: {
-      label: "Cancelled",
+      key: "taskStatus.cancelled",
       bg: "bg-crown-ash/20",
       text: "text-crown-ash",
       dot: "bg-crown-ash",
@@ -80,5 +81,5 @@
       ></span>
     </span>
   {/if}
-  {config.label}
+  {translate(config.key, $locale)}
 </span>

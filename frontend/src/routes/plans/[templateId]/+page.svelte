@@ -202,10 +202,10 @@
                   </p>
                 </td>
                 <td class="px-3 py-3 font-mono text-xs text-crown-ash">
-                  {formatArtifactTypeLabel(step.inputArtifactTypeId)}
+                  {formatArtifactTypeLabel(step.inputArtifactTypeId, $locale)}
                 </td>
                 <td class="px-3 py-3 font-mono text-xs text-talon-gold">
-                  {formatArtifactTypeLabel(step.outputArtifactTypeId)}
+                  {formatArtifactTypeLabel(step.outputArtifactTypeId, $locale)}
                 </td>
               </tr>
             {/each}

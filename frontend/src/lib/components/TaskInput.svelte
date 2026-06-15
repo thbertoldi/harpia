@@ -1,10 +1,11 @@
 <script lang="ts">
   import { Send } from "lucide-svelte";
+  import { locale, translate } from "$lib/i18n";
 
   let {
     onsubmit,
     disabled = false,
-    placeholder = "What do you want to get done?",
+    placeholder = "",
   }: {
     onsubmit: (text: string) => void | Promise<void>;
     disabled?: boolean;
@@ -36,7 +37,7 @@
       type="text"
       bind:value
       {disabled}
-      {placeholder}
+      placeholder={placeholder || translate("home.input.placeholder", $locale)}
       class="flex-1 bg-transparent px-4 py-3 font-body text-lg text-cream outline-none placeholder:text-crown-ash"
     />
     <button

@@ -4,6 +4,7 @@
     formatArtifactPreview,
     type FormattedArtifactPreview,
   } from "$lib/artifacts/preview";
+  import { locale, translate } from "$lib/i18n";
 
   let {
     tenantId,
@@ -38,7 +39,10 @@
       .catch((err: unknown) => {
         if (cancelled) return;
         preview = null;
-        error = err instanceof Error ? err.message : "Failed to load preview";
+        error =
+          err instanceof Error
+            ? err.message
+            : translate("artifactPreview.loadError", $locale);
       })
       .finally(() => {
         if (!cancelled) {
@@ -53,13 +57,19 @@
 </script>
 
 {#if loading}
-  <p class="artifact-preview artifact-preview--loading">Loading preview…</p>
+  <p class="artifact-preview artifact-preview--loading">
+    {translate("artifactPreview.loading", $locale)}
+  </p>
 {:else if error}
   <p class="artifact-preview artifact-preview--error">{error}</p>
 {:else if preview}
   {#if preview.kind === "list" && preview.listSummary}
     <div class="artifact-preview artifact-preview--list">
-      <p>{preview.listSummary.articleCount} articles</p>
+      <p>
+        {translate("artifactPreview.articles", $locale, {
+          count: preview.listSummary.articleCount,
+        })}
+      </p>
       <ul>
         {#each preview.listSummary.titles as title, i (i)}
           <li>{title}</li>

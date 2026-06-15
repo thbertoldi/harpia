@@ -8,6 +8,7 @@
     FeedbackStatus,
     type FeedbackRequest,
   } from "$lib/rpc";
+  import { locale, translate } from "$lib/i18n";
 
   let {
     feedbackId,
@@ -37,9 +38,8 @@
         tenantId: requireTenantId(),
         feedbackId,
       });
-      if (!res.feedbackRequest) {
-        throw new Error("Feedback status returned no request");
-      }
+      if (!res.feedbackRequest)
+        throw new Error(translate("feedback.error.requestMissing", $locale));
       feedback = res.feedbackRequest;
     } catch (e) {
       error = toUserMessage(e);
@@ -74,12 +74,14 @@
   function timeAgo(dateStr: string): string {
     const diff = Date.now() - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60000);
-    if (mins < 1) return "just now";
-    if (mins < 60) return `${mins}m ago`;
+    if (mins < 1) return translate("common.time.justNow", $locale);
+    if (mins < 60)
+      return translate("common.time.minutesAgo", $locale, { count: mins });
     const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h ago`;
+    if (hours < 24)
+      return translate("common.time.hoursAgo", $locale, { count: hours });
     const days = Math.floor(hours / 24);
-    return `${days}d ago`;
+    return translate("common.time.daysAgo", $locale, { count: days });
   }
 </script>
 
@@ -100,31 +102,36 @@
     >
       <Check class="size-8 text-talon-gold" />
     </div>
-    <p class="mt-4 font-heading text-xl text-cream">Feedback submitted</p>
+    <p class="mt-4 font-heading text-xl text-cream">
+      {translate("feedback.submitted", $locale)}
+    </p>
     <p class="mt-1 font-body text-sm text-crown-ash">
       {submittedDecision === "Approve"
-        ? "Agent work approved."
+        ? translate("feedback.submitted.approved", $locale)
         : submittedDecision === "Reject"
-          ? "Sent back to agent for retry."
-          : "Modification feedback sent."}
+          ? translate("feedback.submitted.rejected", $locale)
+          : translate("feedback.submitted.modified", $locale)}
     </p>
   </div>
 {:else if feedback}
   <div class="transition-all duration-300">
-    <h2 class="mb-6 font-heading text-2xl font-bold text-cream">Your Review</h2>
+    <h2 class="mb-6 font-heading text-2xl font-bold text-cream">
+      {translate("feedback.yourReview", $locale)}
+    </h2>
 
     <div class="mb-6 rounded-lg border border-plumage bg-obsidian-light p-5">
       <p
         class="mb-2 font-mono text-[10px] tracking-widest text-crown-ash uppercase"
       >
-        Agent Request
+        {translate("feedback.agentRequest", $locale)}
       </p>
       <p class="font-body text-base leading-relaxed text-cream">
         {feedback.question}
       </p>
       {#if feedback.createdAt}
         <p class="mt-2 font-mono text-xs text-crown-ash-dark">
-          Waiting {timeAgo(feedback.createdAt)}
+          {translate("feedback.waiting", $locale)}
+          {timeAgo(feedback.createdAt)}
         </p>
       {/if}
     </div>
@@ -134,7 +141,7 @@
         <p
           class="mb-3 font-mono text-[10px] tracking-widest text-crown-ash uppercase"
         >
-          Agent Output
+          {translate("feedback.agentOutput", $locale)}
         </p>
         <div class="max-h-64 overflow-y-auto">
           {#each feedback.options as option (option)}
@@ -153,12 +160,12 @@
         <label
           for="feedback-comment"
           class="mb-2 block font-mono text-[10px] tracking-widest text-crown-ash uppercase"
-          >Comment (optional)</label
+          >{translate("feedback.commentOptional", $locale)}</label
         >
         <textarea
           id="feedback-comment"
           bind:value={comment}
-          placeholder="Provide additional context for the agent..."
+          placeholder={translate("feedback.commentPlaceholder", $locale)}
           class="w-full resize-none rounded-lg border border-plumage bg-obsidian-light px-4 py-3 font-body text-sm text-cream placeholder:text-crown-ash-dark focus:border-talon-gold focus:ring-1 focus:ring-talon-gold/30 focus:outline-none"
           rows="3"
         ></textarea>
@@ -175,7 +182,7 @@
           {:else}
             <Check class="size-4" />
           {/if}
-          Approve
+          {translate("feedback.approve", $locale)}
         </button>
         <button
           onclick={() => handleDecision(FeedbackDecision.REJECT, "Reject")}
@@ -187,7 +194,7 @@
           {:else}
             <X class="size-4" />
           {/if}
-          Reject & Retry
+          {translate("feedback.rejectRetry", $locale)}
         </button>
         <button
           onclick={() => handleDecision(FeedbackDecision.MODIFY, "Modify")}
@@ -199,7 +206,7 @@
           {:else}
             <Pencil class="size-4" />
           {/if}
-          Modify
+          {translate("feedback.modify", $locale)}
         </button>
       </div>
     {/if}
@@ -207,7 +214,7 @@
     {#if feedback.status !== FeedbackStatus.PENDING}
       <div class="rounded-lg border border-crown-ash/20 bg-obsidian-light p-4">
         <p class="font-body text-sm text-crown-ash">
-          This feedback has already been resolved.
+          {translate("feedback.alreadyResolved", $locale)}
         </p>
       </div>
     {/if}

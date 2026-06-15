@@ -190,8 +190,8 @@ describe("getCurrentSubtask", () => {
 describe("formatElapsed", () => {
   it("formats elapsed durations", () => {
     const now = Date.parse("2025-01-01T02:15:00Z");
-    expect(formatElapsed("2025-01-01T00:00:00Z", now)).toBe("2h 15m");
-    expect(formatElapsed("2025-01-01T02:10:00Z", now)).toBe("5m");
-    expect(formatElapsed("2025-01-01T02:14:30Z", now)).toBe("<1m");
+    expect(formatElapsed("2025-01-01T00:00:00Z", "en", now)).toBe("2h 15m");
+    expect(formatElapsed("2025-01-01T02:10:00Z", "en", now)).toBe("5m");
+    expect(formatElapsed("2025-01-01T02:14:30Z", "en", now)).toBe("<1m");
   });
 });

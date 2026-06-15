@@ -7,6 +7,7 @@
     getAgentLabel,
     getCurrentSubtask,
   } from "$lib/tasks/ongoing-tasks";
+  import { locale, translate } from "$lib/i18n";
 
   let {
     task,
@@ -17,7 +18,7 @@
   } = $props();
 
   const currentSubtask = $derived(getCurrentSubtask(task));
-  const agentLabel = $derived(getAgentLabel(task, currentSubtask));
+  const agentLabel = $derived(getAgentLabel(task, currentSubtask, $locale));
 </script>
 
 <button
@@ -35,7 +36,7 @@
     </p>
   {:else}
     <p class="mt-1 font-body text-sm text-crown-ash-dark italic">
-      No active subtask
+      {translate("ongoing.noActiveSubtask", $locale)}
     </p>
   {/if}
 
@@ -50,11 +51,11 @@
     {/if}
     <span class="inline-flex items-center gap-1">
       <Clock class="size-3" />
-      {formatElapsed(task.createdAt)}
+      {formatElapsed(task.createdAt, $locale)}
     </span>
     <span class="inline-flex items-center gap-1">
       <DollarSign class="size-3" />
-      {formatEstimatedCost()}
+      {formatEstimatedCost($locale)}
     </span>
   </div>
 </button>

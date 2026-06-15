@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { McpServerStatus } from "$lib/mocks/mcp-servers";
   import { statusLabel } from "$lib/mocks/mcp-servers";
+  import { locale } from "$lib/i18n";
 
   let { status }: { status: McpServerStatus } = $props();
 
@@ -37,5 +38,5 @@
   class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-mono text-[10px] tracking-wider uppercase {config.bg} {config.text}"
 >
   <span class="relative inline-flex h-2 w-2 rounded-full {config.dot}"></span>
-  {statusLabel(status)}
+  {statusLabel(status, $locale)}
 </span>
