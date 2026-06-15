@@ -40,12 +40,12 @@ describe("nav sections registry", () => {
     expect(filterNavSections("Leader").some((d) => d.href === "/agents")).toBe(
       true,
     );
-    expect(filterNavSections("Engineer").some((d) => d.href === "/agents")).toBe(
-      true,
-    );
-    expect(filterNavSections("Overseer").some((d) => d.href === "/agents")).toBe(
-      false,
-    );
+    expect(
+      filterNavSections("Engineer").some((d) => d.href === "/agents"),
+    ).toBe(true);
+    expect(
+      filterNavSections("Overseer").some((d) => d.href === "/agents"),
+    ).toBe(false);
   });
 
   it("hides permission-gated sections from unknown roles", () => {

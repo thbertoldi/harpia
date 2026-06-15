@@ -24,9 +24,7 @@ const ROLE_PERMISSIONS: Record<HarpiaRole, ReadonlySet<HarpiaPermission>> = {
 
 const LEADER_ALIASES = new Set(["Leader", "admin", "owner"]);
 
-export function normalizeRole(
-  role: string | undefined,
-): HarpiaRole | null {
+export function normalizeRole(role: string | undefined): HarpiaRole | null {
   if (!role) {
     return "Leader";
   }

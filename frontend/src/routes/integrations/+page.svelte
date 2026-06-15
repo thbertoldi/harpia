@@ -50,7 +50,7 @@
   let bindNotice = $state<string | null>(null);
 
   $effect(() => {
-    if (engineerAccess) {
+    if (integrationAccess) {
       servers = getMockMcpServers();
     }
   });
