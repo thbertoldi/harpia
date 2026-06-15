@@ -50,6 +50,20 @@ api_json() {
   fi
 }
 
+api_json_status() {
+  method=$1
+  path=$2
+  body=$3
+  output_file=$4
+
+  curl -sS -o "$output_file" -w "%{http_code}" \
+    -X "$method" "$ZITADEL_URL$path" \
+    -H "Authorization: Bearer $PAT" \
+    -H "Content-Type: application/json" \
+    -H "Host: $ZITADEL_HOST" \
+    -d "$body" || true
+}
+
 upload_instance_asset() {
   endpoint=$1
   file=$2
@@ -89,6 +103,19 @@ LABEL_POLICY_BODY=$(cat <<EOF
 EOF
 )
 
+verify_label_policy() {
+  policy=$1
+
+  if ! printf '%s' "$policy" | grep -Fq "$PRIMARY_COLOR"; then
+    echo "ERROR: label policy verification failed — primary color not present" >&2
+    return 1
+  fi
+  if ! printf '%s' "$policy" | grep -Fq "$BACKGROUND_COLOR"; then
+    echo "ERROR: label policy verification failed — background color not present" >&2
+    return 1
+  fi
+}
+
 echo "[branding] Uploading Harpia assets to instance label policy..."
 upload_instance_asset "logo" "$LOGO_FILE" "logo"
 upload_instance_asset "logo/dark" "$LOGO_FILE" "logo (dark)"
@@ -96,21 +123,62 @@ upload_instance_asset "icon" "$ICON_FILE" "icon"
 upload_instance_asset "icon/dark" "$ICON_FILE" "icon (dark)"
 
 echo "[branding] Updating instance label policy palette..."
-api_json PUT /admin/v1/policies/label "$LABEL_POLICY_BODY" >/dev/null
-echo "  label policy updated"
+UPDATE_RESPONSE_FILE=$(mktemp)
+UPDATE_STATUS=$(api_json_status PUT /admin/v1/policies/label "$LABEL_POLICY_BODY" "$UPDATE_RESPONSE_FILE")
+case "$UPDATE_STATUS" in
+  200|204)
+    echo "  label policy updated"
+    ;;
+  400)
+    echo "  update returned HTTP 400; checking whether the existing policy already matches"
+    POLICY_CHECK=$(api_json GET /admin/v1/policies/label)
+    if verify_label_policy "$POLICY_CHECK"; then
+      echo "  existing label policy already matches desired palette"
+    else
+      echo "ERROR: label policy update failed with HTTP 400 and existing policy does not match" >&2
+      cat "$UPDATE_RESPONSE_FILE" >&2 || true
+      rm -f "$UPDATE_RESPONSE_FILE"
+      exit 1
+    fi
+    ;;
+  *)
+    echo "ERROR: label policy update failed with HTTP $UPDATE_STATUS" >&2
+    cat "$UPDATE_RESPONSE_FILE" >&2 || true
+    rm -f "$UPDATE_RESPONSE_FILE"
+    exit 1
+    ;;
+esac
+rm -f "$UPDATE_RESPONSE_FILE"
 
 echo "[branding] Activating instance label policy..."
-api_json POST /admin/v1/policies/label/_activate '{}' >/dev/null
-echo "  label policy activated"
+ACTIVATE_RESPONSE_FILE=$(mktemp)
+ACTIVATE_STATUS=$(api_json_status POST /admin/v1/policies/label/_activate '{}' "$ACTIVATE_RESPONSE_FILE")
+case "$ACTIVATE_STATUS" in
+  200|204)
+    echo "  label policy activated"
+    ;;
+  400)
+    echo "  activate returned HTTP 400; checking whether the desired policy is already active"
+    POLICY_CHECK=$(api_json GET /admin/v1/policies/label)
+    if verify_label_policy "$POLICY_CHECK"; then
+      echo "  existing label policy remains readable and matches desired palette"
+    else
+      echo "ERROR: label policy activation failed with HTTP 400 and existing policy does not match" >&2
+      cat "$ACTIVATE_RESPONSE_FILE" >&2 || true
+      rm -f "$ACTIVATE_RESPONSE_FILE"
+      exit 1
+    fi
+    ;;
+  *)
+    echo "ERROR: label policy activation failed with HTTP $ACTIVATE_STATUS" >&2
+    cat "$ACTIVATE_RESPONSE_FILE" >&2 || true
+    rm -f "$ACTIVATE_RESPONSE_FILE"
+    exit 1
+    ;;
+esac
+rm -f "$ACTIVATE_RESPONSE_FILE"
 
 POLICY_CHECK=$(api_json GET /admin/v1/policies/label)
-if ! printf '%s' "$POLICY_CHECK" | grep -Fq "$PRIMARY_COLOR"; then
-  echo "ERROR: label policy verification failed — primary color not present" >&2
-  exit 1
-fi
-if ! printf '%s' "$POLICY_CHECK" | grep -Fq "$BACKGROUND_COLOR"; then
-  echo "ERROR: label policy verification failed — background color not present" >&2
-  exit 1
-fi
+verify_label_policy "$POLICY_CHECK"
 
 echo "[branding] Harpia theme applied (primary=$PRIMARY_COLOR background=$BACKGROUND_COLOR text=$FONT_COLOR)"

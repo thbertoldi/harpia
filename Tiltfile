@@ -98,7 +98,7 @@ local_resource(
 local_resource(
     'oidc-sync',
     cmd='./scripts/sync-oidc-config.sh',
-    resource_deps=['zitadel'],
+    resource_deps=['zitadel-register-client'],
     trigger_mode=TRIGGER_MODE_AUTO,
     deps=['./scripts/sync-oidc-config.sh'],
     labels=['infra'],
