@@ -1,4 +1,5 @@
 import { SubtaskStatus, TaskStatus, type Subtask, type Task } from "$lib/rpc";
+import { translate, type Locale } from "$lib/i18n";
 
 export type OngoingSectionId =
   | "planning"
@@ -15,11 +16,11 @@ export const ONGOING_SECTION_ORDER: OngoingSectionId[] = [
   "planning",
 ];
 
-export const ONGOING_SECTION_LABELS: Record<OngoingSectionId, string> = {
-  planning: "Planning",
-  in_progress: "In Progress",
-  awaiting_approval: "Awaiting Approval (Gate 1)",
-  awaiting_review: "Awaiting Review (Gate 2)",
+export const ONGOING_SECTION_LABEL_KEYS: Record<OngoingSectionId, string> = {
+  planning: "ongoing.section.planning",
+  in_progress: "ongoing.section.inProgress",
+  awaiting_approval: "ongoing.section.awaitingApproval",
+  awaiting_review: "ongoing.section.awaitingReview",
 };
 
 const TERMINAL_STATUSES = new Set([
@@ -117,22 +118,27 @@ export function getCurrentSubtask(task: Task): Subtask | null {
 export function getAgentLabel(
   task: Task,
   subtask: Subtask | null,
+  locale: Locale,
 ): string | null {
   if (subtask?.assignedAgentId) {
     return subtask.assignedAgentId;
   }
 
   if (task.status === TaskStatus.PLANNING) {
-    return "Planner";
+    return translate("ongoing.agent.planner", locale);
   }
 
   return null;
 }
 
-export function formatElapsed(since: string, now = Date.now()): string {
+export function formatElapsed(
+  since: string,
+  locale: Locale,
+  now = Date.now(),
+): string {
   const start = Date.parse(since);
   if (Number.isNaN(start)) {
-    return "—";
+    return translate("common.emDash", locale);
   }
 
   const elapsedMs = Math.max(0, now - start);
@@ -140,16 +146,19 @@ export function formatElapsed(since: string, now = Date.now()): string {
   const hours = Math.floor(totalMinutes / 60);
 
   if (hours > 0) {
-    return `${hours}h ${totalMinutes % 60}m`;
+    return translate("common.time.hoursMinutes", locale, {
+      hours,
+      minutes: totalMinutes % 60,
+    });
   }
 
   if (totalMinutes > 0) {
-    return `${totalMinutes}m`;
+    return translate("common.time.minutes", locale, { count: totalMinutes });
   }
 
-  return "<1m";
+  return translate("common.time.lessThanMinute", locale);
 }
 
-export function formatEstimatedCost(): string {
-  return "—";
+export function formatEstimatedCost(locale: Locale): string {
+  return translate("common.emDash", locale);
 }

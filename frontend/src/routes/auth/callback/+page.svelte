@@ -3,6 +3,7 @@
   import { resolve } from "$app/paths";
   import { page } from "$app/stores";
   import { handleCallback } from "$lib/auth";
+  import { locale, translate } from "$lib/i18n";
 
   let error = $state<string | null>(null);
 
@@ -11,20 +12,20 @@
     const state = $page.url.searchParams.get("state");
 
     if (!code) {
-      error = "No authorization code received.";
+      error = translate("auth.callback.noCode", $locale);
       return;
     }
 
     const savedState = sessionStorage.getItem("oauth_state");
     if (state !== savedState) {
-      error = "State mismatch — possible CSRF attack.";
+      error = translate("auth.callback.stateMismatch", $locale);
       return;
     }
 
     handleCallback(code)
       .then(() => goto(resolve("/")))
       .catch((e: Error) => {
-        error = e.message || "Authentication failed.";
+        error = e.message || translate("auth.callback.failed", $locale);
       });
   });
 </script>
@@ -39,7 +40,7 @@
       <h1
         class="font-[Bodoni_Moda] text-4xl font-bold tracking-tight text-[#C8920F]"
       >
-        Authentication failed
+        {translate("auth.callback.failed", $locale)}
       </h1>
       <p class="mt-4 max-w-md text-center text-sm text-[#9DA1AB]">
         {error}
@@ -48,13 +49,15 @@
         href={resolve("/login")}
         class="mt-10 inline-block rounded-lg bg-[#C8920F] px-6 py-2.5 text-sm font-medium text-[#121318] transition-colors hover:bg-[#E0A512]"
       >
-        Return to login
+        {translate("auth.callback.returnLogin", $locale)}
       </a>
     {:else}
       <div
         class="size-8 animate-spin rounded-full border-2 border-[#C8920F] border-t-transparent"
       ></div>
-      <p class="mt-4 text-sm text-[#9DA1AB]">Completing sign in...</p>
+      <p class="mt-4 text-sm text-[#9DA1AB]">
+        {translate("auth.callback.completing", $locale)}
+      </p>
     {/if}
   </div>
 </div>

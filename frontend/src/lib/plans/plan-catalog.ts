@@ -1,4 +1,6 @@
 import { toUserMessage } from "$lib/connect-errors";
+import { translate } from "$lib/i18n";
+import type { Locale } from "$lib/i18n";
 import {
   ConnectionStatus,
   type ExecutorEntitlement,
@@ -28,14 +30,14 @@ export interface RequiredExecutorSku {
   displayName: string;
   stepKeys: string[];
   reason: SkuLockReason;
-  message: string;
+  messageKey: string;
+  messageParams?: Record<string, string>;
 }
 
 export interface PlanCatalogEntry {
   template: PlanTemplate;
   requiredSkus: RequiredExecutorSku[];
   isLocked: boolean;
-  lockSummary?: string;
 }
 
 export interface PlanCatalogResult {
@@ -83,7 +85,7 @@ export function resolveSkuLockState(
   sku: ExecutorSKU,
   entitlements: ExecutorEntitlement[],
   installations: ExecutorInstallation[],
-): Pick<RequiredExecutorSku, "reason" | "message"> {
+): Pick<RequiredExecutorSku, "reason" | "messageKey" | "messageParams"> {
   const entitled = entitlements.some(
     (entitlement) => entitlement.executorSkuId === sku.id,
   );
@@ -91,7 +93,8 @@ export function resolveSkuLockState(
   if (!entitled) {
     return {
       reason: "missing_entitlement",
-      message: `Missing SKU entitlement for ${sku.displayName} (${sku.key}). Ask a platform engineer to provision access.`,
+      messageKey: "plans.lock.message.missing_entitlement",
+      messageParams: { name: sku.displayName, key: sku.key },
     };
   }
 
@@ -103,12 +106,13 @@ export function resolveSkuLockState(
   if (skuInstallations.length === 0) {
     return {
       reason: "missing_installation",
-      message: `No installation configured for ${sku.displayName}. Create one under Integrations.`,
+      messageKey: "plans.lock.message.missing_installation",
+      messageParams: { name: sku.displayName },
     };
   }
 
   if (skuInstallations.some(isInstallationReady)) {
-    return { reason: "available", message: "" };
+    return { reason: "available", messageKey: "plans.lock.message.available" };
   }
 
   const integration = skuInstallations.find(
@@ -119,13 +123,15 @@ export function resolveSkuLockState(
     if (detail.connectionStatus !== ConnectionStatus.CONNECTED) {
       return {
         reason: "not_connected",
-        message: `${sku.displayName} is not connected. Finish OAuth or connection setup in Integrations.`,
+        messageKey: "plans.lock.message.not_connected",
+        messageParams: { name: sku.displayName },
       };
     }
     if (isBlankJson(detail.configJson)) {
       return {
         reason: "not_configured",
-        message: `${sku.displayName} needs configuration (for example feed URLs or OAuth settings).`,
+        messageKey: "plans.lock.message.not_configured",
+        messageParams: { name: sku.displayName },
       };
     }
   }
@@ -138,15 +144,37 @@ export function resolveSkuLockState(
     if (!detail.manifestId || !detail.manifestVersion) {
       return {
         reason: "not_configured",
-        message: `${sku.displayName} agent installation is missing manifest metadata.`,
+        messageKey: "plans.lock.message.agent_missing_manifest",
+        messageParams: { name: sku.displayName },
       };
     }
   }
 
   return {
     reason: "not_configured",
-    message: `${sku.displayName} installation is not ready to run plan steps.`,
+    messageKey: "plans.lock.message.installation_not_ready",
+    messageParams: { name: sku.displayName },
   };
+}
+
+export function formatSkuLockMessage(
+  sku: RequiredExecutorSku,
+  locale: Locale,
+): string {
+  return translate(sku.messageKey, locale, sku.messageParams);
+}
+
+export function formatPlanLockSummary(
+  entry: PlanCatalogEntry,
+  locale: Locale,
+): string | undefined {
+  const blocking = entry.requiredSkus.filter(
+    (sku) => sku.reason !== "available",
+  );
+  if (blocking.length === 0) {
+    return undefined;
+  }
+  return blocking.map((sku) => formatSkuLockMessage(sku, locale)).join(" ");
 }
 
 export function collectRequiredSkuKeys(
@@ -185,7 +213,8 @@ export function buildPlanCatalogEntry(
         displayName,
         stepKeys,
         reason: "missing_entitlement",
-        message: `Executor SKU "${skuKey}" is not in the catalog. Provision the SKU before using this plan.`,
+        messageKey: "plans.lock.message.sku_missing_catalog",
+        messageParams: { key: skuKey },
       });
       continue;
     }
@@ -208,15 +237,11 @@ export function buildPlanCatalogEntry(
 
   const blockingSkus = requiredSkus.filter((sku) => sku.reason !== "available");
   const isLocked = blockingSkus.length > 0;
-  const lockSummary = isLocked
-    ? blockingSkus.map((sku) => sku.message).join(" ")
-    : undefined;
 
   return {
     template,
     requiredSkus,
     isLocked,
-    lockSummary,
   };
 }
 

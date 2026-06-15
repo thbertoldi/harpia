@@ -9,6 +9,8 @@
   import { TaskStatus, SubtaskStatus, type Task, type Subtask } from "$lib/rpc";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
   import StatusBadge from "$lib/components/StatusBadge.svelte";
+  import { locale, translate } from "$lib/i18n";
+  import { formatLocaleDateTime } from "$lib/i18n/format";
 
   let {
     task,
@@ -31,13 +33,16 @@
 
   function subtaskStatusLabel(status: SubtaskStatus): string {
     const labels: Record<number, string> = {
-      [SubtaskStatus.PENDING]: "Pending",
-      [SubtaskStatus.IN_PROGRESS]: "In Progress",
-      [SubtaskStatus.AWAITING_FEEDBACK]: "Awaiting Feedback",
-      [SubtaskStatus.COMPLETED]: "Completed",
-      [SubtaskStatus.FAILED]: "Failed",
+      [SubtaskStatus.PENDING]: translate("taskStatus.pending", $locale),
+      [SubtaskStatus.IN_PROGRESS]: translate("taskStatus.inProgress", $locale),
+      [SubtaskStatus.AWAITING_FEEDBACK]: translate(
+        "taskStatus.awaitingFeedback",
+        $locale,
+      ),
+      [SubtaskStatus.COMPLETED]: translate("taskStatus.completed", $locale),
+      [SubtaskStatus.FAILED]: translate("taskStatus.failed", $locale),
     };
-    return labels[status] ?? "Unknown";
+    return labels[status] ?? translate("common.unknown", $locale);
   }
 
   function isActiveSubtask(subtask: Subtask): boolean {
@@ -48,45 +53,36 @@
     if (!task) return "";
     switch (task.status) {
       case TaskStatus.PLANNING:
-        return "Planner agent analyzing your request...";
+        return translate("taskDetail.agentStatus.planning", $locale);
       case TaskStatus.IN_PROGRESS: {
         const activeSubtasks = task.subtasks.filter(
           (s) => s.status === SubtaskStatus.IN_PROGRESS,
         );
         if (activeSubtasks.length > 0) {
-          const agentId = activeSubtasks[0].assignedAgentId || "Agent";
-          return `${agentId.slice(0, 12)} executing...`;
+          const agentId = activeSubtasks[0].assignedAgentId || "";
+          return translate("taskDetail.agentStatus.executing", $locale, {
+            agent: agentId
+              ? `${agentId.slice(0, 12)}`
+              : translate("common.agent", $locale),
+          });
         }
-        return "Agents working on your task...";
+        return translate("taskDetail.agentStatus.inProgress", $locale);
       }
       case TaskStatus.AWAITING_FEEDBACK:
-        return "Awaiting your feedback";
+        return translate("taskDetail.agentStatus.awaitingFeedback", $locale);
       case TaskStatus.COMPLETED:
-        return "Task completed successfully";
+        return translate("taskDetail.agentStatus.completed", $locale);
       case TaskStatus.FAILED:
-        return "Task execution failed";
+        return translate("taskDetail.agentStatus.failed", $locale);
       case TaskStatus.CANCELLED:
-        return "Task cancelled";
+        return translate("taskDetail.agentStatus.cancelled", $locale);
       default:
-        return "Task pending...";
+        return translate("taskDetail.agentStatus.pending", $locale);
     }
   }
 
   function formattedDate(dateStr: string): string {
-    try {
-      const d = new Date(dateStr);
-      return (
-        d.toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        }) +
-        " at " +
-        d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
-      );
-    } catch {
-      return dateStr;
-    }
+    return formatLocaleDateTime(dateStr, $locale);
   }
 </script>
 
@@ -95,7 +91,7 @@
     <div class="text-center">
       <Bot class="mx-auto mb-3 size-10 text-crown-ash" />
       <p class="font-body text-sm text-crown-ash">
-        Select a task to view details
+        {translate("taskDetail.empty", $locale)}
       </p>
     </div>
   </div>
@@ -107,13 +103,13 @@
           <button
             onclick={onclose}
             class="rounded-md p-1 text-crown-ash transition-colors hover:text-cream"
-            aria-label="Close detail"
+            aria-label={translate("taskDetail.close", $locale)}
           >
             <ArrowLeft class="size-4" />
           </button>
         {/if}
         <HarpyHeading tag="h3" class="text-base text-cream"
-          >Task Detail</HarpyHeading
+          >{translate("taskDetail.title", $locale)}</HarpyHeading
         >
       </div>
       <StatusBadge status={task.status} pulsing={true} />
@@ -137,7 +133,9 @@
           </span>
           <span class="flex items-center gap-1.5">
             <Bot class="size-3.5" />
-            {task.subtasks?.length ?? 0} subtasks
+            {translate("tasks.subtask.other", $locale, {
+              count: task.subtasks?.length ?? 0,
+            })}
           </span>
         </div>
 
@@ -148,7 +146,7 @@
             <p
               class="mb-1 font-mono text-[10px] tracking-widest text-crown-ash uppercase"
             >
-              Agent Status
+              {translate("taskDetail.agentStatus.heading", $locale)}
             </p>
             <div class="flex items-center gap-2">
               {#if task.status === TaskStatus.PLANNING || task.status === TaskStatus.IN_PROGRESS}
@@ -182,27 +180,26 @@
             <p
               class="mb-2 font-mono text-[10px] tracking-widest text-amber-400 uppercase"
             >
-              Feedback Required
+              {translate("taskDetail.feedbackRequired.heading", $locale)}
             </p>
             <p class="font-body text-sm text-cream">
-              Harpia needs your input to continue. Review the options below and
-              provide your decision.
+              {translate("taskDetail.feedbackRequired.description", $locale)}
             </p>
             <div class="mt-3 flex gap-2">
               <button
                 class="rounded-md bg-talon-gold px-4 py-2 font-body text-sm text-obsidian transition-colors hover:bg-talon-gold-bright"
               >
-                Approve
+                {translate("feedback.approve", $locale)}
               </button>
               <button
                 class="rounded-md border border-crown-ash px-4 py-2 font-body text-sm text-crown-ash transition-colors hover:border-cream hover:text-cream"
               >
-                Modify
+                {translate("feedback.modify", $locale)}
               </button>
               <button
                 class="rounded-md border border-red-500/30 px-4 py-2 font-body text-sm text-red-400 transition-colors hover:border-red-400"
               >
-                Reject
+                {translate("feedback.reject", $locale)}
               </button>
             </div>
           </div>
@@ -213,7 +210,7 @@
             <p
               class="mb-3 font-mono text-[10px] tracking-widest text-crown-ash uppercase"
             >
-              Subtasks
+              {translate("common.subtasks", $locale)}
             </p>
             <div class="space-y-0">
               {#each task.subtasks as subtask, i (subtask.id)}
@@ -271,11 +268,10 @@
             <p
               class="mb-1 font-mono text-[10px] tracking-widest text-red-400 uppercase"
             >
-              Error
+              {translate("common.error", $locale)}
             </p>
             <p class="font-body text-sm text-red-300">
-              The task encountered an error during execution. Check the logs for
-              details.
+              {translate("taskDetail.errorDescription", $locale)}
             </p>
           </div>
         {/if}

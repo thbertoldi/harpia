@@ -4,6 +4,7 @@
   import { toUserMessage } from "$lib/connect-errors";
   import { feedbackClient, type FeedbackRequest } from "$lib/rpc";
   import FeedbackPanel from "$lib/components/FeedbackPanel.svelte";
+  import { locale, translate } from "$lib/i18n";
 
   let feedbacks = $state<FeedbackRequest[]>([]);
   let loading = $state(true);
@@ -37,12 +38,14 @@
   function timeAgo(dateStr: string): string {
     const diff = Date.now() - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60000);
-    if (mins < 1) return "just now";
-    if (mins < 60) return `${mins}m ago`;
+    if (mins < 1) return translate("common.time.justNow", $locale);
+    if (mins < 60)
+      return translate("common.time.minutesAgo", $locale, { count: mins });
     const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h ago`;
+    if (hours < 24)
+      return translate("common.time.hoursAgo", $locale, { count: hours });
     const days = Math.floor(hours / 24);
-    return `${days}d ago`;
+    return translate("common.time.daysAgo", $locale, { count: days });
   }
 
   function shortId(id: string): string {
@@ -58,9 +61,11 @@
 <div class="flex h-full">
   <div class="flex-1 overflow-y-auto p-6 lg:p-8">
     <div class="mx-auto max-w-3xl">
-      <h1 class="mb-2 font-heading text-3xl font-bold text-cream">Oversee</h1>
+      <h1 class="mb-2 font-heading text-3xl font-bold text-cream">
+        {translate("oversee.heading", $locale)}
+      </h1>
       <p class="mb-8 font-body text-crown-ash">
-        Review agent outputs that need your attention.
+        {translate("oversee.subheading", $locale)}
       </p>
 
       {#if loading}
@@ -74,7 +79,7 @@
             onclick={loadPending}
             class="mt-3 rounded-md border border-red-500/30 px-3 py-1.5 font-body text-xs text-red-400 transition-colors hover:bg-red-500/10"
           >
-            Retry
+            {translate("common.retry", $locale)}
           </button>
         </div>
       {:else if feedbacks.length === 0}
@@ -86,9 +91,11 @@
           >
             <Check class="size-8 text-green-400" />
           </div>
-          <p class="mt-4 font-heading text-xl text-cream">All caught up</p>
+          <p class="mt-4 font-heading text-xl text-cream">
+            {translate("oversee.allCaughtUp", $locale)}
+          </p>
           <p class="mt-1 font-body text-sm text-crown-ash">
-            Nothing needs your review.
+            {translate("oversee.nothingToReview", $locale)}
           </p>
         </div>
       {:else}
@@ -107,7 +114,7 @@
                     <span
                       class="inline-flex animate-pulse items-center rounded-full bg-talon-gold/10 px-2 py-0.5 font-mono text-[10px] tracking-wider text-talon-gold uppercase"
                     >
-                      Awaiting Your Review
+                      {translate("oversee.awaitingReview", $locale)}
                     </span>
                     {#if fb.createdAt}
                       <span
@@ -123,11 +130,15 @@
                   </p>
                   <div class="mt-2 flex items-center gap-3">
                     <span class="font-mono text-[10px] text-crown-ash-dark"
-                      >Task: {shortId(fb.taskId)}</span
+                      >{translate("common.task", $locale)}: {shortId(
+                        fb.taskId,
+                      )}</span
                     >
                     {#if fb.agentInstanceId}
                       <span class="font-mono text-[10px] text-crown-ash-dark"
-                        >Agent: {shortId(fb.agentInstanceId)}</span
+                        >{translate("common.agent", $locale)}: {shortId(
+                          fb.agentInstanceId,
+                        )}</span
                       >
                     {/if}
                   </div>
@@ -150,12 +161,12 @@
       >
         <span
           class="font-mono text-[10px] tracking-widest text-crown-ash uppercase"
-          >Feedback Details</span
+          >{translate("oversee.feedbackDetails", $locale)}</span
         >
         <button
           onclick={() => (selectedId = null)}
           class="rounded-md p-1 text-crown-ash transition-colors hover:text-cream"
-          aria-label="Close feedback details"
+          aria-label={translate("oversee.closeFeedbackDetails", $locale)}
         >
           <svg
             class="size-4"

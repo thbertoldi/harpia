@@ -10,6 +10,8 @@
   } from "lucide-svelte";
   import { resolve } from "$app/paths";
   import {
+    formatPlanLockSummary,
+    formatSkuLockMessage,
     loadPlanCatalog,
     type PlanCatalogEntry,
     type RequiredExecutorSku,
@@ -40,7 +42,8 @@
         loadError = result.error;
       }
     } catch (e) {
-      loadError = e instanceof Error ? e.message : "Failed to load plans";
+      loadError =
+        e instanceof Error ? e.message : translate("plans.loadError", $locale);
     } finally {
       loading = false;
     }
@@ -160,7 +163,7 @@
               class="inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[10px] tracking-wide uppercase {entry.isLocked
                 ? 'border-talon-gold/40 bg-talon-gold/10 text-talon-gold'
                 : 'border-green-500/40 bg-green-500/10 text-green-400'}"
-              title={entry.lockSummary ??
+              title={formatPlanLockSummary(entry, $locale) ??
                 translate("plans.status.ready", $locale)}
             >
               {#if entry.isLocked}
@@ -205,7 +208,7 @@
                     class="rounded-md border px-3 py-2 {skuStatusClass(
                       sku.reason,
                     )}"
-                    title={sku.message || undefined}
+                    title={formatSkuLockMessage(sku, $locale) || undefined}
                   >
                     <div class="flex items-start justify-between gap-2">
                       <div>
@@ -228,7 +231,7 @@
                     {#if sku.reason !== "available"}
                       <p class="mt-1 flex items-start gap-1 font-body text-xs">
                         <Info class="mt-0.5 size-3 shrink-0" />
-                        <span>{sku.message}</span>
+                        <span>{formatSkuLockMessage(sku, $locale)}</span>
                       </p>
                     {/if}
                   </div>

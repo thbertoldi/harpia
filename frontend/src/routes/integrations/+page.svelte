@@ -17,6 +17,7 @@
   import { isEngineer } from "$lib/auth";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
   import McpStatusBadge from "$lib/components/McpStatusBadge.svelte";
+  import { locale, translate } from "$lib/i18n";
   import {
     addMockMcpServer,
     connectMockOAuthServer,
@@ -146,7 +147,10 @@
     } catch (e) {
       testResult = {
         ok: false,
-        message: e instanceof Error ? e.message : "Connection test failed",
+        message:
+          e instanceof Error
+            ? e.message
+            : translate("integrations.error.connectionTestFailed", $locale),
       };
     } finally {
       testing = false;
@@ -156,7 +160,7 @@
   async function handleAddServer() {
     actionError = null;
     if (!addName.trim()) {
-      actionError = "Server name is required.";
+      actionError = translate("integrations.error.serverNameRequired", $locale);
       return;
     }
 
@@ -167,7 +171,10 @@
       expandedServerIds = [...expandedServerIds, created.id];
       closeAddForm();
     } catch (e) {
-      actionError = e instanceof Error ? e.message : "Failed to add server";
+      actionError =
+        e instanceof Error
+          ? e.message
+          : translate("integrations.error.addServerFailed", $locale);
     } finally {
       saving = false;
     }
@@ -182,14 +189,20 @@
       servers = getMockMcpServers();
       expandedServerIds = [...expandedServerIds, serverId];
     } catch (e) {
-      actionError = e instanceof Error ? e.message : "OAuth connection failed";
+      actionError =
+        e instanceof Error
+          ? e.message
+          : translate("integrations.error.oauthFailed", $locale);
     } finally {
       connectingId = null;
     }
   }
 
   function handleBindToAgent(server: McpServer, toolName: string) {
-    bindNotice = `Bind "${toolName}" from ${server.name} to an agent (stub — API pending).`;
+    bindNotice = translate("integrations.bindNotice", $locale, {
+      tool: toolName,
+      server: server.name,
+    });
   }
 
   function kindLabel(kind: McpServerKind): string {
@@ -204,29 +217,27 @@
     >
       <ShieldAlert class="mb-4 size-12 text-talon-gold" />
       <HarpyHeading tag="h1" class="mb-2 text-2xl text-cream">
-        Access Denied
+        {translate("integrations.accessDenied", $locale)}
       </HarpyHeading>
       <p class="max-w-md font-body text-sm text-crown-ash">
-        Integrations and MCP server configuration are available to Platform
-        Engineers only. Your current role is
+        {translate("integrations.accessDeniedDescription", $locale)}
         <span class="text-cream">{user?.role ?? "Leader"}</span>.
       </p>
       <a
         href={resolve("/")}
         class="mt-6 rounded-md border border-plumage px-4 py-2 font-body text-sm text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
       >
-        Return to Tasks
+        {translate("integrations.returnTasks", $locale)}
       </a>
     </div>
   {:else}
     <div class="mb-6 flex items-center justify-between gap-4">
       <div>
         <HarpyHeading tag="h1" class="text-2xl text-cream">
-          Integrations
+          {translate("integrations.heading", $locale)}
         </HarpyHeading>
         <p class="mt-1 font-body text-sm text-crown-ash">
-          Register MCP servers, connect OAuth providers, and browse available
-          tools.
+          {translate("integrations.subheading", $locale)}
         </p>
       </div>
       <button
@@ -234,7 +245,7 @@
         class="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-md bg-talon-gold px-4 py-2 font-body text-sm font-medium text-obsidian transition-all hover:bg-talon-gold-bright"
       >
         <Plus class="size-4" />
-        Add Server
+        {translate("integrations.addServer", $locale)}
       </button>
     </div>
 
@@ -262,12 +273,12 @@
       >
         <div class="mb-4 flex items-center justify-between">
           <HarpyHeading tag="h2" class="text-lg text-cream">
-            Add MCP Server
+            {translate("integrations.addMcpServer", $locale)}
           </HarpyHeading>
           <button
             onclick={closeAddForm}
             class="cursor-pointer rounded-md p-1 text-crown-ash transition-colors hover:text-cream"
-            aria-label="Close add server form"
+            aria-label={translate("integrations.closeAddForm", $locale)}
           >
             <X class="size-4" />
           </button>
@@ -279,12 +290,15 @@
               for="server-name"
               class="mb-1 block font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
             >
-              Server name
+              {translate("integrations.serverName", $locale)}
             </label>
             <input
               id="server-name"
               bind:value={addName}
-              placeholder="My MCP Server"
+              placeholder={translate(
+                "integrations.serverNamePlaceholder",
+                $locale,
+              )}
               class="w-full rounded-md border border-plumage bg-obsidian px-3 py-2 font-body text-sm text-cream outline-none focus:border-talon-gold"
             />
           </div>
@@ -293,7 +307,7 @@
             <p
               class="mb-2 font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
             >
-              Transport kind
+              {translate("integrations.transportKind", $locale)}
             </p>
             <div class="flex flex-wrap gap-2">
               <button
@@ -326,7 +340,7 @@
                   for="server-command"
                   class="mb-1 block font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
                 >
-                  Command
+                  {translate("integrations.command", $locale)}
                 </label>
                 <input
                   id="server-command"
@@ -339,7 +353,7 @@
                   for="server-args"
                   class="mb-1 block font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
                 >
-                  Arguments
+                  {translate("integrations.arguments", $locale)}
                 </label>
                 <input
                   id="server-args"
@@ -353,7 +367,7 @@
                 for="server-env"
                 class="mb-1 block font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
               >
-                Environment (KEY=value, one per line)
+                {translate("integrations.environment", $locale)}
               </label>
               <textarea
                 id="server-env"
@@ -368,7 +382,7 @@
                 for="server-url"
                 class="mb-1 block font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
               >
-                Endpoint URL
+                {translate("integrations.endpointUrl", $locale)}
               </label>
               <input
                 id="server-url"
@@ -381,7 +395,7 @@
                 for="server-headers"
                 class="mb-1 block font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
               >
-                Headers (Name: value, one per line)
+                {translate("integrations.headers", $locale)}
               </label>
               <textarea
                 id="server-headers"
@@ -423,7 +437,7 @@
               {:else}
                 <Plug class="size-4" />
               {/if}
-              Test Connection
+              {translate("integrations.testConnection", $locale)}
             </button>
             <button
               onclick={handleAddServer}
@@ -435,7 +449,7 @@
               {:else}
                 <Plus class="size-4" />
               {/if}
-              Register Server
+              {translate("integrations.registerServer", $locale)}
             </button>
           </div>
         </div>
@@ -495,7 +509,7 @@
                   {:else}
                     <Link2 class="size-3.5" />
                   {/if}
-                  Connect
+                  {translate("integrations.connect", $locale)}
                 </button>
               {/if}
             </div>
@@ -505,14 +519,16 @@
             <div class="border-t border-plumage/60 px-4 py-4">
               <div class="mb-3 flex items-center gap-2">
                 <Wrench class="size-4 text-talon-gold" />
-                <p class="font-body text-sm font-medium text-cream">Tools</p>
+                <p class="font-body text-sm font-medium text-cream">
+                  {translate("integrations.tools", $locale)}
+                </p>
               </div>
 
               {#if server.tools.length === 0}
                 <p class="font-body text-sm text-crown-ash">
-                  No tools discovered yet.
+                  {translate("integrations.noToolsYet", $locale)}
                   {#if server.status === "auth_required"}
-                    Connect this server to discover tools.
+                    {translate("integrations.connectToDiscover", $locale)}
                   {/if}
                 </p>
               {:else}
@@ -534,7 +550,7 @@
                         onclick={() => handleBindToAgent(server, tool.name)}
                         class="cursor-pointer rounded-md border border-plumage px-2.5 py-1 font-body text-[11px] text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
                       >
-                        Bind to agent
+                        {translate("integrations.bindToAgent", $locale)}
                       </button>
                     </li>
                   {/each}
@@ -549,7 +565,7 @@
         >
           <Plug class="mx-auto mb-3 size-10 text-talon-gold" />
           <p class="font-body text-sm text-crown-ash">
-            No MCP servers registered yet.
+            {translate("integrations.noServers", $locale)}
           </p>
         </div>
       {/each}

@@ -11,6 +11,8 @@
   } from "lucide-svelte";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
   import type { AgentCatalogEntry } from "$lib/agent-catalog";
+  import { locale, translate } from "$lib/i18n";
+  import { formatLocaleDateTime } from "$lib/i18n/format";
 
   let {
     entry,
@@ -34,7 +36,7 @@
 
   function formattedDate(dateStr: string): string {
     try {
-      return new Date(dateStr).toLocaleString("en-US", {
+      return formatLocaleDateTime(dateStr, $locale, {
         month: "short",
         day: "numeric",
         hour: "2-digit",
@@ -87,7 +89,7 @@
     <button
       onclick={onclose}
       class="cursor-pointer rounded-md p-1 text-crown-ash transition-colors hover:text-cream"
-      aria-label="Close agent details"
+      aria-label={translate("agents.closeDetails", $locale)}
     >
       <X class="size-4" />
     </button>
@@ -98,7 +100,7 @@
       <h3
         class="mb-2 font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
       >
-        Actions
+        {translate("agents.detail.actions", $locale)}
       </h3>
       <div class="flex flex-wrap gap-2">
         {#if entry.canaryVersion}
@@ -112,7 +114,7 @@
             class="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-plumage px-3 py-1.5 font-body text-xs text-cream transition-colors hover:border-talon-gold hover:text-talon-gold"
           >
             <ArrowUpCircle class="size-3.5" />
-            Promote canary
+            {translate("agents.detail.promoteCanary", $locale)}
           </button>
         {/if}
         <button
@@ -125,7 +127,7 @@
           class="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-plumage px-3 py-1.5 font-body text-xs text-cream transition-colors hover:border-talon-gold hover:text-talon-gold"
         >
           <RotateCcw class="size-3.5" />
-          Rollback
+          {translate("agents.detail.rollback", $locale)}
         </button>
         <button
           onclick={() =>
@@ -140,7 +142,7 @@
           {:else}
             <EyeOff class="size-3.5" />
           {/if}
-          Edit visibility
+          {translate("agents.detail.editVisibility", $locale)}
         </button>
         <button
           onclick={() =>
@@ -152,7 +154,7 @@
           class="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-red-500/30 px-3 py-1.5 font-body text-xs text-red-400 transition-colors hover:bg-red-500/10"
         >
           <Trash2 class="size-3.5" />
-          Deprecate
+          {translate("agents.detail.deprecate", $locale)}
         </button>
       </div>
     </section>
@@ -162,7 +164,7 @@
         <h3
           class="font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
         >
-          Manifest
+          {translate("agents.detail.manifest", $locale)}
         </h3>
         <button
           type="button"
@@ -170,7 +172,7 @@
             window.open(entry.yamlSourceUrl, "_blank", "noopener,noreferrer")}
           class="inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 font-body text-xs text-talon-gold transition-colors hover:text-talon-gold-bright"
         >
-          YAML source
+          {translate("agents.detail.yamlSource", $locale)}
           <ExternalLink class="size-3" />
         </button>
       </div>
@@ -199,10 +201,12 @@
       <h3
         class="mb-2 font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
       >
-        Bound tools
+        {translate("agents.detail.boundTools", $locale)}
       </h3>
       {#if entry.boundTools.length === 0}
-        <p class="font-body text-sm text-crown-ash">No tools bound.</p>
+        <p class="font-body text-sm text-crown-ash">
+          {translate("agents.detail.noTools", $locale)}
+        </p>
       {:else}
         <ul class="space-y-2">
           {#each entry.boundTools as tool (tool.id)}
@@ -229,7 +233,7 @@
         class="mb-2 flex items-center gap-1.5 font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
       >
         <History class="size-3" />
-        Version history
+        {translate("agents.detail.versionHistory", $locale)}
       </h3>
       <ul class="space-y-1.5">
         {#each entry.versionHistory as version (version.version)}
@@ -257,10 +261,12 @@
       <h3
         class="mb-2 font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
       >
-        Recent invocations
+        {translate("agents.detail.recentInvocations", $locale)}
       </h3>
       {#if entry.recentInvocations.length === 0}
-        <p class="font-body text-sm text-crown-ash">No recent invocations.</p>
+        <p class="font-body text-sm text-crown-ash">
+          {translate("agents.detail.noInvocations", $locale)}
+        </p>
       {:else}
         <ul class="space-y-2">
           {#each entry.recentInvocations as invocation (invocation.id)}

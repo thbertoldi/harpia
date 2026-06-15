@@ -38,8 +38,8 @@ describe("mcp server mocks", () => {
   });
 
   it("labels statuses for display", () => {
-    expect(statusLabel("connected")).toBe("Connected");
-    expect(statusLabel("auth_required")).toBe("Auth Required");
+    expect(statusLabel("connected", "en")).toBe("Connected");
+    expect(statusLabel("auth_required", "en")).toBe("Auth Required");
   });
 
   it("counts tools only for connected servers", () => {

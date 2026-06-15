@@ -3,6 +3,8 @@
   import { loadAgentCatalog, type AgentCatalogEntry } from "$lib/agent-catalog";
   import AgentCatalogDetail from "$lib/components/AgentCatalogDetail.svelte";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
+  import { locale, translate } from "$lib/i18n";
+  import { formatLocaleDate } from "$lib/i18n/format";
 
   let entries = $state<AgentCatalogEntry[]>([]);
   let loading = $state(true);
@@ -27,7 +29,8 @@
         loadError = result.error;
       }
     } catch (e) {
-      loadError = e instanceof Error ? e.message : "Failed to load agents";
+      loadError =
+        e instanceof Error ? e.message : translate("agents.loadError", $locale);
     } finally {
       loading = false;
     }
@@ -55,11 +58,7 @@
 
   function formattedDate(dateStr: string): string {
     try {
-      return new Date(dateStr).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      });
+      return formatLocaleDate(dateStr, $locale);
     } catch {
       return dateStr;
     }
@@ -72,9 +71,10 @@
   }
 
   function visibilityLabel(entry: AgentCatalogEntry): string {
-    if (entry.tenantVisibility === "global") return "All tenants";
+    if (entry.tenantVisibility === "global")
+      return translate("agents.visibility.allTenants", $locale);
     const count = entry.visibleTenantIds?.length ?? 0;
-    return `${count} tenant${count === 1 ? "" : "s"}`;
+    return translate("agents.visibility.tenants", $locale, { count });
   }
 </script>
 
@@ -87,16 +87,18 @@
     <div class="flex items-center justify-between px-4 py-3 lg:px-6">
       <div>
         <HarpyHeading tag="h1" class="text-2xl text-cream"
-          >Agent Catalog</HarpyHeading
+          >{translate("agents.heading", $locale)}</HarpyHeading
         >
         <p class="mt-1 font-body text-sm text-crown-ash">
-          Browse registered agent types, versions, and trust scores.
+          {translate("agents.subheading", $locale)}
         </p>
       </div>
       <span
         class="rounded-full border border-plumage px-2.5 py-1 font-mono text-[10px] tracking-wider text-crown-ash uppercase"
       >
-        {dataSource === "api" ? "Live API" : "Mock data"}
+        {dataSource === "api"
+          ? translate("plans.source.live", $locale)
+          : translate("plans.source.mock", $locale)}
       </span>
     </div>
 
@@ -104,20 +106,24 @@
       <div class="flex flex-1 items-center justify-center">
         <div class="flex items-center gap-2 text-crown-ash">
           <Loader2 class="size-5 animate-spin" />
-          <span class="font-body text-sm">Loading agents...</span>
+          <span class="font-body text-sm"
+            >{translate("agents.loading", $locale)}</span
+          >
         </div>
       </div>
     {:else if entries.length === 0 && loadError}
       <div class="flex flex-1 items-center justify-center">
         <div class="text-center">
           <AlertTriangle class="mx-auto mb-3 size-10 text-red-400" />
-          <p class="font-body text-sm text-red-400">Failed to load agents</p>
+          <p class="font-body text-sm text-red-400">
+            {translate("agents.loadError", $locale)}
+          </p>
           <p class="mt-1 font-mono text-xs text-crown-ash">{loadError}</p>
           <button
             onclick={() => fetchCatalog()}
             class="mt-4 cursor-pointer rounded-md border border-plumage px-4 py-2 font-body text-sm text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
           >
-            Retry
+            {translate("common.retry", $locale)}
           </button>
         </div>
       </div>
@@ -125,10 +131,10 @@
       <div class="flex flex-1 flex-col items-center justify-center px-4">
         <Bot class="mb-4 size-12 text-talon-gold" />
         <HarpyHeading tag="h2" class="mb-2 text-center text-xl text-cream">
-          No agent types registered
+          {translate("agents.empty.title", $locale)}
         </HarpyHeading>
         <p class="max-w-md text-center font-body text-sm text-crown-ash">
-          Register agent manifests to populate the catalog.
+          {translate("agents.empty.description", $locale)}
         </p>
       </div>
     {:else}
@@ -137,7 +143,8 @@
           class="mx-4 mb-2 rounded-md border border-talon-gold/30 bg-talon-gold/5 px-3 py-2 lg:mx-6"
         >
           <p class="font-mono text-xs text-talon-gold">
-            API unavailable — showing mock catalog. {loadError}
+            {translate("agents.mockFallback", $locale)}
+            {loadError}
           </p>
         </div>
       {/if}
@@ -148,12 +155,24 @@
             <tr
               class="border-b border-plumage font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
             >
-              <th class="px-3 py-2 text-left">Agent type</th>
-              <th class="px-3 py-2 text-left">Active</th>
-              <th class="px-3 py-2 text-left">Canary</th>
-              <th class="px-3 py-2 text-left">Trust</th>
-              <th class="px-3 py-2 text-left">Visibility</th>
-              <th class="px-3 py-2 text-left">Updated</th>
+              <th class="px-3 py-2 text-left"
+                >{translate("agents.table.agentType", $locale)}</th
+              >
+              <th class="px-3 py-2 text-left"
+                >{translate("agents.table.active", $locale)}</th
+              >
+              <th class="px-3 py-2 text-left"
+                >{translate("agents.table.canary", $locale)}</th
+              >
+              <th class="px-3 py-2 text-left"
+                >{translate("agents.table.trust", $locale)}</th
+              >
+              <th class="px-3 py-2 text-left"
+                >{translate("agents.table.visibility", $locale)}</th
+              >
+              <th class="px-3 py-2 text-left"
+                >{translate("agents.table.updated", $locale)}</th
+              >
             </tr>
           </thead>
           <tbody>

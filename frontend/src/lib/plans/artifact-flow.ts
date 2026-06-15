@@ -2,13 +2,15 @@ import type {
   PlanStep,
   PlanStepDependency,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
+import { translate } from "$lib/i18n";
+import type { Locale } from "$lib/i18n";
 
-const ARTIFACT_TYPE_LABELS: Record<string, string> = {
-  DateRange: "Date Range",
-  NewsList: "News List",
-  TextDraft: "Text Draft",
-  LinkedInPostDraft: "LinkedIn Post Draft",
-  PublishConfirmation: "Publish Confirmation",
+const ARTIFACT_TYPE_KEYS: Record<string, string> = {
+  DateRange: "artifact.type.dateRange",
+  NewsList: "artifact.type.newsList",
+  TextDraft: "artifact.type.textDraft",
+  LinkedInPostDraft: "artifact.type.linkedInPostDraft",
+  PublishConfirmation: "artifact.type.publishConfirmation",
 };
 
 /** Extracts the short artifact type key from a fully-qualified proto id. */
@@ -22,14 +24,17 @@ export function extractArtifactTypeKey(artifactTypeId: string): string {
 }
 
 /** Formats an artifact type id into a human-readable label. */
-export function formatArtifactTypeLabel(artifactTypeId: string): string {
+export function formatArtifactTypeLabel(
+  artifactTypeId: string,
+  locale: Locale,
+): string {
   const key = extractArtifactTypeKey(artifactTypeId);
   if (!key) {
-    return "—";
+    return translate("common.emDash", locale);
   }
 
-  if (ARTIFACT_TYPE_LABELS[key]) {
-    return ARTIFACT_TYPE_LABELS[key];
+  if (ARTIFACT_TYPE_KEYS[key]) {
+    return translate(ARTIFACT_TYPE_KEYS[key], locale);
   }
 
   return key.replace(/([A-Z])/g, " $1").trim();
@@ -89,6 +94,7 @@ export function orderPlanStepsLinear(
 export function buildLinearDagEdges(
   steps: PlanStep[],
   edges: PlanStepDependency[],
+  locale: Locale,
 ): PlanDagEdge[] {
   const lookup = stepByKey(steps);
 
@@ -106,7 +112,7 @@ export function buildLinearDagEdges(
         from,
         to,
         artifactTypeId,
-        artifactLabel: formatArtifactTypeLabel(artifactTypeId),
+        artifactLabel: formatArtifactTypeLabel(artifactTypeId, locale),
       };
     })
     .filter((edge): edge is PlanDagEdge => edge !== null);

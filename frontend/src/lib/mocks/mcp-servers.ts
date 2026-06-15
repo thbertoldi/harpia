@@ -1,3 +1,4 @@
+import { translate, type Locale } from "$lib/i18n";
 export type McpServerKind = "stdio" | "streamable_http";
 export type McpServerStatus =
   | "connected"
@@ -127,16 +128,16 @@ export function countToolsForStatus(
   return 0;
 }
 
-export function statusLabel(status: McpServerStatus): string {
+export function statusLabel(status: McpServerStatus, locale: Locale): string {
   switch (status) {
     case "connected":
-      return "Connected";
+      return translate("integrations.status.connected", locale);
     case "auth_required":
-      return "Auth Required";
+      return translate("integrations.status.authRequired", locale);
     case "error":
-      return "Error";
+      return translate("common.error", locale);
     case "disconnected":
-      return "Disconnected";
+      return translate("integrations.status.disconnected", locale);
   }
 }
 

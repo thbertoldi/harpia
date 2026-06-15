@@ -9,6 +9,7 @@
     formatArtifactTypeLabel,
     orderPlanStepsLinear,
   } from "$lib/plans/artifact-flow";
+  import { locale, translate } from "$lib/i18n";
 
   let {
     steps,
@@ -19,14 +20,14 @@
   } = $props();
 
   const orderedSteps = $derived(orderPlanStepsLinear(steps, edges));
-  const dagEdges = $derived(buildLinearDagEdges(steps, edges));
+  const dagEdges = $derived(buildLinearDagEdges(steps, edges, $locale));
 
   function edgeLabelBetween(fromKey: string, toKey: string): string {
     const edge = dagEdges.find(
       (candidate) =>
         candidate.from.key === fromKey && candidate.to.key === toKey,
     );
-    return edge?.artifactLabel ?? "—";
+    return edge?.artifactLabel ?? translate("common.emDash", $locale);
   }
 </script>
 
@@ -42,13 +43,13 @@
           <span
             class="rounded border border-plumage/60 px-2 py-0.5 text-crown-ash"
           >
-            {formatArtifactTypeLabel(step.inputArtifactTypeId)}
+            {formatArtifactTypeLabel(step.inputArtifactTypeId, $locale)}
           </span>
           <span class="text-crown-ash-dark">→</span>
           <span
             class="rounded border border-talon-gold/40 bg-talon-gold/5 px-2 py-0.5 text-talon-gold"
           >
-            {formatArtifactTypeLabel(step.outputArtifactTypeId)}
+            {formatArtifactTypeLabel(step.outputArtifactTypeId, $locale)}
           </span>
         </div>
       </div>
@@ -82,13 +83,13 @@
             <span
               class="rounded border border-plumage/60 px-2 py-0.5 text-crown-ash"
             >
-              {formatArtifactTypeLabel(step.inputArtifactTypeId)}
+              {formatArtifactTypeLabel(step.inputArtifactTypeId, $locale)}
             </span>
             <span class="text-crown-ash-dark">→</span>
             <span
               class="rounded border border-talon-gold/40 bg-talon-gold/5 px-2 py-0.5 text-talon-gold"
             >
-              {formatArtifactTypeLabel(step.outputArtifactTypeId)}
+              {formatArtifactTypeLabel(step.outputArtifactTypeId, $locale)}
             </span>
           </div>
         </div>

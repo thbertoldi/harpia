@@ -48,7 +48,7 @@ describe("plan catalog lock state", () => {
     const lock = resolveSkuLockState(RSS_SKU, [], []);
 
     expect(lock.reason).toBe("missing_entitlement");
-    expect(lock.message).toContain("Missing SKU entitlement");
+    expect(lock.messageKey).toBe("plans.lock.message.missing_entitlement");
   });
 
   it("marks SKU as missing installation when entitled but not installed", () => {

@@ -20,20 +20,20 @@ describe("artifact flow helpers", () => {
   });
 
   it("formats known artifact types to human labels", () => {
-    expect(formatArtifactTypeLabel("harpia.artifacts.v1.DateRange")).toBe(
+    expect(formatArtifactTypeLabel("harpia.artifacts.v1.DateRange", "en")).toBe(
       "Date Range",
     );
-    expect(formatArtifactTypeLabel("harpia.artifacts.v1.NewsList")).toBe(
+    expect(formatArtifactTypeLabel("harpia.artifacts.v1.NewsList", "en")).toBe(
       "News List",
     );
-    expect(formatArtifactTypeLabel("harpia.artifacts.v1.TextDraft")).toBe(
+    expect(formatArtifactTypeLabel("harpia.artifacts.v1.TextDraft", "en")).toBe(
       "Text Draft",
     );
     expect(
-      formatArtifactTypeLabel("harpia.artifacts.v1.LinkedInPostDraft"),
+      formatArtifactTypeLabel("harpia.artifacts.v1.LinkedInPostDraft", "en"),
     ).toBe("LinkedIn Post Draft");
     expect(
-      formatArtifactTypeLabel("harpia.artifacts.v1.PublishConfirmation"),
+      formatArtifactTypeLabel("harpia.artifacts.v1.PublishConfirmation", "en"),
     ).toBe("Publish Confirmation");
   });
 
@@ -48,7 +48,7 @@ describe("artifact flow helpers", () => {
   });
 
   it("builds labeled edges for the artifact flow diagram", () => {
-    const dagEdges = buildLinearDagEdges(template.steps, template.edges);
+    const dagEdges = buildLinearDagEdges(template.steps, template.edges, "en");
     expect(dagEdges).toHaveLength(3);
     expect(dagEdges.map((edge) => edge.artifactLabel)).toEqual([
       "News List",
