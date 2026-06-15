@@ -1,0 +1,8 @@
+.brand-stripe {
+  background: linear-gradient(
+    180deg,
+    var(--token-stripe-from) 0%,
+    var(--token-stripe-via) 50%,
+    var(--token-stripe-to) 100%
+  );
+}

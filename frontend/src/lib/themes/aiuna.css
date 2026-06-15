@@ -1,32 +1,41 @@
 /*
- * AIUNA theme — placeholder palette until brand assets arrive.
- * TBD: replace hex values with official AIUNA brand tokens.
+ * AIUNA theme — Cloud Neutral palette derived from brand kit.
+ * Light mode is the primary friendly experience; dark mode preserves console density.
  */
 
 [data-theme="aiuna"] {
-  --token-primary: #2563eb;
-  --token-primary-bright: #3b82f6;
+  --token-primary: #300a6f;
+  --token-primary-bright: #3d1288;
   --token-on-primary: #ffffff;
-  --token-accent: #2563eb;
-  --token-accent-gradient-from: #60a5fa;
-  --token-accent-gradient-via: #2563eb;
-  --token-accent-gradient-to: rgba(37, 99, 235, 0.25);
+  --token-accent: #5bc4be;
+  --token-accent-gradient-from: #300a6f;
+  --token-accent-gradient-via: #3d1288;
+  --token-accent-gradient-to: rgba(91, 196, 190, 0.35);
+  --token-stripe-from: #300a6f;
+  --token-stripe-via: #3d1288;
+  --token-stripe-to: rgba(91, 196, 190, 0.35);
+  --token-font-heading: "Jost", system-ui, sans-serif;
+  --token-font-body: "Jost", system-ui, sans-serif;
+  --token-font-wordmark: "Jost", system-ui, sans-serif;
 }
 
 [data-theme="aiuna"]:not(.dark) {
-  --token-surface: #f8fafc;
+  --token-surface: #f4f5f7;
   --token-surface-elevated: #ffffff;
-  --token-text: #0f172a;
-  --token-text-muted: #64748b;
-  --token-text-muted-dark: #94a3b8;
-  --token-border: #e2e8f0;
+  --token-text: #1a1a1c;
+  --token-text-muted: #606062;
+  --token-text-muted-dark: #9ca3af;
+  --token-border: #d7dbde;
 }
 
 [data-theme="aiuna"].dark {
-  --token-surface: #0f172a;
-  --token-surface-elevated: #1e293b;
-  --token-text: #f1f5f9;
-  --token-text-muted: #94a3b8;
-  --token-text-muted-dark: #64748b;
-  --token-border: #334155;
+  --token-surface: #141416;
+  --token-surface-elevated: #1e1e22;
+  --token-text: #f0f1f3;
+  --token-text-muted: #a0a4ab;
+  --token-text-muted-dark: #606062;
+  --token-border: #2e3036;
+  --token-primary: #a47ade;
+  --token-primary-bright: #b794f4;
+  --token-on-primary: #141416;
 }

@@ -27,9 +27,14 @@ export interface User {
 export interface Tenant {
   id: string;
   name: string;
+  themeKey?: string;
 }
 
-export const DEV_TENANT: Tenant = { id: "dev", name: "Dev Workspace" };
+export const DEV_TENANT: Tenant = {
+  id: "dev",
+  name: "Dev Workspace",
+  themeKey: "default",
+};
 
 export interface Session {
   user: User;
@@ -125,6 +130,7 @@ export async function syncSessionTenant(session: Session): Promise<Session> {
     const tenants = response.tenants.map((tenant) => ({
       id: tenant.id,
       name: tenant.name,
+      themeKey: tenant.themeKey || undefined,
     }));
     const tenant = selectDefaultTenant(tenants);
     return tenant ? { ...session, tenant } : session;

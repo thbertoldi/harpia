@@ -9,6 +9,7 @@
   } from "$lib/auth";
   import type { Tenant } from "$lib/auth";
   import { identityClient } from "$lib/rpc";
+  import { initTheme } from "$lib/themes";
   import { locale, translate } from "$lib/i18n";
 
   let tenants = $state<Tenant[]>([]);
@@ -32,6 +33,7 @@
       selectedTenant = DEV_TENANT;
       tenants = [DEV_TENANT];
       setTenant(DEV_TENANT);
+      initTheme({ tenantThemeKey: DEV_TENANT.themeKey ?? null });
     } else {
       void loadTenants();
     }
@@ -43,11 +45,13 @@
       tenants = response.tenants.map((tenant) => ({
         id: tenant.id,
         name: tenant.name,
+        themeKey: tenant.themeKey || undefined,
       }));
       const defaultTenant = selectDefaultTenant(tenants);
       if (defaultTenant) {
         selectedTenant = defaultTenant;
         setTenant(defaultTenant);
+        initTheme({ tenantThemeKey: defaultTenant.themeKey ?? null });
       } else if (tenants.length === 0) {
         noTenantAccess = true;
       }
@@ -60,6 +64,7 @@
   function select(tenant: Tenant) {
     selectedTenant = tenant;
     setTenant(tenant);
+    initTheme({ tenantThemeKey: tenant.themeKey ?? null });
     open = false;
   }
 

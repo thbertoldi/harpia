@@ -4,11 +4,14 @@
   import { resolve } from "$app/paths";
   import TaskInput from "$lib/components/TaskInput.svelte";
   import ChatMessage from "$lib/components/ChatMessage.svelte";
+  import BrandLockup from "$lib/components/BrandLockup.svelte";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
   import { requireTenantId } from "$lib/auth";
   import { toUserMessage } from "$lib/connect-errors";
   import { taskClient, TaskStatus, type Task } from "$lib/rpc";
   import { locale, translate } from "$lib/i18n";
+  import { activeTheme } from "$lib/themes";
+  import { brandTranslateParams } from "$lib/themes/branding";
   import { resolveLocalizedContent } from "$lib/i18n/content";
   import { formatLocaleDateTime } from "$lib/i18n/format";
 
@@ -118,28 +121,23 @@
     {#if !taskCreated}
       <!-- Landing state -->
       <div class="flex flex-1 flex-col items-center justify-center px-4">
-        <div class="mb-4 text-talon-gold">
-          <svg class="size-12" viewBox="0 0 48 48" fill="none">
-            <path
-              d="M24 4L6 18v12l18 14 18-14V18L24 4z"
-              stroke="currentColor"
-              stroke-width="2"
-              fill="none"
-            />
-            <path
-              d="M24 16l-6 4v6l6 4 6-4v-6l-6-4z"
-              fill="currentColor"
-              opacity="0.3"
-            />
-          </svg>
+        <div class="mb-4 flex justify-center">
+          <BrandLockup variant="symbol" size="lg" />
         </div>
 
-        <HarpyHeading tag="h1" class="mb-3 text-center text-5xl font-bold">
+        <HarpyHeading
+          tag="h1"
+          class="mb-3 text-center text-5xl font-bold text-text"
+        >
           {translate("home.hero.title", $locale)}
         </HarpyHeading>
 
         <p class="mb-10 text-center font-body text-lg text-crown-ash">
-          {translate("home.hero.subtitle", $locale)}
+          {translate(
+            "home.hero.subtitle",
+            $locale,
+            brandTranslateParams($activeTheme, $locale),
+          )}
         </p>
 
         <div class="mb-12 w-full">

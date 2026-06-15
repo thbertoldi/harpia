@@ -63,7 +63,7 @@ func (r *MembershipRepository) listMemberships(ctx context.Context, externalID s
 	memberships := make([]TenantMembership, 0)
 	err := database.WithUserExternalID(ctx, r.pool, externalID, func(q database.Querier) error {
 		rows, err := q.Query(ctx,
-			`SELECT t.id, t.slug, t.name, u.role
+			`SELECT t.id, t.slug, t.name, u.role, COALESCE(t.settings->>'theme_key', '')
 			 FROM users u
 			 JOIN tenants t ON t.id = u.tenant_id
 			 WHERE u.external_id = $1
@@ -82,6 +82,7 @@ func (r *MembershipRepository) listMemberships(ctx context.Context, externalID s
 				&membership.Slug,
 				&membership.Name,
 				&membership.Role,
+				&membership.ThemeKey,
 			); err != nil {
 				return fmt.Errorf("scan membership: %w", err)
 			}

@@ -10,6 +10,8 @@
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
   import StatusBadge from "$lib/components/StatusBadge.svelte";
   import { locale, translate } from "$lib/i18n";
+  import { activeTheme } from "$lib/themes";
+  import { brandTranslateParams } from "$lib/themes/branding";
   import { formatLocaleDateTime } from "$lib/i18n/format";
 
   let {
@@ -183,7 +185,11 @@
               {translate("taskDetail.feedbackRequired.heading", $locale)}
             </p>
             <p class="font-body text-sm text-cream">
-              {translate("taskDetail.feedbackRequired.description", $locale)}
+              {translate(
+                "taskDetail.feedbackRequired.description",
+                $locale,
+                brandTranslateParams($activeTheme, $locale),
+              )}
             </p>
             <div class="mt-3 flex gap-2">
               <button

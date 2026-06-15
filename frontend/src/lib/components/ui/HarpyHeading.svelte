@@ -12,7 +12,7 @@
 
 <svelte:element
   this={tag}
-  class="font-heading tracking-tight text-talon-gold {className}"
+  class="font-heading tracking-tight text-primary {className}"
 >
   {@render children()}
 </svelte:element>
