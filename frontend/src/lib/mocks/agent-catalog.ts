@@ -1,4 +1,6 @@
 import { create } from "@bufbuild/protobuf";
+import type { Locale } from "$lib/i18n";
+import { resolveLocalizedContent } from "$lib/i18n/content";
 import {
   AgentTypeSchema,
   type AgentType,
@@ -52,6 +54,45 @@ export interface AgentCatalogEntry {
   boundTools: BoundTool[];
   versionHistory: AgentVersionEntry[];
   recentInvocations: AgentInvocation[];
+}
+
+function localizeAgentType(agentType: AgentType, locale: Locale): AgentType {
+  return create(AgentTypeSchema, {
+    ...agentType,
+    displayName: resolveLocalizedContent(
+      `catalog.agent.${agentType.id}.displayName`,
+      locale,
+    ),
+    description: resolveLocalizedContent(
+      `catalog.agent.${agentType.id}.description`,
+      locale,
+    ),
+    systemPrompt: resolveLocalizedContent(
+      `catalog.agent.${agentType.id}.prompt`,
+      locale,
+    ),
+  });
+}
+
+function localizeBoundTool(tool: BoundTool, locale: Locale): BoundTool {
+  return {
+    ...tool,
+    name: resolveLocalizedContent(`catalog.agent.tool.${tool.id}.name`, locale),
+    description: resolveLocalizedContent(
+      `catalog.agent.tool.${tool.id}.description`,
+      locale,
+    ),
+  };
+}
+
+function localizeCatalogMeta(
+  meta: AgentCatalogMeta,
+  locale: Locale,
+): AgentCatalogMeta {
+  return {
+    ...meta,
+    boundTools: meta.boundTools.map((tool) => localizeBoundTool(tool, locale)),
+  };
 }
 
 const EMAIL_DRAFTER_MANIFEST: AgentType = create(AgentTypeSchema, {
@@ -306,6 +347,7 @@ export const MOCK_AGENT_TYPES: AgentType[] = [
 export function mergeCatalogEntry(
   agentType: AgentType,
   meta?: AgentCatalogMeta,
+  locale: Locale = "en",
 ): AgentCatalogEntry {
   const fallbackMeta: AgentCatalogMeta = {
     activeVersion: agentType.version || "0.0.0",
@@ -329,7 +371,10 @@ export function mergeCatalogEntry(
     recentInvocations: [],
   };
 
-  const resolved = meta ?? AGENT_CATALOG_META[agentType.id] ?? fallbackMeta;
+  const resolved = localizeCatalogMeta(
+    meta ?? AGENT_CATALOG_META[agentType.id] ?? fallbackMeta,
+    locale,
+  );
 
   return {
     agentType,
@@ -346,9 +391,13 @@ export function mergeCatalogEntry(
   };
 }
 
-export function mockAgentCatalog(): AgentCatalogEntry[] {
+export function mockAgentCatalog(locale: Locale = "en"): AgentCatalogEntry[] {
   return MOCK_AGENT_TYPES.map((agentType) =>
-    mergeCatalogEntry(agentType, runtimeAgentCatalogMeta[agentType.id]),
+    mergeCatalogEntry(
+      localizeAgentType(agentType, locale),
+      runtimeAgentCatalogMeta[agentType.id],
+      locale,
+    ),
   );
 }
 
@@ -359,6 +408,7 @@ export function resetMockAgentCatalog(): void {
 export function bindMockToolToAgent(
   agentId: string,
   tool: BoundTool,
+  locale: Locale = "en",
 ): AgentCatalogEntry | null {
   const current = runtimeAgentCatalogMeta[agentId];
   if (!current) {
@@ -385,12 +435,17 @@ export function bindMockToolToAgent(
     return null;
   }
 
-  return mergeCatalogEntry(agentType, runtimeAgentCatalogMeta[agentId]);
+  return mergeCatalogEntry(
+    localizeAgentType(agentType, locale),
+    runtimeAgentCatalogMeta[agentId],
+    locale,
+  );
 }
 
 export function runMockAgentInvocation(
   agentId: string,
   taskId: string,
+  locale: Locale = "en",
 ): AgentCatalogEntry | null {
   const current = runtimeAgentCatalogMeta[agentId];
   if (!current) {
@@ -418,5 +473,9 @@ export function runMockAgentInvocation(
     return null;
   }
 
-  return mergeCatalogEntry(agentType, runtimeAgentCatalogMeta[agentId]);
+  return mergeCatalogEntry(
+    localizeAgentType(agentType, locale),
+    runtimeAgentCatalogMeta[agentId],
+    locale,
+  );
 }

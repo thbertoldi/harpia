@@ -21,6 +21,8 @@ import {
   PlanTemplateSchema,
   type PlanTemplate,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
+import type { Locale } from "$lib/i18n";
+import { resolveLocalizedContent } from "$lib/i18n/content";
 
 export interface MockExecutorContext {
   skus: ExecutorSKU[];
@@ -75,52 +77,77 @@ function mockSku(
   });
 }
 
-const MOCK_SKUS: ExecutorSKU[] = [
-  mockSku(
-    SKU_IDS.rssNewsFeed,
-    "rss-news-feed",
-    "RSS News Feed",
-    "Fetches curated news articles from configured RSS feeds.",
-    ExecutorCatalogKind.INTEGRATION,
-  ),
-  mockSku(
-    SKU_IDS.newsletterWriter,
-    "newsletter-writer-senior",
-    "Newsletter Writer (Senior)",
-    "Senior agent that synthesizes a platform-neutral newsletter draft from curated news.",
-    ExecutorCatalogKind.AGENT,
-  ),
-  mockSku(
-    SKU_IDS.linkedinVoice,
-    "linkedin-voice-senior",
-    "LinkedIn Voice (Senior)",
-    "Senior agent that adapts a neutral text draft into a LinkedIn-ready post.",
-    ExecutorCatalogKind.AGENT,
-  ),
-  mockSku(
-    SKU_IDS.linkedinPublish,
-    "linkedin-publish",
-    "LinkedIn Publish",
-    "Publishes a LinkedIn post draft through the tenant OAuth connection.",
-    ExecutorCatalogKind.INTEGRATION,
-  ),
-];
+function mockSkus(locale: Locale): ExecutorSKU[] {
+  return [
+    mockSku(
+      SKU_IDS.rssNewsFeed,
+      "rss-news-feed",
+      resolveLocalizedContent("catalog.sku.rss-news-feed.name", locale),
+      resolveLocalizedContent("catalog.sku.rss-news-feed.description", locale),
+      ExecutorCatalogKind.INTEGRATION,
+    ),
+    mockSku(
+      SKU_IDS.newsletterWriter,
+      "newsletter-writer-senior",
+      resolveLocalizedContent(
+        "catalog.sku.newsletter-writer-senior.name",
+        locale,
+      ),
+      resolveLocalizedContent(
+        "catalog.sku.newsletter-writer-senior.description",
+        locale,
+      ),
+      ExecutorCatalogKind.AGENT,
+    ),
+    mockSku(
+      SKU_IDS.linkedinVoice,
+      "linkedin-voice-senior",
+      resolveLocalizedContent("catalog.sku.linkedin-voice-senior.name", locale),
+      resolveLocalizedContent(
+        "catalog.sku.linkedin-voice-senior.description",
+        locale,
+      ),
+      ExecutorCatalogKind.AGENT,
+    ),
+    mockSku(
+      SKU_IDS.linkedinPublish,
+      "linkedin-publish",
+      resolveLocalizedContent("catalog.sku.linkedin-publish.name", locale),
+      resolveLocalizedContent(
+        "catalog.sku.linkedin-publish.description",
+        locale,
+      ),
+      ExecutorCatalogKind.INTEGRATION,
+    ),
+  ];
+}
 
-export const WEEKLY_NEWSLETTER_TEMPLATE: PlanTemplate = create(
-  PlanTemplateSchema,
-  {
+function mockWeeklyNewsletterTemplate(locale: Locale): PlanTemplate {
+  return create(PlanTemplateSchema, {
     id: "a1000000-0000-4000-8000-000000000001",
     key: "weekly-newsletter-linkedin",
-    name: "Weekly Newsletter (LinkedIn)",
-    description: "Fetch news, write a draft, adapt for LinkedIn, and publish.",
+    name: resolveLocalizedContent(
+      "catalog.plan.weekly-newsletter-linkedin.name",
+      locale,
+    ),
+    description: resolveLocalizedContent(
+      "catalog.plan.weekly-newsletter-linkedin.description",
+      locale,
+    ),
     vertical: "creator-economy",
     version: 1,
     steps: [
       create(PlanStepSchema, {
         id: "step-fetch-news",
         key: "fetch-news",
-        title: "Fetch News",
-        description: "Collect curated articles for the configured date range.",
+        title: resolveLocalizedContent(
+          "catalog.plan.weekly-newsletter-linkedin.step.fetch-news.title",
+          locale,
+        ),
+        description: resolveLocalizedContent(
+          "catalog.plan.weekly-newsletter-linkedin.step.fetch-news.description",
+          locale,
+        ),
         inputArtifactTypeId: "harpia.artifacts.v1.DateRange",
         outputArtifactTypeId: "harpia.artifacts.v1.NewsList",
         defaultExecutorSkuKey: "rss-news-feed",
@@ -132,8 +159,14 @@ export const WEEKLY_NEWSLETTER_TEMPLATE: PlanTemplate = create(
       create(PlanStepSchema, {
         id: "step-write-draft",
         key: "write-draft",
-        title: "Write Draft",
-        description: "Synthesize a platform-neutral newsletter draft.",
+        title: resolveLocalizedContent(
+          "catalog.plan.weekly-newsletter-linkedin.step.write-draft.title",
+          locale,
+        ),
+        description: resolveLocalizedContent(
+          "catalog.plan.weekly-newsletter-linkedin.step.write-draft.description",
+          locale,
+        ),
         inputArtifactTypeId: "harpia.artifacts.v1.NewsList",
         outputArtifactTypeId: "harpia.artifacts.v1.TextDraft",
         defaultExecutorSkuKey: "newsletter-writer-senior",
@@ -144,8 +177,14 @@ export const WEEKLY_NEWSLETTER_TEMPLATE: PlanTemplate = create(
       create(PlanStepSchema, {
         id: "step-adapt-linkedin",
         key: "adapt-for-linkedin",
-        title: "Adapt for LinkedIn",
-        description: "Transform the draft into a LinkedIn-specific post.",
+        title: resolveLocalizedContent(
+          "catalog.plan.weekly-newsletter-linkedin.step.adapt-for-linkedin.title",
+          locale,
+        ),
+        description: resolveLocalizedContent(
+          "catalog.plan.weekly-newsletter-linkedin.step.adapt-for-linkedin.description",
+          locale,
+        ),
         inputArtifactTypeId: "harpia.artifacts.v1.TextDraft",
         outputArtifactTypeId: "harpia.artifacts.v1.LinkedInPostDraft",
         defaultExecutorSkuKey: "linkedin-voice-senior",
@@ -156,8 +195,14 @@ export const WEEKLY_NEWSLETTER_TEMPLATE: PlanTemplate = create(
       create(PlanStepSchema, {
         id: "step-publish-linkedin",
         key: "publish-linkedin",
-        title: "Publish LinkedIn",
-        description: "Publish the adapted post to LinkedIn.",
+        title: resolveLocalizedContent(
+          "catalog.plan.weekly-newsletter-linkedin.step.publish-linkedin.title",
+          locale,
+        ),
+        description: resolveLocalizedContent(
+          "catalog.plan.weekly-newsletter-linkedin.step.publish-linkedin.description",
+          locale,
+        ),
         inputArtifactTypeId: "harpia.artifacts.v1.LinkedInPostDraft",
         outputArtifactTypeId: "harpia.artifacts.v1.PublishConfirmation",
         defaultExecutorSkuKey: "linkedin-publish",
@@ -183,17 +228,23 @@ export const WEEKLY_NEWSLETTER_TEMPLATE: PlanTemplate = create(
     ],
     createdAt: "2026-06-01T10:00:00Z",
     updatedAt: "2026-06-01T10:00:00Z",
-  },
-);
+  });
+}
 
-export function mockPlanTemplates(): PlanTemplate[] {
-  return [WEEKLY_NEWSLETTER_TEMPLATE];
+export const WEEKLY_NEWSLETTER_TEMPLATE: PlanTemplate =
+  mockWeeklyNewsletterTemplate("en");
+
+export function mockPlanTemplates(locale: Locale = "en"): PlanTemplate[] {
+  return [mockWeeklyNewsletterTemplate(locale)];
 }
 
 /** Mock tenant executor state with mixed lock reasons for local development. */
-export function mockExecutorContext(tenantId = "dev"): MockExecutorContext {
+export function mockExecutorContext(
+  tenantId = "dev",
+  locale: Locale = "en",
+): MockExecutorContext {
   return {
-    skus: MOCK_SKUS,
+    skus: mockSkus(locale),
     entitlements: [
       create(ExecutorEntitlementSchema, {
         id: "ent-rss",

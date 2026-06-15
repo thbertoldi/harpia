@@ -36,7 +36,7 @@
     loadError = null;
 
     try {
-      const result = await loadPlanTemplate(templateId);
+      const result = await loadPlanTemplate(templateId, $locale);
       template = result.template;
       dataSource = result.source;
       bindings = loadOverseerBindingsDraft(templateId);

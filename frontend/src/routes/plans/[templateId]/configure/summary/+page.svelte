@@ -36,7 +36,7 @@
 
     try {
       const [templateResult, skuCatalog] = await Promise.all([
-        loadPlanTemplate(templateId),
+        loadPlanTemplate(templateId, $locale),
         loadExecutorSkuCatalog(),
       ]);
 

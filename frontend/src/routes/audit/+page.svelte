@@ -54,7 +54,12 @@
   ) {
     loading = true;
     try {
-      const page = await getAuditEvents(activeFilters, token, PAGE_SIZE);
+      const page = await getAuditEvents(
+        $locale,
+        activeFilters,
+        token,
+        PAGE_SIZE,
+      );
       events = page.events;
       nextPageToken = page.nextPageToken;
     } finally {
@@ -102,7 +107,7 @@
   async function exportCsv() {
     exporting = true;
     try {
-      const all = await getAllFilteredAuditEvents(appliedFilters);
+      const all = await getAllFilteredAuditEvents($locale, appliedFilters);
       const csv = auditEventsToCsv(all);
       downloadTextFile(
         csv,
@@ -117,7 +122,7 @@
   async function exportJson() {
     exporting = true;
     try {
-      const all = await getAllFilteredAuditEvents(appliedFilters);
+      const all = await getAllFilteredAuditEvents($locale, appliedFilters);
       const json = auditEventsToJson(all);
       downloadTextFile(
         json,

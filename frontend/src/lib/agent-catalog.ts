@@ -1,5 +1,6 @@
 import { toUserMessage } from "$lib/connect-errors";
 import type { AgentType } from "$lib/gen/harpia/agents/v1/agents_pb";
+import type { Locale } from "$lib/i18n";
 import {
   AGENT_CATALOG_META,
   bindMockToolToAgent,
@@ -74,25 +75,27 @@ async function withTimeout<T>(
 }
 
 /** Loads catalog entries; merges ListAgentTypes with catalog metadata when API succeeds. */
-export async function loadAgentCatalog(): Promise<AgentCatalogResult> {
+export async function loadAgentCatalog(
+  locale: Locale = "en",
+): Promise<AgentCatalogResult> {
   try {
     const agentTypes = await withTimeout(
       fetchAgentTypesFromApi(),
       AGENT_CATALOG_API_TIMEOUT_MS,
     );
     if (agentTypes.length === 0) {
-      return { entries: mockAgentCatalog(), source: "mock" };
+      return { entries: mockAgentCatalog(locale), source: "mock" };
     }
 
     const entries = agentTypes.map((agentType) => {
       const key = resolveAgentKey(agentType);
-      return mergeCatalogEntry(agentType, AGENT_CATALOG_META[key]);
+      return mergeCatalogEntry(agentType, AGENT_CATALOG_META[key], locale);
     });
 
     return { entries, source: "api" };
   } catch (error) {
     return {
-      entries: mockAgentCatalog(),
+      entries: mockAgentCatalog(locale),
       source: "mock",
       error: toUserMessage(error),
     };
@@ -103,12 +106,13 @@ export async function bindToolToAgentCatalogEntry(
   source: AgentCatalogSource,
   agentId: string,
   tool: BoundTool,
+  locale: Locale = "en",
 ): Promise<BindToolResult> {
   if (source !== "mock") {
     throw new Error("Binding tools in live catalog is not available yet.");
   }
 
-  const entry = bindMockToolToAgent(agentId, tool);
+  const entry = bindMockToolToAgent(agentId, tool, locale);
   if (!entry) {
     throw new Error("Agent catalog entry not found.");
   }
@@ -119,13 +123,14 @@ export async function bindToolToAgentCatalogEntry(
 export async function runTestInvocationForAgent(
   source: AgentCatalogSource,
   agentId: string,
+  locale: Locale = "en",
 ): Promise<InvocationResult> {
   if (source !== "mock") {
     throw new Error("Test invocations in live catalog are not available yet.");
   }
 
   const taskId = `task-e2e-${Math.random().toString(36).slice(2, 8)}`;
-  const entry = runMockAgentInvocation(agentId, taskId);
+  const entry = runMockAgentInvocation(agentId, taskId, locale);
   if (!entry) {
     throw new Error("Agent catalog entry not found.");
   }

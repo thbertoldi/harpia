@@ -41,6 +41,12 @@ describe("plan template loader", () => {
     expect(template.edges).toHaveLength(3);
   });
 
+  it("localizes seeded template content for pt-BR", () => {
+    const template = mockWeeklyNewsletterLinkedInTemplate("pt-BR");
+    expect(template.name).toBe("Newsletter Semanal (LinkedIn)");
+    expect(template.steps[1]?.title).toBe("Escrever Rascunho");
+  });
+
   it("loads template by key from the API", async () => {
     const apiTemplate = mockWeeklyNewsletterLinkedInTemplate();
     getPlanTemplateByKey.mockResolvedValue({ planTemplate: apiTemplate });

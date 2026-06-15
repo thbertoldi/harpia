@@ -33,7 +33,7 @@
     loading = true;
     loadError = null;
     try {
-      const result = await loadPlanCatalog();
+      const result = await loadPlanCatalog($locale);
       entries = result.entries;
       dataSource = result.source;
       if (result.error && result.source === "mock") {

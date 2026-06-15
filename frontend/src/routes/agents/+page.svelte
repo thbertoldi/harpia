@@ -25,7 +25,7 @@
     loading = true;
     loadError = null;
     try {
-      const result = await loadAgentCatalog();
+      const result = await loadAgentCatalog($locale);
       entries = result.entries;
       dataSource = result.source;
       discoveredTools = collectDiscoveredTools();

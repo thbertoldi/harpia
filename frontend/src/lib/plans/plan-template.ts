@@ -1,5 +1,7 @@
 import { create } from "@bufbuild/protobuf";
 import { toUserMessage } from "$lib/connect-errors";
+import type { Locale } from "$lib/i18n";
+import { resolveLocalizedContent } from "$lib/i18n/content";
 import type { PlanTemplate } from "$lib/gen/harpia/plans/v1/plans_pb";
 import {
   ExecutorKind,
@@ -30,20 +32,34 @@ export function isPlanTemplateUuid(value: string): boolean {
   return UUID_REGEX.test(value);
 }
 
-export function mockWeeklyNewsletterLinkedInTemplate(): PlanTemplate {
+export function mockWeeklyNewsletterLinkedInTemplate(
+  locale: Locale = "en",
+): PlanTemplate {
   return create(PlanTemplateSchema, {
     id: WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_ID,
     key: WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_KEY,
-    name: "Weekly Newsletter (LinkedIn)",
-    description: "Fetch news, write a draft, adapt for LinkedIn, and publish.",
+    name: resolveLocalizedContent(
+      "catalog.plan.weekly-newsletter-linkedin.name",
+      locale,
+    ),
+    description: resolveLocalizedContent(
+      "catalog.plan.weekly-newsletter-linkedin.description",
+      locale,
+    ),
     vertical: "creator-economy",
     version: 1,
     steps: [
       create(PlanStepSchema, {
         id: "b1000000-0000-4000-8000-000000000001",
         key: "fetch-news",
-        title: "Fetch News",
-        description: "Collect curated articles for the configured date range.",
+        title: resolveLocalizedContent(
+          "catalog.plan.weekly-newsletter-linkedin.step.fetch-news.title",
+          locale,
+        ),
+        description: resolveLocalizedContent(
+          "catalog.plan.weekly-newsletter-linkedin.step.fetch-news.description",
+          locale,
+        ),
         inputArtifactTypeId: "harpia.artifacts.v1.DateRange",
         outputArtifactTypeId: "harpia.artifacts.v1.NewsList",
         defaultExecutorSkuKey: "news-fetcher",
@@ -56,8 +72,14 @@ export function mockWeeklyNewsletterLinkedInTemplate(): PlanTemplate {
       create(PlanStepSchema, {
         id: "b1000000-0000-4000-8000-000000000002",
         key: "write-draft",
-        title: "Write Draft",
-        description: "Synthesize a platform-neutral newsletter draft.",
+        title: resolveLocalizedContent(
+          "catalog.plan.weekly-newsletter-linkedin.step.write-draft.title",
+          locale,
+        ),
+        description: resolveLocalizedContent(
+          "catalog.plan.weekly-newsletter-linkedin.step.write-draft.description",
+          locale,
+        ),
         inputArtifactTypeId: "harpia.artifacts.v1.NewsList",
         outputArtifactTypeId: "harpia.artifacts.v1.TextDraft",
         defaultExecutorSkuKey: "newsletter-writer",
@@ -70,8 +92,14 @@ export function mockWeeklyNewsletterLinkedInTemplate(): PlanTemplate {
       create(PlanStepSchema, {
         id: "b1000000-0000-4000-8000-000000000003",
         key: "adapt-for-linkedin",
-        title: "Adapt for LinkedIn",
-        description: "Transform the draft into a LinkedIn-specific post.",
+        title: resolveLocalizedContent(
+          "catalog.plan.weekly-newsletter-linkedin.step.adapt-for-linkedin.title",
+          locale,
+        ),
+        description: resolveLocalizedContent(
+          "catalog.plan.weekly-newsletter-linkedin.step.adapt-for-linkedin.description",
+          locale,
+        ),
         inputArtifactTypeId: "harpia.artifacts.v1.TextDraft",
         outputArtifactTypeId: "harpia.artifacts.v1.LinkedInPostDraft",
         defaultExecutorSkuKey: "linkedin-adapter",
@@ -84,8 +112,14 @@ export function mockWeeklyNewsletterLinkedInTemplate(): PlanTemplate {
       create(PlanStepSchema, {
         id: "b1000000-0000-4000-8000-000000000004",
         key: "publish-linkedin",
-        title: "Publish LinkedIn",
-        description: "Publish the adapted post to LinkedIn.",
+        title: resolveLocalizedContent(
+          "catalog.plan.weekly-newsletter-linkedin.step.publish-linkedin.title",
+          locale,
+        ),
+        description: resolveLocalizedContent(
+          "catalog.plan.weekly-newsletter-linkedin.step.publish-linkedin.description",
+          locale,
+        ),
         inputArtifactTypeId: "harpia.artifacts.v1.LinkedInPostDraft",
         outputArtifactTypeId: "harpia.artifacts.v1.PublishConfirmation",
         defaultExecutorSkuKey: "linkedin-publisher",
@@ -141,13 +175,14 @@ async function fetchPlanTemplateFromApi(
 /** Loads a plan template by UUID or key; falls back to mock data when API is unavailable. */
 export async function loadPlanTemplate(
   templateIdOrKey: string,
+  locale: Locale = "en",
 ): Promise<PlanTemplateResult> {
   try {
     const template = await fetchPlanTemplateFromApi(templateIdOrKey);
     if (!template) {
       if (matchesMockTemplate(templateIdOrKey)) {
         return {
-          template: mockWeeklyNewsletterLinkedInTemplate(),
+          template: mockWeeklyNewsletterLinkedInTemplate(locale),
           source: "mock",
           error: "Empty response from plan service",
         };
@@ -159,7 +194,7 @@ export async function loadPlanTemplate(
   } catch (error) {
     if (matchesMockTemplate(templateIdOrKey)) {
       return {
-        template: mockWeeklyNewsletterLinkedInTemplate(),
+        template: mockWeeklyNewsletterLinkedInTemplate(locale),
         source: "mock",
         error: toUserMessage(error),
       };
