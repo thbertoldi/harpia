@@ -7,7 +7,8 @@ import {
   Plug,
   ScrollText,
 } from "lucide-svelte";
-import type { HarpiaRole, NavSectionDef, ResolvedNavSection } from "./types";
+import { hasPermission } from "$lib/auth-roles";
+import type { NavSectionDef, ResolvedNavSection } from "./types";
 
 /**
  * Shell navigation registry. Feature PRs append entries here instead of
@@ -42,19 +43,19 @@ export const navSectionDefs: NavSectionDef[] = [
     i18nKey: "nav.integrations",
     href: "/integrations",
     icon: Plug,
-    visibleTo: ["Engineer"],
+    requiredPermission: "manageIntegrations",
   },
   {
     i18nKey: "nav.audit",
     href: "/audit",
     icon: ScrollText,
-    visibleTo: ["Overseer", "Engineer"],
+    requiredPermission: "viewAudit",
   },
   {
     i18nKey: "nav.agents",
     href: "/agents",
     icon: Bot,
-    visibleTo: ["Engineer"],
+    requiredPermission: "manageAgents",
   },
 ];
 
@@ -81,9 +82,11 @@ function isVisibleToRole(
   def: NavSectionDef,
   role: string | undefined,
 ): boolean {
-  const visibility = def.visibleTo ?? "all";
-  if (visibility === "all") {
+  if (def.visibleTo === "all") {
     return true;
   }
-  return role !== undefined && visibility.includes(role as HarpiaRole);
+  if (def.requiredPermission) {
+    return hasPermission({ role }, def.requiredPermission);
+  }
+  return true;
 }

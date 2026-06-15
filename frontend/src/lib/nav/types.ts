@@ -1,6 +1,5 @@
 import type { LayoutDashboard } from "lucide-svelte";
-
-export type HarpiaRole = "Leader" | "Overseer" | "Engineer";
+import type { HarpiaPermission } from "$lib/auth-roles";
 
 /** Lucide icon component used in the shell nav. */
 export type NavIcon = typeof LayoutDashboard;
@@ -11,7 +10,8 @@ export interface NavSectionDef {
   href: string;
   icon: NavIcon;
   /** Defaults to all authenticated roles when omitted. */
-  visibleTo?: HarpiaRole[] | "all";
+  visibleTo?: "all";
+  requiredPermission?: HarpiaPermission;
 }
 
 export interface ResolvedNavSection {

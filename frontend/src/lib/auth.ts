@@ -272,4 +272,11 @@ export function setTenant(tenant: Tenant): void {
 }
 
 export type { HarpiaRole } from "$lib/auth-roles";
-export { getUserRole, isEngineer } from "$lib/auth-roles";
+export {
+  canConfigurePlans,
+  canManageAgents,
+  canManageIntegrations,
+  canViewAudit,
+  getUserRole,
+  isEngineer,
+} from "$lib/auth-roles";

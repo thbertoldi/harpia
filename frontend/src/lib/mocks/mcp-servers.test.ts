@@ -1,5 +1,9 @@
 import { describe, expect, it, beforeEach } from "vitest";
-import { getUserRole, isEngineer } from "$lib/auth-roles";
+import {
+  canManageIntegrations,
+  getUserRole,
+  isEngineer,
+} from "$lib/auth-roles";
 import {
   addMockMcpServer,
   connectMockOAuthServer,
@@ -11,15 +15,23 @@ import {
 } from "$lib/mocks/mcp-servers";
 
 describe("auth role gating", () => {
-  it("treats only Engineer as engineer access", () => {
+  it("grants integration access to leaders and engineers", () => {
+    expect(canManageIntegrations({ role: "Engineer" })).toBe(true);
+    expect(canManageIntegrations({ role: "Leader" })).toBe(true);
+    expect(canManageIntegrations({ role: "Overseer" })).toBe(false);
+    expect(canManageIntegrations(null)).toBe(false);
+  });
+
+  it("treats only Engineer as engineer role", () => {
     expect(isEngineer({ role: "Engineer" })).toBe(true);
     expect(isEngineer({ role: "Leader" })).toBe(false);
     expect(isEngineer({ role: "Overseer" })).toBe(false);
     expect(isEngineer(null)).toBe(false);
   });
 
-  it("defaults unknown roles to Leader", () => {
+  it("defaults unknown roles to Leader label without permissions", () => {
     expect(getUserRole({ role: "Admin" })).toBe("Leader");
+    expect(canManageIntegrations({ role: "Admin" })).toBe(false);
     expect(getUserRole(undefined)).toBe("Leader");
   });
 });
