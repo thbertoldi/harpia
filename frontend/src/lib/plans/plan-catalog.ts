@@ -291,7 +291,9 @@ async function fetchExecutorContextFromApi(
 }
 
 /** Loads plan templates and computes tenant lock state from executor entitlements/installations. */
-export async function loadPlanCatalog(): Promise<PlanCatalogResult> {
+export async function loadPlanCatalog(
+  locale: Locale = "en",
+): Promise<PlanCatalogResult> {
   let templates: PlanTemplate[];
   let source: PlanCatalogSource = "api";
   let error: string | undefined;
@@ -299,11 +301,11 @@ export async function loadPlanCatalog(): Promise<PlanCatalogResult> {
   try {
     templates = await fetchPlanTemplatesFromApi();
     if (templates.length === 0) {
-      templates = mockPlanTemplates();
+      templates = mockPlanTemplates(locale);
       source = "mock";
     }
   } catch (err) {
-    templates = mockPlanTemplates();
+    templates = mockPlanTemplates(locale);
     source = "mock";
     error = toUserMessage(err);
   }
@@ -318,7 +320,7 @@ export async function loadPlanCatalog(): Promise<PlanCatalogResult> {
     context = await fetchExecutorContextFromApi(tenantId);
   } catch (err) {
     if (source === "mock") {
-      context = mockExecutorContext(tenantId ?? "dev");
+      context = mockExecutorContext(tenantId ?? "dev", locale);
     } else {
       context = { skus: [], entitlements: [], installations: [] };
       error = error ?? toUserMessage(err);

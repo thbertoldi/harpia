@@ -17,6 +17,7 @@ import {
 } from "$lib/plans/plan-catalog";
 import {
   mockExecutorContext,
+  mockPlanTemplates,
   WEEKLY_NEWSLETTER_TEMPLATE,
 } from "$lib/mocks/plan-catalog";
 
@@ -158,6 +159,15 @@ describe("plan catalog lock state", () => {
     expect(entry.requiredSkus.some((sku) => sku.reason === "available")).toBe(
       true,
     );
+  });
+
+  it("localizes catalog SKUs and templates for pt-BR", () => {
+    const [template] = mockPlanTemplates("pt-BR");
+    const context = mockExecutorContext("dev", "pt-BR");
+
+    expect(template.name).toBe("Newsletter Semanal (LinkedIn)");
+    expect(template.steps[0]?.title).toBe("Buscar Noticias");
+    expect(context.skus[0]?.displayName).toBe("Feed de Noticias RSS");
   });
 
   it("marks agent installation as not configured without manifest metadata", () => {

@@ -38,7 +38,7 @@
     saveNotice = null;
 
     try {
-      const templateResult = await loadPlanTemplate(templateIdOrKey);
+      const templateResult = await loadPlanTemplate(templateIdOrKey, $locale);
       const policiesResult = await loadBehaviorPoliciesForTemplate(
         templateResult.template.id,
       );

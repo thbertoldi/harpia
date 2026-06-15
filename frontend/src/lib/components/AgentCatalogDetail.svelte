@@ -120,6 +120,7 @@
         source,
         entry.agentType.id,
         selectedTool,
+        $locale,
       );
       entry = result.entry;
       onAction(
@@ -141,6 +142,7 @@
       const result = await runTestInvocationForAgent(
         source,
         entry.agentType.id,
+        $locale,
       );
       entry = result.entry;
       onAction(

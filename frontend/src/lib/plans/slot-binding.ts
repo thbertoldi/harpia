@@ -1,5 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import { toUserMessage } from "$lib/connect-errors";
+import type { Locale } from "$lib/i18n";
 import {
   ExecutorKind as CatalogExecutorKind,
   type ExecutorEntitlement,
@@ -487,8 +488,9 @@ function writeMockConfiguration(
 /** Loads template, executor context, and any saved configuration for the configure UI. */
 export async function loadSlotBindingPageData(
   templateIdOrKey: string,
+  locale: Locale = "en",
 ): Promise<SlotBindingPageData> {
-  const templateResult = await loadPlanTemplate(templateIdOrKey);
+  const templateResult = await loadPlanTemplate(templateIdOrKey, locale);
   const tenantId = resolveTenantId() ?? "dev";
   let source: SlotBindingSource = templateResult.source;
   let error = templateResult.error;
@@ -497,7 +499,7 @@ export async function loadSlotBindingPageData(
   try {
     context = await fetchExecutorContextFromApi(tenantId);
   } catch (err) {
-    context = mockExecutorContext(tenantId);
+    context = mockExecutorContext(tenantId, locale);
     if (source === "api") {
       source = "mock";
     }

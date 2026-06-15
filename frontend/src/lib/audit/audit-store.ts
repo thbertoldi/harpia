@@ -1,11 +1,12 @@
 import {
-  MOCK_AUDIT_EVENTS,
+  mockAuditEvents,
   type AuditEvent,
   type AuditEventFilters,
   type AuditEventsPage,
   type AuditPageToken,
   type FeedbackDecision,
 } from "$lib/mocks/audit-events";
+import type { Locale } from "$lib/i18n";
 
 export type { AuditEvent, AuditEventFilters, AuditEventsPage, AuditPageToken };
 
@@ -41,9 +42,20 @@ function persistAuditEvents(events: AuditEvent[]): void {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
 }
 
-const runtimeAuditEvents: AuditEvent[] = loadPersistedAuditEvents() ?? [
-  ...MOCK_AUDIT_EVENTS,
+const persistedAuditEvents = loadPersistedAuditEvents();
+let seededLocale: Locale = "en";
+const runtimeAuditEvents: AuditEvent[] = persistedAuditEvents ?? [
+  ...mockAuditEvents(seededLocale),
 ];
+
+function ensureSeedLocale(locale: Locale): void {
+  if (persistedAuditEvents || locale === seededLocale) {
+    return;
+  }
+  seededLocale = locale;
+  runtimeAuditEvents.length = 0;
+  runtimeAuditEvents.push(...mockAuditEvents(locale));
+}
 
 type KeysetCursor = { ts: string; eventId: string };
 
@@ -162,17 +174,21 @@ export function paginateAuditEvents(
  * Primary data access — swap this implementation when audit APIs land.
  */
 export async function getAuditEvents(
+  locale: Locale = "en",
   filters: AuditEventFilters = {},
   pageToken: AuditPageToken = null,
   pageSize = DEFAULT_PAGE_SIZE,
 ): Promise<AuditEventsPage> {
+  ensureSeedLocale(locale);
   const filtered = filterAuditEvents(runtimeAuditEvents, filters);
   return paginateAuditEvents(filtered, pageToken, pageSize);
 }
 
 export async function getAllFilteredAuditEvents(
+  locale: Locale = "en",
   filters: AuditEventFilters = {},
 ): Promise<AuditEvent[]> {
+  ensureSeedLocale(locale);
   return sortAuditEvents(filterAuditEvents(runtimeAuditEvents, filters));
 }
 
@@ -181,9 +197,10 @@ export function appendMockAuditEvent(event: AuditEvent): void {
   persistAuditEvents(runtimeAuditEvents);
 }
 
-export function resetMockAuditEvents(): void {
+export function resetMockAuditEvents(locale: Locale = "en"): void {
+  seededLocale = locale;
   runtimeAuditEvents.length = 0;
-  runtimeAuditEvents.push(...MOCK_AUDIT_EVENTS);
+  runtimeAuditEvents.push(...mockAuditEvents(locale));
   persistAuditEvents(runtimeAuditEvents);
 }
 

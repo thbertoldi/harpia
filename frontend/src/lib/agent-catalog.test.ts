@@ -18,6 +18,12 @@ describe("agent catalog mocks", () => {
     ]);
   });
 
+  it("localizes mock agent catalog content for pt-BR", () => {
+    const entries = mockAgentCatalog("pt-BR");
+    expect(entries[0]?.agentType.displayName).toBe("Redator de E-mails");
+    expect(entries[0]?.agentType.systemPrompt).toContain("Redija um e-mail");
+  });
+
   it("merges API agent types with catalog metadata by id", () => {
     const apiAgent = {
       ...MOCK_AGENT_TYPES[0],

@@ -64,7 +64,7 @@
     saveNotice = null;
 
     try {
-      const result = await loadSlotBindingPageData(templateId);
+      const result = await loadSlotBindingPageData(templateId, $locale);
       template = result.template;
       context = result.context;
       dataSource = result.source;

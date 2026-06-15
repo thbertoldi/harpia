@@ -133,12 +133,13 @@ describe("paginateAuditEvents", () => {
 
 describe("getAuditEvents", () => {
   it("applies filters and pagination together", async () => {
-    const page = await getAuditEvents({ taskId: "a1b2c3d4" }, null, 3);
+    const page = await getAuditEvents("en", { taskId: "a1b2c3d4" }, null, 3);
     expect(page.events.length).toBeLessThanOrEqual(3);
     expect(page.events.every((e) => e.taskId.includes("a1b2c3d4"))).toBe(true);
 
     if (page.nextPageToken) {
       const next = await getAuditEvents(
+        "en",
         { taskId: "a1b2c3d4" },
         page.nextPageToken,
         3,

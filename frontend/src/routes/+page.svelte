@@ -9,6 +9,7 @@
   import { toUserMessage } from "$lib/connect-errors";
   import { taskClient, TaskStatus, type Task } from "$lib/rpc";
   import { locale, translate } from "$lib/i18n";
+  import { resolveLocalizedContent } from "$lib/i18n/content";
   import { formatLocaleDateTime } from "$lib/i18n/format";
 
   let taskCreated = $state(false);
@@ -22,10 +23,10 @@
   let dismissed = $state(false);
 
   const exampleTasks = $derived([
-    translate("home.example.1", $locale),
-    translate("home.example.2", $locale),
-    translate("home.example.3", $locale),
-    translate("home.example.4", $locale),
+    resolveLocalizedContent("home.example.1", $locale),
+    resolveLocalizedContent("home.example.2", $locale),
+    resolveLocalizedContent("home.example.3", $locale),
+    resolveLocalizedContent("home.example.4", $locale),
   ]);
 
   function now() {
