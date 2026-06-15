@@ -111,7 +111,11 @@ func (v *BindingValidator) ValidateSlotBindings(
 	}
 
 	if strict {
-		for stepKey := range stepKeys {
+		for _, step := range template.Steps {
+			stepKey := strings.TrimSpace(step.Key)
+			if stepKey == "" {
+				continue
+			}
 			binding, ok := bindingsByStep[stepKey]
 			if !ok {
 				return bindingError(stepKey, "", "", connect.CodeFailedPrecondition, "slot binding is required for runnable or scheduled configuration")
