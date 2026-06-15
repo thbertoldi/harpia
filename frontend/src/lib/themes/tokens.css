@@ -18,6 +18,12 @@
   --token-accent-gradient-via: #c8920f;
   --token-accent-gradient-to: rgba(200, 146, 15, 0.3);
   --token-on-primary: #121318;
+  --token-stripe-from: #e0a512;
+  --token-stripe-via: #c8920f;
+  --token-stripe-to: rgba(200, 146, 15, 0.3);
+  --token-font-heading: "Manrope", system-ui, sans-serif;
+  --token-font-body: "DM Sans", system-ui, sans-serif;
+  --token-font-wordmark: "Bodoni Moda", serif;
 }
 
 @theme {
@@ -53,8 +59,8 @@
   --color-crown-ash: var(--token-text-muted);
   --color-crown-ash-dark: var(--token-text-muted-dark);
 
-  --font-heading: "Manrope", system-ui, sans-serif;
-  --font-body: "DM Sans", system-ui, sans-serif;
+  --font-heading: var(--token-font-heading);
+  --font-body: var(--token-font-body);
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
-  --font-wordmark: "Bodoni Moda", serif;
+  --font-wordmark: var(--token-font-wordmark);
 }

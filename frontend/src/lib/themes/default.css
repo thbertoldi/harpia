@@ -11,6 +11,12 @@
   --token-accent-gradient-from: #e0a512;
   --token-accent-gradient-via: #c8920f;
   --token-accent-gradient-to: rgba(200, 146, 15, 0.3);
+  --token-stripe-from: #e0a512;
+  --token-stripe-via: #c8920f;
+  --token-stripe-to: rgba(200, 146, 15, 0.3);
+  --token-font-heading: "Manrope", system-ui, sans-serif;
+  --token-font-body: "DM Sans", system-ui, sans-serif;
+  --token-font-wordmark: "Bodoni Moda", serif;
 }
 
 [data-theme="default"]:not(.dark) {

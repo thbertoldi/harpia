@@ -4,6 +4,6 @@
   let { tag = "h1", children }: { tag?: string; children: Snippet } = $props();
 </script>
 
-<svelte:element this={tag} class="font-heading tracking-tight text-talon-gold">
+<svelte:element this={tag} class="font-heading tracking-tight text-primary">
   {@render children()}
 </svelte:element>

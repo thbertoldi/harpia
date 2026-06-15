@@ -10,6 +10,8 @@
   import TaskDetail from "$lib/components/TaskDetail.svelte";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
   import { locale, translate } from "$lib/i18n";
+  import { activeTheme } from "$lib/themes";
+  import { brandTranslateParams } from "$lib/themes/branding";
 
   let tasks = $state<Task[]>([]);
   let selectedTask = $state<Task | null>(null);
@@ -196,7 +198,11 @@
           {translate("tasks.empty.title", $locale)}
         </HarpyHeading>
         <p class="mb-6 max-w-md text-center font-body text-sm text-crown-ash">
-          {translate("tasks.empty.description", $locale)}
+          {translate(
+            "tasks.empty.description",
+            $locale,
+            brandTranslateParams($activeTheme, $locale),
+          )}
         </p>
         <button
           onclick={handleNewTask}

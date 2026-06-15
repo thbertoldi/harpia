@@ -3,10 +3,21 @@
   import { Menu, X, Sun, Moon } from "lucide-svelte";
   import TenantSelector from "$lib/components/TenantSelector.svelte";
   import FeedbackBadge from "$lib/components/FeedbackBadge.svelte";
-  import { logout } from "$lib/auth";
+  import BrandLockup from "$lib/components/BrandLockup.svelte";
+  import { logout, getTenant } from "$lib/auth";
   import { page } from "$app/state";
   import { resolve } from "$app/paths";
-  import { applyColorScheme, initTheme, resolveColorScheme } from "$lib/themes";
+  import {
+    applyColorScheme,
+    initTheme,
+    resolveColorScheme,
+    activeTheme,
+  } from "$lib/themes";
+  import {
+    brandFavicon,
+    brandMetaDescription,
+    brandName,
+  } from "$lib/themes/branding";
   import {
     initLocale,
     locale,
@@ -24,7 +35,7 @@
   let dark = $state(false);
 
   $effect(() => {
-    initTheme();
+    initTheme({ tenantThemeKey: getTenant()?.themeKey ?? null });
     initLocale();
     dark = resolveColorScheme() === "dark";
   });
@@ -44,6 +55,12 @@
 </script>
 
 <svelte:head>
+  <title>{brandName($activeTheme, $locale)}</title>
+  <meta
+    name="description"
+    content={brandMetaDescription($activeTheme, $locale)}
+  />
+  <link rel="icon" href={brandFavicon($activeTheme)} />
   <script>
     (() => {
       const themeKey = "aiuna-theme";
@@ -55,7 +72,7 @@
       if (theme && themes.includes(theme)) {
         document.documentElement.setAttribute("data-theme", theme);
       } else {
-        document.documentElement.setAttribute("data-theme", "default");
+        document.documentElement.setAttribute("data-theme", "aiuna");
       }
 
       const storedScheme =
@@ -71,10 +88,8 @@
 </svelte:head>
 
 <div class="flex min-h-screen bg-obsidian">
-  <!-- Left gold stripe -->
-  <div
-    class="fixed inset-y-0 left-0 z-50 w-[5px] bg-gradient-to-b from-talon-gold-bright via-talon-gold to-talon-gold/30"
-  ></div>
+  <!-- Left brand stripe -->
+  <div class="brand-stripe fixed inset-y-0 left-0 z-50 w-[5px]"></div>
 
   <!-- Hidden lateral nav -->
   <div class="fixed inset-y-0 left-[5px] z-40 flex">
@@ -85,12 +100,7 @@
     >
       <nav class="h-full w-64 border-r border-plumage bg-obsidian px-4 py-6">
         <div class="mb-8 flex items-center justify-between">
-          <span
-            class="text-xl font-semibold text-talon-gold"
-            style="font-family: 'Bodoni Moda', serif"
-          >
-            Harpia
-          </span>
+          <BrandLockup size="sm" />
           <button
             onclick={() => (navOpen = false)}
             class="cursor-pointer rounded-md p-1 text-crown-ash transition-colors hover:text-cream"
@@ -159,12 +169,7 @@
             >
               <Menu class="size-5" />
             </button>
-            <span
-              class="text-lg font-bold tracking-tight text-cream"
-              style="font-family: 'Bodoni Moda', serif"
-            >
-              <span class="text-talon-gold">Harp</span>ia
-            </span>
+            <BrandLockup size="sm" />
           </div>
 
           <div class="flex items-center gap-4">

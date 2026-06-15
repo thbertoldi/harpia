@@ -21,6 +21,10 @@ describe("selectDefaultTenant", () => {
   });
 
   it("maps the dev tenant constant for dev login flows", () => {
-    expect(DEV_TENANT).toEqual({ id: "dev", name: "Dev Workspace" });
+    expect(DEV_TENANT).toEqual({
+      id: "dev",
+      name: "Dev Workspace",
+      themeKey: "default",
+    });
   });
 });

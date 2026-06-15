@@ -1,4 +1,6 @@
+@import "./lib/themes/fonts.css";
 @import "./lib/themes/tokens.css";
 @import "./lib/themes/default.css";
 @import "./lib/themes/aiuna.css";
 @import "./lib/themes/tenant-base.css";
+@import "./lib/themes/brand.css";

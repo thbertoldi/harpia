@@ -65,9 +65,10 @@ func tenantsFromContext(rc RequestContext) []*identityv1.Tenant {
 			slug = membership.TenantID.String()
 		}
 		tenants = append(tenants, &identityv1.Tenant{
-			Id:   membership.TenantID.String(),
-			Name: name,
-			Slug: slug,
+			Id:        membership.TenantID.String(),
+			Name:      name,
+			Slug:      slug,
+			ThemeKey:  themeKeyFromMembership(membership),
 		})
 	}
 	return tenants
@@ -104,10 +105,19 @@ func tenantFromMembership(membership TenantMembership) *identityv1.Tenant {
 		slug = membership.TenantID.String()
 	}
 	return &identityv1.Tenant{
-		Id:   membership.TenantID.String(),
-		Name: name,
-		Slug: slug,
+		Id:       membership.TenantID.String(),
+		Name:     name,
+		Slug:     slug,
+		ThemeKey: themeKeyFromMembership(membership),
 	}
+}
+
+func themeKeyFromMembership(membership TenantMembership) *string {
+	if membership.ThemeKey == "" {
+		return nil
+	}
+	key := membership.ThemeKey
+	return &key
 }
 
 func tenantIDFromTenant(tenant *identityv1.Tenant) string {

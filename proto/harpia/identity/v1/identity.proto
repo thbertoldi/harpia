@@ -21,6 +21,8 @@ message Tenant {
   string name = 2;
   string slug = 3;
   string created_at = 4;
+  // Optional theme package key (e.g. "aiuna", "default", "tenant-base").
+  optional string theme_key = 5;
 }
 
 message User {

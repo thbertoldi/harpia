@@ -31,6 +31,9 @@
     --tenant-accent-gradient-to,
     rgba(99, 102, 241, 0.25)
   );
+  --token-stripe-from: var(--tenant-stripe-from, #818cf8);
+  --token-stripe-via: var(--tenant-stripe-via, #6366f1);
+  --token-stripe-to: var(--tenant-stripe-to, rgba(99, 102, 241, 0.25));
 }
 
 [data-theme="tenant-base"]:not(.dark) {

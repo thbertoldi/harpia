@@ -22,11 +22,13 @@ const (
 )
 
 type Tenant struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Slug          string                 `protobuf:"bytes,3,opt,name=slug,proto3" json:"slug,omitempty"`
-	CreatedAt     string                 `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Id        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name      string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Slug      string                 `protobuf:"bytes,3,opt,name=slug,proto3" json:"slug,omitempty"`
+	CreatedAt string                 `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	// Optional theme package key (e.g. "aiuna", "default", "tenant-base").
+	ThemeKey      *string `protobuf:"bytes,5,opt,name=theme_key,json=themeKey,proto3,oneof" json:"theme_key,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -85,6 +87,13 @@ func (x *Tenant) GetSlug() string {
 func (x *Tenant) GetCreatedAt() string {
 	if x != nil {
 		return x.CreatedAt
+	}
+	return ""
+}
+
+func (x *Tenant) GetThemeKey() string {
+	if x != nil && x.ThemeKey != nil {
+		return *x.ThemeKey
 	}
 	return ""
 }
@@ -465,13 +474,16 @@ var File_harpia_identity_v1_identity_proto protoreflect.FileDescriptor
 
 const file_harpia_identity_v1_identity_proto_rawDesc = "" +
 	"\n" +
-	"!harpia/identity/v1/identity.proto\x12\x12harpia.identity.v1\"_\n" +
+	"!harpia/identity/v1/identity.proto\x12\x12harpia.identity.v1\"\x8f\x01\n" +
 	"\x06Tenant\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
 	"\x04slug\x18\x03 \x01(\tR\x04slug\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\x04 \x01(\tR\tcreatedAt\"\xc0\x01\n" +
+	"created_at\x18\x04 \x01(\tR\tcreatedAt\x12 \n" +
+	"\ttheme_key\x18\x05 \x01(\tH\x00R\bthemeKey\x88\x01\x01B\f\n" +
+	"\n" +
+	"_theme_key\"\xc0\x01\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x14\n" +
@@ -549,6 +561,7 @@ func file_harpia_identity_v1_identity_proto_init() {
 	if File_harpia_identity_v1_identity_proto != nil {
 		return
 	}
+	file_harpia_identity_v1_identity_proto_msgTypes[0].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
