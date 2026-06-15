@@ -43,6 +43,14 @@ func (tc *TemporalClient) SignalFeedback(ctx context.Context, workflowID string,
 	return tc.client.SignalWorkflow(ctx, workflowID, runID, HumanFeedbackSignalName, signal)
 }
 
+func (tc *TemporalClient) SignalPlanElicitationResponse(ctx context.Context, workflowID string, runID string, signal ElicitationResponseSignal) error {
+	return tc.client.SignalWorkflow(ctx, workflowID, runID, PlanElicitationResponseSignalName, signal)
+}
+
+func (tc *TemporalClient) SignalPlanApprovalDecision(ctx context.Context, workflowID string, runID string, signal ApprovalDecisionSignal) error {
+	return tc.client.SignalWorkflow(ctx, workflowID, runID, PlanApprovalDecisionSignalName, signal)
+}
+
 func (tc *TemporalClient) RawClient() client.Client {
 	return tc.client
 }

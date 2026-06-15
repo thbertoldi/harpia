@@ -34,16 +34,17 @@ export interface BehaviorPoliciesSaveResult {
   error?: string;
 }
 
-export const ELICITATION_TIMEOUT_BEHAVIOR_OPTIONS = [
-  ElicitationTimeoutBehavior.PAUSE_UNTIL_ANSWERED,
-  ElicitationTimeoutBehavior.FAIL_STEP,
-  ElicitationTimeoutBehavior.SKIP_WITH_DEFAULT,
-] as const;
+export const ELICITATION_TIMEOUT_BEHAVIOR_OPTIONS: readonly ElicitationTimeoutBehavior[] =
+  [
+    ElicitationTimeoutBehavior.PAUSE_UNTIL_ANSWERED,
+    ElicitationTimeoutBehavior.FAIL_STEP,
+    ElicitationTimeoutBehavior.FAIL_PLAN,
+  ];
 
-export const PUBLISH_APPROVAL_MODE_OPTIONS = [
+export const PUBLISH_APPROVAL_MODE_OPTIONS: readonly PublishApprovalMode[] = [
   PublishApprovalMode.REQUIRE_APPROVAL,
   PublishApprovalMode.AUTO_PUBLISH,
-] as const;
+];
 
 export const DEFAULT_BEHAVIOR_POLICIES: BehaviorPoliciesFormValues = {
   elicitationTimeoutBehavior: ElicitationTimeoutBehavior.PAUSE_UNTIL_ANSWERED,
@@ -76,8 +77,8 @@ export function elicitationBehaviorLabelKey(
       return "plans.policies.elicitation.pauseUntilAnswered";
     case ElicitationTimeoutBehavior.FAIL_STEP:
       return "plans.policies.elicitation.failStep";
-    case ElicitationTimeoutBehavior.SKIP_WITH_DEFAULT:
-      return "plans.policies.elicitation.skipWithDefault";
+    case ElicitationTimeoutBehavior.FAIL_PLAN:
+      return "plans.policies.elicitation.failPlan";
     default:
       return "plans.policies.elicitation.unspecified";
   }

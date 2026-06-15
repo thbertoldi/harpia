@@ -88,6 +88,21 @@ type StepExecution struct {
 	UpdatedAt                    time.Time
 }
 
+type PlanApprovalRequest struct {
+	ID              string
+	TenantID        uuid.UUID
+	PlanExecutionID uuid.UUID
+	StepExecutionID uuid.UUID
+	PlanStepKey     string
+	InputArtifactID string
+	Status          string
+	DecisionReason  string
+	RequestedAt     time.Time
+	DecidedAt       *time.Time
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+}
+
 type Repository struct {
 	pool *pgxpool.Pool
 }
@@ -638,6 +653,70 @@ func (r *Repository) UpdateStepExecutionStatus(
 	})
 	if err != nil {
 		return fmt.Errorf("update step execution status: %w", err)
+	}
+	return nil
+}
+
+func (r *Repository) CreatePlanApprovalRequest(ctx context.Context, request *PlanApprovalRequest) error {
+	if request == nil {
+		return fmt.Errorf("plan approval request is required")
+	}
+	err := database.WithTenant(ctx, r.pool, request.TenantID, func(q database.Querier) error {
+		_, err := q.Exec(ctx,
+			`INSERT INTO plan_approval_requests (
+				id, tenant_id, plan_execution_id, step_execution_id, plan_step_key,
+				input_artifact_id, status
+			)
+			VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''), $7)
+			ON CONFLICT (id) DO UPDATE
+			SET updated_at = plan_approval_requests.updated_at`,
+			request.ID, request.TenantID, request.PlanExecutionID,
+			request.StepExecutionID, request.PlanStepKey, request.InputArtifactID,
+			ApprovalRequestStatusPending,
+		)
+		if err != nil {
+			return fmt.Errorf("create plan approval request: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("create plan approval request: %w", err)
+	}
+	return nil
+}
+
+func (r *Repository) ResolvePlanApprovalRequest(
+	ctx context.Context,
+	tenantID uuid.UUID,
+	requestID string,
+	stepExecutionID uuid.UUID,
+	approved bool,
+	reason string,
+) error {
+	status := ApprovalRequestStatusRejected
+	if approved {
+		status = ApprovalRequestStatusApproved
+	}
+	err := database.WithTenant(ctx, r.pool, tenantID, func(q database.Querier) error {
+		tag, err := q.Exec(ctx,
+			`UPDATE plan_approval_requests
+			 SET status = $1,
+			     decision_reason = $2,
+			     decided_at = now(),
+			     updated_at = now()
+			 WHERE id = $3 AND tenant_id = $4 AND step_execution_id = $5`,
+			status, reason, requestID, tenantID, stepExecutionID,
+		)
+		if err != nil {
+			return fmt.Errorf("resolve plan approval request: %w", err)
+		}
+		if tag.RowsAffected() == 0 {
+			return pgx.ErrNoRows
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("resolve plan approval request: %w", err)
 	}
 	return nil
 }
