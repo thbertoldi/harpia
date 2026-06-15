@@ -148,6 +148,12 @@ has been migrated, and restart Zitadel once verification passes.
 - Username: admin@harpia.local
 - Password: HarpiaAdmin1!
 
+On first sign-in, the API auto-assigns `admin@harpia.local` to the default Dev
+tenant when `HARPIA_AUTO_PROVISION_DEFAULT_TENANT=true` (enabled in the kind dev
+API deployment). The provisioned role is `admin`, which maps to Leader-level
+access in the Harpia UI. The frontend persists the selected tenant in the
+session after OAuth callback so API calls include `X-Tenant-ID`.
+
 ### OIDC Client Registration
 
 The `zitadel-init.yaml` Job registers the Harpia Web client as **Native** (PKCE, no secret) so

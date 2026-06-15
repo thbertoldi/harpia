@@ -8,6 +8,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 
+	identityv1 "github.com/harpia/control-plane/gen/harpia/identity/v1"
 	tasksv1 "github.com/harpia/control-plane/gen/harpia/tasks/v1"
 )
 
@@ -84,6 +85,53 @@ func TestRequestContextInterceptorRejectsDevTokenWhenDisabled(t *testing.T) {
 	_, err := interceptor.WrapUnary(next)(context.Background(), req)
 	if err == nil || connect.CodeOf(err) != connect.CodeUnauthenticated {
 		t.Fatalf("expected unauthenticated, got %v", err)
+	}
+}
+
+func TestRequestContextInterceptorRejectsNoTenantMembership(t *testing.T) {
+	interceptor := NewRequestContextInterceptor(AuthOptions{
+		Authenticator: fakeAuthenticator{user: AuthenticatedUser{Subject: "user-1", Email: "orphan@harpia.local"}},
+		Memberships:   staticMemberships{"user-1": nil},
+	})
+	next := connect.UnaryFunc(func(context.Context, connect.AnyRequest) (connect.AnyResponse, error) {
+		t.Fatal("next should not be called")
+		return nil, nil
+	})
+	req := connect.NewRequest(&tasksv1.GetTaskRequest{})
+	req.Header().Set("Authorization", "Bearer valid-token")
+
+	_, err := interceptor.WrapUnary(next)(context.Background(), req)
+	if err == nil || connect.CodeOf(err) != connect.CodePermissionDenied {
+		t.Fatalf("expected permission denied, got %v", err)
+	}
+}
+
+func TestRequestContextInterceptorAutoSelectsSingleTenant(t *testing.T) {
+	tenantID := uuid.New()
+	interceptor := NewRequestContextInterceptor(AuthOptions{
+		Authenticator: fakeAuthenticator{user: AuthenticatedUser{Subject: "user-1", Email: "admin@harpia.local"}},
+		Memberships: staticMemberships{
+			"user-1": {
+				{TenantID: tenantID, Slug: "dev", Name: "Dev", Role: DefaultTenantMemberRole},
+			},
+		},
+	})
+	next := connect.UnaryFunc(func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+		rc, ok := RequestContextFrom(ctx)
+		if !ok {
+			return nil, errors.New("missing request context")
+		}
+		if rc.TenantID != tenantID {
+			t.Fatalf("tenant ID = %s, want %s", rc.TenantID, tenantID)
+		}
+		return connect.NewResponse(&identityv1.GetCurrentUserResponse{}), nil
+	})
+	req := connect.NewRequest(&identityv1.GetCurrentUserRequest{})
+	req.Header().Set("Authorization", "Bearer valid-token")
+
+	_, err := interceptor.WrapUnary(next)(context.Background(), req)
+	if err != nil {
+		t.Fatalf("expected success, got %v", err)
 	}
 }
 

@@ -32,6 +32,7 @@ type Config struct {
 }
 
 func Load() *Config {
+	allowDevAuth := envBool("HARPIA_ALLOW_DEV_AUTH", false)
 	return &Config{
 		Port:     envInt("PORT", 8080),
 		LogLevel: parseLogLevel(envStr("LOG_LEVEL", "info")),
@@ -50,10 +51,10 @@ func Load() *Config {
 		OpenFGAStoreID:              envStr("OPENFGA_STORE_ID", ""),
 		OpenFGAAuthorizationModelID: envStr("OPENFGA_AUTHORIZATION_MODEL_ID", ""),
 
-		AllowDevAuth:               envBool("HARPIA_ALLOW_DEV_AUTH", false),
+		AllowDevAuth:               allowDevAuth,
 		AuthCacheTTL:               envDuration("HARPIA_AUTH_CACHE_TTL", 60*time.Second),
 		AuthCacheMaxEntries:        envInt("HARPIA_AUTH_CACHE_MAX_ENTRIES", 1024),
-		AutoProvisionDefaultTenant: envBool("HARPIA_AUTO_PROVISION_DEFAULT_TENANT", false),
+		AutoProvisionDefaultTenant: envBool("HARPIA_AUTO_PROVISION_DEFAULT_TENANT", allowDevAuth),
 	}
 }
 

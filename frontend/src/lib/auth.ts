@@ -66,6 +66,48 @@ function generateState(): string {
   return base64url(array);
 }
 
+export function selectDefaultTenant(tenants: Tenant[]): Tenant | null {
+  return tenants.length === 1 ? tenants[0] : null;
+}
+
+function persistSession(session: Session): void {
+  localStorage.setItem("harpia_session", JSON.stringify(session));
+  document.cookie = `harpia_session=${encodeURIComponent(
+    JSON.stringify({
+      sub: session.user.sub,
+      email: session.user.email,
+      name: session.user.name,
+      tenant_id: session.tenant?.id,
+    }),
+  )}; path=/; SameSite=Lax`;
+}
+
+export async function syncSessionTenant(session: Session): Promise<Session> {
+  if (session.tokens.access_token === "dev-token") {
+    return { ...session, tenant: DEV_TENANT };
+  }
+
+  persistSession(session);
+
+  const { Code, ConnectError } = await import("@connectrpc/connect");
+
+  try {
+    const { identityClient } = await import("$lib/rpc");
+    const response = await identityClient.listTenants({});
+    const tenants = response.tenants.map((tenant) => ({
+      id: tenant.id,
+      name: tenant.name,
+    }));
+    const tenant = selectDefaultTenant(tenants);
+    return tenant ? { ...session, tenant } : session;
+  } catch (error) {
+    if (ConnectError.from(error).code === Code.PermissionDenied) {
+      return session;
+    }
+    throw error;
+  }
+}
+
 export async function login(opts?: { login_hint?: string }): Promise<void> {
   const codeVerifier = generateCodeVerifier();
   const codeChallenge = await generateCodeChallenge(codeVerifier);
@@ -146,20 +188,13 @@ export async function handleCallback(code: string): Promise<Session> {
     },
   };
 
-  localStorage.setItem("harpia_session", JSON.stringify(session));
-
-  document.cookie = `harpia_session=${encodeURIComponent(
-    JSON.stringify({
-      sub: session.user.sub,
-      email: session.user.email,
-      name: session.user.name,
-    }),
-  )}; path=/; SameSite=Lax`;
+  const resolved = await syncSessionTenant(session);
+  persistSession(resolved);
 
   sessionStorage.removeItem("code_verifier");
   sessionStorage.removeItem("oauth_state");
 
-  return session;
+  return resolved;
 }
 
 export function logout(): void {
@@ -201,16 +236,7 @@ export function devLogin(role: string = "Leader"): Session | null {
     tenant: DEV_TENANT,
     tokens: { access_token: "dev-token", id_token: "dev-token" },
   };
-  localStorage.setItem("harpia_session", JSON.stringify(session));
-  document.cookie = `harpia_session=${encodeURIComponent(
-    JSON.stringify({
-      sub: session.user.sub,
-      email: session.user.email,
-      name: session.user.name,
-      role,
-      tenant_id: DEV_TENANT.id,
-    }),
-  )}; path=/; SameSite=Lax`;
+  persistSession(session);
   return session;
 }
 
@@ -242,7 +268,7 @@ export function setTenant(tenant: Tenant): void {
   const session = getSession();
   if (!session) return;
   session.tenant = tenant;
-  localStorage.setItem("harpia_session", JSON.stringify(session));
+  persistSession(session);
 }
 
 export type { HarpiaRole } from "$lib/auth-roles";
