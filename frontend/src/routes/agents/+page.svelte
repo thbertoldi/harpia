@@ -1,6 +1,8 @@
 <script lang="ts">
   import { AlertTriangle, Bot, Loader2, Shield } from "lucide-svelte";
   import { loadAgentCatalog, type AgentCatalogEntry } from "$lib/agent-catalog";
+  import type { BoundTool } from "$lib/mocks/agent-catalog";
+  import { getMockMcpServers } from "$lib/mocks/mcp-servers";
   import AgentCatalogDetail from "$lib/components/AgentCatalogDetail.svelte";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
   import { locale, translate } from "$lib/i18n";
@@ -11,6 +13,7 @@
   let loadError = $state<string | null>(null);
   let dataSource = $state<"api" | "mock">("mock");
   let selectedEntry = $state<AgentCatalogEntry | null>(null);
+  let discoveredTools = $state<BoundTool[]>([]);
   let toast = $state<string | null>(null);
   let toastTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -25,6 +28,7 @@
       const result = await loadAgentCatalog();
       entries = result.entries;
       dataSource = result.source;
+      discoveredTools = collectDiscoveredTools();
       if (result.error && result.source === "mock") {
         loadError = result.error;
       }
@@ -54,6 +58,23 @@
 
   function handleAction(_action: string, message: string) {
     showToast(message);
+  }
+
+  function collectDiscoveredTools(): BoundTool[] {
+    const discovered: BoundTool[] = [];
+    for (const server of getMockMcpServers()) {
+      for (const tool of server.tools) {
+        const toolId = `${server.id}:${tool.name}`;
+        if (!discovered.some((candidate) => candidate.id === toolId)) {
+          discovered.push({
+            id: toolId,
+            name: tool.name,
+            description: `${tool.description} (from ${server.name})`,
+          });
+        }
+      }
+    }
+    return discovered;
   }
 
   function formattedDate(dateStr: string): string {
@@ -179,6 +200,7 @@
             {#each entries as entry (entry.agentType.id)}
               <tr
                 onclick={() => selectEntry(entry)}
+                data-testid={`agent-row-${entry.agentType.id}`}
                 class="cursor-pointer border-b border-plumage/40 transition-colors hover:bg-obsidian-light/60 {selectedEntry
                   ?.agentType.id === entry.agentType.id
                   ? 'bg-obsidian-light'
@@ -228,6 +250,8 @@
     >
       <AgentCatalogDetail
         entry={selectedEntry}
+        source={dataSource}
+        {discoveredTools}
         onclose={deselectEntry}
         onAction={handleAction}
       />

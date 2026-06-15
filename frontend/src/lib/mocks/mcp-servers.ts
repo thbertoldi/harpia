@@ -104,10 +104,42 @@ const INITIAL_SERVERS: McpServer[] = [
   },
 ];
 
-let servers = structuredClone(INITIAL_SERVERS);
+const STORAGE_KEY = "harpia_mock_mcp_servers";
+
+function canUseStorage(): boolean {
+  return (
+    typeof window !== "undefined" && typeof window.localStorage !== "undefined"
+  );
+}
+
+function loadPersistedServers(): McpServer[] | null {
+  if (!canUseStorage()) {
+    return null;
+  }
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      return null;
+    }
+    const parsed = JSON.parse(raw) as McpServer[];
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function persistServers(nextServers: McpServer[]): void {
+  if (!canUseStorage()) {
+    return;
+  }
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextServers));
+}
+
+let servers = loadPersistedServers() ?? structuredClone(INITIAL_SERVERS);
 
 export function resetMockMcpServers(): void {
   servers = structuredClone(INITIAL_SERVERS);
+  persistServers(servers);
 }
 
 export function getMockMcpServers(): McpServer[] {
@@ -219,6 +251,7 @@ export async function addMockMcpServer(
   };
 
   servers = [...servers, server];
+  persistServers(servers);
   return structuredClone(server);
 }
 
@@ -263,6 +296,7 @@ export async function connectMockOAuthServer(
   servers = servers.map((server) =>
     server.id === serverId ? updated : server,
   );
+  persistServers(servers);
   return structuredClone(updated);
 }
 

@@ -205,6 +205,7 @@
           <input
             type="text"
             bind:value={taskId}
+            data-testid="audit-filter-task-id"
             placeholder="task-a1b2…"
             class="w-full rounded-md border border-plumage bg-obsidian px-3 py-2 font-mono text-xs text-cream placeholder:text-crown-ash-dark focus:border-talon-gold focus:outline-none"
           />
@@ -283,6 +284,7 @@
       <div class="mt-4 flex gap-2">
         <button
           onclick={applyFilters}
+          data-testid="audit-apply-filters"
           class="cursor-pointer rounded-md bg-talon-gold/10 px-4 py-2 font-body text-xs font-medium text-talon-gold transition-colors hover:bg-talon-gold/20"
         >
           {translate("audit.apply", $locale)}
@@ -317,6 +319,9 @@
         {#each events as event (event.eventId)}
           <article
             class="rounded-lg border border-plumage bg-obsidian transition-colors hover:border-talon-gold/40"
+            data-testid={`audit-event-${event.eventId}`}
+            data-event-type={event.eventType}
+            data-task-id={event.taskId}
           >
             <div class="border-b border-plumage/50 px-4 py-3">
               <div class="flex flex-wrap items-center gap-2">

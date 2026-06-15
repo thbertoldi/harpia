@@ -235,6 +235,9 @@ export const AGENT_CATALOG_META: Record<string, AgentCatalogMeta> = {
   },
 };
 
+let runtimeAgentCatalogMeta: Record<string, AgentCatalogMeta> =
+  structuredClone(AGENT_CATALOG_META);
+
 const RESEARCH_ANALYST: AgentType = create(AgentTypeSchema, {
   id: "research-analyst",
   name: "research-analyst",
@@ -345,6 +348,75 @@ export function mergeCatalogEntry(
 
 export function mockAgentCatalog(): AgentCatalogEntry[] {
   return MOCK_AGENT_TYPES.map((agentType) =>
-    mergeCatalogEntry(agentType, AGENT_CATALOG_META[agentType.id]),
+    mergeCatalogEntry(agentType, runtimeAgentCatalogMeta[agentType.id]),
   );
+}
+
+export function resetMockAgentCatalog(): void {
+  runtimeAgentCatalogMeta = structuredClone(AGENT_CATALOG_META);
+}
+
+export function bindMockToolToAgent(
+  agentId: string,
+  tool: BoundTool,
+): AgentCatalogEntry | null {
+  const current = runtimeAgentCatalogMeta[agentId];
+  if (!current) {
+    return null;
+  }
+
+  const hasTool = current.boundTools.some(
+    (boundTool) => boundTool.id === tool.id,
+  );
+  const nextBoundTools = hasTool
+    ? current.boundTools
+    : [...current.boundTools, tool];
+
+  runtimeAgentCatalogMeta[agentId] = {
+    ...current,
+    boundTools: nextBoundTools,
+    lastUpdated: new Date().toISOString(),
+  };
+
+  const agentType = MOCK_AGENT_TYPES.find(
+    (candidate) => candidate.id === agentId,
+  );
+  if (!agentType) {
+    return null;
+  }
+
+  return mergeCatalogEntry(agentType, runtimeAgentCatalogMeta[agentId]);
+}
+
+export function runMockAgentInvocation(
+  agentId: string,
+  taskId: string,
+): AgentCatalogEntry | null {
+  const current = runtimeAgentCatalogMeta[agentId];
+  if (!current) {
+    return null;
+  }
+
+  const invocation: AgentInvocation = {
+    id: `inv-${Math.random().toString(36).slice(2, 8)}`,
+    taskId,
+    status: "completed",
+    startedAt: new Date().toISOString(),
+    durationMs: 2400,
+  };
+
+  runtimeAgentCatalogMeta[agentId] = {
+    ...current,
+    recentInvocations: [invocation, ...current.recentInvocations].slice(0, 10),
+    lastUpdated: new Date().toISOString(),
+  };
+
+  const agentType = MOCK_AGENT_TYPES.find(
+    (candidate) => candidate.id === agentId,
+  );
+  if (!agentType) {
+    return null;
+  }
+
+  return mergeCatalogEntry(agentType, runtimeAgentCatalogMeta[agentId]);
 }
