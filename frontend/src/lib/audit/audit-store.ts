@@ -10,6 +10,40 @@ import {
 export type { AuditEvent, AuditEventFilters, AuditEventsPage, AuditPageToken };
 
 const DEFAULT_PAGE_SIZE = 10;
+const STORAGE_KEY = "harpia_mock_audit_events";
+
+function canUseStorage(): boolean {
+  return (
+    typeof window !== "undefined" && typeof window.localStorage !== "undefined"
+  );
+}
+
+function loadPersistedAuditEvents(): AuditEvent[] | null {
+  if (!canUseStorage()) {
+    return null;
+  }
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      return null;
+    }
+    const parsed = JSON.parse(raw) as AuditEvent[];
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function persistAuditEvents(events: AuditEvent[]): void {
+  if (!canUseStorage()) {
+    return;
+  }
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
+}
+
+const runtimeAuditEvents: AuditEvent[] = loadPersistedAuditEvents() ?? [
+  ...MOCK_AUDIT_EVENTS,
+];
 
 type KeysetCursor = { ts: string; eventId: string };
 
@@ -132,14 +166,25 @@ export async function getAuditEvents(
   pageToken: AuditPageToken = null,
   pageSize = DEFAULT_PAGE_SIZE,
 ): Promise<AuditEventsPage> {
-  const filtered = filterAuditEvents(MOCK_AUDIT_EVENTS, filters);
+  const filtered = filterAuditEvents(runtimeAuditEvents, filters);
   return paginateAuditEvents(filtered, pageToken, pageSize);
 }
 
 export async function getAllFilteredAuditEvents(
   filters: AuditEventFilters = {},
 ): Promise<AuditEvent[]> {
-  return sortAuditEvents(filterAuditEvents(MOCK_AUDIT_EVENTS, filters));
+  return sortAuditEvents(filterAuditEvents(runtimeAuditEvents, filters));
+}
+
+export function appendMockAuditEvent(event: AuditEvent): void {
+  runtimeAuditEvents.unshift(event);
+  persistAuditEvents(runtimeAuditEvents);
+}
+
+export function resetMockAuditEvents(): void {
+  runtimeAuditEvents.length = 0;
+  runtimeAuditEvents.push(...MOCK_AUDIT_EVENTS);
+  persistAuditEvents(runtimeAuditEvents);
 }
 
 export function auditEventsToCsv(events: AuditEvent[]): string {

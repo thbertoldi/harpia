@@ -333,6 +333,7 @@
   "agents.detail.versionHistory": "Histórico de versões",
   "agents.detail.recentInvocations": "Invocações recentes",
   "agents.detail.noInvocations": "Sem invocações recentes.",
+  "agents.detail.runTestInvocation": "Executar invocação de teste",
   "integrations.heading": "Integrações",
   "integrations.subheading": "Registre servidores MCP, conecte provedores OAuth e navegue pelas ferramentas disponíveis.",
   "integrations.accessDenied": "Acesso negado",

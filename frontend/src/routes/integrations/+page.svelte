@@ -242,6 +242,7 @@
       </div>
       <button
         onclick={openAddForm}
+        data-testid="integrations-add-server"
         class="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-md bg-talon-gold px-4 py-2 font-body text-sm font-medium text-obsidian transition-all hover:bg-talon-gold-bright"
       >
         <Plus class="size-4" />
@@ -261,6 +262,7 @@
     {#if bindNotice}
       <div
         class="mb-4 flex items-start gap-2 rounded-md border border-talon-gold/30 bg-talon-gold/10 px-4 py-3"
+        data-testid="integrations-bind-notice"
       >
         <Link2 class="mt-0.5 size-4 shrink-0 text-talon-gold" />
         <p class="font-body text-sm text-cream">{bindNotice}</p>
@@ -430,6 +432,7 @@
             <button
               onclick={handleTestConnection}
               disabled={testing || saving}
+              data-testid="integrations-test-connection"
               class="inline-flex cursor-pointer items-center gap-2 rounded-md border border-plumage px-4 py-2 font-body text-sm text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold disabled:cursor-not-allowed disabled:opacity-50"
             >
               {#if testing}
@@ -442,6 +445,7 @@
             <button
               onclick={handleAddServer}
               disabled={saving || testing}
+              data-testid="integrations-register-server"
               class="inline-flex cursor-pointer items-center gap-2 rounded-md bg-talon-gold px-4 py-2 font-body text-sm font-medium text-obsidian transition-all hover:bg-talon-gold-bright disabled:cursor-not-allowed disabled:opacity-50"
             >
               {#if saving}
@@ -460,6 +464,7 @@
       {#each servers as server (server.id)}
         <article
           class="rounded-lg border border-plumage bg-obsidian-light/60 transition-colors hover:border-talon-gold/40"
+          data-testid={`mcp-server-${server.id}`}
         >
           <div class="flex flex-wrap items-start justify-between gap-3 p-4">
             <button
@@ -536,6 +541,7 @@
                   {#each server.tools as tool (tool.name)}
                     <li
                       class="flex flex-wrap items-start justify-between gap-3 rounded-md border border-plumage/60 bg-obsidian/50 px-3 py-2"
+                      data-testid={`mcp-tool-${server.id}-${tool.name}`}
                     >
                       <div class="min-w-0">
                         <p class="font-mono text-xs text-talon-gold">
@@ -548,6 +554,7 @@
                       <button
                         type="button"
                         onclick={() => handleBindToAgent(server, tool.name)}
+                        data-testid={`mcp-bind-${server.id}-${tool.name}`}
                         class="cursor-pointer rounded-md border border-plumage px-2.5 py-1 font-body text-[11px] text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
                       >
                         {translate("integrations.bindToAgent", $locale)}

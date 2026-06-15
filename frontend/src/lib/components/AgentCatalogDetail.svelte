@@ -4,25 +4,60 @@
     ExternalLink,
     Eye,
     EyeOff,
+    FlaskConical,
     History,
+    Link2,
+    Loader2,
     RotateCcw,
     Trash2,
     X,
   } from "lucide-svelte";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
-  import type { AgentCatalogEntry } from "$lib/agent-catalog";
+  import {
+    bindToolToAgentCatalogEntry,
+    runTestInvocationForAgent,
+    type AgentCatalogEntry,
+    type AgentCatalogSource,
+  } from "$lib/agent-catalog";
   import { locale, translate } from "$lib/i18n";
   import { formatLocaleDateTime } from "$lib/i18n/format";
+  import type { BoundTool } from "$lib/mocks/agent-catalog";
 
   let {
     entry,
+    source,
+    discoveredTools,
     onclose,
     onAction,
   }: {
     entry: AgentCatalogEntry;
+    source: AgentCatalogSource;
+    discoveredTools: BoundTool[];
     onclose: () => void;
     onAction: (action: string, message: string) => void;
   } = $props();
+  let selectedToolId = $state<string>("");
+  let bindingTool = $state(false);
+  let invoking = $state(false);
+  let actionError = $state<string | null>(null);
+
+  const bindableTools = $derived(
+    discoveredTools.filter(
+      (tool) => !entry.boundTools.some((boundTool) => boundTool.id === tool.id),
+    ),
+  );
+
+  $effect(() => {
+    if (
+      bindableTools.length > 0 &&
+      !bindableTools.some((tool) => tool.id === selectedToolId)
+    ) {
+      selectedToolId = bindableTools[0].id;
+    }
+    if (bindableTools.length === 0) {
+      selectedToolId = "";
+    }
+  });
 
   function confirmAction(
     action: string,
@@ -70,6 +105,57 @@
         return "text-crown-ash";
     }
   }
+
+  async function handleBindTool(): Promise<void> {
+    if (!selectedToolId) return;
+    const selectedTool = bindableTools.find(
+      (tool) => tool.id === selectedToolId,
+    );
+    if (!selectedTool) return;
+
+    actionError = null;
+    bindingTool = true;
+    try {
+      const result = await bindToolToAgentCatalogEntry(
+        source,
+        entry.agentType.id,
+        selectedTool,
+      );
+      entry = result.entry;
+      onAction(
+        "bind-tool",
+        `Bound ${selectedTool.name} to ${entry.agentType.displayName || entry.agentType.name}.`,
+      );
+    } catch (error) {
+      actionError =
+        error instanceof Error ? error.message : "Failed to bind tool.";
+    } finally {
+      bindingTool = false;
+    }
+  }
+
+  async function handleRunTestInvocation(): Promise<void> {
+    actionError = null;
+    invoking = true;
+    try {
+      const result = await runTestInvocationForAgent(
+        source,
+        entry.agentType.id,
+      );
+      entry = result.entry;
+      onAction(
+        "test-invocation",
+        `Test invocation completed for task ${result.taskId}.`,
+      );
+    } catch (error) {
+      actionError =
+        error instanceof Error
+          ? error.message
+          : "Failed to run test invocation.";
+    } finally {
+      invoking = false;
+    }
+  }
 </script>
 
 <div class="flex h-full flex-col">
@@ -102,7 +188,53 @@
       >
         {translate("agents.detail.actions", $locale)}
       </h3>
+      {#if actionError}
+        <p class="mb-2 font-body text-xs text-red-400">{actionError}</p>
+      {/if}
       <div class="flex flex-wrap gap-2">
+        {#if bindableTools.length > 0}
+          <div
+            class="inline-flex items-center gap-2 rounded-md border border-plumage px-2 py-1"
+          >
+            <select
+              bind:value={selectedToolId}
+              class="max-w-40 bg-transparent font-mono text-[10px] text-crown-ash outline-none"
+              data-testid="agent-bind-tool-select"
+            >
+              {#each bindableTools as tool (tool.id)}
+                <option value={tool.id}>{tool.name}</option>
+              {/each}
+            </select>
+            <button
+              type="button"
+              onclick={handleBindTool}
+              disabled={bindingTool || invoking}
+              class="inline-flex cursor-pointer items-center gap-1 rounded-md border border-plumage px-2 py-1 font-body text-[11px] text-cream transition-colors hover:border-talon-gold hover:text-talon-gold disabled:cursor-not-allowed disabled:opacity-50"
+              data-testid="agent-bind-selected-tool"
+            >
+              {#if bindingTool}
+                <Loader2 class="size-3 animate-spin" />
+              {:else}
+                <Link2 class="size-3" />
+              {/if}
+              {translate("integrations.bindToAgent", $locale)}
+            </button>
+          </div>
+        {/if}
+        <button
+          type="button"
+          onclick={handleRunTestInvocation}
+          disabled={bindingTool || invoking}
+          class="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-plumage px-3 py-1.5 font-body text-xs text-cream transition-colors hover:border-talon-gold hover:text-talon-gold disabled:cursor-not-allowed disabled:opacity-50"
+          data-testid="agent-run-test-invocation"
+        >
+          {#if invoking}
+            <Loader2 class="size-3.5 animate-spin" />
+          {:else}
+            <FlaskConical class="size-3.5" />
+          {/if}
+          {translate("agents.detail.runTestInvocation", $locale)}
+        </button>
         {#if entry.canaryVersion}
           <button
             onclick={() =>
@@ -212,6 +344,7 @@
           {#each entry.boundTools as tool (tool.id)}
             <li
               class="rounded-md border border-plumage bg-obsidian-light/40 px-3 py-2"
+              data-testid={`agent-bound-tool-${tool.id}`}
             >
               <p class="font-body text-sm font-medium text-cream">
                 {tool.name}
@@ -272,6 +405,7 @@
           {#each entry.recentInvocations as invocation (invocation.id)}
             <li
               class="flex items-center justify-between rounded-md border border-plumage/60 px-3 py-2"
+              data-testid={`agent-invocation-${invocation.id}`}
             >
               <div>
                 <span class="font-mono text-xs text-cream">{invocation.id}</span
