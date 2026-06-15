@@ -71,7 +71,10 @@ func runWorker(ctx context.Context, cfg *config.Config) {
 	defer pool.Close()
 
 	planRepo := plans.NewRepository(pool)
-	planActivities := &workflow.PlanActivities{Creator: planRepo}
+	executorRepo := executors.NewRepository(pool)
+	planActivities := &workflow.PlanActivities{
+		Runtime: plans.NewRuntimeRepository(planRepo, executorRepo),
+	}
 
 	c, err := client.Dial(client.Options{HostPort: cfg.TemporalHost})
 	if err != nil {
@@ -178,7 +181,12 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	}
 
 	scheduleManager := plans.NewScheduleManager(temporalClient, logger)
-	planHandler, err := plans.NewPlanHandler(planRepo, executorRepo, scheduleManager)
+	var planHandler *plans.PlanHandler
+	if temporalClient != nil {
+		planHandler, err = plans.NewPlanHandler(planRepo, executorRepo, scheduleManager, temporalClient)
+	} else {
+		planHandler, err = plans.NewPlanHandler(planRepo, executorRepo, scheduleManager)
+	}
 	if err != nil {
 		fatal("create plan handler failed", "error", err)
 	}

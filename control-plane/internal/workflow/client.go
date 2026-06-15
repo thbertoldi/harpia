@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/sdk/client"
 )
 
@@ -29,6 +30,15 @@ func (tc *TemporalClient) StartTaskWorkflow(ctx context.Context, input TaskInput
 	return tc.client.ExecuteWorkflow(ctx, opts, TaskOrchestration, input)
 }
 
+func (tc *TemporalClient) StartPlanWorkflow(ctx context.Context, input PlanWorkflowInput) (client.WorkflowRun, error) {
+	opts := client.StartWorkflowOptions{
+		ID:                    PlanWorkflowID(input.PlanExecutionID),
+		TaskQueue:             TaskQueueName,
+		WorkflowIDReusePolicy: enums.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE,
+	}
+	return tc.client.ExecuteWorkflow(ctx, opts, PlanWorkflow, input)
+}
+
 func (tc *TemporalClient) SignalFeedback(ctx context.Context, workflowID string, runID string, signal HumanFeedbackSignal) error {
 	return tc.client.SignalWorkflow(ctx, workflowID, runID, HumanFeedbackSignalName, signal)
 }
@@ -39,4 +49,8 @@ func (tc *TemporalClient) RawClient() client.Client {
 
 func (tc *TemporalClient) Close() {
 	tc.client.Close()
+}
+
+func PlanWorkflowID(planExecutionID string) string {
+	return fmt.Sprintf("plan-execution-%s", planExecutionID)
 }
