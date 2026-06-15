@@ -13,10 +13,14 @@ const (
 	ExecutionStatusFailed    = "failed"
 	ExecutionStatusCancelled = "cancelled"
 
-	StepStatusPending              = "pending"
-	StepStatusRunning              = "running"
-	StepStatusAwaitingElicitation  = "awaiting_elicitation"
-	StepStatusAwaitingApproval     = "awaiting_approval"
-	StepStatusCompleted            = "completed"
-	StepStatusFailed               = "failed"
+	StepStatusPending             = "pending"
+	StepStatusRunning             = "running"
+	StepStatusAwaitingElicitation = "awaiting_elicitation"
+	StepStatusAwaitingApproval    = "awaiting_approval"
+	StepStatusCompleted           = "completed"
+	StepStatusFailed              = "failed"
+
+	ApprovalRequestStatusPending  = "pending"
+	ApprovalRequestStatusApproved = "approved"
+	ApprovalRequestStatusRejected = "rejected"
 )

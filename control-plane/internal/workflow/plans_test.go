@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/mock"
 	"go.temporal.io/sdk/testsuite"
@@ -236,6 +238,378 @@ func TestPlanWorkflowMarksStepAndPlanFailedWhenExecutorFails(t *testing.T) {
 	}
 }
 
+func TestPlanWorkflowWaitsForElicitationResponseAndResumesAgent(t *testing.T) {
+	env := newPlanWorkflowTestEnv(t)
+
+	input := PlanWorkflowInput{
+		TenantID:        "22222222-2222-2222-2222-222222222222",
+		PlanExecutionID: "11111111-1111-1111-1111-111111111111",
+	}
+	snapshot := testPlanSnapshot()
+	snapshot.Template.Steps = snapshot.Template.Steps[:2]
+	snapshot.Template.Edges = snapshot.Template.Edges[:1]
+	snapshot.ExecutorInstallations = map[string]ExecutorInstallationSnapshot{
+		"fetch-news":  snapshot.ExecutorInstallations["fetch-news"],
+		"write-draft": snapshot.ExecutorInstallations["write-draft"],
+	}
+	snapshot.Configuration.BehaviorPolicies = &plansv1.PlanBehaviorPolicies{
+		ElicitationTimeoutBehavior: plansv1.ElicitationTimeoutBehavior_ELICITATION_TIMEOUT_BEHAVIOR_PAUSE_UNTIL_ANSWERED,
+		ElicitationTimeoutHours:    48,
+		PublishApprovalMode:        plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_REQUIRE_APPROVAL,
+	}
+
+	var agentCalls int
+	awaitElicitationCalled := false
+	env.OnActivity(LoadPlanExecutionActivityName, mock.Anything, input).Return(LoadedPlanExecution{
+		PlanExecutionID: input.PlanExecutionID,
+		Status:          "pending",
+		Snapshot:        snapshot,
+	}, nil)
+	env.OnActivity(StartPlanExecutionActivityName, mock.Anything, input).Return(nil)
+	env.OnActivity(CreateStepExecutionActivityName, mock.Anything, mock.Anything).Return(
+		func(ctx context.Context, stepInput CreateStepExecutionInput) (StepExecutionRecord, error) {
+			return StepExecutionRecord{
+				ID:              "step-" + stepInput.PlanStepKey,
+				PlanStepKey:     stepInput.PlanStepKey,
+				Attempt:         1,
+				InputArtifactID: stepInput.InputArtifactID,
+			}, nil
+		},
+	)
+	env.OnActivity(RunIntegrationActivityName, mock.Anything, mock.Anything).Return(ExecutorActivityResult{
+		Status:           ExecutorResultStatusCompleted,
+		OutputArtifactID: "out-fetch-news",
+	}, nil)
+	env.OnActivity(RunAgentActivityName, mock.Anything, mock.Anything).Return(
+		func(ctx context.Context, executorInput ExecutorActivityInput) (ExecutorActivityResult, error) {
+			agentCalls++
+			if agentCalls == 1 {
+				if executorInput.ElicitationResponse != nil {
+					t.Fatal("first agent call should not include elicitation response")
+				}
+				return ExecutorActivityResult{
+					Status:              ExecutorResultStatusElicitationRequested,
+					ElicitationThreadID: "thread-write-draft",
+				}, nil
+			}
+			if executorInput.ElicitationResponse == nil || executorInput.ElicitationResponse.ResponseText != "use this context" {
+				t.Fatalf("second agent call response = %#v", executorInput.ElicitationResponse)
+			}
+			return ExecutorActivityResult{
+				Status:           ExecutorResultStatusCompleted,
+				OutputArtifactID: "out-write-draft",
+			}, nil
+		},
+	)
+	env.OnActivity(AwaitElicitationStepExecutionActivityName, mock.Anything, mock.Anything).Return(
+		func(ctx context.Context, statusInput StepStatusUpdateInput) error {
+			awaitElicitationCalled = statusInput.StepExecutionID == "step-write-draft" &&
+				statusInput.ElicitationThreadID == "thread-write-draft"
+			return nil
+		},
+	)
+	env.OnActivity(ResumeStepExecutionActivityName, mock.Anything, mock.Anything).Return(nil)
+	env.OnActivity(CompleteStepExecutionActivityName, mock.Anything, mock.Anything).Return(nil)
+	env.OnActivity(CompletePlanExecutionActivityName, mock.Anything, input).Return(nil)
+	env.RegisterDelayedCallback(func() {
+		env.SignalWorkflow(PlanElicitationResponseSignalName, ElicitationResponseSignal{
+			StepExecutionID:     "step-other",
+			ElicitationThreadID: "thread-other",
+			ResponseText:        "wrong context",
+		})
+		env.SignalWorkflow(PlanElicitationResponseSignalName, ElicitationResponseSignal{
+			StepExecutionID:     "step-write-draft",
+			ElicitationThreadID: "thread-write-draft",
+			ResponseText:        "use this context",
+		})
+	}, time.Hour)
+
+	env.ExecuteWorkflow(PlanWorkflow, input)
+
+	if !env.IsWorkflowCompleted() {
+		t.Fatal("workflow did not complete")
+	}
+	if err := env.GetWorkflowError(); err != nil {
+		t.Fatalf("workflow failed: %v", err)
+	}
+	if agentCalls != 2 {
+		t.Fatalf("agent calls = %d, want 2", agentCalls)
+	}
+	if !awaitElicitationCalled {
+		t.Fatal("expected AwaitElicitationStepExecutionActivity")
+	}
+}
+
+func TestPlanWorkflowFailsTimedOutElicitationPerPolicy(t *testing.T) {
+	env := newPlanWorkflowTestEnv(t)
+
+	input := PlanWorkflowInput{
+		TenantID:        "22222222-2222-2222-2222-222222222222",
+		PlanExecutionID: "11111111-1111-1111-1111-111111111111",
+	}
+	snapshot := singleStepSnapshot("write-draft", ExecutorKindAgent)
+	snapshot.Configuration.BehaviorPolicies = &plansv1.PlanBehaviorPolicies{
+		ElicitationTimeoutBehavior: plansv1.ElicitationTimeoutBehavior_ELICITATION_TIMEOUT_BEHAVIOR_FAIL_STEP,
+		ElicitationTimeoutHours:    1,
+		PublishApprovalMode:        plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_REQUIRE_APPROVAL,
+	}
+
+	failStepCalled := false
+	failPlanCalled := false
+	env.OnActivity(LoadPlanExecutionActivityName, mock.Anything, input).Return(LoadedPlanExecution{
+		PlanExecutionID: input.PlanExecutionID,
+		Status:          "pending",
+		Snapshot:        snapshot,
+	}, nil)
+	env.OnActivity(StartPlanExecutionActivityName, mock.Anything, input).Return(nil)
+	env.OnActivity(CreateStepExecutionActivityName, mock.Anything, mock.Anything).Return(StepExecutionRecord{
+		ID:          "step-write-draft",
+		PlanStepKey: "write-draft",
+		Attempt:     1,
+	}, nil)
+	env.OnActivity(RunAgentActivityName, mock.Anything, mock.Anything).Return(ExecutorActivityResult{
+		Status:              ExecutorResultStatusElicitationRequested,
+		ElicitationThreadID: "thread-write-draft",
+	}, nil)
+	env.OnActivity(AwaitElicitationStepExecutionActivityName, mock.Anything, mock.Anything).Return(nil)
+	env.OnActivity(FailStepExecutionActivityName, mock.Anything, mock.Anything).Return(
+		func(ctx context.Context, statusInput StepStatusUpdateInput) error {
+			failStepCalled = statusInput.StepExecutionID == "step-write-draft"
+			return nil
+		},
+	)
+	env.OnActivity(FailPlanExecutionActivityName, mock.Anything, input).Return(
+		func(ctx context.Context, workflowInput PlanWorkflowInput) error {
+			failPlanCalled = true
+			return nil
+		},
+	)
+
+	env.ExecuteWorkflow(PlanWorkflow, input)
+
+	if !env.IsWorkflowCompleted() {
+		t.Fatal("workflow did not complete")
+	}
+	if err := env.GetWorkflowError(); err == nil {
+		t.Fatal("expected workflow error")
+	} else if !strings.Contains(err.Error(), "policy failed the step") {
+		t.Fatalf("workflow error = %v, want FAIL_STEP policy context", err)
+	}
+	if !failStepCalled {
+		t.Fatal("expected FailStepExecutionActivity")
+	}
+	if !failPlanCalled {
+		t.Fatal("expected FailPlanExecutionActivity")
+	}
+}
+
+func TestPlanWorkflowFailsPlanOnTimedOutElicitationPolicy(t *testing.T) {
+	env := newPlanWorkflowTestEnv(t)
+
+	input := PlanWorkflowInput{
+		TenantID:        "22222222-2222-2222-2222-222222222222",
+		PlanExecutionID: "11111111-1111-1111-1111-111111111111",
+	}
+	snapshot := singleStepSnapshot("write-draft", ExecutorKindAgent)
+	snapshot.Configuration.BehaviorPolicies = &plansv1.PlanBehaviorPolicies{
+		ElicitationTimeoutBehavior: plansv1.ElicitationTimeoutBehavior_ELICITATION_TIMEOUT_BEHAVIOR_FAIL_PLAN,
+		ElicitationTimeoutHours:    1,
+		PublishApprovalMode:        plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_REQUIRE_APPROVAL,
+	}
+
+	failStepCalled := false
+	failPlanCalled := false
+	env.OnActivity(LoadPlanExecutionActivityName, mock.Anything, input).Return(LoadedPlanExecution{
+		PlanExecutionID: input.PlanExecutionID,
+		Status:          "pending",
+		Snapshot:        snapshot,
+	}, nil)
+	env.OnActivity(StartPlanExecutionActivityName, mock.Anything, input).Return(nil)
+	env.OnActivity(CreateStepExecutionActivityName, mock.Anything, mock.Anything).Return(StepExecutionRecord{
+		ID:          "step-write-draft",
+		PlanStepKey: "write-draft",
+		Attempt:     1,
+	}, nil)
+	env.OnActivity(RunAgentActivityName, mock.Anything, mock.Anything).Return(ExecutorActivityResult{
+		Status:              ExecutorResultStatusElicitationRequested,
+		ElicitationThreadID: "thread-write-draft",
+	}, nil)
+	env.OnActivity(AwaitElicitationStepExecutionActivityName, mock.Anything, mock.Anything).Return(nil)
+	env.OnActivity(FailStepExecutionActivityName, mock.Anything, mock.Anything).Return(
+		func(ctx context.Context, statusInput StepStatusUpdateInput) error {
+			failStepCalled = statusInput.StepExecutionID == "step-write-draft"
+			return nil
+		},
+	)
+	env.OnActivity(FailPlanExecutionActivityName, mock.Anything, input).Return(
+		func(ctx context.Context, workflowInput PlanWorkflowInput) error {
+			failPlanCalled = true
+			return nil
+		},
+	)
+
+	env.ExecuteWorkflow(PlanWorkflow, input)
+
+	if !env.IsWorkflowCompleted() {
+		t.Fatal("workflow did not complete")
+	}
+	if err := env.GetWorkflowError(); err == nil {
+		t.Fatal("expected workflow error")
+	} else if !strings.Contains(err.Error(), "policy failed the plan") {
+		t.Fatalf("workflow error = %v, want FAIL_PLAN policy context", err)
+	}
+	if !failStepCalled {
+		t.Fatal("expected FailStepExecutionActivity")
+	}
+	if !failPlanCalled {
+		t.Fatal("expected FailPlanExecutionActivity")
+	}
+}
+
+func TestPlanWorkflowRequiresApprovalBeforePublishStep(t *testing.T) {
+	env := newPlanWorkflowTestEnv(t)
+
+	input := PlanWorkflowInput{
+		TenantID:        "22222222-2222-2222-2222-222222222222",
+		PlanExecutionID: "11111111-1111-1111-1111-111111111111",
+	}
+	snapshot := singleStepSnapshot("publish-linkedin", ExecutorKindIntegration)
+	snapshot.Template.Steps[0].OutputArtifactTypeId = "harpia.artifacts.v1.PublishConfirmation"
+	snapshot.Configuration.BehaviorPolicies = &plansv1.PlanBehaviorPolicies{
+		ElicitationTimeoutBehavior: plansv1.ElicitationTimeoutBehavior_ELICITATION_TIMEOUT_BEHAVIOR_PAUSE_UNTIL_ANSWERED,
+		ElicitationTimeoutHours:    48,
+		PublishApprovalMode:        plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_REQUIRE_APPROVAL,
+	}
+
+	approvalRequestID := planApprovalRequestID(input.PlanExecutionID, "step-publish-linkedin")
+	events := make([]string, 0, 2)
+	env.OnActivity(LoadPlanExecutionActivityName, mock.Anything, input).Return(LoadedPlanExecution{
+		PlanExecutionID: input.PlanExecutionID,
+		Status:          "pending",
+		Snapshot:        snapshot,
+	}, nil)
+	env.OnActivity(StartPlanExecutionActivityName, mock.Anything, input).Return(nil)
+	env.OnActivity(CreateStepExecutionActivityName, mock.Anything, mock.Anything).Return(StepExecutionRecord{
+		ID:          "step-publish-linkedin",
+		PlanStepKey: "publish-linkedin",
+		Attempt:     1,
+	}, nil)
+	env.OnActivity(CreateApprovalRequestActivityName, mock.Anything, mock.Anything).Return(
+		func(ctx context.Context, approvalInput CreateApprovalRequestInput) error {
+			events = append(events, "create-approval")
+			if approvalInput.ApprovalRequestID != approvalRequestID {
+				t.Fatalf("approval request id = %q, want %q", approvalInput.ApprovalRequestID, approvalRequestID)
+			}
+			if approvalInput.PlanExecutionID != input.PlanExecutionID {
+				t.Fatalf("plan execution id = %q, want %q", approvalInput.PlanExecutionID, input.PlanExecutionID)
+			}
+			return nil
+		},
+	)
+	env.OnActivity(ResolveApprovalRequestActivityName, mock.Anything, mock.Anything).Return(
+		func(ctx context.Context, decisionInput ResolveApprovalRequestInput) error {
+			events = append(events, "resolve-approval")
+			if !decisionInput.Approved {
+				t.Fatal("expected approved decision")
+			}
+			return nil
+		},
+	)
+	env.OnActivity(ResumeStepExecutionActivityName, mock.Anything, mock.Anything).Return(
+		func(ctx context.Context, statusInput StepStatusUpdateInput) error {
+			events = append(events, "resume-step")
+			return nil
+		},
+	)
+	env.OnActivity(RunIntegrationActivityName, mock.Anything, mock.Anything).Return(
+		func(ctx context.Context, executorInput ExecutorActivityInput) (ExecutorActivityResult, error) {
+			events = append(events, "run-integration")
+			return ExecutorActivityResult{
+				Status:           ExecutorResultStatusCompleted,
+				OutputArtifactID: "out-publish-linkedin",
+			}, nil
+		},
+	)
+	env.OnActivity(CompleteStepExecutionActivityName, mock.Anything, mock.Anything).Return(nil)
+	env.OnActivity(CompletePlanExecutionActivityName, mock.Anything, input).Return(nil)
+	env.RegisterDelayedCallback(func() {
+		env.SignalWorkflow(PlanApprovalDecisionSignalName, ApprovalDecisionSignal{
+			StepExecutionID:   "step-other",
+			ApprovalRequestID: "approval-other",
+			Approved:          true,
+		})
+		env.SignalWorkflow(PlanApprovalDecisionSignalName, ApprovalDecisionSignal{
+			StepExecutionID:   "step-publish-linkedin",
+			ApprovalRequestID: approvalRequestID,
+			Approved:          true,
+		})
+	}, time.Hour)
+
+	env.ExecuteWorkflow(PlanWorkflow, input)
+
+	if !env.IsWorkflowCompleted() {
+		t.Fatal("workflow did not complete")
+	}
+	if err := env.GetWorkflowError(); err != nil {
+		t.Fatalf("workflow failed: %v", err)
+	}
+	if !reflect.DeepEqual(events, []string{"create-approval", "resolve-approval", "resume-step", "run-integration"}) {
+		t.Fatalf("events = %#v", events)
+	}
+}
+
+func TestPlanWorkflowAutoPublishSkipsApprovalGate(t *testing.T) {
+	env := newPlanWorkflowTestEnv(t)
+
+	input := PlanWorkflowInput{
+		TenantID:        "22222222-2222-2222-2222-222222222222",
+		PlanExecutionID: "11111111-1111-1111-1111-111111111111",
+	}
+	snapshot := singleStepSnapshot("publish-linkedin", ExecutorKindIntegration)
+	snapshot.Template.Steps[0].OutputArtifactTypeId = "harpia.artifacts.v1.PublishConfirmation"
+	snapshot.Configuration.BehaviorPolicies = &plansv1.PlanBehaviorPolicies{
+		ElicitationTimeoutBehavior: plansv1.ElicitationTimeoutBehavior_ELICITATION_TIMEOUT_BEHAVIOR_PAUSE_UNTIL_ANSWERED,
+		ElicitationTimeoutHours:    48,
+		PublishApprovalMode:        plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_AUTO_PUBLISH,
+	}
+
+	runIntegrationCalled := false
+	env.OnActivity(LoadPlanExecutionActivityName, mock.Anything, input).Return(LoadedPlanExecution{
+		PlanExecutionID: input.PlanExecutionID,
+		Status:          "pending",
+		Snapshot:        snapshot,
+	}, nil)
+	env.OnActivity(StartPlanExecutionActivityName, mock.Anything, input).Return(nil)
+	env.OnActivity(CreateStepExecutionActivityName, mock.Anything, mock.Anything).Return(StepExecutionRecord{
+		ID:          "step-publish-linkedin",
+		PlanStepKey: "publish-linkedin",
+		Attempt:     1,
+	}, nil)
+	env.OnActivity(RunIntegrationActivityName, mock.Anything, mock.Anything).Return(
+		func(ctx context.Context, executorInput ExecutorActivityInput) (ExecutorActivityResult, error) {
+			runIntegrationCalled = true
+			return ExecutorActivityResult{
+				Status:           ExecutorResultStatusCompleted,
+				OutputArtifactID: "out-publish-linkedin",
+			}, nil
+		},
+	)
+	env.OnActivity(CompleteStepExecutionActivityName, mock.Anything, mock.Anything).Return(nil)
+	env.OnActivity(CompletePlanExecutionActivityName, mock.Anything, input).Return(nil)
+
+	env.ExecuteWorkflow(PlanWorkflow, input)
+
+	if !env.IsWorkflowCompleted() {
+		t.Fatal("workflow did not complete")
+	}
+	if err := env.GetWorkflowError(); err != nil {
+		t.Fatalf("workflow failed: %v", err)
+	}
+	if !runIntegrationCalled {
+		t.Fatal("expected RunIntegrationActivity")
+	}
+}
+
 func TestTopologicalPlanStepsRejectsCycles(t *testing.T) {
 	template := &plansv1.PlanTemplate{
 		Steps: []*plansv1.PlanStep{
@@ -265,9 +639,12 @@ func newPlanWorkflowTestEnv(t *testing.T) *testsuite.TestWorkflowEnvironment {
 	env.RegisterActivity(CreateStepExecutionActivity)
 	env.RegisterActivity(RunIntegrationActivity)
 	env.RegisterActivity(RunAgentActivity)
+	env.RegisterActivity(ResumeStepExecutionActivity)
 	env.RegisterActivity(CompleteStepExecutionActivity)
 	env.RegisterActivity(FailStepExecutionActivity)
 	env.RegisterActivity(AwaitElicitationStepExecutionActivity)
+	env.RegisterActivity(CreateApprovalRequestActivity)
+	env.RegisterActivity(ResolveApprovalRequestActivity)
 	env.RegisterActivity(CompletePlanExecutionActivity)
 	env.RegisterActivity(FailPlanExecutionActivity)
 	return env
@@ -293,6 +670,10 @@ func RunAgentActivity(context.Context, ExecutorActivityInput) (ExecutorActivityR
 	return ExecutorActivityResult{}, unexpectedActivityError("RunAgentActivity")
 }
 
+func ResumeStepExecutionActivity(context.Context, StepStatusUpdateInput) error {
+	return unexpectedActivityError("ResumeStepExecutionActivity")
+}
+
 func CompleteStepExecutionActivity(context.Context, StepStatusUpdateInput) error {
 	return unexpectedActivityError("CompleteStepExecutionActivity")
 }
@@ -303,6 +684,14 @@ func FailStepExecutionActivity(context.Context, StepStatusUpdateInput) error {
 
 func AwaitElicitationStepExecutionActivity(context.Context, StepStatusUpdateInput) error {
 	return unexpectedActivityError("AwaitElicitationStepExecutionActivity")
+}
+
+func CreateApprovalRequestActivity(context.Context, CreateApprovalRequestInput) error {
+	return unexpectedActivityError("CreateApprovalRequestActivity")
+}
+
+func ResolveApprovalRequestActivity(context.Context, ResolveApprovalRequestInput) error {
+	return unexpectedActivityError("ResolveApprovalRequestActivity")
 }
 
 func CompletePlanExecutionActivity(context.Context, PlanWorkflowInput) error {
@@ -375,6 +764,31 @@ func testPlanSnapshot() PlanExecutionSnapshot {
 			},
 		},
 	}
+}
+
+func singleStepSnapshot(stepKey string, executorKind string) PlanExecutionSnapshot {
+	snapshot := testPlanSnapshot()
+	snapshot.Configuration.SeedArtifacts = nil
+	snapshot.Configuration.BehaviorPolicies = &plansv1.PlanBehaviorPolicies{
+		ElicitationTimeoutBehavior: plansv1.ElicitationTimeoutBehavior_ELICITATION_TIMEOUT_BEHAVIOR_PAUSE_UNTIL_ANSWERED,
+		ElicitationTimeoutHours:    48,
+		PublishApprovalMode:        plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_REQUIRE_APPROVAL,
+	}
+	snapshot.Template.Steps = []*plansv1.PlanStep{
+		{
+			Key:                  stepKey,
+			InputArtifactTypeId:  "",
+			OutputArtifactTypeId: "harpia.artifacts.v1.TextDraft",
+		},
+	}
+	snapshot.Template.Edges = nil
+	snapshot.ExecutorInstallations = map[string]ExecutorInstallationSnapshot{
+		stepKey: {
+			ID:   "installation-" + stepKey,
+			Kind: executorKind,
+		},
+	}
+	return snapshot
 }
 
 func assertArtifactIDs(t *testing.T, artifacts []ArtifactRef, expected []string) {

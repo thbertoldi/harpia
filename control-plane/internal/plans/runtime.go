@@ -129,6 +129,14 @@ func (r *RuntimeRepository) CreateStepExecution(ctx context.Context, input workf
 	}, nil
 }
 
+func (r *RuntimeRepository) ResumeStepExecution(ctx context.Context, input workflow.StepStatusUpdateInput) error {
+	tenantID, stepID, err := parseRuntimeTenantStep(input.TenantID, input.StepExecutionID)
+	if err != nil {
+		return err
+	}
+	return r.plans.UpdateStepExecutionStatus(ctx, tenantID, stepID, StepStatusRunning, "", "", "")
+}
+
 func (r *RuntimeRepository) CompleteStepExecution(ctx context.Context, input workflow.StepStatusUpdateInput) error {
 	tenantID, stepID, err := parseRuntimeTenantStep(input.TenantID, input.StepExecutionID)
 	if err != nil {
@@ -151,6 +159,37 @@ func (r *RuntimeRepository) AwaitElicitationStepExecution(ctx context.Context, i
 		return err
 	}
 	return r.plans.UpdateStepExecutionStatus(ctx, tenantID, stepID, StepStatusAwaitingElicitation, "", input.ElicitationThreadID, "")
+}
+
+func (r *RuntimeRepository) CreateApprovalRequest(ctx context.Context, input workflow.CreateApprovalRequestInput) error {
+	tenantID, executionID, err := parseRuntimeTenantExecution(input.TenantID, input.PlanExecutionID)
+	if err != nil {
+		return err
+	}
+	stepID, err := uuid.Parse(input.StepExecutionID)
+	if err != nil {
+		return fmt.Errorf("parse step execution id: %w", err)
+	}
+	if err := r.plans.CreatePlanApprovalRequest(ctx, &PlanApprovalRequest{
+		ID:              input.ApprovalRequestID,
+		TenantID:        tenantID,
+		PlanExecutionID: executionID,
+		StepExecutionID: stepID,
+		PlanStepKey:     input.PlanStepKey,
+		InputArtifactID: input.InputArtifactID,
+		Status:          ApprovalRequestStatusPending,
+	}); err != nil {
+		return err
+	}
+	return r.plans.UpdateStepExecutionStatus(ctx, tenantID, stepID, StepStatusAwaitingApproval, "", "", input.ApprovalRequestID)
+}
+
+func (r *RuntimeRepository) ResolveApprovalRequest(ctx context.Context, input workflow.ResolveApprovalRequestInput) error {
+	tenantID, stepID, err := parseRuntimeTenantStep(input.TenantID, input.StepExecutionID)
+	if err != nil {
+		return err
+	}
+	return r.plans.ResolvePlanApprovalRequest(ctx, tenantID, input.ApprovalRequestID, stepID, input.Approved, input.Reason)
 }
 
 func (r *RuntimeRepository) CompletePlanExecution(ctx context.Context, tenantID, executionID uuid.UUID) error {

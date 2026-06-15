@@ -25,9 +25,12 @@ func StartWorker(ctx context.Context, temporalClient client.Client, taskQueue st
 		w.RegisterActivity(planActivities.CreateStepExecutionActivity)
 		w.RegisterActivity(planActivities.RunIntegrationActivity)
 		w.RegisterActivity(planActivities.RunAgentActivity)
+		w.RegisterActivity(planActivities.ResumeStepExecutionActivity)
 		w.RegisterActivity(planActivities.CompleteStepExecutionActivity)
 		w.RegisterActivity(planActivities.FailStepExecutionActivity)
 		w.RegisterActivity(planActivities.AwaitElicitationStepExecutionActivity)
+		w.RegisterActivity(planActivities.CreateApprovalRequestActivity)
+		w.RegisterActivity(planActivities.ResolveApprovalRequestActivity)
 		w.RegisterActivity(planActivities.CompletePlanExecutionActivity)
 		w.RegisterActivity(planActivities.FailPlanExecutionActivity)
 	}

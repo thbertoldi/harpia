@@ -76,7 +76,7 @@ describe("behavior policies", () => {
 
   it("round-trips form values through proto", () => {
     const values = {
-      elicitationTimeoutBehavior: ElicitationTimeoutBehavior.SKIP_WITH_DEFAULT,
+      elicitationTimeoutBehavior: ElicitationTimeoutBehavior.FAIL_PLAN,
       elicitationTimeoutHours: 24,
       publishApprovalMode: PublishApprovalMode.REQUIRE_APPROVAL,
     };
