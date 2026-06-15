@@ -13,6 +13,10 @@ import (
 
 var ErrProvisioningEmailRequired = errors.New("auto-provisioning requires user email")
 
+// DefaultTenantMemberRole is the Harpia role assigned when auto-provisioning the
+// default tenant. "admin" maps to Leader-level product access in the UI.
+const DefaultTenantMemberRole = "admin"
+
 type MembershipResolver interface {
 	ResolveMemberships(ctx context.Context, user AuthenticatedUser) ([]TenantMembership, error)
 }
@@ -104,12 +108,13 @@ func (r *MembershipRepository) provisionDefaultMembership(ctx context.Context, u
 	return database.WithUserExternalID(ctx, r.pool, user.Subject, func(q database.Querier) error {
 		_, err := q.Exec(ctx,
 			`INSERT INTO users (tenant_id, external_id, email, name, role)
-			 VALUES ($1, $2, $3, $4, 'member')
+			 VALUES ($1, $2, $3, $4, $5)
 			 ON CONFLICT (tenant_id, external_id) DO NOTHING`,
 			r.defaultTenantID,
 			user.Subject,
 			user.Email,
 			name,
+			DefaultTenantMemberRole,
 		)
 		if err != nil {
 			return fmt.Errorf("provision default membership: %w", err)
