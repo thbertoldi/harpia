@@ -1,8 +1,8 @@
 import { redirect } from "@sveltejs/kit";
 import { canConfigurePlans } from "$lib/auth-roles";
-import type { PageServerLoad } from "./$types";
+import type { LayoutServerLoad } from "./$types";
 
-export const load: PageServerLoad = async ({ parent }) => {
+export const load: LayoutServerLoad = async ({ parent }) => {
   const { user } = await parent();
 
   if (!canConfigurePlans(user)) {
