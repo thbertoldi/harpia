@@ -3,7 +3,6 @@
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { resolve } from "$app/paths";
-  import { onDestroy } from "svelte";
   import { requireTenantId } from "$lib/auth";
   import { toUserMessage } from "$lib/connect-errors";
   import { taskClient, type Task } from "$lib/rpc";
@@ -137,8 +136,10 @@
     return desc.length > 100 ? desc.slice(0, 100) + "..." : desc;
   }
 
-  onDestroy(() => {
-    watchController?.abort();
+  $effect(() => {
+    return () => {
+      watchController?.abort();
+    };
   });
 </script>
 

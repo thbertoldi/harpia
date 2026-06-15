@@ -1,6 +1,6 @@
 import { createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
-import type { Page } from "@playwright/test";
+import type { Page, Route } from "@playwright/test";
 import {
   FeedbackDecision,
   FeedbackStatus,
@@ -17,6 +17,19 @@ type SeedTaskInput = {
   title?: string;
   description?: string;
   workspaceId?: string;
+};
+
+type StubTaskApi = {
+  seedTask: (input: SeedTaskInput) => Task;
+  waitForTaskStatus: (
+    taskId: string,
+    status: TaskStatus,
+    opts?: { timeoutMs?: number; pollMs?: number },
+  ) => Promise<Task>;
+  getWatchEventCount: (taskId: string) => number;
+  getCreateCallCount: () => number;
+  getListCallCount: () => number;
+  getWatchCallCount: () => number;
 };
 
 const apiBaseURL = process.env.E2E_API_BASE_URL ?? "http://127.0.0.1:19080";
@@ -461,6 +474,237 @@ export async function installOverseerJourneyMocks(
     },
     async dispose() {
       // No-op for in-browser mock.
+    },
+  };
+}
+
+function makeTask(input: Required<SeedTaskInput> & { id: string }): Task {
+  const now = new Date().toISOString();
+  return {
+    $typeName: "harpia.tasks.v1.Task",
+    id: input.id,
+    tenantId: input.tenantId,
+    workspaceId: input.workspaceId,
+    title: input.title,
+    description: input.description,
+    status: TaskStatus.PENDING,
+    subtasks: [],
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+function encodeEnvelope(payload: Uint8Array, flags = 0): Uint8Array {
+  const out = new Uint8Array(5 + payload.length);
+  out[0] = flags;
+  const view = new DataView(out.buffer, out.byteOffset, out.byteLength);
+  view.setUint32(1, payload.length, false);
+  out.set(payload, 5);
+  return out;
+}
+
+function endStreamEnvelope(): Uint8Array {
+  const payload = new TextEncoder().encode(JSON.stringify({ metadata: {} }));
+  return encodeEnvelope(payload, 0x02);
+}
+
+function toStreamBody(chunks: Uint8Array[]): Buffer {
+  return Buffer.concat(chunks.map((chunk) => Buffer.from(chunk)));
+}
+
+export async function installTaskApiStub(page: Page): Promise<StubTaskApi> {
+  const tasks = new Map<string, Task>();
+  const watchEventCount = new Map<string, number>();
+  const scheduled = new Map<string, Timer[]>();
+  let seq = 0;
+  let createCallCount = 0;
+  let listCallCount = 0;
+  let watchCallCount = 0;
+
+  const bumpWatchEvent = (taskId: string) => {
+    const next = (watchEventCount.get(taskId) ?? 0) + 1;
+    watchEventCount.set(taskId, next);
+  };
+
+  const updateTask = (taskId: string, status: TaskStatus): Task => {
+    const task = tasks.get(taskId);
+    if (!task) {
+      throw new Error(`Tried to update missing task ${taskId}`);
+    }
+    const nextTask: Task = {
+      ...task,
+      status,
+      updatedAt: new Date().toISOString(),
+    };
+    tasks.set(taskId, nextTask);
+    return nextTask;
+  };
+
+  const scheduleFastCompletion = (taskId: string) => {
+    const timers: Timer[] = [];
+    const states = [
+      TaskStatus.PLANNING,
+      TaskStatus.IN_PROGRESS,
+      TaskStatus.COMPLETED,
+    ];
+    states.forEach((status, index) => {
+      const timer = setTimeout(
+        () => {
+          updateTask(taskId, status);
+        },
+        (index + 1) * 80,
+      );
+      timers.push(timer);
+    });
+    scheduled.set(taskId, timers);
+  };
+
+  const seedTaskLocal = ({
+    tenantId,
+    title = "E2E seeded task",
+    description = "Created by Playwright E2E fixture",
+    workspaceId = "default",
+  }: SeedTaskInput): Task => {
+    seq += 1;
+    const id = `e2e-task-${seq}`;
+    const task = makeTask({ id, tenantId, title, description, workspaceId });
+    tasks.set(id, task);
+    watchEventCount.set(id, 0);
+    return task;
+  };
+
+  const fulfillUnary = async (
+    route: Route,
+    jsonBody: object,
+  ): Promise<void> => {
+    await route.fulfill({
+      status: 200,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(jsonBody),
+    });
+  };
+
+  await page.route("**/harpia.tasks.v1.TaskService/*", async (route) => {
+    const url = new URL(route.request().url());
+    const method = url.pathname.split("/").at(-1) ?? "";
+
+    if (method === "CreateTask") {
+      createCallCount += 1;
+      const task = seedTaskLocal({
+        tenantId: "dev",
+        title: "Leader journey stub task",
+        description: "Leader journey stub task",
+        workspaceId: "default",
+      });
+      scheduleFastCompletion(task.id);
+      await fulfillUnary(route, { task });
+      return;
+    }
+
+    if (method === "GetTask") {
+      const latest = Array.from(tasks.values()).at(-1);
+      await fulfillUnary(route, { task: latest ?? null });
+      return;
+    }
+
+    if (method === "ListTasks") {
+      listCallCount += 1;
+      const payload = new TextEncoder().encode(
+        JSON.stringify({
+          tasks: Array.from(tasks.values()),
+          nextPageToken: "",
+        }),
+      );
+      const body = toStreamBody([encodeEnvelope(payload), endStreamEnvelope()]);
+      await route.fulfill({
+        status: 200,
+        headers: { "content-type": "application/connect+json" },
+        body,
+      });
+      return;
+    }
+
+    if (method === "WatchTask") {
+      watchCallCount += 1;
+      const task = Array.from(tasks.values()).at(-1);
+      if (!task) {
+        await route.fulfill({
+          status: 404,
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ message: "No task found for watch" }),
+        });
+        return;
+      }
+
+      const planning = updateTask(task.id, TaskStatus.PLANNING);
+      const inProgress = updateTask(task.id, TaskStatus.IN_PROGRESS);
+      const completed = updateTask(task.id, TaskStatus.COMPLETED);
+      bumpWatchEvent(task.id);
+      bumpWatchEvent(task.id);
+      bumpWatchEvent(task.id);
+
+      const planningPayload = new TextEncoder().encode(
+        JSON.stringify({ task: planning }),
+      );
+      const inProgressPayload = new TextEncoder().encode(
+        JSON.stringify({ task: inProgress }),
+      );
+      const completedPayload = new TextEncoder().encode(
+        JSON.stringify({ task: completed }),
+      );
+
+      const body = toStreamBody([
+        encodeEnvelope(planningPayload),
+        encodeEnvelope(inProgressPayload),
+        encodeEnvelope(completedPayload),
+        endStreamEnvelope(),
+      ]);
+
+      await route.fulfill({
+        status: 200,
+        headers: { "content-type": "application/connect+json" },
+        body,
+      });
+      return;
+    }
+
+    await route.fulfill({
+      status: 404,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        message: `Unhandled TaskService method: ${method}`,
+      }),
+    });
+  });
+
+  return {
+    seedTask: seedTaskLocal,
+    async waitForTaskStatus(taskId, status, opts = {}) {
+      const timeoutMs = opts.timeoutMs ?? 5_000;
+      const pollMs = opts.pollMs ?? 50;
+      const deadline = Date.now() + timeoutMs;
+      while (Date.now() < deadline) {
+        const task = tasks.get(taskId);
+        if (task?.status === status) {
+          return task;
+        }
+        await new Promise((resolve) => setTimeout(resolve, pollMs));
+      }
+      throw new Error(
+        `Stub task ${taskId} did not reach status ${TaskStatus[status]} in ${timeoutMs}ms`,
+      );
+    },
+    getWatchEventCount(taskId) {
+      return watchEventCount.get(taskId) ?? 0;
+    },
+    getCreateCallCount() {
+      return createCallCount;
+    },
+    getListCallCount() {
+      return listCallCount;
+    },
+    getWatchCallCount() {
+      return watchCallCount;
     },
   };
 }

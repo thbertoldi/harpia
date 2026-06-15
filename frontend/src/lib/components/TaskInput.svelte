@@ -29,7 +29,11 @@
   }
 </script>
 
-<form onsubmit={handleSubmit} class="mx-auto w-full max-w-2xl">
+<form
+  onsubmit={handleSubmit}
+  class="mx-auto w-full max-w-2xl"
+  data-testid="task-input-form"
+>
   <div
     class="flex items-center gap-2 rounded-lg border border-plumage bg-obsidian-light p-1 transition-all focus-within:border-talon-gold focus-within:ring-2 focus-within:ring-talon-gold/20"
   >
@@ -37,12 +41,14 @@
       type="text"
       bind:value
       {disabled}
+      data-testid="task-input-field"
       placeholder={placeholder || translate("home.input.placeholder", $locale)}
       class="flex-1 bg-transparent px-4 py-3 font-body text-lg text-cream outline-none placeholder:text-crown-ash"
     />
     <button
       type="submit"
       disabled={disabled || loading || !value.trim()}
+      data-testid="task-input-submit"
       class="flex h-10 w-10 items-center justify-center rounded-md bg-talon-gold text-obsidian transition-all hover:bg-talon-gold-bright disabled:cursor-not-allowed disabled:opacity-40"
     >
       <Send class="size-4" />
