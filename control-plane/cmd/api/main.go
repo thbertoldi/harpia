@@ -226,9 +226,14 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	})
 
 	interceptors := []connect.Interceptor{identity.NewRequestContextInterceptor(identity.AuthOptions{
-		DevTenantID:   tenantID,
-		AllowDevAuth:  cfg.AllowDevAuth,
-		Authenticator: identity.NewZitadelAuthenticator(cfg.ZitadelURL, nil, cfg.AuthCacheTTL, cfg.AuthCacheMaxEntries),
+		DevTenantID:  tenantID,
+		AllowDevAuth: cfg.AllowDevAuth,
+		Authenticator: identity.NewZitadelAuthenticator(
+			cfg.ZitadelURL,
+			nil,
+			cfg.AuthCacheTTL,
+			cfg.AuthCacheMaxEntries,
+		).WithHostHeader(cfg.ZitadelHost),
 		Memberships: identity.NewMembershipRepository(pool, identity.MembershipRepositoryOptions{
 			DefaultTenantID:            tenantID,
 			AutoProvisionDefaultTenant: cfg.AutoProvisionDefaultTenant,

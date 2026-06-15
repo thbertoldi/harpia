@@ -50,6 +50,8 @@ spec:
               value: {{ printf "http://%s:3900" $garageHost | quote }}
             - name: ZITADEL_URL
               value: {{ printf "http://%s:8080" $zitadelHost | quote }}
+            - name: ZITADEL_HOST
+              value: {{ printf "%s:%s" .Values.zitadel.externalDomain .Values.zitadel.externalPort | quote }}
             - name: HARPIA_ALLOW_DEV_AUTH
               value: {{ .Values.api.auth.allowDevAuth | quote }}
             - name: HARPIA_AUTO_PROVISION_DEFAULT_TENANT

@@ -28,6 +28,7 @@ type BearerAuthenticator interface {
 
 type ZitadelAuthenticator struct {
 	userInfoURL     string
+	hostHeader      string
 	httpClient      *http.Client
 	cacheTTL        time.Duration
 	cacheMaxEntries int
@@ -69,6 +70,11 @@ func NewZitadelAuthenticator(baseURL string, client *http.Client, cacheTTL time.
 	}
 }
 
+func (a *ZitadelAuthenticator) WithHostHeader(host string) *ZitadelAuthenticator {
+	a.hostHeader = strings.TrimSpace(host)
+	return a
+}
+
 func (a *ZitadelAuthenticator) AuthenticateBearer(ctx context.Context, token string) (AuthenticatedUser, error) {
 	if a.userInfoURL == "" {
 		return AuthenticatedUser{}, connect.NewError(
@@ -87,6 +93,9 @@ func (a *ZitadelAuthenticator) AuthenticateBearer(ctx context.Context, token str
 		return AuthenticatedUser{}, connect.NewError(connect.CodeInternal, err)
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
+	if a.hostHeader != "" {
+		req.Host = a.hostHeader
+	}
 
 	resp, err := a.httpClient.Do(req)
 	if err != nil {
