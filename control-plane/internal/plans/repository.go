@@ -27,15 +27,15 @@ type PlanTemplate struct {
 }
 
 type PlanStep struct {
-	ID                     uuid.UUID
-	Key                    string
-	Title                  string
-	Description            string
-	InputArtifactTypeID    string
-	OutputArtifactTypeID   string
-	ExecutorRequirement    json.RawMessage
-	DefaultExecutorSKUKey  string
-	Position               int32
+	ID                    uuid.UUID
+	Key                   string
+	Title                 string
+	Description           string
+	InputArtifactTypeID   string
+	OutputArtifactTypeID  string
+	ExecutorRequirement   json.RawMessage
+	DefaultExecutorSKUKey string
+	Position              int32
 }
 
 type PlanStepDependency struct {
@@ -383,6 +383,20 @@ func (r *Repository) ListConfigurations(ctx context.Context, tenantID uuid.UUID,
 func (r *Repository) CreateExecution(ctx context.Context, execution *PlanExecution) (*PlanExecution, error) {
 	var created PlanExecution
 	err := database.WithTenant(ctx, r.pool, execution.TenantID, func(q database.Querier) error {
+		if execution.ID != uuid.Nil {
+			row := q.QueryRow(ctx,
+				`INSERT INTO plan_executions (
+					id, tenant_id, plan_configuration_id, plan_configuration_snapshot, status, triggered_at
+				) VALUES ($1, $2, $3, $4, $5, $6)
+				ON CONFLICT (id) DO UPDATE SET id = plan_executions.id
+				RETURNING id, tenant_id, plan_configuration_id, plan_configuration_snapshot, status,
+				          triggered_at, completed_at, created_at, updated_at`,
+				execution.ID, execution.TenantID, execution.PlanConfigurationID, execution.PlanConfigurationSnapshot,
+				execution.Status, execution.TriggeredAt,
+			)
+			return scanExecution(row, &created)
+		}
+
 		row := q.QueryRow(ctx,
 			`INSERT INTO plan_executions (
 				tenant_id, plan_configuration_id, plan_configuration_snapshot, status, triggered_at
@@ -398,6 +412,68 @@ func (r *Repository) CreateExecution(ctx context.Context, execution *PlanExecuti
 		return nil, fmt.Errorf("create plan execution: %w", err)
 	}
 	return &created, nil
+}
+
+func (r *Repository) UpdateExecutionStatus(ctx context.Context, tenantID, executionID uuid.UUID, status string, completedAt *time.Time) error {
+	err := database.WithTenant(ctx, r.pool, tenantID, func(q database.Querier) error {
+		var currentStatus string
+		err := q.QueryRow(ctx,
+			`SELECT status
+			   FROM plan_executions
+			  WHERE id = $1 AND tenant_id = $2
+			  FOR UPDATE`,
+			executionID, tenantID,
+		).Scan(&currentStatus)
+		if err != nil {
+			return fmt.Errorf("load plan execution status: %w", err)
+		}
+
+		switch status {
+		case ExecutionStatusRunning:
+			if currentStatus == ExecutionStatusRunning {
+				return nil
+			}
+			if currentStatus != ExecutionStatusPending {
+				return fmt.Errorf("cannot move plan execution from %q to %q", currentStatus, status)
+			}
+		case ExecutionStatusCompleted:
+			if currentStatus == ExecutionStatusCompleted {
+				return nil
+			}
+			if currentStatus != ExecutionStatusRunning {
+				return fmt.Errorf("cannot move plan execution from %q to %q", currentStatus, status)
+			}
+		case ExecutionStatusFailed:
+			if currentStatus == ExecutionStatusFailed {
+				return nil
+			}
+			if currentStatus == ExecutionStatusCompleted || currentStatus == ExecutionStatusCancelled {
+				return fmt.Errorf("cannot move plan execution from %q to %q", currentStatus, status)
+			}
+		default:
+			return fmt.Errorf("unsupported plan execution status %q", status)
+		}
+
+		tag, err := q.Exec(ctx,
+			`UPDATE plan_executions
+			 SET status = $1,
+			     completed_at = $2,
+			     updated_at = now()
+			 WHERE id = $3 AND tenant_id = $4`,
+			status, completedAt, executionID, tenantID,
+		)
+		if err != nil {
+			return fmt.Errorf("update plan execution status: %w", err)
+		}
+		if tag.RowsAffected() == 0 {
+			return pgx.ErrNoRows
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("update plan execution status: %w", err)
+	}
+	return nil
 }
 
 func (r *Repository) GetExecution(ctx context.Context, tenantID, executionID uuid.UUID) (*PlanExecution, error) {
@@ -475,6 +551,95 @@ func (r *Repository) ListExecutions(ctx context.Context, tenantID uuid.UUID, con
 		return nil, err
 	}
 	return executions, nil
+}
+
+func (r *Repository) CreateStepExecution(ctx context.Context, step *StepExecution) (*StepExecution, error) {
+	var created StepExecution
+	err := database.WithTenant(ctx, r.pool, step.TenantID, func(q database.Querier) error {
+		row := q.QueryRow(ctx,
+			`WITH existing AS (
+				SELECT id, tenant_id, plan_execution_id, plan_step_key, status,
+				       COALESCE(input_artifact_id, '') AS input_artifact_id,
+				       COALESCE(output_artifact_id, '') AS output_artifact_id,
+				       executor_installation_snapshot, attempt,
+				       COALESCE(elicitation_thread_id, '') AS elicitation_thread_id,
+				       COALESCE(approval_request_id, '') AS approval_request_id,
+				       created_at, updated_at
+				  FROM step_executions
+				 WHERE tenant_id = $1
+				   AND plan_execution_id = $2
+				   AND plan_step_key = $3
+				   AND status IN ('running', 'awaiting_elicitation', 'awaiting_approval')
+				 ORDER BY attempt DESC
+				 LIMIT 1
+			), inserted AS (
+				INSERT INTO step_executions (
+					tenant_id, plan_execution_id, plan_step_key, status, input_artifact_id,
+					executor_installation_snapshot, attempt
+				)
+				SELECT $1, $2, $3, $4, NULLIF($5, ''), $6,
+				       COALESCE((
+					       SELECT MAX(prior.attempt) + 1
+					       FROM step_executions prior
+					       WHERE prior.tenant_id = $1
+					         AND prior.plan_execution_id = $2
+					         AND prior.plan_step_key = $3
+				       ), 1)
+				WHERE NOT EXISTS (SELECT 1 FROM existing)
+				RETURNING id, tenant_id, plan_execution_id, plan_step_key, status,
+				          COALESCE(input_artifact_id, ''), COALESCE(output_artifact_id, ''),
+				          executor_installation_snapshot, attempt,
+				          COALESCE(elicitation_thread_id, ''), COALESCE(approval_request_id, ''),
+				          created_at, updated_at
+			)
+			SELECT * FROM inserted
+			UNION ALL
+			SELECT * FROM existing
+			LIMIT 1`,
+			step.TenantID, step.PlanExecutionID, step.PlanStepKey, step.Status,
+			step.InputArtifactID, step.ExecutorInstallationSnapshot,
+		)
+		return scanStepExecution(row, &created)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create step execution: %w", err)
+	}
+	return &created, nil
+}
+
+func (r *Repository) UpdateStepExecutionStatus(
+	ctx context.Context,
+	tenantID uuid.UUID,
+	stepExecutionID uuid.UUID,
+	status string,
+	outputArtifactID string,
+	elicitationThreadID string,
+	approvalRequestID string,
+) error {
+	err := database.WithTenant(ctx, r.pool, tenantID, func(q database.Querier) error {
+		tag, err := q.Exec(ctx,
+			`UPDATE step_executions
+			 SET status = $1,
+			     output_artifact_id = COALESCE(NULLIF($2, ''), output_artifact_id),
+			     elicitation_thread_id = COALESCE(NULLIF($3, ''), elicitation_thread_id),
+			     approval_request_id = COALESCE(NULLIF($4, ''), approval_request_id),
+			     updated_at = now()
+			 WHERE id = $5 AND tenant_id = $6`,
+			status, outputArtifactID, elicitationThreadID, approvalRequestID,
+			stepExecutionID, tenantID,
+		)
+		if err != nil {
+			return fmt.Errorf("update step execution status: %w", err)
+		}
+		if tag.RowsAffected() == 0 {
+			return pgx.ErrNoRows
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("update step execution status: %w", err)
+	}
+	return nil
 }
 
 func (r *Repository) GetStepExecution(ctx context.Context, tenantID, stepExecutionID uuid.UUID) (*StepExecution, error) {

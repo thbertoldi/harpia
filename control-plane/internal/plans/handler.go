@@ -10,28 +10,42 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
+	"go.temporal.io/sdk/client"
 
 	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
 	"github.com/harpia/control-plane/internal/identity"
+	"github.com/harpia/control-plane/internal/workflow"
 )
 
 type PlanHandler struct {
-	repo      *Repository
-	validator *BindingValidator
-	schedule  *ScheduleManager
+	repo            *Repository
+	executors       ExecutorLookup
+	validator       *BindingValidator
+	schedule        *ScheduleManager
+	workflowStarter PlanWorkflowStarter
 }
 
-func NewPlanHandler(repo *Repository, executors ExecutorLookup, schedule *ScheduleManager) (*PlanHandler, error) {
+type PlanWorkflowStarter interface {
+	StartPlanWorkflow(ctx context.Context, input workflow.PlanWorkflowInput) (client.WorkflowRun, error)
+}
+
+func NewPlanHandler(repo *Repository, executors ExecutorLookup, schedule *ScheduleManager, starters ...PlanWorkflowStarter) (*PlanHandler, error) {
 	if repo == nil {
 		return nil, errors.New("plans: repository is required")
 	}
 	if executors == nil {
 		return nil, errors.New("plans: executor lookup is required")
 	}
+	var starter PlanWorkflowStarter
+	if len(starters) > 0 {
+		starter = starters[0]
+	}
 	return &PlanHandler{
-		repo:      repo,
-		validator: NewBindingValidator(executors),
-		schedule:  schedule,
+		repo:            repo,
+		executors:       executors,
+		validator:       NewBindingValidator(executors),
+		schedule:        schedule,
+		workflowStarter: starter,
 	}, nil
 }
 
@@ -314,8 +328,15 @@ func (h *PlanHandler) CreatePlanExecution(ctx context.Context, req *connect.Requ
 	if err := h.validator.ValidateConfigurationForExecution(ctx, tenantID, template, config); err != nil {
 		return nil, connectErrorFromBinding(err)
 	}
+	if h.workflowStarter == nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("workflow engine is unavailable"))
+	}
 
-	snapshot, err := json.Marshal(configurationToProto(config))
+	snapshot, err := buildPlanExecutionSnapshot(ctx, tenantID, config, template, h.executors, time.Now().UTC())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	rawSnapshot, err := marshalPlanExecutionSnapshot(snapshot)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -324,12 +345,23 @@ func (h *PlanHandler) CreatePlanExecution(ctx context.Context, req *connect.Requ
 	execution, err := h.repo.CreateExecution(ctx, &PlanExecution{
 		TenantID:                  tenantID,
 		PlanConfigurationID:       configID,
-		PlanConfigurationSnapshot: snapshot,
+		PlanConfigurationSnapshot: rawSnapshot,
 		Status:                    ExecutionStatusPending,
 		TriggeredAt:               &now,
 	})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	if _, err := h.workflowStarter.StartPlanWorkflow(ctx, workflow.PlanWorkflowInput{
+		TenantID:        tenantID.String(),
+		PlanExecutionID: execution.ID.String(),
+	}); err != nil {
+		completedAt := time.Now().UTC()
+		if markErr := h.repo.UpdateExecutionStatus(ctx, tenantID, execution.ID, ExecutionStatusFailed, &completedAt); markErr != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("start plan workflow: %w; additionally failed to mark execution failed: %v", err, markErr))
+		}
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("start plan workflow: %w", err))
 	}
 
 	return connect.NewResponse(&plansv1.CreatePlanExecutionResponse{
@@ -569,12 +601,12 @@ func templateToProto(t *PlanTemplate) *plansv1.PlanTemplate {
 
 func stepToProto(s *PlanStep) *plansv1.PlanStep {
 	step := &plansv1.PlanStep{
-		Id:                   s.ID.String(),
-		Key:                  s.Key,
-		Title:                s.Title,
-		Description:          s.Description,
-		InputArtifactTypeId:  s.InputArtifactTypeID,
-		OutputArtifactTypeId: s.OutputArtifactTypeID,
+		Id:                    s.ID.String(),
+		Key:                   s.Key,
+		Title:                 s.Title,
+		Description:           s.Description,
+		InputArtifactTypeId:   s.InputArtifactTypeID,
+		OutputArtifactTypeId:  s.OutputArtifactTypeID,
 		DefaultExecutorSkuKey: s.DefaultExecutorSKUKey,
 	}
 	if len(s.ExecutorRequirement) > 0 && string(s.ExecutorRequirement) != "{}" {
@@ -652,9 +684,14 @@ func executionToProto(e *PlanExecution) *plansv1.PlanExecution {
 	}
 
 	if len(e.PlanConfigurationSnapshot) > 0 {
-		var snapshot plansv1.PlanConfiguration
-		if err := json.Unmarshal(e.PlanConfigurationSnapshot, &snapshot); err == nil {
-			execution.PlanConfigurationSnapshot = &snapshot
+		var runtimeSnapshot workflow.PlanExecutionSnapshot
+		if err := json.Unmarshal(e.PlanConfigurationSnapshot, &runtimeSnapshot); err == nil && runtimeSnapshot.Configuration != nil {
+			execution.PlanConfigurationSnapshot = runtimeSnapshot.Configuration
+		} else {
+			var snapshot plansv1.PlanConfiguration
+			if err := json.Unmarshal(e.PlanConfigurationSnapshot, &snapshot); err == nil {
+				execution.PlanConfigurationSnapshot = &snapshot
+			}
 		}
 	}
 
