@@ -84,13 +84,21 @@
         {translate("plans.subheading", $locale)}
       </p>
     </div>
-    <span
-      class="rounded-full border border-plumage px-2.5 py-1 font-mono text-[10px] tracking-wider text-crown-ash uppercase"
-    >
-      {dataSource === "api"
-        ? translate("plans.source.live", $locale)
-        : translate("plans.source.mock", $locale)}
-    </span>
+    <div class="flex items-center gap-2">
+      <a
+        href={resolve("/plans/executions")}
+        class="rounded-md border border-plumage px-3 py-1.5 font-body text-xs text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
+      >
+        {translate("executions.list.heading", $locale)}
+      </a>
+      <span
+        class="rounded-full border border-plumage px-2.5 py-1 font-mono text-[10px] tracking-wider text-crown-ash uppercase"
+      >
+        {dataSource === "api"
+          ? translate("plans.source.live", $locale)
+          : translate("plans.source.mock", $locale)}
+      </span>
+    </div>
   </div>
 
   {#if loading}
