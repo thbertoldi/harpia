@@ -50,8 +50,17 @@ export type {
 export type {
   GetPlanTemplateByKeyResponse,
   GetPlanTemplateResponse,
+  GetPlanExecutionResponse,
+  ListPlanExecutionsResponse,
+  ListStepExecutionsResponse,
+  PlanExecution,
   ListPlanTemplatesResponse,
   PlanStep,
   PlanStepDependency,
   PlanTemplate,
+  StepExecution,
+} from "$lib/gen/harpia/plans/v1/plans_pb";
+export {
+  PlanExecutionStatus,
+  StepExecutionStatus,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
