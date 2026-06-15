@@ -26,6 +26,18 @@
   let error = $state<string | null>(null);
   let comment = $state("");
 
+  type FeedbackClientLike = Pick<
+    typeof feedbackClient,
+    "getFeedbackStatus" | "submitFeedback"
+  >;
+
+  function resolveFeedbackClient(): FeedbackClientLike {
+    const scope = globalThis as typeof globalThis & {
+      __HARPIA_E2E_OVERSEER__?: { feedbackClient?: FeedbackClientLike };
+    };
+    return scope.__HARPIA_E2E_OVERSEER__?.feedbackClient ?? feedbackClient;
+  }
+
   $effect(() => {
     loadFeedback();
   });
@@ -34,7 +46,8 @@
     loading = true;
     error = null;
     try {
-      const res = await feedbackClient.getFeedbackStatus({
+      const client = resolveFeedbackClient();
+      const res = await client.getFeedbackStatus({
         tenantId: requireTenantId(),
         feedbackId,
       });
@@ -53,7 +66,8 @@
     submitting = true;
     error = null;
     try {
-      await feedbackClient.submitFeedback({
+      const client = resolveFeedbackClient();
+      await client.submitFeedback({
         tenantId: requireTenantId(),
         feedbackId,
         decision,
@@ -95,6 +109,7 @@
   </div>
 {:else if submitted}
   <div
+    data-testid="feedback-submitted"
     class="animate-in fade-in flex flex-col items-center justify-center py-16 transition-all duration-500"
   >
     <div
@@ -115,7 +130,10 @@
   </div>
 {:else if feedback}
   <div class="transition-all duration-300">
-    <h2 class="mb-6 font-heading text-2xl font-bold text-cream">
+    <h2
+      data-testid="feedback-panel-title"
+      class="mb-6 font-heading text-2xl font-bold text-cream"
+    >
       {translate("feedback.yourReview", $locale)}
     </h2>
 
@@ -125,7 +143,10 @@
       >
         {translate("feedback.agentRequest", $locale)}
       </p>
-      <p class="font-body text-base leading-relaxed text-cream">
+      <p
+        data-testid="feedback-question"
+        class="font-body text-base leading-relaxed text-cream"
+      >
         {feedback.question}
       </p>
       {#if feedback.createdAt}
@@ -144,8 +165,9 @@
           {translate("feedback.agentOutput", $locale)}
         </p>
         <div class="max-h-64 overflow-y-auto">
-          {#each feedback.options as option (option)}
+          {#each feedback.options as option, idx (option)}
             <div
+              data-testid={`feedback-option-${idx}`}
               class="mb-2 rounded bg-obsidian-light px-3 py-2 font-mono text-sm leading-relaxed whitespace-pre-wrap text-crown-ash last:mb-0"
             >
               {option}
@@ -174,6 +196,7 @@
       <div class="flex gap-3">
         <button
           onclick={() => handleDecision(FeedbackDecision.APPROVE, "Approve")}
+          data-testid="feedback-approve"
           disabled={submitting}
           class="flex items-center gap-2 rounded-lg bg-talon-gold px-5 py-2.5 font-body text-sm font-medium text-obsidian transition-all hover:bg-talon-gold-bright disabled:cursor-not-allowed disabled:opacity-50"
         >
@@ -186,6 +209,7 @@
         </button>
         <button
           onclick={() => handleDecision(FeedbackDecision.REJECT, "Reject")}
+          data-testid="feedback-reject-retry"
           disabled={submitting}
           class="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-5 py-2.5 font-body text-sm font-medium text-red-400 transition-all hover:border-red-500/50 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50"
         >
@@ -198,6 +222,7 @@
         </button>
         <button
           onclick={() => handleDecision(FeedbackDecision.MODIFY, "Modify")}
+          data-testid="feedback-modify"
           disabled={submitting}
           class="flex items-center gap-2 rounded-lg border border-plumage bg-transparent px-5 py-2.5 font-body text-sm font-medium text-crown-ash transition-all hover:border-talon-gold hover:text-talon-gold disabled:cursor-not-allowed disabled:opacity-50"
         >
