@@ -44,6 +44,8 @@ spec:
               value: "http://garage:3900"
             - name: ZITADEL_URL
               value: "http://zitadel:8080"
+            - name: ZITADEL_HOST
+              value: "localhost:8085"
             - name: HARPIA_ALLOW_DEV_AUTH
               value: "true"
             - name: HARPIA_AUTO_PROVISION_DEFAULT_TENANT

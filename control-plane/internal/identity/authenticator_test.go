@@ -54,6 +54,30 @@ func TestZitadelAuthenticatorCachesSuccessfulUserInfo(t *testing.T) {
 	}
 }
 
+func TestZitadelAuthenticatorSetsConfiguredHostHeader(t *testing.T) {
+	authenticator := NewZitadelAuthenticator(
+		"http://zitadel:8080",
+		&http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			if req.URL.String() != "http://zitadel:8080/oidc/v1/userinfo" {
+				t.Fatalf("userinfo URL = %q", req.URL.String())
+			}
+			if req.Host != "localhost:8085" {
+				t.Fatalf("Host = %q, want localhost:8085", req.Host)
+			}
+			if got := req.Header.Get("Authorization"); got != "Bearer token" {
+				t.Fatalf("Authorization = %q", got)
+			}
+			return jsonResponse(`{"sub":"user-1"}`), nil
+		})},
+		0,
+		1024,
+	).WithHostHeader(" localhost:8085 ")
+
+	if _, err := authenticator.AuthenticateBearer(context.Background(), "token"); err != nil {
+		t.Fatalf("expected success, got %v", err)
+	}
+}
+
 func TestZitadelAuthenticatorMapsClientStatuses(t *testing.T) {
 	tests := []struct {
 		name   string
