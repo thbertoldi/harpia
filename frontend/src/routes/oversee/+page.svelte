@@ -11,6 +11,15 @@
   let error = $state<string | null>(null);
   let selectedId = $state<string | null>(null);
 
+  type FeedbackClientLike = Pick<typeof feedbackClient, "listPendingFeedback">;
+
+  function resolveFeedbackClient(): FeedbackClientLike {
+    const scope = globalThis as typeof globalThis & {
+      __HARPIA_E2E_OVERSEER__?: { feedbackClient?: FeedbackClientLike };
+    };
+    return scope.__HARPIA_E2E_OVERSEER__?.feedbackClient ?? feedbackClient;
+  }
+
   $effect(() => {
     loadPending();
   });
@@ -19,8 +28,9 @@
     loading = true;
     error = null;
     try {
+      const client = resolveFeedbackClient();
       const pending: FeedbackRequest[] = [];
-      for await (const res of feedbackClient.listPendingFeedback({
+      for await (const res of client.listPendingFeedback({
         tenantId: requireTenantId(),
         pageSize: 50,
         pageToken: "",
@@ -103,6 +113,7 @@
           {#each feedbacks as fb (fb.id)}
             <button
               onclick={() => (selectedId = fb.id)}
+              data-testid={`feedback-item-${fb.id}`}
               class="w-full rounded-lg border text-left transition-all {selectedId ===
               fb.id
                 ? 'border-talon-gold bg-obsidian-light'
@@ -154,6 +165,7 @@
 
   {#if selectedId}
     <div
+      data-testid="feedback-detail-panel"
       class="w-[480px] shrink-0 overflow-y-auto border-l border-plumage bg-obsidian-light transition-all duration-300"
     >
       <div
