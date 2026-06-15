@@ -12,7 +12,7 @@ import (
 	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
 	"go.temporal.io/sdk/workflow"
 
-	"github.com/harpia/control-plane/internal/integrations/rss"
+	"github.com/harpia/control-plane/internal/executors"
 )
 
 const PlanScheduledExecutionWorkflowName = "PlanScheduledExecution"
@@ -195,8 +195,7 @@ type PlanRuntimeStore interface {
 
 type PlanActivities struct {
 	Runtime       PlanRuntimeStore
-	Artifacts     *ArtifactIO
-	FeedFetcher   rss.FeedFetcher
+	Integrations  executors.IntegrationRunner
 }
 
 func (a *PlanActivities) CreateScheduledPlanExecutionActivity(ctx context.Context, input PlanExecutionInput) (PlanWorkflowInput, error) {
@@ -311,16 +310,6 @@ func (a *PlanActivities) FailPlanExecutionActivity(ctx context.Context, input Pl
 		return err
 	}
 	return a.Runtime.FailPlanExecution(ctx, tenantID, executionID)
-}
-
-func (a *PlanActivities) RunIntegrationActivity(ctx context.Context, input ExecutorActivityInput) (ExecutorActivityResult, error) {
-	if rss.SupportsFetchNewsStep(input.PlanStepKey, input.ExecutorInstallationSnapshot.ExecutorSKUKey) {
-		return a.runRSSFetchNews(ctx, input)
-	}
-	return ExecutorActivityResult{
-		Status: ExecutorResultStatusFailed,
-		Error:  fmt.Sprintf("RunIntegration is not implemented for step %q", input.PlanStepKey),
-	}, nil
 }
 
 func (a *PlanActivities) RunAgentActivity(ctx context.Context, input ExecutorActivityInput) (ExecutorActivityResult, error) {

@@ -116,18 +116,6 @@ func (s stubFeedFetcher) Fetch(_ context.Context, _ string) (*gofeed.Feed, error
 	return s.feed, nil
 }
 
-func TestSupportsFetchNewsStep(t *testing.T) {
-	if !SupportsFetchNewsStep("fetch-news", "") {
-		t.Fatal("expected fetch-news step to be supported")
-	}
-	if !SupportsFetchNewsStep("", "rss-news-feed") {
-		t.Fatal("expected rss-news-feed sku to be supported")
-	}
-	if SupportsFetchNewsStep("publish-linkedin", "linkedin-publish") {
-		t.Fatal("did not expect linkedin step to be supported")
-	}
-}
-
 func TestItemToNewsArticleUsesPublishedDate(t *testing.T) {
 	published := time.Date(2026, 1, 5, 15, 4, 5, 0, time.UTC)
 	article := itemToNewsArticle(&gofeed.Item{

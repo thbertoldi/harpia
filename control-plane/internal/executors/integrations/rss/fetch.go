@@ -13,8 +13,6 @@ import (
 	artifactsv1 "github.com/harpia/control-plane/gen/harpia/artifacts/v1"
 )
 
-const fetchNewsStepKey = "fetch-news"
-
 type FeedFetcher interface {
 	Fetch(ctx context.Context, feedURL string) (*gofeed.Feed, error)
 }
@@ -100,11 +98,6 @@ func FetchNewsList(ctx context.Context, fetcher FeedFetcher, feeds []string, dat
 	})
 
 	return &artifactsv1.NewsList{Articles: articles}, nil
-}
-
-func SupportsFetchNewsStep(planStepKey, executorSKUKey string) bool {
-	return strings.TrimSpace(planStepKey) == fetchNewsStepKey ||
-		strings.TrimSpace(executorSKUKey) == "rss-news-feed"
 }
 
 func itemToNewsArticle(item *gofeed.Item, source string) *artifactsv1.NewsArticle {

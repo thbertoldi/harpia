@@ -27,9 +27,9 @@ import (
 	"github.com/harpia/control-plane/internal/config"
 	"github.com/harpia/control-plane/internal/database"
 	"github.com/harpia/control-plane/internal/executors"
+	"github.com/harpia/control-plane/internal/executors/integrations/rss"
 	"github.com/harpia/control-plane/internal/feedback"
 	"github.com/harpia/control-plane/internal/identity"
-	"github.com/harpia/control-plane/internal/integrations/rss"
 	"github.com/harpia/control-plane/internal/plans"
 	"github.com/harpia/control-plane/internal/server"
 	"github.com/harpia/control-plane/internal/storage"
@@ -87,10 +87,14 @@ func runWorker(ctx context.Context, cfg *config.Config) {
 		fatal("create garage store failed", "error", err)
 	}
 
+	artifactGateway := executors.NewArtifactGateway(artifactRepo, garageStore)
+	integrationRegistry := executors.NewIntegrationRegistry(
+		rss.NewHandler(artifactGateway, rss.NewHTTPFeedFetcher(nil)),
+	)
+
 	planActivities := &workflow.PlanActivities{
-		Runtime:     plans.NewRuntimeRepository(planRepo, executorRepo),
-		Artifacts:   workflow.NewArtifactIO(artifactRepo, garageStore),
-		FeedFetcher: rss.NewHTTPFeedFetcher(nil),
+		Runtime:      plans.NewRuntimeRepository(planRepo, executorRepo),
+		Integrations: integrationRegistry,
 	}
 
 	c, err := client.Dial(client.Options{HostPort: cfg.TemporalHost})
