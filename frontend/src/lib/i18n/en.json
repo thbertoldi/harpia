@@ -336,7 +336,7 @@
   "integrations.heading": "Integrations",
   "integrations.subheading": "Register MCP servers, connect OAuth providers, and browse available tools.",
   "integrations.accessDenied": "Access Denied",
-  "integrations.accessDeniedDescription": "Integrations and MCP server configuration are available to Platform Engineers only. Your current role is",
+  "integrations.accessDeniedDescription": "Integrations and MCP server configuration require tenant configuration access. Your current role is",
   "integrations.returnTasks": "Return to Tasks",
   "integrations.addServer": "Add Server",
   "integrations.addMcpServer": "Add MCP Server",

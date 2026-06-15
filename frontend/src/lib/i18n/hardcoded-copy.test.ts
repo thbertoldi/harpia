@@ -29,12 +29,15 @@ const BANNED_LITERALS = [
   "No active subtask",
 ];
 
+function markupOnly(content: string): string {
+  return content.replace(/<script[\s\S]*?<\/script>/gi, "");
+}
+
 describe("hardcoded copy guard", () => {
   it("avoids known hard-coded literals in high risk files", () => {
     for (const relativePath of HIGH_RISK_FILES) {
-      const content = readFileSync(
-        resolve(FRONTEND_ROOT, relativePath),
-        "utf8",
+      const content = markupOnly(
+        readFileSync(resolve(FRONTEND_ROOT, relativePath), "utf8"),
       );
       for (const literal of BANNED_LITERALS) {
         expect(

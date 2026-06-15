@@ -8,30 +8,51 @@ import {
 
 describe("nav sections registry", () => {
   it("includes base sections for all roles", () => {
-    expect(filterNavSections("Leader")).toHaveLength(4);
+    expect(filterNavSections("Leader")).toHaveLength(7);
     expect(filterNavSections(undefined)).toHaveLength(4);
   });
 
-  it("shows integrations to engineers only", () => {
-    expect(filterNavSections("Engineer")).toHaveLength(7);
+  it("shows integrations to leaders and engineers", () => {
+    expect(
+      filterNavSections("Leader").some((d) => d.href === "/integrations"),
+    ).toBe(true);
     expect(
       filterNavSections("Engineer").some((d) => d.href === "/integrations"),
     ).toBe(true);
-    expect(filterNavSections("Leader")).toHaveLength(4);
+    expect(
+      filterNavSections("Overseer").some((d) => d.href === "/integrations"),
+    ).toBe(false);
   });
 
-  it("shows audit log to overseer and engineer", () => {
-    expect(filterNavSections("Overseer")).toHaveLength(5);
-    expect(filterNavSections("Engineer")).toHaveLength(7);
-    expect(filterNavSections("Leader")).toHaveLength(4);
+  it("shows audit log to leader, overseer, and engineer", () => {
+    expect(filterNavSections("Leader").some((d) => d.href === "/audit")).toBe(
+      true,
+    );
+    expect(filterNavSections("Overseer").some((d) => d.href === "/audit")).toBe(
+      true,
+    );
+    expect(filterNavSections("Engineer").some((d) => d.href === "/audit")).toBe(
+      true,
+    );
   });
 
-  it("shows agents catalog to engineers only", () => {
-    expect(filterNavSections("Engineer")).toHaveLength(7);
+  it("shows agents catalog to leaders and engineers", () => {
+    expect(filterNavSections("Leader").some((d) => d.href === "/agents")).toBe(
+      true,
+    );
     expect(
       filterNavSections("Engineer").some((d) => d.href === "/agents"),
     ).toBe(true);
-    expect(filterNavSections("Leader")).toHaveLength(4);
+    expect(
+      filterNavSections("Overseer").some((d) => d.href === "/agents"),
+    ).toBe(false);
+  });
+
+  it("hides permission-gated sections from unknown roles", () => {
+    expect(filterNavSections("member")).toHaveLength(4);
+    expect(filterNavSections("member").some((d) => d.href === "/audit")).toBe(
+      false,
+    );
   });
 
   it("shows plan catalog to all authenticated roles", () => {
@@ -52,6 +73,9 @@ describe("nav sections registry", () => {
       "t:nav.ongoing",
       "t:nav.oversee",
       "t:nav.plans",
+      "t:nav.integrations",
+      "t:nav.audit",
+      "t:nav.agents",
     ]);
   });
 });

@@ -14,7 +14,7 @@
   } from "lucide-svelte";
   import { page } from "$app/state";
   import { resolve } from "$app/paths";
-  import { isEngineer } from "$lib/auth";
+  import { canManageIntegrations } from "$lib/auth";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
   import McpStatusBadge from "$lib/components/McpStatusBadge.svelte";
   import { locale, translate } from "$lib/i18n";
@@ -31,7 +31,7 @@
   } from "$lib/mocks/mcp-servers";
 
   const user = $derived(page.data.user);
-  const engineerAccess = $derived(isEngineer(user));
+  const integrationAccess = $derived(canManageIntegrations(user));
 
   let servers = $state<McpServer[]>([]);
   let expandedServerIds = $state<string[]>([]);
@@ -51,7 +51,7 @@
   let bindNotice = $state<string | null>(null);
 
   $effect(() => {
-    if (engineerAccess) {
+    if (integrationAccess) {
       servers = getMockMcpServers();
     }
   });
@@ -211,7 +211,7 @@
 </script>
 
 <div class="mx-auto max-w-5xl px-4 py-6 lg:px-6">
-  {#if !engineerAccess}
+  {#if !integrationAccess}
     <div
       class="flex flex-col items-center justify-center rounded-lg border border-plumage bg-obsidian-light/40 px-6 py-16 text-center"
     >

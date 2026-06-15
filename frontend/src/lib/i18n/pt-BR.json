@@ -336,7 +336,7 @@
   "integrations.heading": "Integrações",
   "integrations.subheading": "Registre servidores MCP, conecte provedores OAuth e navegue pelas ferramentas disponíveis.",
   "integrations.accessDenied": "Acesso negado",
-  "integrations.accessDeniedDescription": "Integrações e configuração de servidores MCP estão disponíveis apenas para Engenheiros de Plataforma. Sua função atual é",
+  "integrations.accessDeniedDescription": "Integrações e configuração de servidores MCP exigem acesso de configuração do tenant. Sua função atual é",
   "integrations.returnTasks": "Voltar para tarefas",
   "integrations.addServer": "Adicionar servidor",
   "integrations.addMcpServer": "Adicionar servidor MCP",
