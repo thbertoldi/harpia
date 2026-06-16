@@ -59,8 +59,17 @@ export type {
   PlanStepDependency,
   PlanTemplate,
   StepExecution,
+  ElicitationRequest,
+  ThreadMessage,
+  ListElicitationsResponse,
+  GetElicitationResponse,
+  RespondToElicitationResponse,
+  WatchElicitationsResponse,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
 export {
   PlanExecutionStatus,
   StepExecutionStatus,
+  ElicitationStatus,
+  ElicitationTimeoutBehavior,
+  ThreadMessageRole,
 } from "$lib/gen/harpia/plans/v1/plans_pb";

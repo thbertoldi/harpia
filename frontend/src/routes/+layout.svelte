@@ -3,6 +3,7 @@
   import { Menu, X, Sun, Moon } from "lucide-svelte";
   import TenantSelector from "$lib/components/TenantSelector.svelte";
   import FeedbackBadge from "$lib/components/FeedbackBadge.svelte";
+  import ElicitationBadge from "$lib/components/ElicitationBadge.svelte";
   import BrandLockup from "$lib/components/BrandLockup.svelte";
   import { logout, getTenant } from "$lib/auth";
   import { page } from "$app/state";
@@ -127,6 +128,9 @@
               >
               {#if section.href === "/oversee"}
                 <FeedbackBadge />
+              {/if}
+              {#if section.href === "/elicitations"}
+                <ElicitationBadge />
               {/if}
             </a>
           {/each}
