@@ -2,15 +2,17 @@ package bootstrap
 
 import (
 	"github.com/harpia/control-plane/internal/artifacts"
+	"github.com/harpia/control-plane/internal/executors/integrations/linkedin"
 	"github.com/harpia/control-plane/internal/executors/integrations/rss"
 	"github.com/harpia/control-plane/internal/executors/runtime"
 )
 
 // Dependencies wires infrastructure ports required by the executor runtime.
 type Dependencies struct {
-	ArtifactRepo runtime.ArtifactRepository
-	PayloadStore artifacts.PayloadStore
-	FeedFetcher  rss.FeedFetcher
+	ArtifactRepo      runtime.ArtifactRepository
+	PayloadStore      artifacts.PayloadStore
+	FeedFetcher       rss.FeedFetcher
+	LinkedInPublisher linkedin.LinkedInPublisher
 }
 
 // Runtime owns integration execution wiring for the control-plane worker.
@@ -26,14 +28,19 @@ func NewRuntime(deps Dependencies) *Runtime {
 	if deps.FeedFetcher == nil {
 		deps.FeedFetcher = rss.NewHTTPFeedFetcher(nil)
 	}
+	if deps.LinkedInPublisher == nil {
+		deps.LinkedInPublisher = linkedin.NewNoopPublisher()
+	}
 
 	configValidators := runtime.NewConfigValidatorRegistry(
 		rss.NewConfigValidator(),
+		linkedin.NewConfigValidator(),
 	)
 
 	return &Runtime{
 		Integrations: runtime.NewIntegrationRegistry(
 			rss.NewHandler(artifactStore, deps.FeedFetcher),
+			linkedin.NewHandler(artifactStore, deps.LinkedInPublisher),
 		),
 		ArtifactStore:    artifactStore,
 		ConfigValidators: configValidators,
@@ -44,5 +51,6 @@ func NewRuntime(deps Dependencies) *Runtime {
 func DefaultConfigValidators() *runtime.ConfigValidatorRegistry {
 	return runtime.NewConfigValidatorRegistry(
 		rss.NewConfigValidator(),
+		linkedin.NewConfigValidator(),
 	)
 }
