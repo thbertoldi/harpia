@@ -9,6 +9,7 @@ import (
 	"go.temporal.io/sdk/temporal"
 
 	"github.com/harpia/control-plane/internal/executors"
+	"github.com/harpia/control-plane/internal/executors/runtime"
 )
 
 func (a *PlanActivities) RunIntegrationActivity(ctx context.Context, input ExecutorActivityInput) (ExecutorActivityResult, error) {
@@ -26,7 +27,7 @@ func (a *PlanActivities) RunIntegrationActivity(ctx context.Context, input Execu
 
 	result, err := a.Integrations.Run(ctx, mapIntegrationRequest(tenantID, input))
 	if err != nil {
-		var retryable *executors.RetryableError
+		var retryable *runtime.RetryableError
 		if errors.As(err, &retryable) {
 			return ExecutorActivityResult{}, temporal.NewApplicationError(
 				retryable.Error(),
@@ -43,7 +44,7 @@ func mapIntegrationRequest(tenantID uuid.UUID, input ExecutorActivityInput) exec
 	inputArtifacts := make([]executors.InputArtifactRef, 0, len(input.InputArtifacts))
 	for _, ref := range input.InputArtifacts {
 		inputArtifacts = append(inputArtifacts, executors.InputArtifactRef{
-			ArtifactType: ref.ArtifactType,
+			ArtifactTypeKey: ref.ArtifactTypeKey,
 			ArtifactID:   ref.ArtifactID,
 			LiteralJSON:  ref.LiteralJSON,
 		})
@@ -59,7 +60,7 @@ func mapIntegrationRequest(tenantID uuid.UUID, input ExecutorActivityInput) exec
 		StepExecutionID:      input.StepExecutionID,
 		PlanStepKey:          input.PlanStepKey,
 		InputArtifacts:       inputArtifacts,
-		OutputArtifactTypeKey: input.OutputArtifactTypeID,
+		OutputArtifactTypeKey: input.OutputArtifactTypeKey,
 		Installation: executors.InstallationSnapshot{
 			ID:             input.ExecutorInstallationSnapshot.ID,
 			ExecutorSKUID:  input.ExecutorInstallationSnapshot.ExecutorSKUID,

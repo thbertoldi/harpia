@@ -105,7 +105,7 @@ func TestExecutorArtifactStoreCreateValidatedPayloadAcceptsTypeKeyRef(t *testing
 
 	artifactID, err := artifactStore.CreateValidatedPayload(context.Background(), executors.CreateArtifactRequest{
 		TenantID:              uuid.MustParse("22222222-2222-2222-2222-222222222222"),
-		OutputArtifactTypeRef: artifacts.TypeKeyNewsList,
+		OutputArtifactTypeKey: artifacts.TypeKeyNewsList,
 		StepExecutionID:       "step-fetch-news",
 		Payload:               payload,
 	})

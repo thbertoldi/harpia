@@ -13,6 +13,7 @@ import (
 	"github.com/harpia/control-plane/internal/artifacts"
 	"github.com/harpia/control-plane/internal/executors"
 	"github.com/harpia/control-plane/internal/executors/integrations/rss"
+	"github.com/harpia/control-plane/internal/executors/runtime"
 )
 
 type memoryArtifactRepo struct {
@@ -81,9 +82,9 @@ func (m *memoryPayloadStore) Get(_ context.Context, storageURI string) ([]byte, 
 	return append([]byte(nil), payload...), nil
 }
 
-func newTestArtifactStore() *executors.ExecutorArtifactStoreAdapter {
+func newTestArtifactStore() runtime.ExecutorArtifactStore {
 	typeID := uuid.MustParse("33333333-3333-3333-3333-333333333333")
-	return executors.NewExecutorArtifactStore(&memoryArtifactRepo{
+	return runtime.NewExecutorArtifactStore(&memoryArtifactRepo{
 		types: map[string]*artifacts.ArtifactType{
 			artifacts.TypeKeyNewsList: {ID: typeID, Key: artifacts.TypeKeyNewsList},
 		},
@@ -114,15 +115,15 @@ func TestHandlerExecuteSuccessWithPlanTemplateTypeKey(t *testing.T) {
 		}},
 	}})
 
-	result, err := handler.Execute(context.Background(), executors.IntegrationExecutionRequest{
+	result, err := handler.Execute(context.Background(), runtime.IntegrationExecutionRequest{
 		TenantID:              uuid.MustParse("22222222-2222-2222-2222-222222222222"),
 		StepExecutionID:       "step-fetch-news",
 		OutputArtifactTypeKey: artifacts.TypeKeyNewsList,
-		InputArtifacts: []executors.InputArtifactRef{{
-			ArtifactType: artifacts.TypeKeyDateRange,
+		InputArtifacts: []runtime.InputArtifactRef{{
+			ArtifactTypeKey: artifacts.TypeKeyDateRange,
 			LiteralJSON:  `{"startDate":"2026-01-01","endDate":"2026-01-07"}`,
 		}},
-		Installation: executors.InstallationSnapshot{
+		Installation: runtime.InstallationSnapshot{
 			ExecutorSKUKey: executors.SKURSSNewsFeed,
 			ConfigJSON:     json.RawMessage(`{"feeds":["https://example.com/rss"]}`),
 		},
@@ -130,7 +131,7 @@ func TestHandlerExecuteSuccessWithPlanTemplateTypeKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
-	if result.Status != executors.IntegrationStatusCompleted {
+	if result.Status != runtime.IntegrationStatusCompleted {
 		t.Fatalf("Status = %q, want completed (%s)", result.Status, result.Error)
 	}
 	if result.OutputArtifactID == "" {
@@ -140,20 +141,20 @@ func TestHandlerExecuteSuccessWithPlanTemplateTypeKey(t *testing.T) {
 
 func TestHandlerExecuteInvalidConfig(t *testing.T) {
 	handler := rss.NewHandler(newTestArtifactStore(), stubFeedFetcher{})
-	result, err := handler.Execute(context.Background(), executors.IntegrationExecutionRequest{
+	result, err := handler.Execute(context.Background(), runtime.IntegrationExecutionRequest{
 		TenantID: uuid.MustParse("22222222-2222-2222-2222-222222222222"),
-		InputArtifacts: []executors.InputArtifactRef{{
-			ArtifactType: artifacts.TypeKeyDateRange,
+		InputArtifacts: []runtime.InputArtifactRef{{
+			ArtifactTypeKey: artifacts.TypeKeyDateRange,
 			LiteralJSON:  `{"startDate":"2026-01-01","endDate":"2026-01-07"}`,
 		}},
-		Installation: executors.InstallationSnapshot{
+		Installation: runtime.InstallationSnapshot{
 			ConfigJSON: json.RawMessage(`{}`),
 		},
 	})
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
-	if result.Status != executors.IntegrationStatusFailed {
+	if result.Status != runtime.IntegrationStatusFailed {
 		t.Fatalf("Status = %q, want failed", result.Status)
 	}
 }
@@ -162,32 +163,32 @@ func TestHandlerExecuteDeadFeedReturnsRetryableError(t *testing.T) {
 	handler := rss.NewHandler(newTestArtifactStore(), stubFeedFetcher{err: errors.New("connection refused")})
 	_, err := handler.Execute(context.Background(), executors.IntegrationExecutionRequest{
 		TenantID: uuid.MustParse("22222222-2222-2222-2222-222222222222"),
-		InputArtifacts: []executors.InputArtifactRef{{
-			ArtifactType: artifacts.TypeKeyDateRange,
+		InputArtifacts: []runtime.InputArtifactRef{{
+			ArtifactTypeKey: artifacts.TypeKeyDateRange,
 			LiteralJSON:  `{"startDate":"2026-01-01","endDate":"2026-01-07"}`,
 		}},
-		Installation: executors.InstallationSnapshot{
+		Installation: runtime.InstallationSnapshot{
 			ConfigJSON: json.RawMessage(`{"feeds":["https://example.com/rss"]}`),
 		},
 	})
 	if err == nil {
 		t.Fatal("expected retryable error")
 	}
-	var retryable *executors.RetryableError
+	var retryable *runtime.RetryableError
 	if !errors.As(err, &retryable) {
-		t.Fatalf("error = %T(%v), want *executors.RetryableError", err, err)
+		t.Fatalf("error = %T(%v), want *runtime.RetryableError", err, err)
 	}
 }
 
 func TestIntegrationRegistryRoutesBySKUKey(t *testing.T) {
-	registry := executors.NewIntegrationRegistry(rss.NewHandler(newTestArtifactStore(), stubFeedFetcher{}))
-	result, err := registry.Run(context.Background(), executors.IntegrationExecutionRequest{
-		Installation: executors.InstallationSnapshot{ExecutorSKUKey: executors.SKULinkedInPublish},
+	registry := runtime.NewIntegrationRegistry(rss.NewHandler(newTestArtifactStore(), stubFeedFetcher{}))
+	result, err := registry.Run(context.Background(), runtime.IntegrationExecutionRequest{
+		Installation: runtime.InstallationSnapshot{ExecutorSKUKey: executors.SKULinkedInPublish},
 	})
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
-	if result.Status != executors.IntegrationStatusFailed {
+	if result.Status != runtime.IntegrationStatusFailed {
 		t.Fatalf("Status = %q, want failed", result.Status)
 	}
 }

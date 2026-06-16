@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -17,14 +18,18 @@ import (
 )
 
 type Handler struct {
-	repo *Repository
+	repo               *Repository
+	configValidators   *ConfigValidatorRegistry
 }
 
-func NewHandler(repo *Repository) (*Handler, error) {
+func NewHandler(repo *Repository, configValidators *ConfigValidatorRegistry) (*Handler, error) {
 	if repo == nil {
 		return nil, errors.New("executors: repository is required")
 	}
-	return &Handler{repo: repo}, nil
+	if configValidators == nil {
+		configValidators = DefaultConfigValidators()
+	}
+	return &Handler{repo: repo, configValidators: configValidators}, nil
 }
 
 func (h *Handler) ListExecutorSKUs(ctx context.Context, req *connect.Request[executorsv1.ListExecutorSKUsRequest], stream *connect.ServerStream[executorsv1.ListExecutorSKUsResponse]) error {
@@ -319,6 +324,11 @@ func (h *Handler) CreateExecutorInstallation(ctx context.Context, req *connect.R
 					return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("integration config_json must be valid JSON"))
 				}
 				configJSON = json.RawMessage(detail.Integration.ConfigJson)
+			}
+		}
+		if trimmed := strings.TrimSpace(string(configJSON)); trimmed != "" && trimmed != "{}" && trimmed != "null" {
+			if err := h.configValidators.Validate(sku.Key, configJSON); err != nil {
+				return nil, connect.NewError(connect.CodeInvalidArgument, err)
 			}
 		}
 		installation.ConnectionStatus = &status

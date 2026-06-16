@@ -9,13 +9,14 @@ import (
 
 	"github.com/harpia/control-plane/internal/artifacts"
 	"github.com/harpia/control-plane/internal/executors"
+	"github.com/harpia/control-plane/internal/executors/runtime"
 	"github.com/harpia/control-plane/internal/workflow"
 )
 
 type retryingRunner struct{}
 
 func (retryingRunner) Run(_ context.Context, _ executors.IntegrationExecutionRequest) (executors.IntegrationExecutionResult, error) {
-	return executors.IntegrationExecutionResult{}, executors.NewRetryableError("FeedFetchError", "feed fetch failed", errors.New("connection refused"))
+	return executors.IntegrationExecutionResult{}, runtime.NewRetryableError(runtime.ErrCodeFeedFetch, "feed fetch failed", errors.New("connection refused"))
 }
 
 func TestRunIntegrationActivityMapsRetryableError(t *testing.T) {
@@ -25,7 +26,7 @@ func TestRunIntegrationActivityMapsRetryableError(t *testing.T) {
 		TenantID:        "22222222-2222-2222-2222-222222222222",
 		StepExecutionID: "step-fetch-news",
 		InputArtifacts: []workflow.ArtifactRef{{
-			ArtifactType: artifacts.TypeKeyDateRange,
+			ArtifactTypeKey: artifacts.TypeKeyDateRange,
 			LiteralJSON:  `{"startDate":"2026-01-01","endDate":"2026-01-07"}`,
 		}},
 		ExecutorInstallationSnapshot: workflow.ExecutorInstallationSnapshot{

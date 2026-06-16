@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
-	"github.com/harpia/control-plane/internal/executors"
+	executorpkg "github.com/harpia/control-plane/internal/executors"
 )
 
 var (
@@ -20,9 +20,9 @@ var (
 )
 
 type ExecutorLookup interface {
-	GetInstallationByID(ctx context.Context, tenantID, id uuid.UUID) (*executors.ExecutorInstallation, error)
-	GetSKUByID(ctx context.Context, id uuid.UUID) (*executors.ExecutorSKU, error)
-	ListEntitlements(ctx context.Context, tenantID uuid.UUID, skuID *uuid.UUID, limit, offset int) ([]executors.ExecutorEntitlement, error)
+	GetInstallationByID(ctx context.Context, tenantID, id uuid.UUID) (*executorpkg.ExecutorInstallation, error)
+	GetSKUByID(ctx context.Context, id uuid.UUID) (*executorpkg.ExecutorSKU, error)
+	ListEntitlements(ctx context.Context, tenantID uuid.UUID, skuID *uuid.UUID, limit, offset int) ([]executorpkg.ExecutorEntitlement, error)
 }
 
 type BindingValidationError struct {
@@ -60,11 +60,16 @@ func (e *BindingValidationError) Unwrap() error {
 }
 
 type BindingValidator struct {
-	executors ExecutorLookup
+	executorLookup   ExecutorLookup
+	configValidators *executorpkg.ConfigValidatorRegistry
 }
 
-func NewBindingValidator(executors ExecutorLookup) *BindingValidator {
-	return &BindingValidator{executors: executors}
+func NewBindingValidator(lookup ExecutorLookup, configValidators ...*executorpkg.ConfigValidatorRegistry) *BindingValidator {
+	registry := executorpkg.DefaultConfigValidators()
+	if len(configValidators) > 0 && configValidators[0] != nil {
+		registry = configValidators[0]
+	}
+	return &BindingValidator{executorLookup: lookup, configValidators: registry}
 }
 
 func (v *BindingValidator) ValidateSlotBindings(
@@ -74,7 +79,7 @@ func (v *BindingValidator) ValidateSlotBindings(
 	status plansv1.PlanConfigurationStatus,
 	slotBindings []*plansv1.SlotBinding,
 ) error {
-	if v == nil || v.executors == nil {
+	if v == nil || v.executorLookup == nil {
 		return errors.New("plans: binding validator is required")
 	}
 	if template == nil {
@@ -182,7 +187,7 @@ func (v *BindingValidator) validateBinding(
 		return bindingError(stepKey, skuID, installationID, connect.CodeInvalidArgument, "executor_installation_id must be a valid UUID")
 	}
 
-	installation, err := v.executors.GetInstallationByID(ctx, tenantID, parsedInstallationID)
+	installation, err := v.executorLookup.GetInstallationByID(ctx, tenantID, parsedInstallationID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return bindingError(stepKey, skuID, installationID, connect.CodeFailedPrecondition, "executor installation not found for tenant")
@@ -193,7 +198,7 @@ func (v *BindingValidator) validateBinding(
 		return bindingError(stepKey, skuID, installationID, connect.CodeFailedPrecondition, "executor installation does not belong to tenant")
 	}
 
-	sku, err := v.executors.GetSKUByID(ctx, installation.ExecutorSKUID)
+	sku, err := v.executorLookup.GetSKUByID(ctx, installation.ExecutorSKUID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return bindingError(stepKey, installation.ExecutorSKUID.String(), installationID, connect.CodeFailedPrecondition, "executor sku not found for installation")
@@ -221,7 +226,7 @@ func (v *BindingValidator) validateBinding(
 		}
 	}
 
-	entitlements, err := v.executors.ListEntitlements(ctx, tenantID, &installation.ExecutorSKUID, 1, 0)
+	entitlements, err := v.executorLookup.ListEntitlements(ctx, tenantID, &installation.ExecutorSKUID, 1, 0)
 	if err != nil {
 		return connect.NewError(connect.CodeInternal, fmt.Errorf("lookup executor entitlement: %w", err))
 	}
@@ -234,11 +239,11 @@ func (v *BindingValidator) validateBinding(
 			return bindingErrorWithSKU(stepKey, sku, installationID, connect.CodeFailedPrecondition, "executor installation is disabled")
 		}
 		switch installation.Kind {
-		case executors.KindIntegration:
-			if err := validateIntegrationReadiness(installation); err != nil {
+		case executorpkg.KindIntegration:
+			if err := v.validateIntegrationReadiness(installation, sku.Key); err != nil {
 				return bindingErrorWithSKU(stepKey, sku, installationID, connect.CodeFailedPrecondition, err.Error())
 			}
-		case executors.KindAgent:
+		case executorpkg.KindAgent:
 			if installation.ManifestID == nil || strings.TrimSpace(*installation.ManifestID) == "" ||
 				installation.ManifestVersion == nil || strings.TrimSpace(*installation.ManifestVersion) == "" {
 				return bindingErrorWithSKU(stepKey, sku, installationID, connect.CodeFailedPrecondition, "agent installation requires manifest_id and manifest_version")
@@ -249,7 +254,7 @@ func (v *BindingValidator) validateBinding(
 	return nil
 }
 
-func validateIntegrationReadiness(installation *executors.ExecutorInstallation) error {
+func (v *BindingValidator) validateIntegrationReadiness(installation *executorpkg.ExecutorInstallation, skuKey string) error {
 	status := "disconnected"
 	if installation.ConnectionStatus != nil {
 		status = strings.TrimSpace(*installation.ConnectionStatus)
@@ -265,7 +270,7 @@ func validateIntegrationReadiness(installation *executors.ExecutorInstallation) 
 	if !json.Valid(installation.ConfigJSON) {
 		return errors.New("integration installation config_json is invalid")
 	}
-	return nil
+	return v.configValidators.Validate(skuKey, installation.ConfigJSON)
 }
 
 func templateStepKeys(template *PlanTemplate) map[string]struct{} {
@@ -279,9 +284,9 @@ func templateStepKeys(template *PlanTemplate) map[string]struct{} {
 func plansExecutorKindToDB(kind plansv1.ExecutorKind) (string, error) {
 	switch kind {
 	case plansv1.ExecutorKind_EXECUTOR_KIND_INTEGRATION:
-		return executors.KindIntegration, nil
+		return executorpkg.KindIntegration, nil
 	case plansv1.ExecutorKind_EXECUTOR_KIND_AGENT:
-		return executors.KindAgent, nil
+		return executorpkg.KindAgent, nil
 	default:
 		return "", fmt.Errorf("unsupported executor kind %s", kind.String())
 	}
@@ -297,7 +302,7 @@ func bindingError(stepKey, skuID, installationID string, code connect.Code, reas
 	}
 }
 
-func bindingErrorWithSKU(stepKey string, sku *executors.ExecutorSKU, installationID string, code connect.Code, reason string) error {
+func bindingErrorWithSKU(stepKey string, sku *executorpkg.ExecutorSKU, installationID string, code connect.Code, reason string) error {
 	return &BindingValidationError{
 		StepKey:                stepKey,
 		ExecutorSKUID:          sku.ID.String(),

@@ -126,7 +126,7 @@ type ArtifactRef struct {
 	InputName    string `json:"input_name,omitempty"`
 	ArtifactID   string `json:"artifact_id,omitempty"`
 	LiteralJSON  string `json:"literal_json,omitempty"`
-	ArtifactType string `json:"artifact_type,omitempty"`
+	ArtifactTypeKey string `json:"artifact_type_key,omitempty"`
 }
 
 type ExecutorActivityInput struct {
@@ -135,7 +135,7 @@ type ExecutorActivityInput struct {
 	StepExecutionID              string                       `json:"step_execution_id"`
 	PlanStepKey                  string                       `json:"plan_step_key"`
 	InputArtifacts               []ArtifactRef                `json:"input_artifacts"`
-	OutputArtifactTypeID         string                       `json:"output_artifact_type_id"`
+	OutputArtifactTypeKey          string                       `json:"output_artifact_type_key"`
 	ExecutorInstallationSnapshot ExecutorInstallationSnapshot `json:"executor_installation_snapshot"`
 	ElicitationResponse          *ElicitationResponseSignal   `json:"elicitation_response,omitempty"`
 }
@@ -481,7 +481,7 @@ func runPlanWorkflow(ctx workflow.Context, input PlanWorkflowInput) (PlanWorkflo
 			StepExecutionID:              stepRecord.ID,
 			PlanStepKey:                  step.Key,
 			InputArtifacts:               inputArtifacts,
-			OutputArtifactTypeID:         step.OutputArtifactTypeId,
+			OutputArtifactTypeKey:         step.OutputArtifactTypeId,
 			ExecutorInstallationSnapshot: installation,
 		}
 
@@ -516,7 +516,7 @@ func runPlanWorkflow(ctx workflow.Context, input PlanWorkflowInput) (PlanWorkflo
 					Source:       "step_output",
 					StepKey:      step.Key,
 					ArtifactID:   executorResult.OutputArtifactID,
-					ArtifactType: step.OutputArtifactTypeId,
+					ArtifactTypeKey: step.OutputArtifactTypeId,
 				}
 
 			case ExecutorResultStatusElicitationRequested:
@@ -1012,8 +1012,8 @@ func stepInputArtifacts(
 	}
 	inputs := append([]ArtifactRef(nil), seedArtifacts[step.Key]...)
 	for i := range inputs {
-		if strings.TrimSpace(inputs[i].ArtifactType) == "" {
-			inputs[i].ArtifactType = step.InputArtifactTypeId
+		if strings.TrimSpace(inputs[i].ArtifactTypeKey) == "" {
+			inputs[i].ArtifactTypeKey = step.InputArtifactTypeId
 		}
 	}
 	if len(upstreamStepKeys) == 0 {
@@ -1045,7 +1045,7 @@ func validateStepInputArtifactTypes(step *plansv1.PlanStep, inputs []ArtifactRef
 		return nil
 	}
 	for _, input := range inputs {
-		actual := strings.TrimSpace(input.ArtifactType)
+		actual := strings.TrimSpace(input.ArtifactTypeKey)
 		if actual != "" && actual != expected {
 			return fmt.Errorf("step %q expected input artifact type %q but received %q from %q", step.Key, expected, actual, input.StepKey)
 		}
