@@ -72,6 +72,18 @@ const (
 	// PlanServiceListStepExecutionsProcedure is the fully-qualified name of the PlanService's
 	// ListStepExecutions RPC.
 	PlanServiceListStepExecutionsProcedure = "/harpia.plans.v1.PlanService/ListStepExecutions"
+	// PlanServiceListElicitationsProcedure is the fully-qualified name of the PlanService's
+	// ListElicitations RPC.
+	PlanServiceListElicitationsProcedure = "/harpia.plans.v1.PlanService/ListElicitations"
+	// PlanServiceGetElicitationProcedure is the fully-qualified name of the PlanService's
+	// GetElicitation RPC.
+	PlanServiceGetElicitationProcedure = "/harpia.plans.v1.PlanService/GetElicitation"
+	// PlanServiceRespondToElicitationProcedure is the fully-qualified name of the PlanService's
+	// RespondToElicitation RPC.
+	PlanServiceRespondToElicitationProcedure = "/harpia.plans.v1.PlanService/RespondToElicitation"
+	// PlanServiceWatchElicitationsProcedure is the fully-qualified name of the PlanService's
+	// WatchElicitations RPC.
+	PlanServiceWatchElicitationsProcedure = "/harpia.plans.v1.PlanService/WatchElicitations"
 )
 
 // PlanServiceClient is a client for the harpia.plans.v1.PlanService service.
@@ -92,6 +104,12 @@ type PlanServiceClient interface {
 	ListPlanExecutions(context.Context, *connect.Request[v1.ListPlanExecutionsRequest]) (*connect.ServerStreamForClient[v1.ListPlanExecutionsResponse], error)
 	GetStepExecution(context.Context, *connect.Request[v1.GetStepExecutionRequest]) (*connect.Response[v1.GetStepExecutionResponse], error)
 	ListStepExecutions(context.Context, *connect.Request[v1.ListStepExecutionsRequest]) (*connect.ServerStreamForClient[v1.ListStepExecutionsResponse], error)
+	// In-app elicitation thread (E5.1, FR-11, UX-DR5).
+	// Overseers receive and answer agent questions scoped to a StepExecution.
+	ListElicitations(context.Context, *connect.Request[v1.ListElicitationsRequest]) (*connect.Response[v1.ListElicitationsResponse], error)
+	GetElicitation(context.Context, *connect.Request[v1.GetElicitationRequest]) (*connect.Response[v1.GetElicitationResponse], error)
+	RespondToElicitation(context.Context, *connect.Request[v1.RespondToElicitationRequest]) (*connect.Response[v1.RespondToElicitationResponse], error)
+	WatchElicitations(context.Context, *connect.Request[v1.WatchElicitationsRequest]) (*connect.ServerStreamForClient[v1.WatchElicitationsResponse], error)
 }
 
 // NewPlanServiceClient constructs a client for the harpia.plans.v1.PlanService service. By default,
@@ -183,6 +201,30 @@ func NewPlanServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(planServiceMethods.ByName("ListStepExecutions")),
 			connect.WithClientOptions(opts...),
 		),
+		listElicitations: connect.NewClient[v1.ListElicitationsRequest, v1.ListElicitationsResponse](
+			httpClient,
+			baseURL+PlanServiceListElicitationsProcedure,
+			connect.WithSchema(planServiceMethods.ByName("ListElicitations")),
+			connect.WithClientOptions(opts...),
+		),
+		getElicitation: connect.NewClient[v1.GetElicitationRequest, v1.GetElicitationResponse](
+			httpClient,
+			baseURL+PlanServiceGetElicitationProcedure,
+			connect.WithSchema(planServiceMethods.ByName("GetElicitation")),
+			connect.WithClientOptions(opts...),
+		),
+		respondToElicitation: connect.NewClient[v1.RespondToElicitationRequest, v1.RespondToElicitationResponse](
+			httpClient,
+			baseURL+PlanServiceRespondToElicitationProcedure,
+			connect.WithSchema(planServiceMethods.ByName("RespondToElicitation")),
+			connect.WithClientOptions(opts...),
+		),
+		watchElicitations: connect.NewClient[v1.WatchElicitationsRequest, v1.WatchElicitationsResponse](
+			httpClient,
+			baseURL+PlanServiceWatchElicitationsProcedure,
+			connect.WithSchema(planServiceMethods.ByName("WatchElicitations")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -201,6 +243,10 @@ type planServiceClient struct {
 	listPlanExecutions      *connect.Client[v1.ListPlanExecutionsRequest, v1.ListPlanExecutionsResponse]
 	getStepExecution        *connect.Client[v1.GetStepExecutionRequest, v1.GetStepExecutionResponse]
 	listStepExecutions      *connect.Client[v1.ListStepExecutionsRequest, v1.ListStepExecutionsResponse]
+	listElicitations        *connect.Client[v1.ListElicitationsRequest, v1.ListElicitationsResponse]
+	getElicitation          *connect.Client[v1.GetElicitationRequest, v1.GetElicitationResponse]
+	respondToElicitation    *connect.Client[v1.RespondToElicitationRequest, v1.RespondToElicitationResponse]
+	watchElicitations       *connect.Client[v1.WatchElicitationsRequest, v1.WatchElicitationsResponse]
 }
 
 // GetPlanTemplate calls harpia.plans.v1.PlanService.GetPlanTemplate.
@@ -268,6 +314,26 @@ func (c *planServiceClient) ListStepExecutions(ctx context.Context, req *connect
 	return c.listStepExecutions.CallServerStream(ctx, req)
 }
 
+// ListElicitations calls harpia.plans.v1.PlanService.ListElicitations.
+func (c *planServiceClient) ListElicitations(ctx context.Context, req *connect.Request[v1.ListElicitationsRequest]) (*connect.Response[v1.ListElicitationsResponse], error) {
+	return c.listElicitations.CallUnary(ctx, req)
+}
+
+// GetElicitation calls harpia.plans.v1.PlanService.GetElicitation.
+func (c *planServiceClient) GetElicitation(ctx context.Context, req *connect.Request[v1.GetElicitationRequest]) (*connect.Response[v1.GetElicitationResponse], error) {
+	return c.getElicitation.CallUnary(ctx, req)
+}
+
+// RespondToElicitation calls harpia.plans.v1.PlanService.RespondToElicitation.
+func (c *planServiceClient) RespondToElicitation(ctx context.Context, req *connect.Request[v1.RespondToElicitationRequest]) (*connect.Response[v1.RespondToElicitationResponse], error) {
+	return c.respondToElicitation.CallUnary(ctx, req)
+}
+
+// WatchElicitations calls harpia.plans.v1.PlanService.WatchElicitations.
+func (c *planServiceClient) WatchElicitations(ctx context.Context, req *connect.Request[v1.WatchElicitationsRequest]) (*connect.ServerStreamForClient[v1.WatchElicitationsResponse], error) {
+	return c.watchElicitations.CallServerStream(ctx, req)
+}
+
 // PlanServiceHandler is an implementation of the harpia.plans.v1.PlanService service.
 type PlanServiceHandler interface {
 	// Template catalog (global, read-only for tenants).
@@ -286,6 +352,12 @@ type PlanServiceHandler interface {
 	ListPlanExecutions(context.Context, *connect.Request[v1.ListPlanExecutionsRequest], *connect.ServerStream[v1.ListPlanExecutionsResponse]) error
 	GetStepExecution(context.Context, *connect.Request[v1.GetStepExecutionRequest]) (*connect.Response[v1.GetStepExecutionResponse], error)
 	ListStepExecutions(context.Context, *connect.Request[v1.ListStepExecutionsRequest], *connect.ServerStream[v1.ListStepExecutionsResponse]) error
+	// In-app elicitation thread (E5.1, FR-11, UX-DR5).
+	// Overseers receive and answer agent questions scoped to a StepExecution.
+	ListElicitations(context.Context, *connect.Request[v1.ListElicitationsRequest]) (*connect.Response[v1.ListElicitationsResponse], error)
+	GetElicitation(context.Context, *connect.Request[v1.GetElicitationRequest]) (*connect.Response[v1.GetElicitationResponse], error)
+	RespondToElicitation(context.Context, *connect.Request[v1.RespondToElicitationRequest]) (*connect.Response[v1.RespondToElicitationResponse], error)
+	WatchElicitations(context.Context, *connect.Request[v1.WatchElicitationsRequest], *connect.ServerStream[v1.WatchElicitationsResponse]) error
 }
 
 // NewPlanServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -373,6 +445,30 @@ func NewPlanServiceHandler(svc PlanServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(planServiceMethods.ByName("ListStepExecutions")),
 		connect.WithHandlerOptions(opts...),
 	)
+	planServiceListElicitationsHandler := connect.NewUnaryHandler(
+		PlanServiceListElicitationsProcedure,
+		svc.ListElicitations,
+		connect.WithSchema(planServiceMethods.ByName("ListElicitations")),
+		connect.WithHandlerOptions(opts...),
+	)
+	planServiceGetElicitationHandler := connect.NewUnaryHandler(
+		PlanServiceGetElicitationProcedure,
+		svc.GetElicitation,
+		connect.WithSchema(planServiceMethods.ByName("GetElicitation")),
+		connect.WithHandlerOptions(opts...),
+	)
+	planServiceRespondToElicitationHandler := connect.NewUnaryHandler(
+		PlanServiceRespondToElicitationProcedure,
+		svc.RespondToElicitation,
+		connect.WithSchema(planServiceMethods.ByName("RespondToElicitation")),
+		connect.WithHandlerOptions(opts...),
+	)
+	planServiceWatchElicitationsHandler := connect.NewServerStreamHandler(
+		PlanServiceWatchElicitationsProcedure,
+		svc.WatchElicitations,
+		connect.WithSchema(planServiceMethods.ByName("WatchElicitations")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/harpia.plans.v1.PlanService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PlanServiceGetPlanTemplateProcedure:
@@ -401,6 +497,14 @@ func NewPlanServiceHandler(svc PlanServiceHandler, opts ...connect.HandlerOption
 			planServiceGetStepExecutionHandler.ServeHTTP(w, r)
 		case PlanServiceListStepExecutionsProcedure:
 			planServiceListStepExecutionsHandler.ServeHTTP(w, r)
+		case PlanServiceListElicitationsProcedure:
+			planServiceListElicitationsHandler.ServeHTTP(w, r)
+		case PlanServiceGetElicitationProcedure:
+			planServiceGetElicitationHandler.ServeHTTP(w, r)
+		case PlanServiceRespondToElicitationProcedure:
+			planServiceRespondToElicitationHandler.ServeHTTP(w, r)
+		case PlanServiceWatchElicitationsProcedure:
+			planServiceWatchElicitationsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -460,4 +564,20 @@ func (UnimplementedPlanServiceHandler) GetStepExecution(context.Context, *connec
 
 func (UnimplementedPlanServiceHandler) ListStepExecutions(context.Context, *connect.Request[v1.ListStepExecutionsRequest], *connect.ServerStream[v1.ListStepExecutionsResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("harpia.plans.v1.PlanService.ListStepExecutions is not implemented"))
+}
+
+func (UnimplementedPlanServiceHandler) ListElicitations(context.Context, *connect.Request[v1.ListElicitationsRequest]) (*connect.Response[v1.ListElicitationsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("harpia.plans.v1.PlanService.ListElicitations is not implemented"))
+}
+
+func (UnimplementedPlanServiceHandler) GetElicitation(context.Context, *connect.Request[v1.GetElicitationRequest]) (*connect.Response[v1.GetElicitationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("harpia.plans.v1.PlanService.GetElicitation is not implemented"))
+}
+
+func (UnimplementedPlanServiceHandler) RespondToElicitation(context.Context, *connect.Request[v1.RespondToElicitationRequest]) (*connect.Response[v1.RespondToElicitationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("harpia.plans.v1.PlanService.RespondToElicitation is not implemented"))
+}
+
+func (UnimplementedPlanServiceHandler) WatchElicitations(context.Context, *connect.Request[v1.WatchElicitationsRequest], *connect.ServerStream[v1.WatchElicitationsResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("harpia.plans.v1.PlanService.WatchElicitations is not implemented"))
 }

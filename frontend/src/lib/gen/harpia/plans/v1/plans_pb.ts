@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file harpia/plans/v1/plans.proto.
  */
 export const file_harpia_plans_v1_plans: GenFile = /*@__PURE__*/
-  fileDesc("ChtoYXJwaWEvcGxhbnMvdjEvcGxhbnMucHJvdG8SD2hhcnBpYS5wbGFucy52MSLzAQoMUGxhblRlbXBsYXRlEgoKAmlkGAEgASgJEgsKA2tleRgCIAEoCRIMCgRuYW1lGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEhAKCHZlcnRpY2FsGAUgASgJEg8KB3ZlcnNpb24YBiABKAUSKAoFc3RlcHMYByADKAsyGS5oYXJwaWEucGxhbnMudjEuUGxhblN0ZXASMgoFZWRnZXMYCCADKAsyIy5oYXJwaWEucGxhbnMudjEuUGxhblN0ZXBEZXBlbmRlbmN5EhIKCmNyZWF0ZWRfYXQYCSABKAkSEgoKdXBkYXRlZF9hdBgKIAEoCSLuAQoIUGxhblN0ZXASCgoCaWQYASABKAkSCwoDa2V5GAIgASgJEg0KBXRpdGxlGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEh4KFmlucHV0X2FydGlmYWN0X3R5cGVfaWQYBSABKAkSHwoXb3V0cHV0X2FydGlmYWN0X3R5cGVfaWQYBiABKAkSQgoUZXhlY3V0b3JfcmVxdWlyZW1lbnQYByABKAsyJC5oYXJwaWEucGxhbnMudjEuRXhlY3V0b3JSZXF1aXJlbWVudBIgChhkZWZhdWx0X2V4ZWN1dG9yX3NrdV9rZXkYCCABKAkiQAoSUGxhblN0ZXBEZXBlbmRlbmN5EhUKDWZyb21fc3RlcF9rZXkYASABKAkSEwoLdG9fc3RlcF9rZXkYAiABKAkigwEKE0V4ZWN1dG9yUmVxdWlyZW1lbnQSNAoNZXhlY3V0b3Jfa2luZBgBIAEoDjIdLmhhcnBpYS5wbGFucy52MS5FeGVjdXRvcktpbmQSHQoVcmVxdWlyZWRfY2FwYWJpbGl0aWVzGAIgAygJEhcKD2Nvbm5lY3Rpb25fdHlwZRgDIAEoCSKGBAoRUGxhbkNvbmZpZ3VyYXRpb24SCgoCaWQYASABKAkSEQoJdGVuYW50X2lkGAIgASgJEhQKDHdvcmtzcGFjZV9pZBgDIAEoCRIYChBwbGFuX3RlbXBsYXRlX2lkGAQgASgJEh0KFXBsYW5fdGVtcGxhdGVfdmVyc2lvbhgFIAEoBRI4CgZzdGF0dXMYBiABKA4yKC5oYXJwaWEucGxhbnMudjEuUGxhbkNvbmZpZ3VyYXRpb25TdGF0dXMSPAoOc2VlZF9hcnRpZmFjdHMYByADKAsyJC5oYXJwaWEucGxhbnMudjEuU2VlZEFydGlmYWN0QmluZGluZxIzCg1zbG90X2JpbmRpbmdzGAggAygLMhwuaGFycGlhLnBsYW5zLnYxLlNsb3RCaW5kaW5nEjsKEW92ZXJzZWVyX2JpbmRpbmdzGAkgAygLMiAuaGFycGlhLnBsYW5zLnYxLk92ZXJzZWVyQmluZGluZxJAChFiZWhhdmlvcl9wb2xpY2llcxgKIAEoCzIlLmhhcnBpYS5wbGFucy52MS5QbGFuQmVoYXZpb3JQb2xpY2llcxIvCghzY2hlZHVsZRgLIAEoCzIdLmhhcnBpYS5wbGFucy52MS5QbGFuU2NoZWR1bGUSEgoKY3JlYXRlZF9hdBgMIAEoCRISCgp1cGRhdGVkX2F0GA0gASgJImYKE1NlZWRBcnRpZmFjdEJpbmRpbmcSEAoIc3RlcF9rZXkYASABKAkSEgoKaW5wdXRfbmFtZRgCIAEoCRITCgthcnRpZmFjdF9pZBgDIAEoCRIUCgxsaXRlcmFsX2pzb24YBCABKAkikAEKC1Nsb3RCaW5kaW5nEhAKCHN0ZXBfa2V5GAEgASgJEjQKDWV4ZWN1dG9yX2tpbmQYAiABKA4yHS5oYXJwaWEucGxhbnMudjEuRXhlY3V0b3JLaW5kEhcKD2V4ZWN1dG9yX3NrdV9pZBgDIAEoCRIgChhleGVjdXRvcl9pbnN0YWxsYXRpb25faWQYBCABKAkiPQoPT3ZlcnNlZXJCaW5kaW5nEhAKCHN0ZXBfa2V5GAEgASgJEhgKEG92ZXJzZWVyX3VzZXJfaWQYAiABKAki0QEKFFBsYW5CZWhhdmlvclBvbGljaWVzElEKHGVsaWNpdGF0aW9uX3RpbWVvdXRfYmVoYXZpb3IYASABKA4yKy5oYXJwaWEucGxhbnMudjEuRWxpY2l0YXRpb25UaW1lb3V0QmVoYXZpb3ISIQoZZWxpY2l0YXRpb25fdGltZW91dF9ob3VycxgCIAEoBRJDChVwdWJsaXNoX2FwcHJvdmFsX21vZGUYAyABKA4yJC5oYXJwaWEucGxhbnMudjEuUHVibGlzaEFwcHJvdmFsTW9kZSI5CgxQbGFuU2NoZWR1bGUSFwoPY3Jvbl9leHByZXNzaW9uGAEgASgJEhAKCHRpbWV6b25lGAIgASgJItkCCg1QbGFuRXhlY3V0aW9uEgoKAmlkGAEgASgJEhEKCXRlbmFudF9pZBgCIAEoCRIdChVwbGFuX2NvbmZpZ3VyYXRpb25faWQYAyABKAkSRwobcGxhbl9jb25maWd1cmF0aW9uX3NuYXBzaG90GAQgASgLMiIuaGFycGlhLnBsYW5zLnYxLlBsYW5Db25maWd1cmF0aW9uEjQKBnN0YXR1cxgFIAEoDjIkLmhhcnBpYS5wbGFucy52MS5QbGFuRXhlY3V0aW9uU3RhdHVzEjcKD3N0ZXBfZXhlY3V0aW9ucxgGIAMoCzIeLmhhcnBpYS5wbGFucy52MS5TdGVwRXhlY3V0aW9uEhQKDHRyaWdnZXJlZF9hdBgHIAEoCRIUCgxjb21wbGV0ZWRfYXQYCCABKAkSEgoKY3JlYXRlZF9hdBgJIAEoCRISCgp1cGRhdGVkX2F0GAogASgJItcCCg1TdGVwRXhlY3V0aW9uEgoKAmlkGAEgASgJEhkKEXBsYW5fZXhlY3V0aW9uX2lkGAIgASgJEhUKDXBsYW5fc3RlcF9rZXkYAyABKAkSNAoGc3RhdHVzGAQgASgOMiQuaGFycGlhLnBsYW5zLnYxLlN0ZXBFeGVjdXRpb25TdGF0dXMSGQoRaW5wdXRfYXJ0aWZhY3RfaWQYBSABKAkSGgoSb3V0cHV0X2FydGlmYWN0X2lkGAYgASgJEiYKHmV4ZWN1dG9yX2luc3RhbGxhdGlvbl9zbmFwc2hvdBgHIAEoCRIPCgdhdHRlbXB0GAggASgFEh0KFWVsaWNpdGF0aW9uX3RocmVhZF9pZBgJIAEoCRIbChNhcHByb3ZhbF9yZXF1ZXN0X2lkGAogASgJEhIKCmNyZWF0ZWRfYXQYCyABKAkSEgoKdXBkYXRlZF9hdBgMIAEoCSIyChZHZXRQbGFuVGVtcGxhdGVSZXF1ZXN0EhgKEHBsYW5fdGVtcGxhdGVfaWQYASABKAkiTwoXR2V0UGxhblRlbXBsYXRlUmVzcG9uc2USNAoNcGxhbl90ZW1wbGF0ZRgBIAEoCzIdLmhhcnBpYS5wbGFucy52MS5QbGFuVGVtcGxhdGUiKgobR2V0UGxhblRlbXBsYXRlQnlLZXlSZXF1ZXN0EgsKA2tleRgBIAEoCSJUChxHZXRQbGFuVGVtcGxhdGVCeUtleVJlc3BvbnNlEjQKDXBsYW5fdGVtcGxhdGUYASABKAsyHS5oYXJwaWEucGxhbnMudjEuUGxhblRlbXBsYXRlImUKGExpc3RQbGFuVGVtcGxhdGVzUmVxdWVzdBIVCgh2ZXJ0aWNhbBgBIAEoCUgAiAEBEhEKCXBhZ2Vfc2l6ZRgCIAEoBRISCgpwYWdlX3Rva2VuGAMgASgJQgsKCV92ZXJ0aWNhbCJrChlMaXN0UGxhblRlbXBsYXRlc1Jlc3BvbnNlEjUKDnBsYW5fdGVtcGxhdGVzGAEgAygLMh0uaGFycGlhLnBsYW5zLnYxLlBsYW5UZW1wbGF0ZRIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkiwAMKHkNyZWF0ZVBsYW5Db25maWd1cmF0aW9uUmVxdWVzdBIRCgl0ZW5hbnRfaWQYASABKAkSFAoMd29ya3NwYWNlX2lkGAIgASgJEhgKEHBsYW5fdGVtcGxhdGVfaWQYAyABKAkSOAoGc3RhdHVzGAQgASgOMiguaGFycGlhLnBsYW5zLnYxLlBsYW5Db25maWd1cmF0aW9uU3RhdHVzEjwKDnNlZWRfYXJ0aWZhY3RzGAUgAygLMiQuaGFycGlhLnBsYW5zLnYxLlNlZWRBcnRpZmFjdEJpbmRpbmcSMwoNc2xvdF9iaW5kaW5ncxgGIAMoCzIcLmhhcnBpYS5wbGFucy52MS5TbG90QmluZGluZxI7ChFvdmVyc2Vlcl9iaW5kaW5ncxgHIAMoCzIgLmhhcnBpYS5wbGFucy52MS5PdmVyc2VlckJpbmRpbmcSQAoRYmVoYXZpb3JfcG9saWNpZXMYCCABKAsyJS5oYXJwaWEucGxhbnMudjEuUGxhbkJlaGF2aW9yUG9saWNpZXMSLwoIc2NoZWR1bGUYCSABKAsyHS5oYXJwaWEucGxhbnMudjEuUGxhblNjaGVkdWxlImEKH0NyZWF0ZVBsYW5Db25maWd1cmF0aW9uUmVzcG9uc2USPgoScGxhbl9jb25maWd1cmF0aW9uGAEgASgLMiIuaGFycGlhLnBsYW5zLnYxLlBsYW5Db25maWd1cmF0aW9uIk8KG0dldFBsYW5Db25maWd1cmF0aW9uUmVxdWVzdBIRCgl0ZW5hbnRfaWQYASABKAkSHQoVcGxhbl9jb25maWd1cmF0aW9uX2lkGAIgASgJIl4KHEdldFBsYW5Db25maWd1cmF0aW9uUmVzcG9uc2USPgoScGxhbl9jb25maWd1cmF0aW9uGAEgASgLMiIuaGFycGlhLnBsYW5zLnYxLlBsYW5Db25maWd1cmF0aW9uIq8DCh5VcGRhdGVQbGFuQ29uZmlndXJhdGlvblJlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgJEh0KFXBsYW5fY29uZmlndXJhdGlvbl9pZBgCIAEoCRI4CgZzdGF0dXMYAyABKA4yKC5oYXJwaWEucGxhbnMudjEuUGxhbkNvbmZpZ3VyYXRpb25TdGF0dXMSPAoOc2VlZF9hcnRpZmFjdHMYBCADKAsyJC5oYXJwaWEucGxhbnMudjEuU2VlZEFydGlmYWN0QmluZGluZxIzCg1zbG90X2JpbmRpbmdzGAUgAygLMhwuaGFycGlhLnBsYW5zLnYxLlNsb3RCaW5kaW5nEjsKEW92ZXJzZWVyX2JpbmRpbmdzGAYgAygLMiAuaGFycGlhLnBsYW5zLnYxLk92ZXJzZWVyQmluZGluZxJAChFiZWhhdmlvcl9wb2xpY2llcxgHIAEoCzIlLmhhcnBpYS5wbGFucy52MS5QbGFuQmVoYXZpb3JQb2xpY2llcxIvCghzY2hlZHVsZRgIIAEoCzIdLmhhcnBpYS5wbGFucy52MS5QbGFuU2NoZWR1bGUiYQofVXBkYXRlUGxhbkNvbmZpZ3VyYXRpb25SZXNwb25zZRI+ChJwbGFuX2NvbmZpZ3VyYXRpb24YASABKAsyIi5oYXJwaWEucGxhbnMudjEuUGxhbkNvbmZpZ3VyYXRpb24izwEKHUxpc3RQbGFuQ29uZmlndXJhdGlvbnNSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRIZCgx3b3Jrc3BhY2VfaWQYAiABKAlIAIgBARI9CgZzdGF0dXMYAyABKA4yKC5oYXJwaWEucGxhbnMudjEuUGxhbkNvbmZpZ3VyYXRpb25TdGF0dXNIAYgBARIRCglwYWdlX3NpemUYBCABKAUSEgoKcGFnZV90b2tlbhgFIAEoCUIPCg1fd29ya3NwYWNlX2lkQgkKB19zdGF0dXMiegoeTGlzdFBsYW5Db25maWd1cmF0aW9uc1Jlc3BvbnNlEj8KE3BsYW5fY29uZmlndXJhdGlvbnMYASADKAsyIi5oYXJwaWEucGxhbnMudjEuUGxhbkNvbmZpZ3VyYXRpb24SFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIk4KGkNyZWF0ZVBsYW5FeGVjdXRpb25SZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRIdChVwbGFuX2NvbmZpZ3VyYXRpb25faWQYAiABKAkiVQobQ3JlYXRlUGxhbkV4ZWN1dGlvblJlc3BvbnNlEjYKDnBsYW5fZXhlY3V0aW9uGAEgASgLMh4uaGFycGlhLnBsYW5zLnYxLlBsYW5FeGVjdXRpb24iZAoZUmV0cnlQbGFuRXhlY3V0aW9uUmVxdWVzdBIRCgl0ZW5hbnRfaWQYASABKAkSGQoRcGxhbl9leGVjdXRpb25faWQYAiABKAkSGQoRc3RlcF9leGVjdXRpb25faWQYAyABKAkiVAoaUmV0cnlQbGFuRXhlY3V0aW9uUmVzcG9uc2USNgoOcGxhbl9leGVjdXRpb24YASABKAsyHi5oYXJwaWEucGxhbnMudjEuUGxhbkV4ZWN1dGlvbiJHChdHZXRQbGFuRXhlY3V0aW9uUmVxdWVzdBIRCgl0ZW5hbnRfaWQYASABKAkSGQoRcGxhbl9leGVjdXRpb25faWQYAiABKAkiUgoYR2V0UGxhbkV4ZWN1dGlvblJlc3BvbnNlEjYKDnBsYW5fZXhlY3V0aW9uGAEgASgLMh4uaGFycGlhLnBsYW5zLnYxLlBsYW5FeGVjdXRpb24ikwEKGUxpc3RQbGFuRXhlY3V0aW9uc1JlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgJEiIKFXBsYW5fY29uZmlndXJhdGlvbl9pZBgCIAEoCUgAiAEBEhEKCXBhZ2Vfc2l6ZRgDIAEoBRISCgpwYWdlX3Rva2VuGAQgASgJQhgKFl9wbGFuX2NvbmZpZ3VyYXRpb25faWQibgoaTGlzdFBsYW5FeGVjdXRpb25zUmVzcG9uc2USNwoPcGxhbl9leGVjdXRpb25zGAEgAygLMh4uaGFycGlhLnBsYW5zLnYxLlBsYW5FeGVjdXRpb24SFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIkcKF0dldFN0ZXBFeGVjdXRpb25SZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRIZChFzdGVwX2V4ZWN1dGlvbl9pZBgCIAEoCSJSChhHZXRTdGVwRXhlY3V0aW9uUmVzcG9uc2USNgoOc3RlcF9leGVjdXRpb24YASABKAsyHi5oYXJwaWEucGxhbnMudjEuU3RlcEV4ZWN1dGlvbiJwChlMaXN0U3RlcEV4ZWN1dGlvbnNSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRIZChFwbGFuX2V4ZWN1dGlvbl9pZBgCIAEoCRIRCglwYWdlX3NpemUYAyABKAUSEgoKcGFnZV90b2tlbhgEIAEoCSJuChpMaXN0U3RlcEV4ZWN1dGlvbnNSZXNwb25zZRI3Cg9zdGVwX2V4ZWN1dGlvbnMYASADKAsyHi5oYXJwaWEucGxhbnMudjEuU3RlcEV4ZWN1dGlvbhIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkqZQoMRXhlY3V0b3JLaW5kEh0KGUVYRUNVVE9SX0tJTkRfVU5TUEVDSUZJRUQQABIXChNFWEVDVVRPUl9LSU5EX0FHRU5UEAESHQoZRVhFQ1VUT1JfS0lORF9JTlRFR1JBVElPThACKooCChdQbGFuQ29uZmlndXJhdGlvblN0YXR1cxIpCiVQTEFOX0NPTkZJR1VSQVRJT05fU1RBVFVTX1VOU1BFQ0lGSUVEEAASIwofUExBTl9DT05GSUdVUkFUSU9OX1NUQVRVU19EUkFGVBABEiYKIlBMQU5fQ09ORklHVVJBVElPTl9TVEFUVVNfUlVOTkFCTEUQAhInCiNQTEFOX0NPTkZJR1VSQVRJT05fU1RBVFVTX1NDSEVEVUxFRBADEiYKIlBMQU5fQ09ORklHVVJBVElPTl9TVEFUVVNfRElTQUJMRUQQBBImCiJQTEFOX0NPTkZJR1VSQVRJT05fU1RBVFVTX0FSQ0hJVkVEEAUqkQIKGkVsaWNpdGF0aW9uVGltZW91dEJlaGF2aW9yEiwKKEVMSUNJVEFUSU9OX1RJTUVPVVRfQkVIQVZJT1JfVU5TUEVDSUZJRUQQABI1CjFFTElDSVRBVElPTl9USU1FT1VUX0JFSEFWSU9SX1BBVVNFX1VOVElMX0FOU1dFUkVEEAESKgomRUxJQ0lUQVRJT05fVElNRU9VVF9CRUhBVklPUl9GQUlMX1NURVAQAhI2Ci5FTElDSVRBVElPTl9USU1FT1VUX0JFSEFWSU9SX1NLSVBfV0lUSF9ERUZBVUxUEAMaAggBEioKJkVMSUNJVEFUSU9OX1RJTUVPVVRfQkVIQVZJT1JfRkFJTF9QTEFOEAQqkAEKE1B1Ymxpc2hBcHByb3ZhbE1vZGUSJQohUFVCTElTSF9BUFBST1ZBTF9NT0RFX1VOU1BFQ0lGSUVEEAASKgomUFVCTElTSF9BUFBST1ZBTF9NT0RFX1JFUVVJUkVfQVBQUk9WQUwQARImCiJQVUJMSVNIX0FQUFJPVkFMX01PREVfQVVUT19QVUJMSVNIEAIq7gEKE1BsYW5FeGVjdXRpb25TdGF0dXMSJQohUExBTl9FWEVDVVRJT05fU1RBVFVTX1VOU1BFQ0lGSUVEEAASIQodUExBTl9FWEVDVVRJT05fU1RBVFVTX1BFTkRJTkcQARIhCh1QTEFOX0VYRUNVVElPTl9TVEFUVVNfUlVOTklORxACEiMKH1BMQU5fRVhFQ1VUSU9OX1NUQVRVU19DT01QTEVURUQQAxIgChxQTEFOX0VYRUNVVElPTl9TVEFUVVNfRkFJTEVEEAQSIwofUExBTl9FWEVDVVRJT05fU1RBVFVTX0NBTkNFTExFRBAFKqYCChNTdGVwRXhlY3V0aW9uU3RhdHVzEiUKIVNURVBfRVhFQ1VUSU9OX1NUQVRVU19VTlNQRUNJRklFRBAAEiEKHVNURVBfRVhFQ1VUSU9OX1NUQVRVU19QRU5ESU5HEAESIQodU1RFUF9FWEVDVVRJT05fU1RBVFVTX1JVTk5JTkcQAhIuCipTVEVQX0VYRUNVVElPTl9TVEFUVVNfQVdBSVRJTkdfRUxJQ0lUQVRJT04QAxIrCidTVEVQX0VYRUNVVElPTl9TVEFUVVNfQVdBSVRJTkdfQVBQUk9WQUwQBBIjCh9TVEVQX0VYRUNVVElPTl9TVEFUVVNfQ09NUExFVEVEEAUSIAocU1RFUF9FWEVDVVRJT05fU1RBVFVTX0ZBSUxFRBAGMtkLCgtQbGFuU2VydmljZRJkCg9HZXRQbGFuVGVtcGxhdGUSJy5oYXJwaWEucGxhbnMudjEuR2V0UGxhblRlbXBsYXRlUmVxdWVzdBooLmhhcnBpYS5wbGFucy52MS5HZXRQbGFuVGVtcGxhdGVSZXNwb25zZRJzChRHZXRQbGFuVGVtcGxhdGVCeUtleRIsLmhhcnBpYS5wbGFucy52MS5HZXRQbGFuVGVtcGxhdGVCeUtleVJlcXVlc3QaLS5oYXJwaWEucGxhbnMudjEuR2V0UGxhblRlbXBsYXRlQnlLZXlSZXNwb25zZRJsChFMaXN0UGxhblRlbXBsYXRlcxIpLmhhcnBpYS5wbGFucy52MS5MaXN0UGxhblRlbXBsYXRlc1JlcXVlc3QaKi5oYXJwaWEucGxhbnMudjEuTGlzdFBsYW5UZW1wbGF0ZXNSZXNwb25zZTABEnwKF0NyZWF0ZVBsYW5Db25maWd1cmF0aW9uEi8uaGFycGlhLnBsYW5zLnYxLkNyZWF0ZVBsYW5Db25maWd1cmF0aW9uUmVxdWVzdBowLmhhcnBpYS5wbGFucy52MS5DcmVhdGVQbGFuQ29uZmlndXJhdGlvblJlc3BvbnNlEnMKFEdldFBsYW5Db25maWd1cmF0aW9uEiwuaGFycGlhLnBsYW5zLnYxLkdldFBsYW5Db25maWd1cmF0aW9uUmVxdWVzdBotLmhhcnBpYS5wbGFucy52MS5HZXRQbGFuQ29uZmlndXJhdGlvblJlc3BvbnNlEnwKF1VwZGF0ZVBsYW5Db25maWd1cmF0aW9uEi8uaGFycGlhLnBsYW5zLnYxLlVwZGF0ZVBsYW5Db25maWd1cmF0aW9uUmVxdWVzdBowLmhhcnBpYS5wbGFucy52MS5VcGRhdGVQbGFuQ29uZmlndXJhdGlvblJlc3BvbnNlEnsKFkxpc3RQbGFuQ29uZmlndXJhdGlvbnMSLi5oYXJwaWEucGxhbnMudjEuTGlzdFBsYW5Db25maWd1cmF0aW9uc1JlcXVlc3QaLy5oYXJwaWEucGxhbnMudjEuTGlzdFBsYW5Db25maWd1cmF0aW9uc1Jlc3BvbnNlMAEScAoTQ3JlYXRlUGxhbkV4ZWN1dGlvbhIrLmhhcnBpYS5wbGFucy52MS5DcmVhdGVQbGFuRXhlY3V0aW9uUmVxdWVzdBosLmhhcnBpYS5wbGFucy52MS5DcmVhdGVQbGFuRXhlY3V0aW9uUmVzcG9uc2USbQoSUmV0cnlQbGFuRXhlY3V0aW9uEiouaGFycGlhLnBsYW5zLnYxLlJldHJ5UGxhbkV4ZWN1dGlvblJlcXVlc3QaKy5oYXJwaWEucGxhbnMudjEuUmV0cnlQbGFuRXhlY3V0aW9uUmVzcG9uc2USZwoQR2V0UGxhbkV4ZWN1dGlvbhIoLmhhcnBpYS5wbGFucy52MS5HZXRQbGFuRXhlY3V0aW9uUmVxdWVzdBopLmhhcnBpYS5wbGFucy52MS5HZXRQbGFuRXhlY3V0aW9uUmVzcG9uc2USbwoSTGlzdFBsYW5FeGVjdXRpb25zEiouaGFycGlhLnBsYW5zLnYxLkxpc3RQbGFuRXhlY3V0aW9uc1JlcXVlc3QaKy5oYXJwaWEucGxhbnMudjEuTGlzdFBsYW5FeGVjdXRpb25zUmVzcG9uc2UwARJnChBHZXRTdGVwRXhlY3V0aW9uEiguaGFycGlhLnBsYW5zLnYxLkdldFN0ZXBFeGVjdXRpb25SZXF1ZXN0GikuaGFycGlhLnBsYW5zLnYxLkdldFN0ZXBFeGVjdXRpb25SZXNwb25zZRJvChJMaXN0U3RlcEV4ZWN1dGlvbnMSKi5oYXJwaWEucGxhbnMudjEuTGlzdFN0ZXBFeGVjdXRpb25zUmVxdWVzdBorLmhhcnBpYS5wbGFucy52MS5MaXN0U3RlcEV4ZWN1dGlvbnNSZXNwb25zZTABQrwBChNjb20uaGFycGlhLnBsYW5zLnYxQgpQbGFuc1Byb3RvUAFaO2dpdGh1Yi5jb20vaGFycGlhL2NvbnRyb2wtcGxhbmUvZ2VuL2hhcnBpYS9wbGFucy92MTtwbGFuc3YxogIDSFBYqgIPSGFycGlhLlBsYW5zLlYxygIPSGFycGlhXFBsYW5zXFYx4gIbSGFycGlhXFBsYW5zXFYxXEdQQk1ldGFkYXRh6gIRSGFycGlhOjpQbGFuczo6VjFiBnByb3RvMw");
+  fileDesc("ChtoYXJwaWEvcGxhbnMvdjEvcGxhbnMucHJvdG8SD2hhcnBpYS5wbGFucy52MSLzAQoMUGxhblRlbXBsYXRlEgoKAmlkGAEgASgJEgsKA2tleRgCIAEoCRIMCgRuYW1lGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEhAKCHZlcnRpY2FsGAUgASgJEg8KB3ZlcnNpb24YBiABKAUSKAoFc3RlcHMYByADKAsyGS5oYXJwaWEucGxhbnMudjEuUGxhblN0ZXASMgoFZWRnZXMYCCADKAsyIy5oYXJwaWEucGxhbnMudjEuUGxhblN0ZXBEZXBlbmRlbmN5EhIKCmNyZWF0ZWRfYXQYCSABKAkSEgoKdXBkYXRlZF9hdBgKIAEoCSLuAQoIUGxhblN0ZXASCgoCaWQYASABKAkSCwoDa2V5GAIgASgJEg0KBXRpdGxlGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEh4KFmlucHV0X2FydGlmYWN0X3R5cGVfaWQYBSABKAkSHwoXb3V0cHV0X2FydGlmYWN0X3R5cGVfaWQYBiABKAkSQgoUZXhlY3V0b3JfcmVxdWlyZW1lbnQYByABKAsyJC5oYXJwaWEucGxhbnMudjEuRXhlY3V0b3JSZXF1aXJlbWVudBIgChhkZWZhdWx0X2V4ZWN1dG9yX3NrdV9rZXkYCCABKAkiQAoSUGxhblN0ZXBEZXBlbmRlbmN5EhUKDWZyb21fc3RlcF9rZXkYASABKAkSEwoLdG9fc3RlcF9rZXkYAiABKAkigwEKE0V4ZWN1dG9yUmVxdWlyZW1lbnQSNAoNZXhlY3V0b3Jfa2luZBgBIAEoDjIdLmhhcnBpYS5wbGFucy52MS5FeGVjdXRvcktpbmQSHQoVcmVxdWlyZWRfY2FwYWJpbGl0aWVzGAIgAygJEhcKD2Nvbm5lY3Rpb25fdHlwZRgDIAEoCSKGBAoRUGxhbkNvbmZpZ3VyYXRpb24SCgoCaWQYASABKAkSEQoJdGVuYW50X2lkGAIgASgJEhQKDHdvcmtzcGFjZV9pZBgDIAEoCRIYChBwbGFuX3RlbXBsYXRlX2lkGAQgASgJEh0KFXBsYW5fdGVtcGxhdGVfdmVyc2lvbhgFIAEoBRI4CgZzdGF0dXMYBiABKA4yKC5oYXJwaWEucGxhbnMudjEuUGxhbkNvbmZpZ3VyYXRpb25TdGF0dXMSPAoOc2VlZF9hcnRpZmFjdHMYByADKAsyJC5oYXJwaWEucGxhbnMudjEuU2VlZEFydGlmYWN0QmluZGluZxIzCg1zbG90X2JpbmRpbmdzGAggAygLMhwuaGFycGlhLnBsYW5zLnYxLlNsb3RCaW5kaW5nEjsKEW92ZXJzZWVyX2JpbmRpbmdzGAkgAygLMiAuaGFycGlhLnBsYW5zLnYxLk92ZXJzZWVyQmluZGluZxJAChFiZWhhdmlvcl9wb2xpY2llcxgKIAEoCzIlLmhhcnBpYS5wbGFucy52MS5QbGFuQmVoYXZpb3JQb2xpY2llcxIvCghzY2hlZHVsZRgLIAEoCzIdLmhhcnBpYS5wbGFucy52MS5QbGFuU2NoZWR1bGUSEgoKY3JlYXRlZF9hdBgMIAEoCRISCgp1cGRhdGVkX2F0GA0gASgJImYKE1NlZWRBcnRpZmFjdEJpbmRpbmcSEAoIc3RlcF9rZXkYASABKAkSEgoKaW5wdXRfbmFtZRgCIAEoCRITCgthcnRpZmFjdF9pZBgDIAEoCRIUCgxsaXRlcmFsX2pzb24YBCABKAkikAEKC1Nsb3RCaW5kaW5nEhAKCHN0ZXBfa2V5GAEgASgJEjQKDWV4ZWN1dG9yX2tpbmQYAiABKA4yHS5oYXJwaWEucGxhbnMudjEuRXhlY3V0b3JLaW5kEhcKD2V4ZWN1dG9yX3NrdV9pZBgDIAEoCRIgChhleGVjdXRvcl9pbnN0YWxsYXRpb25faWQYBCABKAkiPQoPT3ZlcnNlZXJCaW5kaW5nEhAKCHN0ZXBfa2V5GAEgASgJEhgKEG92ZXJzZWVyX3VzZXJfaWQYAiABKAki0QEKFFBsYW5CZWhhdmlvclBvbGljaWVzElEKHGVsaWNpdGF0aW9uX3RpbWVvdXRfYmVoYXZpb3IYASABKA4yKy5oYXJwaWEucGxhbnMudjEuRWxpY2l0YXRpb25UaW1lb3V0QmVoYXZpb3ISIQoZZWxpY2l0YXRpb25fdGltZW91dF9ob3VycxgCIAEoBRJDChVwdWJsaXNoX2FwcHJvdmFsX21vZGUYAyABKA4yJC5oYXJwaWEucGxhbnMudjEuUHVibGlzaEFwcHJvdmFsTW9kZSI5CgxQbGFuU2NoZWR1bGUSFwoPY3Jvbl9leHByZXNzaW9uGAEgASgJEhAKCHRpbWV6b25lGAIgASgJItkCCg1QbGFuRXhlY3V0aW9uEgoKAmlkGAEgASgJEhEKCXRlbmFudF9pZBgCIAEoCRIdChVwbGFuX2NvbmZpZ3VyYXRpb25faWQYAyABKAkSRwobcGxhbl9jb25maWd1cmF0aW9uX3NuYXBzaG90GAQgASgLMiIuaGFycGlhLnBsYW5zLnYxLlBsYW5Db25maWd1cmF0aW9uEjQKBnN0YXR1cxgFIAEoDjIkLmhhcnBpYS5wbGFucy52MS5QbGFuRXhlY3V0aW9uU3RhdHVzEjcKD3N0ZXBfZXhlY3V0aW9ucxgGIAMoCzIeLmhhcnBpYS5wbGFucy52MS5TdGVwRXhlY3V0aW9uEhQKDHRyaWdnZXJlZF9hdBgHIAEoCRIUCgxjb21wbGV0ZWRfYXQYCCABKAkSEgoKY3JlYXRlZF9hdBgJIAEoCRISCgp1cGRhdGVkX2F0GAogASgJItcCCg1TdGVwRXhlY3V0aW9uEgoKAmlkGAEgASgJEhkKEXBsYW5fZXhlY3V0aW9uX2lkGAIgASgJEhUKDXBsYW5fc3RlcF9rZXkYAyABKAkSNAoGc3RhdHVzGAQgASgOMiQuaGFycGlhLnBsYW5zLnYxLlN0ZXBFeGVjdXRpb25TdGF0dXMSGQoRaW5wdXRfYXJ0aWZhY3RfaWQYBSABKAkSGgoSb3V0cHV0X2FydGlmYWN0X2lkGAYgASgJEiYKHmV4ZWN1dG9yX2luc3RhbGxhdGlvbl9zbmFwc2hvdBgHIAEoCRIPCgdhdHRlbXB0GAggASgFEh0KFWVsaWNpdGF0aW9uX3RocmVhZF9pZBgJIAEoCRIbChNhcHByb3ZhbF9yZXF1ZXN0X2lkGAogASgJEhIKCmNyZWF0ZWRfYXQYCyABKAkSEgoKdXBkYXRlZF9hdBgMIAEoCSIyChZHZXRQbGFuVGVtcGxhdGVSZXF1ZXN0EhgKEHBsYW5fdGVtcGxhdGVfaWQYASABKAkiTwoXR2V0UGxhblRlbXBsYXRlUmVzcG9uc2USNAoNcGxhbl90ZW1wbGF0ZRgBIAEoCzIdLmhhcnBpYS5wbGFucy52MS5QbGFuVGVtcGxhdGUiKgobR2V0UGxhblRlbXBsYXRlQnlLZXlSZXF1ZXN0EgsKA2tleRgBIAEoCSJUChxHZXRQbGFuVGVtcGxhdGVCeUtleVJlc3BvbnNlEjQKDXBsYW5fdGVtcGxhdGUYASABKAsyHS5oYXJwaWEucGxhbnMudjEuUGxhblRlbXBsYXRlImUKGExpc3RQbGFuVGVtcGxhdGVzUmVxdWVzdBIVCgh2ZXJ0aWNhbBgBIAEoCUgAiAEBEhEKCXBhZ2Vfc2l6ZRgCIAEoBRISCgpwYWdlX3Rva2VuGAMgASgJQgsKCV92ZXJ0aWNhbCJrChlMaXN0UGxhblRlbXBsYXRlc1Jlc3BvbnNlEjUKDnBsYW5fdGVtcGxhdGVzGAEgAygLMh0uaGFycGlhLnBsYW5zLnYxLlBsYW5UZW1wbGF0ZRIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkiwAMKHkNyZWF0ZVBsYW5Db25maWd1cmF0aW9uUmVxdWVzdBIRCgl0ZW5hbnRfaWQYASABKAkSFAoMd29ya3NwYWNlX2lkGAIgASgJEhgKEHBsYW5fdGVtcGxhdGVfaWQYAyABKAkSOAoGc3RhdHVzGAQgASgOMiguaGFycGlhLnBsYW5zLnYxLlBsYW5Db25maWd1cmF0aW9uU3RhdHVzEjwKDnNlZWRfYXJ0aWZhY3RzGAUgAygLMiQuaGFycGlhLnBsYW5zLnYxLlNlZWRBcnRpZmFjdEJpbmRpbmcSMwoNc2xvdF9iaW5kaW5ncxgGIAMoCzIcLmhhcnBpYS5wbGFucy52MS5TbG90QmluZGluZxI7ChFvdmVyc2Vlcl9iaW5kaW5ncxgHIAMoCzIgLmhhcnBpYS5wbGFucy52MS5PdmVyc2VlckJpbmRpbmcSQAoRYmVoYXZpb3JfcG9saWNpZXMYCCABKAsyJS5oYXJwaWEucGxhbnMudjEuUGxhbkJlaGF2aW9yUG9saWNpZXMSLwoIc2NoZWR1bGUYCSABKAsyHS5oYXJwaWEucGxhbnMudjEuUGxhblNjaGVkdWxlImEKH0NyZWF0ZVBsYW5Db25maWd1cmF0aW9uUmVzcG9uc2USPgoScGxhbl9jb25maWd1cmF0aW9uGAEgASgLMiIuaGFycGlhLnBsYW5zLnYxLlBsYW5Db25maWd1cmF0aW9uIk8KG0dldFBsYW5Db25maWd1cmF0aW9uUmVxdWVzdBIRCgl0ZW5hbnRfaWQYASABKAkSHQoVcGxhbl9jb25maWd1cmF0aW9uX2lkGAIgASgJIl4KHEdldFBsYW5Db25maWd1cmF0aW9uUmVzcG9uc2USPgoScGxhbl9jb25maWd1cmF0aW9uGAEgASgLMiIuaGFycGlhLnBsYW5zLnYxLlBsYW5Db25maWd1cmF0aW9uIq8DCh5VcGRhdGVQbGFuQ29uZmlndXJhdGlvblJlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgJEh0KFXBsYW5fY29uZmlndXJhdGlvbl9pZBgCIAEoCRI4CgZzdGF0dXMYAyABKA4yKC5oYXJwaWEucGxhbnMudjEuUGxhbkNvbmZpZ3VyYXRpb25TdGF0dXMSPAoOc2VlZF9hcnRpZmFjdHMYBCADKAsyJC5oYXJwaWEucGxhbnMudjEuU2VlZEFydGlmYWN0QmluZGluZxIzCg1zbG90X2JpbmRpbmdzGAUgAygLMhwuaGFycGlhLnBsYW5zLnYxLlNsb3RCaW5kaW5nEjsKEW92ZXJzZWVyX2JpbmRpbmdzGAYgAygLMiAuaGFycGlhLnBsYW5zLnYxLk92ZXJzZWVyQmluZGluZxJAChFiZWhhdmlvcl9wb2xpY2llcxgHIAEoCzIlLmhhcnBpYS5wbGFucy52MS5QbGFuQmVoYXZpb3JQb2xpY2llcxIvCghzY2hlZHVsZRgIIAEoCzIdLmhhcnBpYS5wbGFucy52MS5QbGFuU2NoZWR1bGUiYQofVXBkYXRlUGxhbkNvbmZpZ3VyYXRpb25SZXNwb25zZRI+ChJwbGFuX2NvbmZpZ3VyYXRpb24YASABKAsyIi5oYXJwaWEucGxhbnMudjEuUGxhbkNvbmZpZ3VyYXRpb24izwEKHUxpc3RQbGFuQ29uZmlndXJhdGlvbnNSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRIZCgx3b3Jrc3BhY2VfaWQYAiABKAlIAIgBARI9CgZzdGF0dXMYAyABKA4yKC5oYXJwaWEucGxhbnMudjEuUGxhbkNvbmZpZ3VyYXRpb25TdGF0dXNIAYgBARIRCglwYWdlX3NpemUYBCABKAUSEgoKcGFnZV90b2tlbhgFIAEoCUIPCg1fd29ya3NwYWNlX2lkQgkKB19zdGF0dXMiegoeTGlzdFBsYW5Db25maWd1cmF0aW9uc1Jlc3BvbnNlEj8KE3BsYW5fY29uZmlndXJhdGlvbnMYASADKAsyIi5oYXJwaWEucGxhbnMudjEuUGxhbkNvbmZpZ3VyYXRpb24SFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIk4KGkNyZWF0ZVBsYW5FeGVjdXRpb25SZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRIdChVwbGFuX2NvbmZpZ3VyYXRpb25faWQYAiABKAkiVQobQ3JlYXRlUGxhbkV4ZWN1dGlvblJlc3BvbnNlEjYKDnBsYW5fZXhlY3V0aW9uGAEgASgLMh4uaGFycGlhLnBsYW5zLnYxLlBsYW5FeGVjdXRpb24iZAoZUmV0cnlQbGFuRXhlY3V0aW9uUmVxdWVzdBIRCgl0ZW5hbnRfaWQYASABKAkSGQoRcGxhbl9leGVjdXRpb25faWQYAiABKAkSGQoRc3RlcF9leGVjdXRpb25faWQYAyABKAkiVAoaUmV0cnlQbGFuRXhlY3V0aW9uUmVzcG9uc2USNgoOcGxhbl9leGVjdXRpb24YASABKAsyHi5oYXJwaWEucGxhbnMudjEuUGxhbkV4ZWN1dGlvbiJHChdHZXRQbGFuRXhlY3V0aW9uUmVxdWVzdBIRCgl0ZW5hbnRfaWQYASABKAkSGQoRcGxhbl9leGVjdXRpb25faWQYAiABKAkiUgoYR2V0UGxhbkV4ZWN1dGlvblJlc3BvbnNlEjYKDnBsYW5fZXhlY3V0aW9uGAEgASgLMh4uaGFycGlhLnBsYW5zLnYxLlBsYW5FeGVjdXRpb24ikwEKGUxpc3RQbGFuRXhlY3V0aW9uc1JlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgJEiIKFXBsYW5fY29uZmlndXJhdGlvbl9pZBgCIAEoCUgAiAEBEhEKCXBhZ2Vfc2l6ZRgDIAEoBRISCgpwYWdlX3Rva2VuGAQgASgJQhgKFl9wbGFuX2NvbmZpZ3VyYXRpb25faWQibgoaTGlzdFBsYW5FeGVjdXRpb25zUmVzcG9uc2USNwoPcGxhbl9leGVjdXRpb25zGAEgAygLMh4uaGFycGlhLnBsYW5zLnYxLlBsYW5FeGVjdXRpb24SFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIkcKF0dldFN0ZXBFeGVjdXRpb25SZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRIZChFzdGVwX2V4ZWN1dGlvbl9pZBgCIAEoCSJSChhHZXRTdGVwRXhlY3V0aW9uUmVzcG9uc2USNgoOc3RlcF9leGVjdXRpb24YASABKAsyHi5oYXJwaWEucGxhbnMudjEuU3RlcEV4ZWN1dGlvbiJwChlMaXN0U3RlcEV4ZWN1dGlvbnNSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRIZChFwbGFuX2V4ZWN1dGlvbl9pZBgCIAEoCRIRCglwYWdlX3NpemUYAyABKAUSEgoKcGFnZV90b2tlbhgEIAEoCSJuChpMaXN0U3RlcEV4ZWN1dGlvbnNSZXNwb25zZRI3Cg9zdGVwX2V4ZWN1dGlvbnMYASADKAsyHi5oYXJwaWEucGxhbnMudjEuU3RlcEV4ZWN1dGlvbhIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAki5QMKEkVsaWNpdGF0aW9uUmVxdWVzdBIKCgJpZBgBIAEoCRIRCgl0ZW5hbnRfaWQYAiABKAkSGQoRc3RlcF9leGVjdXRpb25faWQYAyABKAkSGQoRcGxhbl9leGVjdXRpb25faWQYBCABKAkSFQoNcGxhbl9zdGVwX2tleRgFIAEoCRIdChVlbGljaXRhdGlvbl90aHJlYWRfaWQYBiABKAkSDgoGcHJvbXB0GAcgASgJEhMKC3NjaGVtYV9qc29uGAggASgJEjIKBnN0YXR1cxgJIAEoDjIiLmhhcnBpYS5wbGFucy52MS5FbGljaXRhdGlvblN0YXR1cxIYChBvdmVyc2Vlcl91c2VyX2lkGAogASgJEkUKEHRpbWVvdXRfYmVoYXZpb3IYCyABKA4yKy5oYXJwaWEucGxhbnMudjEuRWxpY2l0YXRpb25UaW1lb3V0QmVoYXZpb3ISEgoKY3JlYXRlZF9hdBgMIAEoCRISCgpleHBpcmVzX2F0GA0gASgJEhQKDHJlc3BvbmRlZF9hdBgOIAEoCRIcChRyZXNwb25kZWRfYnlfdXNlcl9pZBgPIAEoCRIuCgZ0aHJlYWQYECADKAsyHi5oYXJwaWEucGxhbnMudjEuVGhyZWFkTWVzc2FnZSKRAQoNVGhyZWFkTWVzc2FnZRIwCgRyb2xlGAEgASgOMiIuaGFycGlhLnBsYW5zLnYxLlRocmVhZE1lc3NhZ2VSb2xlEgwKBHRleHQYAiABKAkSFAoMcGF5bG9hZF9qc29uGAMgASgJEhYKDmF1dGhvcl91c2VyX2lkGAQgASgJEhIKCmNyZWF0ZWRfYXQYBSABKAkiigEKE0VsaWNpdGF0aW9uUmVzcG9uc2USEgoKcmVxdWVzdF9pZBgBIAEoCRIUCgxwYXlsb2FkX2pzb24YAiABKAkSFQoNcmVzcG9uc2VfdGV4dBgDIAEoCRIcChRyZXNwb25kZWRfYnlfdXNlcl9pZBgEIAEoCRIUCgxyZXNwb25kZWRfYXQYBSABKAkinAIKF0xpc3RFbGljaXRhdGlvbnNSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRIeChFzdGVwX2V4ZWN1dGlvbl9pZBgCIAEoCUgAiAEBEh4KEXBsYW5fZXhlY3V0aW9uX2lkGAMgASgJSAGIAQESNwoGc3RhdHVzGAQgASgOMiIuaGFycGlhLnBsYW5zLnYxLkVsaWNpdGF0aW9uU3RhdHVzSAKIAQESFwoPYWRkcmVzc2VkX3RvX21lGAUgASgIEhEKCXBhZ2Vfc2l6ZRgGIAEoBRISCgpwYWdlX3Rva2VuGAcgASgJQhQKEl9zdGVwX2V4ZWN1dGlvbl9pZEIUChJfcGxhbl9leGVjdXRpb25faWRCCQoHX3N0YXR1cyJuChhMaXN0RWxpY2l0YXRpb25zUmVzcG9uc2USOQoMZWxpY2l0YXRpb25zGAEgAygLMiMuaGFycGlhLnBsYW5zLnYxLkVsaWNpdGF0aW9uUmVxdWVzdBIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkiQgoVR2V0RWxpY2l0YXRpb25SZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRIWCg5lbGljaXRhdGlvbl9pZBgCIAEoCSJSChZHZXRFbGljaXRhdGlvblJlc3BvbnNlEjgKC2VsaWNpdGF0aW9uGAEgASgLMiMuaGFycGlhLnBsYW5zLnYxLkVsaWNpdGF0aW9uUmVxdWVzdCJ1ChtSZXNwb25kVG9FbGljaXRhdGlvblJlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgJEhYKDmVsaWNpdGF0aW9uX2lkGAIgASgJEhQKDHBheWxvYWRfanNvbhgDIAEoCRIVCg1yZXNwb25zZV90ZXh0GAQgASgJIlgKHFJlc3BvbmRUb0VsaWNpdGF0aW9uUmVzcG9uc2USOAoLZWxpY2l0YXRpb24YASABKAsyIy5oYXJwaWEucGxhbnMudjEuRWxpY2l0YXRpb25SZXF1ZXN0InwKGFdhdGNoRWxpY2l0YXRpb25zUmVxdWVzdBIRCgl0ZW5hbnRfaWQYASABKAkSHgoRc3RlcF9leGVjdXRpb25faWQYAiABKAlIAIgBARIXCg9hZGRyZXNzZWRfdG9fbWUYAyABKAhCFAoSX3N0ZXBfZXhlY3V0aW9uX2lkIlYKGVdhdGNoRWxpY2l0YXRpb25zUmVzcG9uc2USOQoMZWxpY2l0YXRpb25zGAEgAygLMiMuaGFycGlhLnBsYW5zLnYxLkVsaWNpdGF0aW9uUmVxdWVzdCplCgxFeGVjdXRvcktpbmQSHQoZRVhFQ1VUT1JfS0lORF9VTlNQRUNJRklFRBAAEhcKE0VYRUNVVE9SX0tJTkRfQUdFTlQQARIdChlFWEVDVVRPUl9LSU5EX0lOVEVHUkFUSU9OEAIqigIKF1BsYW5Db25maWd1cmF0aW9uU3RhdHVzEikKJVBMQU5fQ09ORklHVVJBVElPTl9TVEFUVVNfVU5TUEVDSUZJRUQQABIjCh9QTEFOX0NPTkZJR1VSQVRJT05fU1RBVFVTX0RSQUZUEAESJgoiUExBTl9DT05GSUdVUkFUSU9OX1NUQVRVU19SVU5OQUJMRRACEicKI1BMQU5fQ09ORklHVVJBVElPTl9TVEFUVVNfU0NIRURVTEVEEAMSJgoiUExBTl9DT05GSUdVUkFUSU9OX1NUQVRVU19ESVNBQkxFRBAEEiYKIlBMQU5fQ09ORklHVVJBVElPTl9TVEFUVVNfQVJDSElWRUQQBSqRAgoaRWxpY2l0YXRpb25UaW1lb3V0QmVoYXZpb3ISLAooRUxJQ0lUQVRJT05fVElNRU9VVF9CRUhBVklPUl9VTlNQRUNJRklFRBAAEjUKMUVMSUNJVEFUSU9OX1RJTUVPVVRfQkVIQVZJT1JfUEFVU0VfVU5USUxfQU5TV0VSRUQQARIqCiZFTElDSVRBVElPTl9USU1FT1VUX0JFSEFWSU9SX0ZBSUxfU1RFUBACEjYKLkVMSUNJVEFUSU9OX1RJTUVPVVRfQkVIQVZJT1JfU0tJUF9XSVRIX0RFRkFVTFQQAxoCCAESKgomRUxJQ0lUQVRJT05fVElNRU9VVF9CRUhBVklPUl9GQUlMX1BMQU4QBCqQAQoTUHVibGlzaEFwcHJvdmFsTW9kZRIlCiFQVUJMSVNIX0FQUFJPVkFMX01PREVfVU5TUEVDSUZJRUQQABIqCiZQVUJMSVNIX0FQUFJPVkFMX01PREVfUkVRVUlSRV9BUFBST1ZBTBABEiYKIlBVQkxJU0hfQVBQUk9WQUxfTU9ERV9BVVRPX1BVQkxJU0gQAiruAQoTUGxhbkV4ZWN1dGlvblN0YXR1cxIlCiFQTEFOX0VYRUNVVElPTl9TVEFUVVNfVU5TUEVDSUZJRUQQABIhCh1QTEFOX0VYRUNVVElPTl9TVEFUVVNfUEVORElORxABEiEKHVBMQU5fRVhFQ1VUSU9OX1NUQVRVU19SVU5OSU5HEAISIwofUExBTl9FWEVDVVRJT05fU1RBVFVTX0NPTVBMRVRFRBADEiAKHFBMQU5fRVhFQ1VUSU9OX1NUQVRVU19GQUlMRUQQBBIjCh9QTEFOX0VYRUNVVElPTl9TVEFUVVNfQ0FOQ0VMTEVEEAUqpgIKE1N0ZXBFeGVjdXRpb25TdGF0dXMSJQohU1RFUF9FWEVDVVRJT05fU1RBVFVTX1VOU1BFQ0lGSUVEEAASIQodU1RFUF9FWEVDVVRJT05fU1RBVFVTX1BFTkRJTkcQARIhCh1TVEVQX0VYRUNVVElPTl9TVEFUVVNfUlVOTklORxACEi4KKlNURVBfRVhFQ1VUSU9OX1NUQVRVU19BV0FJVElOR19FTElDSVRBVElPThADEisKJ1NURVBfRVhFQ1VUSU9OX1NUQVRVU19BV0FJVElOR19BUFBST1ZBTBAEEiMKH1NURVBfRVhFQ1VUSU9OX1NUQVRVU19DT01QTEVURUQQBRIgChxTVEVQX0VYRUNVVElPTl9TVEFUVVNfRkFJTEVEEAYqvAEKEUVsaWNpdGF0aW9uU3RhdHVzEiIKHkVMSUNJVEFUSU9OX1NUQVRVU19VTlNQRUNJRklFRBAAEh4KGkVMSUNJVEFUSU9OX1NUQVRVU19QRU5ESU5HEAESHwobRUxJQ0lUQVRJT05fU1RBVFVTX0FOU1dFUkVEEAISIAocRUxJQ0lUQVRJT05fU1RBVFVTX1RJTUVEX09VVBADEiAKHEVMSUNJVEFUSU9OX1NUQVRVU19DQU5DRUxMRUQQBCp5ChFUaHJlYWRNZXNzYWdlUm9sZRIjCh9USFJFQURfTUVTU0FHRV9ST0xFX1VOU1BFQ0lGSUVEEAASHQoZVEhSRUFEX01FU1NBR0VfUk9MRV9BR0VOVBABEiAKHFRIUkVBRF9NRVNTQUdFX1JPTEVfT1ZFUlNFRVIQAjKIDwoLUGxhblNlcnZpY2USZAoPR2V0UGxhblRlbXBsYXRlEicuaGFycGlhLnBsYW5zLnYxLkdldFBsYW5UZW1wbGF0ZVJlcXVlc3QaKC5oYXJwaWEucGxhbnMudjEuR2V0UGxhblRlbXBsYXRlUmVzcG9uc2UScwoUR2V0UGxhblRlbXBsYXRlQnlLZXkSLC5oYXJwaWEucGxhbnMudjEuR2V0UGxhblRlbXBsYXRlQnlLZXlSZXF1ZXN0Gi0uaGFycGlhLnBsYW5zLnYxLkdldFBsYW5UZW1wbGF0ZUJ5S2V5UmVzcG9uc2USbAoRTGlzdFBsYW5UZW1wbGF0ZXMSKS5oYXJwaWEucGxhbnMudjEuTGlzdFBsYW5UZW1wbGF0ZXNSZXF1ZXN0GiouaGFycGlhLnBsYW5zLnYxLkxpc3RQbGFuVGVtcGxhdGVzUmVzcG9uc2UwARJ8ChdDcmVhdGVQbGFuQ29uZmlndXJhdGlvbhIvLmhhcnBpYS5wbGFucy52MS5DcmVhdGVQbGFuQ29uZmlndXJhdGlvblJlcXVlc3QaMC5oYXJwaWEucGxhbnMudjEuQ3JlYXRlUGxhbkNvbmZpZ3VyYXRpb25SZXNwb25zZRJzChRHZXRQbGFuQ29uZmlndXJhdGlvbhIsLmhhcnBpYS5wbGFucy52MS5HZXRQbGFuQ29uZmlndXJhdGlvblJlcXVlc3QaLS5oYXJwaWEucGxhbnMudjEuR2V0UGxhbkNvbmZpZ3VyYXRpb25SZXNwb25zZRJ8ChdVcGRhdGVQbGFuQ29uZmlndXJhdGlvbhIvLmhhcnBpYS5wbGFucy52MS5VcGRhdGVQbGFuQ29uZmlndXJhdGlvblJlcXVlc3QaMC5oYXJwaWEucGxhbnMudjEuVXBkYXRlUGxhbkNvbmZpZ3VyYXRpb25SZXNwb25zZRJ7ChZMaXN0UGxhbkNvbmZpZ3VyYXRpb25zEi4uaGFycGlhLnBsYW5zLnYxLkxpc3RQbGFuQ29uZmlndXJhdGlvbnNSZXF1ZXN0Gi8uaGFycGlhLnBsYW5zLnYxLkxpc3RQbGFuQ29uZmlndXJhdGlvbnNSZXNwb25zZTABEnAKE0NyZWF0ZVBsYW5FeGVjdXRpb24SKy5oYXJwaWEucGxhbnMudjEuQ3JlYXRlUGxhbkV4ZWN1dGlvblJlcXVlc3QaLC5oYXJwaWEucGxhbnMudjEuQ3JlYXRlUGxhbkV4ZWN1dGlvblJlc3BvbnNlEm0KElJldHJ5UGxhbkV4ZWN1dGlvbhIqLmhhcnBpYS5wbGFucy52MS5SZXRyeVBsYW5FeGVjdXRpb25SZXF1ZXN0GisuaGFycGlhLnBsYW5zLnYxLlJldHJ5UGxhbkV4ZWN1dGlvblJlc3BvbnNlEmcKEEdldFBsYW5FeGVjdXRpb24SKC5oYXJwaWEucGxhbnMudjEuR2V0UGxhbkV4ZWN1dGlvblJlcXVlc3QaKS5oYXJwaWEucGxhbnMudjEuR2V0UGxhbkV4ZWN1dGlvblJlc3BvbnNlEm8KEkxpc3RQbGFuRXhlY3V0aW9ucxIqLmhhcnBpYS5wbGFucy52MS5MaXN0UGxhbkV4ZWN1dGlvbnNSZXF1ZXN0GisuaGFycGlhLnBsYW5zLnYxLkxpc3RQbGFuRXhlY3V0aW9uc1Jlc3BvbnNlMAESZwoQR2V0U3RlcEV4ZWN1dGlvbhIoLmhhcnBpYS5wbGFucy52MS5HZXRTdGVwRXhlY3V0aW9uUmVxdWVzdBopLmhhcnBpYS5wbGFucy52MS5HZXRTdGVwRXhlY3V0aW9uUmVzcG9uc2USbwoSTGlzdFN0ZXBFeGVjdXRpb25zEiouaGFycGlhLnBsYW5zLnYxLkxpc3RTdGVwRXhlY3V0aW9uc1JlcXVlc3QaKy5oYXJwaWEucGxhbnMudjEuTGlzdFN0ZXBFeGVjdXRpb25zUmVzcG9uc2UwARJnChBMaXN0RWxpY2l0YXRpb25zEiguaGFycGlhLnBsYW5zLnYxLkxpc3RFbGljaXRhdGlvbnNSZXF1ZXN0GikuaGFycGlhLnBsYW5zLnYxLkxpc3RFbGljaXRhdGlvbnNSZXNwb25zZRJhCg5HZXRFbGljaXRhdGlvbhImLmhhcnBpYS5wbGFucy52MS5HZXRFbGljaXRhdGlvblJlcXVlc3QaJy5oYXJwaWEucGxhbnMudjEuR2V0RWxpY2l0YXRpb25SZXNwb25zZRJzChRSZXNwb25kVG9FbGljaXRhdGlvbhIsLmhhcnBpYS5wbGFucy52MS5SZXNwb25kVG9FbGljaXRhdGlvblJlcXVlc3QaLS5oYXJwaWEucGxhbnMudjEuUmVzcG9uZFRvRWxpY2l0YXRpb25SZXNwb25zZRJsChFXYXRjaEVsaWNpdGF0aW9ucxIpLmhhcnBpYS5wbGFucy52MS5XYXRjaEVsaWNpdGF0aW9uc1JlcXVlc3QaKi5oYXJwaWEucGxhbnMudjEuV2F0Y2hFbGljaXRhdGlvbnNSZXNwb25zZTABQrwBChNjb20uaGFycGlhLnBsYW5zLnYxQgpQbGFuc1Byb3RvUAFaO2dpdGh1Yi5jb20vaGFycGlhL2NvbnRyb2wtcGxhbmUvZ2VuL2hhcnBpYS9wbGFucy92MTtwbGFuc3YxogIDSFBYqgIPSGFycGlhLlBsYW5zLlYxygIPSGFycGlhXFBsYW5zXFYx4gIbSGFycGlhXFBsYW5zXFYxXEdQQk1ldGFkYXRh6gIRSGFycGlhOjpQbGFuczo6VjFiBnByb3RvMw");
 
 /**
  * @generated from message harpia.plans.v1.PlanTemplate
@@ -1149,6 +1149,393 @@ export const ListStepExecutionsResponseSchema: GenMessage<ListStepExecutionsResp
   messageDesc(file_harpia_plans_v1_plans, 37);
 
 /**
+ * ElicitationRequest is a question raised by an agent StepExecution that an
+ * overseer must answer for the step to resume. The request prompt plus the
+ * overseer responses form the in-app thread (see thread).
+ *
+ * @generated from message harpia.plans.v1.ElicitationRequest
+ */
+export type ElicitationRequest = Message<"harpia.plans.v1.ElicitationRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string tenant_id = 2;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: string step_execution_id = 3;
+   */
+  stepExecutionId: string;
+
+  /**
+   * @generated from field: string plan_execution_id = 4;
+   */
+  planExecutionId: string;
+
+  /**
+   * @generated from field: string plan_step_key = 5;
+   */
+  planStepKey: string;
+
+  /**
+   * @generated from field: string elicitation_thread_id = 6;
+   */
+  elicitationThreadId: string;
+
+  /**
+   * @generated from field: string prompt = 7;
+   */
+  prompt: string;
+
+  /**
+   * JSON Schema describing the expected response payload (optional).
+   *
+   * @generated from field: string schema_json = 8;
+   */
+  schemaJson: string;
+
+  /**
+   * @generated from field: harpia.plans.v1.ElicitationStatus status = 9;
+   */
+  status: ElicitationStatus;
+
+  /**
+   * The overseer the request is addressed to (from OverseerBinding).
+   *
+   * @generated from field: string overseer_user_id = 10;
+   */
+  overseerUserId: string;
+
+  /**
+   * @generated from field: harpia.plans.v1.ElicitationTimeoutBehavior timeout_behavior = 11;
+   */
+  timeoutBehavior: ElicitationTimeoutBehavior;
+
+  /**
+   * @generated from field: string created_at = 12;
+   */
+  createdAt: string;
+
+  /**
+   * @generated from field: string expires_at = 13;
+   */
+  expiresAt: string;
+
+  /**
+   * @generated from field: string responded_at = 14;
+   */
+  respondedAt: string;
+
+  /**
+   * @generated from field: string responded_by_user_id = 15;
+   */
+  respondedByUserId: string;
+
+  /**
+   * Ordered conversation: the agent prompt followed by overseer responses.
+   *
+   * @generated from field: repeated harpia.plans.v1.ThreadMessage thread = 16;
+   */
+  thread: ThreadMessage[];
+};
+
+/**
+ * Describes the message harpia.plans.v1.ElicitationRequest.
+ * Use `create(ElicitationRequestSchema)` to create a new message.
+ */
+export const ElicitationRequestSchema: GenMessage<ElicitationRequest> = /*@__PURE__*/
+  messageDesc(file_harpia_plans_v1_plans, 38);
+
+/**
+ * @generated from message harpia.plans.v1.ThreadMessage
+ */
+export type ThreadMessage = Message<"harpia.plans.v1.ThreadMessage"> & {
+  /**
+   * @generated from field: harpia.plans.v1.ThreadMessageRole role = 1;
+   */
+  role: ThreadMessageRole;
+
+  /**
+   * @generated from field: string text = 2;
+   */
+  text: string;
+
+  /**
+   * Structured response payload as a JSON string (optional).
+   *
+   * @generated from field: string payload_json = 3;
+   */
+  payloadJson: string;
+
+  /**
+   * @generated from field: string author_user_id = 4;
+   */
+  authorUserId: string;
+
+  /**
+   * @generated from field: string created_at = 5;
+   */
+  createdAt: string;
+};
+
+/**
+ * Describes the message harpia.plans.v1.ThreadMessage.
+ * Use `create(ThreadMessageSchema)` to create a new message.
+ */
+export const ThreadMessageSchema: GenMessage<ThreadMessage> = /*@__PURE__*/
+  messageDesc(file_harpia_plans_v1_plans, 39);
+
+/**
+ * ElicitationResponse is the overseer answer to an ElicitationRequest.
+ *
+ * @generated from message harpia.plans.v1.ElicitationResponse
+ */
+export type ElicitationResponse = Message<"harpia.plans.v1.ElicitationResponse"> & {
+  /**
+   * @generated from field: string request_id = 1;
+   */
+  requestId: string;
+
+  /**
+   * Structured response payload encoded as a JSON string.
+   *
+   * @generated from field: string payload_json = 2;
+   */
+  payloadJson: string;
+
+  /**
+   * @generated from field: string response_text = 3;
+   */
+  responseText: string;
+
+  /**
+   * @generated from field: string responded_by_user_id = 4;
+   */
+  respondedByUserId: string;
+
+  /**
+   * @generated from field: string responded_at = 5;
+   */
+  respondedAt: string;
+};
+
+/**
+ * Describes the message harpia.plans.v1.ElicitationResponse.
+ * Use `create(ElicitationResponseSchema)` to create a new message.
+ */
+export const ElicitationResponseSchema: GenMessage<ElicitationResponse> = /*@__PURE__*/
+  messageDesc(file_harpia_plans_v1_plans, 40);
+
+/**
+ * @generated from message harpia.plans.v1.ListElicitationsRequest
+ */
+export type ListElicitationsRequest = Message<"harpia.plans.v1.ListElicitationsRequest"> & {
+  /**
+   * @generated from field: string tenant_id = 1;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: optional string step_execution_id = 2;
+   */
+  stepExecutionId?: string | undefined;
+
+  /**
+   * @generated from field: optional string plan_execution_id = 3;
+   */
+  planExecutionId?: string | undefined;
+
+  /**
+   * @generated from field: optional harpia.plans.v1.ElicitationStatus status = 4;
+   */
+  status?: ElicitationStatus | undefined;
+
+  /**
+   * When true, only elicitations addressed to the calling overseer are returned.
+   *
+   * @generated from field: bool addressed_to_me = 5;
+   */
+  addressedToMe: boolean;
+
+  /**
+   * @generated from field: int32 page_size = 6;
+   */
+  pageSize: number;
+
+  /**
+   * @generated from field: string page_token = 7;
+   */
+  pageToken: string;
+};
+
+/**
+ * Describes the message harpia.plans.v1.ListElicitationsRequest.
+ * Use `create(ListElicitationsRequestSchema)` to create a new message.
+ */
+export const ListElicitationsRequestSchema: GenMessage<ListElicitationsRequest> = /*@__PURE__*/
+  messageDesc(file_harpia_plans_v1_plans, 41);
+
+/**
+ * @generated from message harpia.plans.v1.ListElicitationsResponse
+ */
+export type ListElicitationsResponse = Message<"harpia.plans.v1.ListElicitationsResponse"> & {
+  /**
+   * @generated from field: repeated harpia.plans.v1.ElicitationRequest elicitations = 1;
+   */
+  elicitations: ElicitationRequest[];
+
+  /**
+   * @generated from field: string next_page_token = 2;
+   */
+  nextPageToken: string;
+};
+
+/**
+ * Describes the message harpia.plans.v1.ListElicitationsResponse.
+ * Use `create(ListElicitationsResponseSchema)` to create a new message.
+ */
+export const ListElicitationsResponseSchema: GenMessage<ListElicitationsResponse> = /*@__PURE__*/
+  messageDesc(file_harpia_plans_v1_plans, 42);
+
+/**
+ * @generated from message harpia.plans.v1.GetElicitationRequest
+ */
+export type GetElicitationRequest = Message<"harpia.plans.v1.GetElicitationRequest"> & {
+  /**
+   * @generated from field: string tenant_id = 1;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: string elicitation_id = 2;
+   */
+  elicitationId: string;
+};
+
+/**
+ * Describes the message harpia.plans.v1.GetElicitationRequest.
+ * Use `create(GetElicitationRequestSchema)` to create a new message.
+ */
+export const GetElicitationRequestSchema: GenMessage<GetElicitationRequest> = /*@__PURE__*/
+  messageDesc(file_harpia_plans_v1_plans, 43);
+
+/**
+ * @generated from message harpia.plans.v1.GetElicitationResponse
+ */
+export type GetElicitationResponse = Message<"harpia.plans.v1.GetElicitationResponse"> & {
+  /**
+   * @generated from field: harpia.plans.v1.ElicitationRequest elicitation = 1;
+   */
+  elicitation?: ElicitationRequest | undefined;
+};
+
+/**
+ * Describes the message harpia.plans.v1.GetElicitationResponse.
+ * Use `create(GetElicitationResponseSchema)` to create a new message.
+ */
+export const GetElicitationResponseSchema: GenMessage<GetElicitationResponse> = /*@__PURE__*/
+  messageDesc(file_harpia_plans_v1_plans, 44);
+
+/**
+ * @generated from message harpia.plans.v1.RespondToElicitationRequest
+ */
+export type RespondToElicitationRequest = Message<"harpia.plans.v1.RespondToElicitationRequest"> & {
+  /**
+   * @generated from field: string tenant_id = 1;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: string elicitation_id = 2;
+   */
+  elicitationId: string;
+
+  /**
+   * Structured response payload encoded as a JSON string (optional).
+   *
+   * @generated from field: string payload_json = 3;
+   */
+  payloadJson: string;
+
+  /**
+   * @generated from field: string response_text = 4;
+   */
+  responseText: string;
+};
+
+/**
+ * Describes the message harpia.plans.v1.RespondToElicitationRequest.
+ * Use `create(RespondToElicitationRequestSchema)` to create a new message.
+ */
+export const RespondToElicitationRequestSchema: GenMessage<RespondToElicitationRequest> = /*@__PURE__*/
+  messageDesc(file_harpia_plans_v1_plans, 45);
+
+/**
+ * @generated from message harpia.plans.v1.RespondToElicitationResponse
+ */
+export type RespondToElicitationResponse = Message<"harpia.plans.v1.RespondToElicitationResponse"> & {
+  /**
+   * @generated from field: harpia.plans.v1.ElicitationRequest elicitation = 1;
+   */
+  elicitation?: ElicitationRequest | undefined;
+};
+
+/**
+ * Describes the message harpia.plans.v1.RespondToElicitationResponse.
+ * Use `create(RespondToElicitationResponseSchema)` to create a new message.
+ */
+export const RespondToElicitationResponseSchema: GenMessage<RespondToElicitationResponse> = /*@__PURE__*/
+  messageDesc(file_harpia_plans_v1_plans, 46);
+
+/**
+ * @generated from message harpia.plans.v1.WatchElicitationsRequest
+ */
+export type WatchElicitationsRequest = Message<"harpia.plans.v1.WatchElicitationsRequest"> & {
+  /**
+   * @generated from field: string tenant_id = 1;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: optional string step_execution_id = 2;
+   */
+  stepExecutionId?: string | undefined;
+
+  /**
+   * @generated from field: bool addressed_to_me = 3;
+   */
+  addressedToMe: boolean;
+};
+
+/**
+ * Describes the message harpia.plans.v1.WatchElicitationsRequest.
+ * Use `create(WatchElicitationsRequestSchema)` to create a new message.
+ */
+export const WatchElicitationsRequestSchema: GenMessage<WatchElicitationsRequest> = /*@__PURE__*/
+  messageDesc(file_harpia_plans_v1_plans, 47);
+
+/**
+ * @generated from message harpia.plans.v1.WatchElicitationsResponse
+ */
+export type WatchElicitationsResponse = Message<"harpia.plans.v1.WatchElicitationsResponse"> & {
+  /**
+   * @generated from field: repeated harpia.plans.v1.ElicitationRequest elicitations = 1;
+   */
+  elicitations: ElicitationRequest[];
+};
+
+/**
+ * Describes the message harpia.plans.v1.WatchElicitationsResponse.
+ * Use `create(WatchElicitationsResponseSchema)` to create a new message.
+ */
+export const WatchElicitationsResponseSchema: GenMessage<WatchElicitationsResponse> = /*@__PURE__*/
+  messageDesc(file_harpia_plans_v1_plans, 48);
+
+/**
  * @generated from enum harpia.plans.v1.ExecutorKind
  */
 export enum ExecutorKind {
@@ -1366,6 +1753,68 @@ export const StepExecutionStatusSchema: GenEnum<StepExecutionStatus> = /*@__PURE
   enumDesc(file_harpia_plans_v1_plans, 5);
 
 /**
+ * @generated from enum harpia.plans.v1.ElicitationStatus
+ */
+export enum ElicitationStatus {
+  /**
+   * @generated from enum value: ELICITATION_STATUS_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: ELICITATION_STATUS_PENDING = 1;
+   */
+  PENDING = 1,
+
+  /**
+   * @generated from enum value: ELICITATION_STATUS_ANSWERED = 2;
+   */
+  ANSWERED = 2,
+
+  /**
+   * @generated from enum value: ELICITATION_STATUS_TIMED_OUT = 3;
+   */
+  TIMED_OUT = 3,
+
+  /**
+   * @generated from enum value: ELICITATION_STATUS_CANCELLED = 4;
+   */
+  CANCELLED = 4,
+}
+
+/**
+ * Describes the enum harpia.plans.v1.ElicitationStatus.
+ */
+export const ElicitationStatusSchema: GenEnum<ElicitationStatus> = /*@__PURE__*/
+  enumDesc(file_harpia_plans_v1_plans, 6);
+
+/**
+ * @generated from enum harpia.plans.v1.ThreadMessageRole
+ */
+export enum ThreadMessageRole {
+  /**
+   * @generated from enum value: THREAD_MESSAGE_ROLE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: THREAD_MESSAGE_ROLE_AGENT = 1;
+   */
+  AGENT = 1,
+
+  /**
+   * @generated from enum value: THREAD_MESSAGE_ROLE_OVERSEER = 2;
+   */
+  OVERSEER = 2,
+}
+
+/**
+ * Describes the enum harpia.plans.v1.ThreadMessageRole.
+ */
+export const ThreadMessageRoleSchema: GenEnum<ThreadMessageRole> = /*@__PURE__*/
+  enumDesc(file_harpia_plans_v1_plans, 7);
+
+/**
  * PlanService manages plan templates, tenant configurations, and executions.
  * Template plans use the plan-centric model defined in ADR-012.
  *
@@ -1481,6 +1930,41 @@ export const PlanService: GenService<{
     methodKind: "server_streaming";
     input: typeof ListStepExecutionsRequestSchema;
     output: typeof ListStepExecutionsResponseSchema;
+  },
+  /**
+   * In-app elicitation thread (E5.1, FR-11, UX-DR5).
+   * Overseers receive and answer agent questions scoped to a StepExecution.
+   *
+   * @generated from rpc harpia.plans.v1.PlanService.ListElicitations
+   */
+  listElicitations: {
+    methodKind: "unary";
+    input: typeof ListElicitationsRequestSchema;
+    output: typeof ListElicitationsResponseSchema;
+  },
+  /**
+   * @generated from rpc harpia.plans.v1.PlanService.GetElicitation
+   */
+  getElicitation: {
+    methodKind: "unary";
+    input: typeof GetElicitationRequestSchema;
+    output: typeof GetElicitationResponseSchema;
+  },
+  /**
+   * @generated from rpc harpia.plans.v1.PlanService.RespondToElicitation
+   */
+  respondToElicitation: {
+    methodKind: "unary";
+    input: typeof RespondToElicitationRequestSchema;
+    output: typeof RespondToElicitationResponseSchema;
+  },
+  /**
+   * @generated from rpc harpia.plans.v1.PlanService.WatchElicitations
+   */
+  watchElicitations: {
+    methodKind: "server_streaming";
+    input: typeof WatchElicitationsRequestSchema;
+    output: typeof WatchElicitationsResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_harpia_plans_v1_plans, 0);

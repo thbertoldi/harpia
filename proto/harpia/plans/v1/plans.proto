@@ -23,6 +23,13 @@ service PlanService {
   rpc ListPlanExecutions(ListPlanExecutionsRequest) returns (stream ListPlanExecutionsResponse);
   rpc GetStepExecution(GetStepExecutionRequest) returns (GetStepExecutionResponse);
   rpc ListStepExecutions(ListStepExecutionsRequest) returns (stream ListStepExecutionsResponse);
+
+  // In-app elicitation thread (E5.1, FR-11, UX-DR5).
+  // Overseers receive and answer agent questions scoped to a StepExecution.
+  rpc ListElicitations(ListElicitationsRequest) returns (ListElicitationsResponse);
+  rpc GetElicitation(GetElicitationRequest) returns (GetElicitationResponse);
+  rpc RespondToElicitation(RespondToElicitationRequest) returns (RespondToElicitationResponse);
+  rpc WatchElicitations(WatchElicitationsRequest) returns (stream WatchElicitationsResponse);
 }
 
 message PlanTemplate {
@@ -321,4 +328,113 @@ message ListStepExecutionsRequest {
 message ListStepExecutionsResponse {
   repeated StepExecution step_executions = 1;
   string next_page_token = 2;
+}
+
+// ============================================================
+// Elicitation thread (E5.1)
+// ============================================================
+
+// ElicitationRequest is a question raised by an agent StepExecution that an
+// overseer must answer for the step to resume. The request prompt plus the
+// overseer responses form the in-app thread (see thread).
+message ElicitationRequest {
+  string id = 1;
+  string tenant_id = 2;
+  string step_execution_id = 3;
+  string plan_execution_id = 4;
+  string plan_step_key = 5;
+  string elicitation_thread_id = 6;
+  string prompt = 7;
+  // JSON Schema describing the expected response payload (optional).
+  string schema_json = 8;
+  ElicitationStatus status = 9;
+  // The overseer the request is addressed to (from OverseerBinding).
+  string overseer_user_id = 10;
+  ElicitationTimeoutBehavior timeout_behavior = 11;
+  string created_at = 12;
+  string expires_at = 13;
+  string responded_at = 14;
+  string responded_by_user_id = 15;
+  // Ordered conversation: the agent prompt followed by overseer responses.
+  repeated ThreadMessage thread = 16;
+}
+
+enum ElicitationStatus {
+  ELICITATION_STATUS_UNSPECIFIED = 0;
+  ELICITATION_STATUS_PENDING = 1;
+  ELICITATION_STATUS_ANSWERED = 2;
+  ELICITATION_STATUS_TIMED_OUT = 3;
+  ELICITATION_STATUS_CANCELLED = 4;
+}
+
+message ThreadMessage {
+  ThreadMessageRole role = 1;
+  string text = 2;
+  // Structured response payload as a JSON string (optional).
+  string payload_json = 3;
+  string author_user_id = 4;
+  string created_at = 5;
+}
+
+enum ThreadMessageRole {
+  THREAD_MESSAGE_ROLE_UNSPECIFIED = 0;
+  THREAD_MESSAGE_ROLE_AGENT = 1;
+  THREAD_MESSAGE_ROLE_OVERSEER = 2;
+}
+
+// ElicitationResponse is the overseer answer to an ElicitationRequest.
+message ElicitationResponse {
+  string request_id = 1;
+  // Structured response payload encoded as a JSON string.
+  string payload_json = 2;
+  string response_text = 3;
+  string responded_by_user_id = 4;
+  string responded_at = 5;
+}
+
+message ListElicitationsRequest {
+  string tenant_id = 1;
+  optional string step_execution_id = 2;
+  optional string plan_execution_id = 3;
+  optional ElicitationStatus status = 4;
+  // When true, only elicitations addressed to the calling overseer are returned.
+  bool addressed_to_me = 5;
+  int32 page_size = 6;
+  string page_token = 7;
+}
+
+message ListElicitationsResponse {
+  repeated ElicitationRequest elicitations = 1;
+  string next_page_token = 2;
+}
+
+message GetElicitationRequest {
+  string tenant_id = 1;
+  string elicitation_id = 2;
+}
+
+message GetElicitationResponse {
+  ElicitationRequest elicitation = 1;
+}
+
+message RespondToElicitationRequest {
+  string tenant_id = 1;
+  string elicitation_id = 2;
+  // Structured response payload encoded as a JSON string (optional).
+  string payload_json = 3;
+  string response_text = 4;
+}
+
+message RespondToElicitationResponse {
+  ElicitationRequest elicitation = 1;
+}
+
+message WatchElicitationsRequest {
+  string tenant_id = 1;
+  optional string step_execution_id = 2;
+  bool addressed_to_me = 3;
+}
+
+message WatchElicitationsResponse {
+  repeated ElicitationRequest elicitations = 1;
 }

@@ -57,6 +57,18 @@ class PlanService(Protocol):
     def list_step_executions(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.ListStepExecutionsRequest, ctx: RequestContext) -> AsyncIterator[harpia_dot_plans_dot_v1_dot_plans__pb2.ListStepExecutionsResponse]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def list_elicitations(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.ListElicitationsRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.ListElicitationsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def get_elicitation(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.GetElicitationRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.GetElicitationResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def respond_to_elicitation(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToElicitationRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToElicitationResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    def watch_elicitations(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.WatchElicitationsRequest, ctx: RequestContext) -> AsyncIterator[harpia_dot_plans_dot_v1_dot_plans__pb2.WatchElicitationsResponse]:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
 
 class PlanServiceASGIApplication(ConnectASGIApplication[PlanService]):
     def __init__(self, service: PlanService | AsyncGenerator[PlanService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
@@ -192,6 +204,46 @@ class PlanServiceASGIApplication(ConnectASGIApplication[PlanService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.list_step_executions,
+                ),
+                "/harpia.plans.v1.PlanService/ListElicitations": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListElicitations",
+                        service_name="harpia.plans.v1.PlanService",
+                        input=harpia_dot_plans_dot_v1_dot_plans__pb2.ListElicitationsRequest,
+                        output=harpia_dot_plans_dot_v1_dot_plans__pb2.ListElicitationsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_elicitations,
+                ),
+                "/harpia.plans.v1.PlanService/GetElicitation": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetElicitation",
+                        service_name="harpia.plans.v1.PlanService",
+                        input=harpia_dot_plans_dot_v1_dot_plans__pb2.GetElicitationRequest,
+                        output=harpia_dot_plans_dot_v1_dot_plans__pb2.GetElicitationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_elicitation,
+                ),
+                "/harpia.plans.v1.PlanService/RespondToElicitation": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RespondToElicitation",
+                        service_name="harpia.plans.v1.PlanService",
+                        input=harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToElicitationRequest,
+                        output=harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToElicitationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.respond_to_elicitation,
+                ),
+                "/harpia.plans.v1.PlanService/WatchElicitations": Endpoint.server_stream(
+                    method=MethodInfo(
+                        name="WatchElicitations",
+                        service_name="harpia.plans.v1.PlanService",
+                        input=harpia_dot_plans_dot_v1_dot_plans__pb2.WatchElicitationsRequest,
+                        output=harpia_dot_plans_dot_v1_dot_plans__pb2.WatchElicitationsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.watch_elicitations,
                 ),
             },
             interceptors=interceptors,
@@ -467,6 +519,86 @@ class PlanServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def list_elicitations(
+        self,
+        request: harpia_dot_plans_dot_v1_dot_plans__pb2.ListElicitationsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_plans_dot_v1_dot_plans__pb2.ListElicitationsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListElicitations",
+                service_name="harpia.plans.v1.PlanService",
+                input=harpia_dot_plans_dot_v1_dot_plans__pb2.ListElicitationsRequest,
+                output=harpia_dot_plans_dot_v1_dot_plans__pb2.ListElicitationsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_elicitation(
+        self,
+        request: harpia_dot_plans_dot_v1_dot_plans__pb2.GetElicitationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_plans_dot_v1_dot_plans__pb2.GetElicitationResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetElicitation",
+                service_name="harpia.plans.v1.PlanService",
+                input=harpia_dot_plans_dot_v1_dot_plans__pb2.GetElicitationRequest,
+                output=harpia_dot_plans_dot_v1_dot_plans__pb2.GetElicitationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def respond_to_elicitation(
+        self,
+        request: harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToElicitationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToElicitationResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RespondToElicitation",
+                service_name="harpia.plans.v1.PlanService",
+                input=harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToElicitationRequest,
+                output=harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToElicitationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def watch_elicitations(
+        self,
+        request: harpia_dot_plans_dot_v1_dot_plans__pb2.WatchElicitationsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> AsyncIterator[harpia_dot_plans_dot_v1_dot_plans__pb2.WatchElicitationsResponse]:
+        return self.execute_server_stream(
+            request=request,
+            method=MethodInfo(
+                name="WatchElicitations",
+                service_name="harpia.plans.v1.PlanService",
+                input=harpia_dot_plans_dot_v1_dot_plans__pb2.WatchElicitationsRequest,
+                output=harpia_dot_plans_dot_v1_dot_plans__pb2.WatchElicitationsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 
 
 
@@ -497,6 +629,14 @@ class PlanServiceSync(Protocol):
     def get_step_execution(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.GetStepExecutionRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.GetStepExecutionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_step_executions(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.ListStepExecutionsRequest, ctx: RequestContext) -> Iterator[harpia_dot_plans_dot_v1_dot_plans__pb2.ListStepExecutionsResponse]:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def list_elicitations(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.ListElicitationsRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.ListElicitationsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def get_elicitation(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.GetElicitationRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.GetElicitationResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def respond_to_elicitation(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToElicitationRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToElicitationResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def watch_elicitations(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.WatchElicitationsRequest, ctx: RequestContext) -> Iterator[harpia_dot_plans_dot_v1_dot_plans__pb2.WatchElicitationsResponse]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -633,6 +773,46 @@ class PlanServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.list_step_executions,
+                ),
+                "/harpia.plans.v1.PlanService/ListElicitations": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListElicitations",
+                        service_name="harpia.plans.v1.PlanService",
+                        input=harpia_dot_plans_dot_v1_dot_plans__pb2.ListElicitationsRequest,
+                        output=harpia_dot_plans_dot_v1_dot_plans__pb2.ListElicitationsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_elicitations,
+                ),
+                "/harpia.plans.v1.PlanService/GetElicitation": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetElicitation",
+                        service_name="harpia.plans.v1.PlanService",
+                        input=harpia_dot_plans_dot_v1_dot_plans__pb2.GetElicitationRequest,
+                        output=harpia_dot_plans_dot_v1_dot_plans__pb2.GetElicitationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_elicitation,
+                ),
+                "/harpia.plans.v1.PlanService/RespondToElicitation": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RespondToElicitation",
+                        service_name="harpia.plans.v1.PlanService",
+                        input=harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToElicitationRequest,
+                        output=harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToElicitationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.respond_to_elicitation,
+                ),
+                "/harpia.plans.v1.PlanService/WatchElicitations": EndpointSync.server_stream(
+                    method=MethodInfo(
+                        name="WatchElicitations",
+                        service_name="harpia.plans.v1.PlanService",
+                        input=harpia_dot_plans_dot_v1_dot_plans__pb2.WatchElicitationsRequest,
+                        output=harpia_dot_plans_dot_v1_dot_plans__pb2.WatchElicitationsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.watch_elicitations,
                 ),
             },
             interceptors=interceptors,
@@ -902,6 +1082,86 @@ class PlanServiceClientSync(ConnectClientSync):
                 service_name="harpia.plans.v1.PlanService",
                 input=harpia_dot_plans_dot_v1_dot_plans__pb2.ListStepExecutionsRequest,
                 output=harpia_dot_plans_dot_v1_dot_plans__pb2.ListStepExecutionsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def list_elicitations(
+        self,
+        request: harpia_dot_plans_dot_v1_dot_plans__pb2.ListElicitationsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_plans_dot_v1_dot_plans__pb2.ListElicitationsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListElicitations",
+                service_name="harpia.plans.v1.PlanService",
+                input=harpia_dot_plans_dot_v1_dot_plans__pb2.ListElicitationsRequest,
+                output=harpia_dot_plans_dot_v1_dot_plans__pb2.ListElicitationsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def get_elicitation(
+        self,
+        request: harpia_dot_plans_dot_v1_dot_plans__pb2.GetElicitationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_plans_dot_v1_dot_plans__pb2.GetElicitationResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetElicitation",
+                service_name="harpia.plans.v1.PlanService",
+                input=harpia_dot_plans_dot_v1_dot_plans__pb2.GetElicitationRequest,
+                output=harpia_dot_plans_dot_v1_dot_plans__pb2.GetElicitationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def respond_to_elicitation(
+        self,
+        request: harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToElicitationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToElicitationResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RespondToElicitation",
+                service_name="harpia.plans.v1.PlanService",
+                input=harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToElicitationRequest,
+                output=harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToElicitationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def watch_elicitations(
+        self,
+        request: harpia_dot_plans_dot_v1_dot_plans__pb2.WatchElicitationsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> Iterator[harpia_dot_plans_dot_v1_dot_plans__pb2.WatchElicitationsResponse]:
+        return self.execute_server_stream(
+            request=request,
+            method=MethodInfo(
+                name="WatchElicitations",
+                service_name="harpia.plans.v1.PlanService",
+                input=harpia_dot_plans_dot_v1_dot_plans__pb2.WatchElicitationsRequest,
+                output=harpia_dot_plans_dot_v1_dot_plans__pb2.WatchElicitationsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
