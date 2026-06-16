@@ -24,6 +24,8 @@ type PlanHandler struct {
 	schedule        *ScheduleManager
 	runtime         PlanExecutionRetryer
 	workflowStarter PlanWorkflowStarter
+	elicitations    ElicitationStore
+	signaler        PlanElicitationSignaler
 }
 
 type PlanWorkflowStarter interface {
@@ -45,14 +47,19 @@ func NewPlanHandler(repo *Repository, executors ExecutorLookup, schedule *Schedu
 	if len(starters) > 0 {
 		starter = starters[0]
 	}
-	return &PlanHandler{
+	handler := &PlanHandler{
 		repo:            repo,
 		executors:       executors,
 		validator:       NewBindingValidator(executors),
 		schedule:        schedule,
 		runtime:         NewRuntimeRepository(repo, executors),
 		workflowStarter: starter,
-	}, nil
+		elicitations:    repo,
+	}
+	if signaler, ok := starter.(PlanElicitationSignaler); ok {
+		handler.signaler = signaler
+	}
+	return handler, nil
 }
 
 func (h *PlanHandler) GetPlanTemplate(ctx context.Context, req *connect.Request[plansv1.GetPlanTemplateRequest]) (*connect.Response[plansv1.GetPlanTemplateResponse], error) {

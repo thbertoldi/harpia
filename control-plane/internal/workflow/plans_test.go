@@ -445,6 +445,7 @@ func TestPlanWorkflowFailsTimedOutElicitationPerPolicy(t *testing.T) {
 		ElicitationThreadID: "thread-write-draft",
 	}, nil)
 	env.OnActivity(AwaitElicitationStepExecutionActivityName, mock.Anything, mock.Anything).Return(nil)
+	env.OnActivity(TimeoutElicitationStepExecutionActivityName, mock.Anything, mock.Anything).Return(nil)
 	env.OnActivity(FailStepExecutionActivityName, mock.Anything, mock.Anything).Return(
 		func(ctx context.Context, statusInput StepStatusUpdateInput) error {
 			failStepCalled = statusInput.StepExecutionID == "step-write-draft"
@@ -508,6 +509,7 @@ func TestPlanWorkflowFailsPlanOnTimedOutElicitationPolicy(t *testing.T) {
 		ElicitationThreadID: "thread-write-draft",
 	}, nil)
 	env.OnActivity(AwaitElicitationStepExecutionActivityName, mock.Anything, mock.Anything).Return(nil)
+	env.OnActivity(TimeoutElicitationStepExecutionActivityName, mock.Anything, mock.Anything).Return(nil)
 	env.OnActivity(FailStepExecutionActivityName, mock.Anything, mock.Anything).Return(
 		func(ctx context.Context, statusInput StepStatusUpdateInput) error {
 			failStepCalled = statusInput.StepExecutionID == "step-write-draft"
@@ -716,6 +718,7 @@ func newPlanWorkflowTestEnv(t *testing.T) *testsuite.TestWorkflowEnvironment {
 	env.RegisterActivity(CompleteStepExecutionActivity)
 	env.RegisterActivity(FailStepExecutionActivity)
 	env.RegisterActivity(AwaitElicitationStepExecutionActivity)
+	env.RegisterActivity(TimeoutElicitationStepExecutionActivity)
 	env.RegisterActivity(CreateApprovalRequestActivity)
 	env.RegisterActivity(ResolveApprovalRequestActivity)
 	env.RegisterActivity(CompletePlanExecutionActivity)
@@ -757,6 +760,10 @@ func FailStepExecutionActivity(context.Context, StepStatusUpdateInput) error {
 
 func AwaitElicitationStepExecutionActivity(context.Context, StepStatusUpdateInput) error {
 	return unexpectedActivityError("AwaitElicitationStepExecutionActivity")
+}
+
+func TimeoutElicitationStepExecutionActivity(context.Context, StepStatusUpdateInput) error {
+	return unexpectedActivityError("TimeoutElicitationStepExecutionActivity")
 }
 
 func CreateApprovalRequestActivity(context.Context, CreateApprovalRequestInput) error {

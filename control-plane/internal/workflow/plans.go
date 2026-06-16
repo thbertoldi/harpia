@@ -26,8 +26,9 @@ const (
 	RunAgentActivityName                      = "RunAgentActivity"
 	CompleteStepExecutionActivityName         = "CompleteStepExecutionActivity"
 	FailStepExecutionActivityName             = "FailStepExecutionActivity"
-	AwaitElicitationStepExecutionActivityName = "AwaitElicitationStepExecutionActivity"
-	ResumeStepExecutionActivityName           = "ResumeStepExecutionActivity"
+	AwaitElicitationStepExecutionActivityName   = "AwaitElicitationStepExecutionActivity"
+	TimeoutElicitationStepExecutionActivityName = "TimeoutElicitationStepExecutionActivity"
+	ResumeStepExecutionActivityName             = "ResumeStepExecutionActivity"
 	CreateApprovalRequestActivityName         = "CreateApprovalRequestActivity"
 	ResolveApprovalRequestActivityName        = "ResolveApprovalRequestActivity"
 	CompletePlanExecutionActivityName         = "CompletePlanExecutionActivity"
@@ -120,6 +121,14 @@ type StepStatusUpdateInput struct {
 	StepExecutionID     string `json:"step_execution_id"`
 	OutputArtifactID    string `json:"output_artifact_id,omitempty"`
 	ElicitationThreadID string `json:"elicitation_thread_id,omitempty"`
+	// Elicitation persistence fields (E5.1), populated when a step pauses for an
+	// elicitation so the runtime can durably record the in-app thread.
+	PlanExecutionID       string `json:"plan_execution_id,omitempty"`
+	PlanStepKey           string `json:"plan_step_key,omitempty"`
+	ElicitationPrompt     string `json:"elicitation_prompt,omitempty"`
+	ElicitationSchemaJSON string `json:"elicitation_schema_json,omitempty"`
+	ElicitationExpiresAt  string `json:"elicitation_expires_at,omitempty"`
+	ElicitationTimeout    string `json:"elicitation_timeout_behavior,omitempty"`
 }
 
 type ArtifactRef struct {
@@ -143,10 +152,12 @@ type ExecutorActivityInput struct {
 }
 
 type ExecutorActivityResult struct {
-	Status              string `json:"status"`
-	OutputArtifactID    string `json:"output_artifact_id,omitempty"`
-	ElicitationThreadID string `json:"elicitation_thread_id,omitempty"`
-	Error               string `json:"error,omitempty"`
+	Status                string `json:"status"`
+	OutputArtifactID      string `json:"output_artifact_id,omitempty"`
+	ElicitationThreadID   string `json:"elicitation_thread_id,omitempty"`
+	ElicitationPrompt     string `json:"elicitation_prompt,omitempty"`
+	ElicitationSchemaJSON string `json:"elicitation_schema_json,omitempty"`
+	Error                 string `json:"error,omitempty"`
 }
 
 type ElicitationResponseSignal struct {
@@ -189,6 +200,7 @@ type PlanRuntimeStore interface {
 	CompleteStepExecution(ctx context.Context, input StepStatusUpdateInput) error
 	FailStepExecution(ctx context.Context, input StepStatusUpdateInput) error
 	AwaitElicitationStepExecution(ctx context.Context, input StepStatusUpdateInput) error
+	TimeoutElicitationStepExecution(ctx context.Context, input StepStatusUpdateInput) error
 	CreateApprovalRequest(ctx context.Context, input CreateApprovalRequestInput) error
 	ResolveApprovalRequest(ctx context.Context, input ResolveApprovalRequestInput) error
 	CompletePlanExecution(ctx context.Context, tenantID, executionID uuid.UUID) error
@@ -276,6 +288,13 @@ func (a *PlanActivities) AwaitElicitationStepExecutionActivity(ctx context.Conte
 		return fmt.Errorf("plan runtime store is not configured")
 	}
 	return a.Runtime.AwaitElicitationStepExecution(ctx, input)
+}
+
+func (a *PlanActivities) TimeoutElicitationStepExecutionActivity(ctx context.Context, input StepStatusUpdateInput) error {
+	if a == nil || a.Runtime == nil {
+		return fmt.Errorf("plan runtime store is not configured")
+	}
+	return a.Runtime.TimeoutElicitationStepExecution(ctx, input)
 }
 
 func (a *PlanActivities) CreateApprovalRequestActivity(ctx context.Context, input CreateApprovalRequestInput) error {
@@ -555,11 +574,18 @@ func runPlanWorkflow(ctx workflow.Context, input PlanWorkflowInput) (PlanWorkflo
 					}).Get(ctx, nil)
 					return result, failPlan(ctx, input, fmt.Errorf("step %q requested elicitation without thread id", step.Key))
 				}
-				if err := workflow.ExecuteActivity(ctx, AwaitElicitationStepExecutionActivityName, StepStatusUpdateInput{
-					TenantID:            input.TenantID,
-					StepExecutionID:     stepRecord.ID,
-					ElicitationThreadID: threadID,
-				}).Get(ctx, nil); err != nil {
+				awaitInput := StepStatusUpdateInput{
+					TenantID:              input.TenantID,
+					StepExecutionID:       stepRecord.ID,
+					ElicitationThreadID:   threadID,
+					PlanExecutionID:       input.PlanExecutionID,
+					PlanStepKey:           step.Key,
+					ElicitationPrompt:     executorResult.ElicitationPrompt,
+					ElicitationSchemaJSON: executorResult.ElicitationSchemaJSON,
+					ElicitationExpiresAt:  elicitationExpiresAt(ctx, policies),
+					ElicitationTimeout:    elicitationTimeoutBehavior(policies).String(),
+				}
+				if err := workflow.ExecuteActivity(ctx, AwaitElicitationStepExecutionActivityName, awaitInput).Get(ctx, nil); err != nil {
 					return result, failPlan(ctx, input, err)
 				}
 				response, timedOut, err := waitForElicitationResponse(ctx, stepRecord.ID, threadID, policies)
@@ -571,6 +597,11 @@ func runPlanWorkflow(ctx workflow.Context, input PlanWorkflowInput) (PlanWorkflo
 					return result, failPlan(ctx, input, fmt.Errorf("step %q elicitation response: %w", step.Key, err))
 				}
 				if timedOut {
+					_ = workflow.ExecuteActivity(ctx, TimeoutElicitationStepExecutionActivityName, StepStatusUpdateInput{
+						TenantID:            input.TenantID,
+						StepExecutionID:     stepRecord.ID,
+						ElicitationThreadID: threadID,
+					}).Get(ctx, nil)
 					return result, failTimedOutElicitation(ctx, input, step, stepRecord, policies)
 				}
 				if err := workflow.ExecuteActivity(ctx, ResumeStepExecutionActivityName, StepStatusUpdateInput{
@@ -823,6 +854,16 @@ func elicitationTimeoutDuration(policies *plansv1.PlanBehaviorPolicies) time.Dur
 		}
 		return time.Duration(hours) * time.Hour
 	}
+}
+
+// elicitationExpiresAt returns the RFC3339 deadline for an elicitation given the
+// policy, or "" when the policy pauses indefinitely (no deadline).
+func elicitationExpiresAt(ctx workflow.Context, policies *plansv1.PlanBehaviorPolicies) string {
+	timeout := elicitationTimeoutDuration(policies)
+	if timeout <= 0 {
+		return ""
+	}
+	return workflow.Now(ctx).UTC().Add(timeout).Format(time.RFC3339)
 }
 
 func elicitationTimeoutBehavior(policies *plansv1.PlanBehaviorPolicies) plansv1.ElicitationTimeoutBehavior {

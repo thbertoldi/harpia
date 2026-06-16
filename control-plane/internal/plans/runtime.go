@@ -161,7 +161,90 @@ func (r *RuntimeRepository) AwaitElicitationStepExecution(ctx context.Context, i
 	if err != nil {
 		return err
 	}
-	return r.plans.UpdateStepExecutionStatus(ctx, tenantID, stepID, StepStatusAwaitingElicitation, "", input.ElicitationThreadID, "")
+	if err := r.plans.UpdateStepExecutionStatus(ctx, tenantID, stepID, StepStatusAwaitingElicitation, "", input.ElicitationThreadID, ""); err != nil {
+		return err
+	}
+	return r.persistElicitation(ctx, tenantID, stepID, input)
+}
+
+func (r *RuntimeRepository) persistElicitation(ctx context.Context, tenantID, stepID uuid.UUID, input workflow.StepStatusUpdateInput) error {
+	threadID := strings.TrimSpace(input.ElicitationThreadID)
+	planExecutionID := strings.TrimSpace(input.PlanExecutionID)
+	if threadID == "" || planExecutionID == "" {
+		// Without a thread id or plan execution id we cannot durably scope the
+		// elicitation thread; the step status update above is sufficient.
+		return nil
+	}
+	executionID, err := uuid.Parse(planExecutionID)
+	if err != nil {
+		return fmt.Errorf("parse plan execution id: %w", err)
+	}
+
+	var expiresAt *time.Time
+	if trimmed := strings.TrimSpace(input.ElicitationExpiresAt); trimmed != "" {
+		parsed, parseErr := time.Parse(time.RFC3339, trimmed)
+		if parseErr == nil {
+			expiresAt = &parsed
+		}
+	}
+
+	var schema json.RawMessage
+	if trimmed := strings.TrimSpace(input.ElicitationSchemaJSON); trimmed != "" {
+		schema = json.RawMessage(trimmed)
+	}
+
+	overseer := r.resolveOverseer(ctx, tenantID, executionID, input.PlanStepKey)
+
+	_, err = r.plans.UpsertElicitation(ctx, &Elicitation{
+		TenantID:            tenantID,
+		PlanExecutionID:     executionID,
+		StepExecutionID:     stepID,
+		PlanStepKey:         input.PlanStepKey,
+		ElicitationThreadID: threadID,
+		Status:              ElicitationStatusPending,
+		Prompt:              input.ElicitationPrompt,
+		SchemaJSON:          schema,
+		TimeoutBehavior:     input.ElicitationTimeout,
+		OverseerUserID:      overseer,
+		ExpiresAt:           expiresAt,
+	})
+	return err
+}
+
+// resolveOverseer looks up the overseer bound to the step from the execution
+// snapshot so the elicitation can be addressed and authorized. A missing binding
+// is non-fatal (leaders can still respond).
+func (r *RuntimeRepository) resolveOverseer(ctx context.Context, tenantID, executionID uuid.UUID, stepKey string) uuid.NullUUID {
+	execution, err := r.plans.GetExecution(ctx, tenantID, executionID)
+	if err != nil {
+		return uuid.NullUUID{}
+	}
+	snapshot, err := unmarshalPlanExecutionSnapshot(execution.PlanConfigurationSnapshot)
+	if err != nil || snapshot.Configuration == nil {
+		return uuid.NullUUID{}
+	}
+	for _, binding := range snapshot.Configuration.GetOverseerBindings() {
+		if binding == nil {
+			continue
+		}
+		if strings.TrimSpace(binding.GetStepKey()) != strings.TrimSpace(stepKey) {
+			continue
+		}
+		parsed, parseErr := uuid.Parse(strings.TrimSpace(binding.GetOverseerUserId()))
+		if parseErr != nil {
+			return uuid.NullUUID{}
+		}
+		return uuid.NullUUID{UUID: parsed, Valid: true}
+	}
+	return uuid.NullUUID{}
+}
+
+func (r *RuntimeRepository) TimeoutElicitationStepExecution(ctx context.Context, input workflow.StepStatusUpdateInput) error {
+	tenantID, stepID, err := parseRuntimeTenantStep(input.TenantID, input.StepExecutionID)
+	if err != nil {
+		return err
+	}
+	return r.plans.MarkElicitationTimedOutByStep(ctx, tenantID, stepID, strings.TrimSpace(input.ElicitationThreadID))
 }
 
 func (r *RuntimeRepository) CreateApprovalRequest(ctx context.Context, input workflow.CreateApprovalRequestInput) error {

@@ -1,4 +1,4 @@
-h1:I0OOFfxWxISBF/ttXfllBEiAXdyRZZ7PVPrmnKAn770=
+h1:6nCetiueEBMY5UD2Lh8ob2kuVU4RrUzx1+kRkZ+MJhI=
 000001_initial_schema.sql h1:ftqC16BXTrfe3uzdOQErFk7uYG44t+M5PPhk0pRkHe4=
 000002_schema_sync.sql h1:M7nTp8ww9G1Dd+KzZdbYkaTqjMhbh2cp1reW3yGqE7Q=
 000003_tenant_rls_hardening.sql h1:SsBdrSPxoIsOkuT0yXRnVskct+H0fenhJZ/24Eu4F4k=
@@ -6,3 +6,4 @@ h1:I0OOFfxWxISBF/ttXfllBEiAXdyRZZ7PVPrmnKAn770=
 000005_executor_registry.sql h1:ZgtsEEBlX0hesjmMk3tMjBc/YooQje3v+gRXjs6wsjg=
 000006_artifact_tables.sql h1:hrVTQruKKsTZe4+HIKrGcReMBJo5a+z3aaYj2KyUsfw=
 000007_plan_approval_requests.sql h1:aP3dFsuxcnZ+zN7XZes9LVd1qeRAKyktEwbJthVAr6U=
+000008_plan_elicitations.sql h1:1OwvUyFangcIAOIeX2rBj1vd+3ln4nx8S0OTwEOWxg8=
