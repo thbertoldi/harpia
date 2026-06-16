@@ -11,6 +11,7 @@ from harpia_agents.temporal.worker import (
     HarpiaTaskWorkflow,
     decompose_task_activity,
     execute_subtask_activity,
+    run_agent_activity,
 )
 
 logger = logging.getLogger("harpia_agents.temporal_worker")
@@ -26,7 +27,7 @@ async def run_worker() -> None:
         client,
         task_queue=task_queue,
         workflows=[HarpiaTaskWorkflow],
-        activities=[decompose_task_activity, execute_subtask_activity],
+        activities=[decompose_task_activity, execute_subtask_activity, run_agent_activity],
     )
     logger.info("Temporal worker started", extra={"host": temporal_host, "queue": task_queue})
     await worker.run()

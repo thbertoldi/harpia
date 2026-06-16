@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
+from google.protobuf.json_format import MessageToDict
 from harpia.agents.v1.agents_connect import AgentService
 from harpia.agents.v1.agents_pb2 import (
     AgentInstanceStatus,
@@ -13,6 +15,7 @@ from harpia.agents.v1.agents_pb2 import (
     ContinueExecutionResponse,
     ExecuteTaskRequest,
     ExecuteTaskResponse,
+    FeedbackRequest,
     ListAgentTypesRequest,
     ListAgentTypesResponse,
     MatchAgentRequest,
@@ -22,6 +25,8 @@ from harpia.agents.v1.agents_pb2 import (
 )
 from langchain_openai import OpenAIEmbeddings
 
+from harpia_agents.agents.newsletter_writer import ElicitationRequest
+from harpia_agents.agents.registry import has_runner, run_registered_agent
 from harpia_agents.graph import TaskState, build_graph
 from harpia_agents.identity import require_selected_tenant, require_tenant
 
@@ -78,6 +83,44 @@ class AgentServiceImpl(AgentService):
         tenant_id = require_tenant(ctx, request.tenant_id)
 
         async def _stream() -> AsyncIterator[ExecuteTaskResponse]:
+            if has_runner(request.agent_type_id):
+                try:
+                    payload = (
+                        json.loads(request.task_description) if request.task_description else {}
+                    )
+                    if not isinstance(payload, dict):
+                        raise ValueError("task_description must be a JSON object")
+                    result = await run_registered_agent(
+                        request.agent_type_id,
+                        input_news_list=payload,
+                    )
+                    if isinstance(result, ElicitationRequest):
+                        yield ExecuteTaskResponse(
+                            status=AgentInstanceStatus.AGENT_INSTANCE_STATUS_AWAITING_FEEDBACK,
+                            message="elicitation requested",
+                            feedback_request=FeedbackRequest(
+                                subtask_id=request.subtask_id,
+                                question=result.question,
+                                options=list(result.required_fields),
+                            ),
+                        )
+                        return
+
+                    yield ExecuteTaskResponse(
+                        status=AgentInstanceStatus.AGENT_INSTANCE_STATUS_COMPLETED,
+                        output=json.dumps(
+                            MessageToDict(result, preserving_proto_field_name=True),
+                            sort_keys=True,
+                        ),
+                    )
+                    return
+                except Exception as exc:
+                    yield ExecuteTaskResponse(
+                        status=AgentInstanceStatus.AGENT_INSTANCE_STATUS_FAILED,
+                        error=str(exc),
+                    )
+                    return
+
             graph = build_graph()
             state = TaskState(
                 task_id=request.task_id,

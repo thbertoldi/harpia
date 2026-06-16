@@ -8,9 +8,12 @@ from harpia_agents.agents.manifest import (
     AgentType,
     ManifestReferenceRegistry,
 )
+from harpia_agents.agents.registry import has_runner, run_registered_agent
 
 __all__ = [
     "AgentManifestValidationError",
     "AgentType",
     "ManifestReferenceRegistry",
+    "has_runner",
+    "run_registered_agent",
 ]
