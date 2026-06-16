@@ -242,6 +242,19 @@ func NewRSSArtifactStore() runtime.ExecutorArtifactStore {
 // ValidRSSDateRangeLiteral is a schema-valid DateRange literal for contract tests.
 const ValidRSSDateRangeLiteral = `{"startDate":"2026-01-01","endDate":"2026-01-07"}`
 
+// NewLinkedInArtifactStore returns an artifact store seeded for LinkedIn contract tests.
+func NewLinkedInArtifactStore() runtime.ExecutorArtifactStore {
+	typeID := uuid.MustParse("55555555-5555-5555-5555-555555555555")
+	return runtime.NewExecutorArtifactStore(&MemoryArtifactRepo{
+		Types: map[string]*artifacts.ArtifactType{
+			artifacts.TypeKeyPublishConfirmation: {ID: typeID, Key: artifacts.TypeKeyPublishConfirmation},
+		},
+	}, &MemoryPayloadStore{})
+}
+
+// ValidLinkedInPostDraftLiteral is a schema-valid LinkedInPostDraft literal for contract tests.
+const ValidLinkedInPostDraftLiteral = `{"text":"Shipping LinkedIn publish integration.","hashtags":["harpia","automation"]}`
+
 // AssertNewsListPayload validates a stored NewsList payload against the schema.
 func AssertNewsListPayload(t *testing.T, payload []byte) {
 	t.Helper()
@@ -251,6 +264,18 @@ func AssertNewsListPayload(t *testing.T, payload []byte) {
 	}
 	if err := artifacts.ValidatePayload(artifacts.TypeKeyNewsList, payload); err != nil {
 		t.Fatalf("news list schema validation: %v", err)
+	}
+}
+
+// AssertPublishConfirmationPayload validates a stored PublishConfirmation payload.
+func AssertPublishConfirmationPayload(t *testing.T, payload []byte) {
+	t.Helper()
+	confirmation := &artifactsv1.PublishConfirmation{}
+	if err := protojson.Unmarshal(payload, confirmation); err != nil {
+		t.Fatalf("unmarshal publish confirmation: %v", err)
+	}
+	if err := artifacts.ValidatePayload(artifacts.TypeKeyPublishConfirmation, payload); err != nil {
+		t.Fatalf("publish confirmation schema validation: %v", err)
 	}
 }
 

@@ -5,7 +5,9 @@ import "errors"
 // Retryable Temporal activity error codes. Integration handlers must use these
 // constants so workflow adapters can map failures consistently.
 const (
-	ErrCodeFeedFetch = "FeedFetchError"
+	ErrCodeFeedFetch              = "FeedFetchError"
+	ErrCodeLinkedInPublish        = "LinkedInPublishError"
+	ErrCodeOAuthReconnectRequired = "OAuthReconnectRequired"
 )
 
 // RetryableError marks a transient integration failure that Temporal should retry.
