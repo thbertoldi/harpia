@@ -33,7 +33,7 @@ type IntegrationExecutionRequest struct {
 	StepExecutionID      string
 	PlanStepKey          string
 	InputArtifacts       []InputArtifactRef
-	OutputArtifactTypeID string
+	OutputArtifactTypeKey string
 	Installation         InstallationSnapshot
 }
 

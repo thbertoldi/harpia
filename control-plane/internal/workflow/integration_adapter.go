@@ -59,7 +59,7 @@ func mapIntegrationRequest(tenantID uuid.UUID, input ExecutorActivityInput) exec
 		StepExecutionID:      input.StepExecutionID,
 		PlanStepKey:          input.PlanStepKey,
 		InputArtifacts:       inputArtifacts,
-		OutputArtifactTypeID: input.OutputArtifactTypeID,
+		OutputArtifactTypeKey: input.OutputArtifactTypeID,
 		Installation: executors.InstallationSnapshot{
 			ID:             input.ExecutorInstallationSnapshot.ID,
 			ExecutorSKUID:  input.ExecutorInstallationSnapshot.ExecutorSKUID,

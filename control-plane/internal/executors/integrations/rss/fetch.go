@@ -19,22 +19,19 @@ type FeedFetcher interface {
 
 type HTTPFeedFetcher struct {
 	client *http.Client
-	parser *gofeed.Parser
 }
 
 func NewHTTPFeedFetcher(client *http.Client) *HTTPFeedFetcher {
 	if client == nil {
 		client = http.DefaultClient
 	}
-	return &HTTPFeedFetcher{
-		client: client,
-		parser: gofeed.NewParser(),
-	}
+	return &HTTPFeedFetcher{client: client}
 }
 
 func (f *HTTPFeedFetcher) Fetch(ctx context.Context, feedURL string) (*gofeed.Feed, error) {
-	f.parser.Client = f.client
-	feed, err := f.parser.ParseURLWithContext(feedURL, ctx)
+	parser := gofeed.NewParser()
+	parser.Client = f.client
+	feed, err := parser.ParseURLWithContext(feedURL, ctx)
 	if err != nil {
 		return nil, NewFeedFetchError(feedURL, err)
 	}

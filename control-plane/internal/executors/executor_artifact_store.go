@@ -11,18 +11,19 @@ import (
 	"github.com/harpia/control-plane/internal/artifacts"
 )
 
-// ArtifactGateway is the executors BC port for typed artifact persistence.
-type ArtifactGateway interface {
+// ExecutorArtifactStore is the executors BC port for runtime artifact persistence.
+// OutputArtifactTypeRef values from plan steps are stable artifact type keys
+// (for example harpia.artifacts.v1.NewsList), not database UUIDs.
+type ExecutorArtifactStore interface {
 	LoadPayloadForType(ctx context.Context, tenantID uuid.UUID, refs []InputArtifactRef, typeKey string) ([]byte, error)
 	CreateValidatedPayload(ctx context.Context, req CreateArtifactRequest) (string, error)
 }
 
 type CreateArtifactRequest struct {
-	TenantID        uuid.UUID
-	ArtifactTypeID  string
-	ArtifactTypeKey string
-	StepExecutionID string
-	Payload         []byte
+	TenantID              uuid.UUID
+	OutputArtifactTypeRef string
+	StepExecutionID       string
+	Payload               []byte
 }
 
 type artifactStore interface {
@@ -32,23 +33,23 @@ type artifactStore interface {
 	GetArtifact(ctx context.Context, tenantID, artifactID uuid.UUID) (*artifacts.Artifact, error)
 }
 
-type ArtifactGatewayAdapter struct {
+type ExecutorArtifactStoreAdapter struct {
 	repo  artifactStore
 	store artifacts.PayloadStore
 }
 
-func NewArtifactGateway(repo artifactStore, store artifacts.PayloadStore) *ArtifactGatewayAdapter {
-	return &ArtifactGatewayAdapter{repo: repo, store: store}
+func NewExecutorArtifactStore(repo artifactStore, store artifacts.PayloadStore) *ExecutorArtifactStoreAdapter {
+	return &ExecutorArtifactStoreAdapter{repo: repo, store: store}
 }
 
-func (g *ArtifactGatewayAdapter) LoadPayloadForType(
+func (g *ExecutorArtifactStoreAdapter) LoadPayloadForType(
 	ctx context.Context,
 	tenantID uuid.UUID,
 	refs []InputArtifactRef,
 	typeKey string,
 ) ([]byte, error) {
 	if g == nil || g.repo == nil || g.store == nil {
-		return nil, fmt.Errorf("artifact gateway is not configured")
+		return nil, fmt.Errorf("executor artifact store is not configured")
 	}
 
 	for _, ref := range refs {
@@ -70,19 +71,19 @@ func (g *ArtifactGatewayAdapter) LoadPayloadForType(
 	return nil, fmt.Errorf("missing input artifact for %q", typeKey)
 }
 
-func (g *ArtifactGatewayAdapter) CreateValidatedPayload(ctx context.Context, req CreateArtifactRequest) (string, error) {
+func (g *ExecutorArtifactStoreAdapter) CreateValidatedPayload(ctx context.Context, req CreateArtifactRequest) (string, error) {
 	if g == nil || g.repo == nil || g.store == nil {
-		return "", fmt.Errorf("artifact gateway is not configured")
+		return "", fmt.Errorf("executor artifact store is not configured")
 	}
 	if len(req.Payload) == 0 {
 		return "", fmt.Errorf("payload is required")
 	}
-	if err := artifacts.ValidatePayload(req.ArtifactTypeKey, req.Payload); err != nil {
+
+	artifactType, err := g.resolveArtifactType(ctx, req.OutputArtifactTypeRef)
+	if err != nil {
 		return "", err
 	}
-
-	artifactType, err := g.resolveArtifactType(ctx, req.ArtifactTypeID, req.ArtifactTypeKey)
-	if err != nil {
+	if err := artifacts.ValidatePayload(artifactType.Key, req.Payload); err != nil {
 		return "", err
 	}
 
@@ -106,7 +107,7 @@ func (g *ArtifactGatewayAdapter) CreateValidatedPayload(ctx context.Context, req
 	return created.ID.String(), nil
 }
 
-func (g *ArtifactGatewayAdapter) loadArtifactPayload(ctx context.Context, tenantID uuid.UUID, artifactIDRaw string) ([]byte, error) {
+func (g *ExecutorArtifactStoreAdapter) loadArtifactPayload(ctx context.Context, tenantID uuid.UUID, artifactIDRaw string) ([]byte, error) {
 	artifactID, err := uuid.Parse(artifactIDRaw)
 	if err != nil {
 		return nil, fmt.Errorf("parse artifact id: %w", err)
@@ -122,24 +123,23 @@ func (g *ArtifactGatewayAdapter) loadArtifactPayload(ctx context.Context, tenant
 	return payload, nil
 }
 
-func (g *ArtifactGatewayAdapter) resolveArtifactType(ctx context.Context, artifactTypeID, artifactTypeKey string) (*artifacts.ArtifactType, error) {
-	if trimmed := strings.TrimSpace(artifactTypeID); trimmed != "" {
-		typeID, err := uuid.Parse(trimmed)
-		if err != nil {
-			return nil, fmt.Errorf("parse artifact type id: %w", err)
-		}
-		artifactType, err := g.repo.GetTypeByID(ctx, typeID)
-		if err != nil {
-			return nil, fmt.Errorf("load artifact type %q: %w", trimmed, err)
+func (g *ExecutorArtifactStoreAdapter) resolveArtifactType(ctx context.Context, artifactTypeRef string) (*artifacts.ArtifactType, error) {
+	ref := strings.TrimSpace(artifactTypeRef)
+	if ref == "" {
+		return nil, fmt.Errorf("output artifact type ref is required")
+	}
+
+	if typeID, err := uuid.Parse(ref); err == nil {
+		artifactType, lookupErr := g.repo.GetTypeByID(ctx, typeID)
+		if lookupErr != nil {
+			return nil, fmt.Errorf("load artifact type id %q: %w", ref, lookupErr)
 		}
 		return artifactType, nil
 	}
-	if trimmed := strings.TrimSpace(artifactTypeKey); trimmed != "" {
-		artifactType, err := g.repo.GetTypeByKey(ctx, trimmed)
-		if err != nil {
-			return nil, fmt.Errorf("load artifact type key %q: %w", trimmed, err)
-		}
-		return artifactType, nil
+
+	artifactType, err := g.repo.GetTypeByKey(ctx, ref)
+	if err != nil {
+		return nil, fmt.Errorf("load artifact type key %q: %w", ref, err)
 	}
-	return nil, fmt.Errorf("artifact type id or key is required")
+	return artifactType, nil
 }

@@ -15,11 +15,11 @@ import (
 const retryableFeedFetchCode = "FeedFetchError"
 
 type Handler struct {
-	artifacts executors.ArtifactGateway
+	artifacts executors.ExecutorArtifactStore
 	feeds     FeedFetcher
 }
 
-func NewHandler(artifacts executors.ArtifactGateway, feeds FeedFetcher) *Handler {
+func NewHandler(artifacts executors.ExecutorArtifactStore, feeds FeedFetcher) *Handler {
 	return &Handler{artifacts: artifacts, feeds: feeds}
 }
 
@@ -68,11 +68,10 @@ func (h *Handler) Execute(ctx context.Context, req executors.IntegrationExecutio
 	}
 
 	outputArtifactID, err := h.artifacts.CreateValidatedPayload(ctx, executors.CreateArtifactRequest{
-		TenantID:        req.TenantID,
-		ArtifactTypeID:  req.OutputArtifactTypeID,
-		ArtifactTypeKey: artifacts.TypeKeyNewsList,
-		StepExecutionID: req.StepExecutionID,
-		Payload:         payload,
+		TenantID:              req.TenantID,
+		OutputArtifactTypeRef: req.OutputArtifactTypeKey,
+		StepExecutionID:       req.StepExecutionID,
+		Payload:               payload,
 	})
 	if err != nil {
 		return executors.IntegrationExecutionResult{}, fmt.Errorf("create news list artifact: %w", err)

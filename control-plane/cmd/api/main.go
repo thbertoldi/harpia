@@ -87,9 +87,9 @@ func runWorker(ctx context.Context, cfg *config.Config) {
 		fatal("create garage store failed", "error", err)
 	}
 
-	artifactGateway := executors.NewArtifactGateway(artifactRepo, garageStore)
+	artifactStore := executors.NewExecutorArtifactStore(artifactRepo, garageStore)
 	integrationRegistry := executors.NewIntegrationRegistry(
-		rss.NewHandler(artifactGateway, rss.NewHTTPFeedFetcher(nil)),
+		rss.NewHandler(artifactStore, rss.NewHTTPFeedFetcher(nil)),
 	)
 
 	planActivities := &workflow.PlanActivities{

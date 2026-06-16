@@ -116,6 +116,28 @@ func (s stubFeedFetcher) Fetch(_ context.Context, _ string) (*gofeed.Feed, error
 	return s.feed, nil
 }
 
+func TestHTTPFeedFetcherConcurrentFetch(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(sampleFeedXML))
+	}))
+	defer server.Close()
+
+	fetcher := NewHTTPFeedFetcher(server.Client())
+	const workers = 8
+	errCh := make(chan error, workers)
+	for i := 0; i < workers; i++ {
+		go func() {
+			_, err := fetcher.Fetch(context.Background(), server.URL)
+			errCh <- err
+		}()
+	}
+	for i := 0; i < workers; i++ {
+		if err := <-errCh; err != nil {
+			t.Fatalf("Fetch() error = %v", err)
+		}
+	}
+}
+
 func TestItemToNewsArticleUsesPublishedDate(t *testing.T) {
 	published := time.Date(2026, 1, 5, 15, 4, 5, 0, time.UTC)
 	article := itemToNewsArticle(&gofeed.Item{

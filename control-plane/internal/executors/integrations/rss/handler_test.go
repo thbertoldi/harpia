@@ -15,35 +15,79 @@ import (
 	"github.com/harpia/control-plane/internal/executors/integrations/rss"
 )
 
-type handlerArtifactGateway struct {
+type memoryArtifactRepo struct {
 	types     map[string]*artifacts.ArtifactType
 	artifacts map[uuid.UUID]*artifacts.Artifact
-	objects   map[string][]byte
 }
 
-func (m *handlerArtifactGateway) LoadPayloadForType(_ context.Context, _ uuid.UUID, refs []executors.InputArtifactRef, typeKey string) ([]byte, error) {
-	for _, ref := range refs {
-		if ref.ArtifactType != "" && ref.ArtifactType != typeKey {
-			continue
-		}
-		if ref.LiteralJSON != "" {
-			return []byte(ref.LiteralJSON), nil
+func (m *memoryArtifactRepo) GetTypeByID(_ context.Context, typeID uuid.UUID) (*artifacts.ArtifactType, error) {
+	for _, artifactType := range m.types {
+		if artifactType.ID == typeID {
+			return artifactType, nil
 		}
 	}
-	return nil, errors.New("missing input artifact")
+	return nil, context.Canceled
 }
 
-func (m *handlerArtifactGateway) CreateValidatedPayload(_ context.Context, req executors.CreateArtifactRequest) (string, error) {
-	if err := artifacts.ValidatePayload(req.ArtifactTypeKey, req.Payload); err != nil {
-		return "", err
+func (m *memoryArtifactRepo) GetTypeByKey(_ context.Context, key string) (*artifacts.ArtifactType, error) {
+	artifactType, ok := m.types[key]
+	if !ok {
+		return nil, context.Canceled
 	}
+	return artifactType, nil
+}
+
+func (m *memoryArtifactRepo) CreateArtifact(_ context.Context, artifact *artifacts.Artifact) (*artifacts.Artifact, error) {
+	if m.artifacts == nil {
+		m.artifacts = make(map[uuid.UUID]*artifacts.Artifact)
+	}
+	created := *artifact
+	if created.ID == uuid.Nil {
+		created.ID = uuid.New()
+	}
+	if created.CreatedAt.IsZero() {
+		created.CreatedAt = time.Now().UTC()
+	}
+	m.artifacts[created.ID] = &created
+	return &created, nil
+}
+
+func (m *memoryArtifactRepo) GetArtifact(_ context.Context, tenantID, artifactID uuid.UUID) (*artifacts.Artifact, error) {
+	artifact, ok := m.artifacts[artifactID]
+	if !ok || artifact.TenantID != tenantID {
+		return nil, context.Canceled
+	}
+	return artifact, nil
+}
+
+type memoryPayloadStore struct {
+	objects map[string][]byte
+}
+
+func (m *memoryPayloadStore) Put(_ context.Context, objectPath string, payload []byte) (string, error) {
 	if m.objects == nil {
 		m.objects = make(map[string][]byte)
 	}
-	artifactID := uuid.New()
-	uri := "s3://harpia/tenant/test/" + artifactID.String()
-	m.objects[uri] = append([]byte(nil), req.Payload...)
-	return artifactID.String(), nil
+	uri := "s3://harpia/tenant/test/" + objectPath
+	m.objects[uri] = append([]byte(nil), payload...)
+	return uri, nil
+}
+
+func (m *memoryPayloadStore) Get(_ context.Context, storageURI string) ([]byte, error) {
+	payload, ok := m.objects[storageURI]
+	if !ok {
+		return nil, context.Canceled
+	}
+	return append([]byte(nil), payload...), nil
+}
+
+func newTestArtifactStore() *executors.ExecutorArtifactStoreAdapter {
+	typeID := uuid.MustParse("33333333-3333-3333-3333-333333333333")
+	return executors.NewExecutorArtifactStore(&memoryArtifactRepo{
+		types: map[string]*artifacts.ArtifactType{
+			artifacts.TypeKeyNewsList: {ID: typeID, Key: artifacts.TypeKeyNewsList},
+		},
+	}, &memoryPayloadStore{})
 }
 
 type stubFeedFetcher struct {
@@ -58,8 +102,9 @@ func (s stubFeedFetcher) Fetch(_ context.Context, _ string) (*gofeed.Feed, error
 	return s.feed, nil
 }
 
-func TestHandlerExecuteSuccess(t *testing.T) {
-	handler := rss.NewHandler(&handlerArtifactGateway{}, stubFeedFetcher{feed: &gofeed.Feed{
+func TestHandlerExecuteSuccessWithPlanTemplateTypeKey(t *testing.T) {
+	store := newTestArtifactStore()
+	handler := rss.NewHandler(store, stubFeedFetcher{feed: &gofeed.Feed{
 		Title: "Example News",
 		Items: []*gofeed.Item{{
 			Title:           "Story",
@@ -70,9 +115,9 @@ func TestHandlerExecuteSuccess(t *testing.T) {
 	}})
 
 	result, err := handler.Execute(context.Background(), executors.IntegrationExecutionRequest{
-		TenantID:        uuid.MustParse("22222222-2222-2222-2222-222222222222"),
-		StepExecutionID: "step-fetch-news",
-		OutputArtifactTypeID: uuid.MustParse("33333333-3333-3333-3333-333333333333").String(),
+		TenantID:              uuid.MustParse("22222222-2222-2222-2222-222222222222"),
+		StepExecutionID:       "step-fetch-news",
+		OutputArtifactTypeKey: artifacts.TypeKeyNewsList,
 		InputArtifacts: []executors.InputArtifactRef{{
 			ArtifactType: artifacts.TypeKeyDateRange,
 			LiteralJSON:  `{"startDate":"2026-01-01","endDate":"2026-01-07"}`,
@@ -94,7 +139,7 @@ func TestHandlerExecuteSuccess(t *testing.T) {
 }
 
 func TestHandlerExecuteInvalidConfig(t *testing.T) {
-	handler := rss.NewHandler(&handlerArtifactGateway{}, stubFeedFetcher{})
+	handler := rss.NewHandler(newTestArtifactStore(), stubFeedFetcher{})
 	result, err := handler.Execute(context.Background(), executors.IntegrationExecutionRequest{
 		TenantID: uuid.MustParse("22222222-2222-2222-2222-222222222222"),
 		InputArtifacts: []executors.InputArtifactRef{{
@@ -114,7 +159,7 @@ func TestHandlerExecuteInvalidConfig(t *testing.T) {
 }
 
 func TestHandlerExecuteDeadFeedReturnsRetryableError(t *testing.T) {
-	handler := rss.NewHandler(&handlerArtifactGateway{}, stubFeedFetcher{err: errors.New("connection refused")})
+	handler := rss.NewHandler(newTestArtifactStore(), stubFeedFetcher{err: errors.New("connection refused")})
 	_, err := handler.Execute(context.Background(), executors.IntegrationExecutionRequest{
 		TenantID: uuid.MustParse("22222222-2222-2222-2222-222222222222"),
 		InputArtifacts: []executors.InputArtifactRef{{
@@ -135,7 +180,7 @@ func TestHandlerExecuteDeadFeedReturnsRetryableError(t *testing.T) {
 }
 
 func TestIntegrationRegistryRoutesBySKUKey(t *testing.T) {
-	registry := executors.NewIntegrationRegistry(rss.NewHandler(&handlerArtifactGateway{}, stubFeedFetcher{}))
+	registry := executors.NewIntegrationRegistry(rss.NewHandler(newTestArtifactStore(), stubFeedFetcher{}))
 	result, err := registry.Run(context.Background(), executors.IntegrationExecutionRequest{
 		Installation: executors.InstallationSnapshot{ExecutorSKUKey: executors.SKULinkedInPublish},
 	})
