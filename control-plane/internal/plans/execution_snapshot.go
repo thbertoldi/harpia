@@ -67,7 +67,11 @@ func buildPlanExecutionSnapshot(
 		if err != nil {
 			return workflow.PlanExecutionSnapshot{}, fmt.Errorf("load executor installation for step %q: %w", step.Key, err)
 		}
-		installationSnapshots[step.Key] = executorInstallationToSnapshot(installation)
+		sku, err := executorLookup.GetSKUByID(ctx, installation.ExecutorSKUID)
+		if err != nil {
+			return workflow.PlanExecutionSnapshot{}, fmt.Errorf("load executor sku for step %q: %w", step.Key, err)
+		}
+		installationSnapshots[step.Key] = executorInstallationToSnapshot(installation, sku)
 	}
 
 	return workflow.PlanExecutionSnapshot{
@@ -104,7 +108,7 @@ func unmarshalPlanExecutionSnapshot(raw json.RawMessage) (workflow.PlanExecution
 	return snapshot, nil
 }
 
-func executorInstallationToSnapshot(installation *executors.ExecutorInstallation) workflow.ExecutorInstallationSnapshot {
+func executorInstallationToSnapshot(installation *executors.ExecutorInstallation, sku *executors.ExecutorSKU) workflow.ExecutorInstallationSnapshot {
 	if installation == nil {
 		return workflow.ExecutorInstallationSnapshot{}
 	}
@@ -119,8 +123,14 @@ func executorInstallationToSnapshot(installation *executors.ExecutorInstallation
 		CreatedAt:     installation.CreatedAt.UTC().Format(time.RFC3339),
 		UpdatedAt:     installation.UpdatedAt.UTC().Format(time.RFC3339),
 	}
+	if sku != nil {
+		snapshot.ExecutorSKUKey = sku.Key
+	}
 	if installation.ConnectionStatus != nil {
 		snapshot.ConnectionStatus = *installation.ConnectionStatus
+	}
+	if len(installation.ConfigJSON) > 0 {
+		snapshot.ConfigJSON = string(installation.ConfigJSON)
 	}
 	if installation.ManifestID != nil {
 		snapshot.ManifestID = *installation.ManifestID

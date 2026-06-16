@@ -20,7 +20,7 @@ type CatalogSeed struct {
 
 var DefaultCatalogSeeds = []CatalogSeed{
 	{
-		Key:         "rss-news-feed",
+		Key:         SKURSSNewsFeed,
 		DisplayName: "RSS News Feed",
 		Description: "Fetches curated news articles from configured RSS feeds.",
 		Kind:        KindIntegration,
@@ -33,7 +33,7 @@ var DefaultCatalogSeeds = []CatalogSeed{
 		},
 	},
 	{
-		Key:         "linkedin-publish",
+		Key:         SKULinkedInPublish,
 		DisplayName: "LinkedIn Publish",
 		Description: "Publishes a LinkedIn post draft through the tenant OAuth connection.",
 		Kind:        KindIntegration,
@@ -46,7 +46,7 @@ var DefaultCatalogSeeds = []CatalogSeed{
 		},
 	},
 	{
-		Key:         "newsletter-writer-senior",
+		Key:         SKUNewsletterWriterSenior,
 		DisplayName: "Newsletter Writer (Senior)",
 		Description: "Senior agent that synthesizes a platform-neutral newsletter draft from curated news.",
 		Kind:        KindAgent,
@@ -60,7 +60,7 @@ var DefaultCatalogSeeds = []CatalogSeed{
 		},
 	},
 	{
-		Key:         "linkedin-voice-senior",
+		Key:         SKULinkedInVoiceSenior,
 		DisplayName: "LinkedIn Voice (Senior)",
 		Description: "Senior agent that adapts a neutral text draft into a LinkedIn-ready post.",
 		Kind:        KindAgent,
