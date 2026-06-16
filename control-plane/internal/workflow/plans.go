@@ -59,8 +59,10 @@ type PlanExecutionInput struct {
 }
 
 type PlanWorkflowInput struct {
-	TenantID        string `json:"tenant_id"`
-	PlanExecutionID string `json:"plan_execution_id"`
+	TenantID                string                 `json:"tenant_id"`
+	PlanExecutionID         string                 `json:"plan_execution_id"`
+	RetryFromStepKey        string                 `json:"retry_from_step_key,omitempty"`
+	RetryStepArtifactsByKey map[string]ArtifactRef `json:"retry_step_artifacts_by_key,omitempty"`
 }
 
 type PlanWorkflowResult struct {
@@ -121,11 +123,11 @@ type StepStatusUpdateInput struct {
 }
 
 type ArtifactRef struct {
-	Source       string `json:"source"`
-	StepKey      string `json:"step_key,omitempty"`
-	InputName    string `json:"input_name,omitempty"`
-	ArtifactID   string `json:"artifact_id,omitempty"`
-	LiteralJSON  string `json:"literal_json,omitempty"`
+	Source          string `json:"source"`
+	StepKey         string `json:"step_key,omitempty"`
+	InputName       string `json:"input_name,omitempty"`
+	ArtifactID      string `json:"artifact_id,omitempty"`
+	LiteralJSON     string `json:"literal_json,omitempty"`
 	ArtifactTypeKey string `json:"artifact_type_key,omitempty"`
 }
 
@@ -135,7 +137,7 @@ type ExecutorActivityInput struct {
 	StepExecutionID              string                       `json:"step_execution_id"`
 	PlanStepKey                  string                       `json:"plan_step_key"`
 	InputArtifacts               []ArtifactRef                `json:"input_artifacts"`
-	OutputArtifactTypeKey          string                       `json:"output_artifact_type_key"`
+	OutputArtifactTypeKey        string                       `json:"output_artifact_type_key"`
 	ExecutorInstallationSnapshot ExecutorInstallationSnapshot `json:"executor_installation_snapshot"`
 	ElicitationResponse          *ElicitationResponseSignal   `json:"elicitation_response,omitempty"`
 }
@@ -194,8 +196,8 @@ type PlanRuntimeStore interface {
 }
 
 type PlanActivities struct {
-	Runtime       PlanRuntimeStore
-	Integrations  executors.IntegrationRunner
+	Runtime      PlanRuntimeStore
+	Integrations executors.IntegrationRunner
 }
 
 func (a *PlanActivities) CreateScheduledPlanExecutionActivity(ctx context.Context, input PlanExecutionInput) (PlanWorkflowInput, error) {
@@ -413,8 +415,25 @@ func runPlanWorkflow(ctx workflow.Context, input PlanWorkflowInput) (PlanWorkflo
 	dependencies := dependencyIndex(loaded.Snapshot.Template)
 	seedArtifacts := seedArtifactsByStep(loaded.Snapshot.Configuration)
 	outputs := make(map[string]ArtifactRef, len(order))
+	for stepKey, output := range input.RetryStepArtifactsByKey {
+		if strings.TrimSpace(output.ArtifactID) == "" {
+			continue
+		}
+		outputs[stepKey] = output
+	}
+	retryIndex := indexForRetryStep(order, input.RetryFromStepKey)
+	if strings.TrimSpace(input.RetryFromStepKey) != "" && retryIndex < 0 {
+		return result, failPlan(ctx, input, fmt.Errorf("retry step %q is not part of the plan template", input.RetryFromStepKey))
+	}
 
-	for _, step := range order {
+	for i, step := range order {
+		if retryIndex >= 0 && i < retryIndex {
+			reused, ok := outputs[step.Key]
+			if !ok || strings.TrimSpace(reused.ArtifactID) == "" {
+				return result, failPlan(ctx, input, fmt.Errorf("retry step %q missing reusable artifact for upstream step %q", input.RetryFromStepKey, step.Key))
+			}
+			continue
+		}
 		inputArtifacts, err := stepInputArtifacts(step, dependencies[step.Key], seedArtifacts, outputs)
 		if err != nil {
 			installation := loaded.Snapshot.ExecutorInstallations[step.Key]
@@ -481,7 +500,7 @@ func runPlanWorkflow(ctx workflow.Context, input PlanWorkflowInput) (PlanWorkflo
 			StepExecutionID:              stepRecord.ID,
 			PlanStepKey:                  step.Key,
 			InputArtifacts:               inputArtifacts,
-			OutputArtifactTypeKey:         step.OutputArtifactTypeId,
+			OutputArtifactTypeKey:        step.OutputArtifactTypeId,
 			ExecutorInstallationSnapshot: installation,
 		}
 
@@ -513,9 +532,9 @@ func runPlanWorkflow(ctx workflow.Context, input PlanWorkflowInput) (PlanWorkflo
 					return result, failPlan(ctx, input, err)
 				}
 				outputs[step.Key] = ArtifactRef{
-					Source:       "step_output",
-					StepKey:      step.Key,
-					ArtifactID:   executorResult.OutputArtifactID,
+					Source:          "step_output",
+					StepKey:         step.Key,
+					ArtifactID:      executorResult.OutputArtifactID,
 					ArtifactTypeKey: step.OutputArtifactTypeId,
 				}
 
@@ -1066,4 +1085,17 @@ func sortStepKeys(keys []string, indexByKey map[string]int) {
 			return keys[i] < keys[j]
 		}
 	})
+}
+
+func indexForRetryStep(order []*plansv1.PlanStep, retryStepKey string) int {
+	key := strings.TrimSpace(retryStepKey)
+	if key == "" {
+		return -1
+	}
+	for idx, step := range order {
+		if step != nil && strings.TrimSpace(step.Key) == key {
+			return idx
+		}
+	}
+	return -1
 }

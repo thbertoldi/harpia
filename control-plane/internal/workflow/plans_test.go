@@ -101,6 +101,79 @@ func TestPlanWorkflowRunsStepsInTopologicalOrder(t *testing.T) {
 	}
 }
 
+func TestPlanWorkflowRetrySkipsUpstreamSteps(t *testing.T) {
+	env := newPlanWorkflowTestEnv(t)
+
+	input := PlanWorkflowInput{
+		TenantID:         "22222222-2222-2222-2222-222222222222",
+		PlanExecutionID:  "retry-11111111-1111-1111-1111-111111111111",
+		RetryFromStepKey: "write-draft",
+		RetryStepArtifactsByKey: map[string]ArtifactRef{
+			"fetch-news": {
+				Source:          "step_output",
+				StepKey:         "fetch-news",
+				ArtifactID:      "out-fetch-news-original",
+				ArtifactTypeKey: "harpia.artifacts.v1.NewsList",
+			},
+		},
+	}
+	snapshot := testPlanSnapshot()
+
+	createdSteps := make([]string, 0, 2)
+	ranSteps := make([]string, 0, 2)
+	env.OnActivity(LoadPlanExecutionActivityName, mock.Anything, input).Return(LoadedPlanExecution{
+		PlanExecutionID: input.PlanExecutionID,
+		Status:          "pending",
+		Snapshot:        snapshot,
+	}, nil)
+	env.OnActivity(StartPlanExecutionActivityName, mock.Anything, input).Return(nil)
+	env.OnActivity(CreateStepExecutionActivityName, mock.Anything, mock.Anything).Return(
+		func(ctx context.Context, stepInput CreateStepExecutionInput) (StepExecutionRecord, error) {
+			createdSteps = append(createdSteps, stepInput.PlanStepKey)
+			return StepExecutionRecord{
+				ID:              "step-" + stepInput.PlanStepKey,
+				PlanStepKey:     stepInput.PlanStepKey,
+				Attempt:         2,
+				InputArtifactID: stepInput.InputArtifactID,
+			}, nil
+		},
+	)
+	env.OnActivity(RunAgentActivityName, mock.Anything, mock.Anything).Return(
+		func(ctx context.Context, executorInput ExecutorActivityInput) (ExecutorActivityResult, error) {
+			ranSteps = append(ranSteps, executorInput.PlanStepKey)
+			switch executorInput.PlanStepKey {
+			case "write-draft":
+				assertArtifactIDs(t, executorInput.InputArtifacts, []string{"out-fetch-news-original"})
+			case "adapt-for-linkedin":
+				assertArtifactIDs(t, executorInput.InputArtifacts, []string{"out-write-draft"})
+			default:
+				t.Fatalf("unexpected retried step %q", executorInput.PlanStepKey)
+			}
+			return ExecutorActivityResult{
+				Status:           ExecutorResultStatusCompleted,
+				OutputArtifactID: "out-" + executorInput.PlanStepKey,
+			}, nil
+		},
+	)
+	env.OnActivity(CompleteStepExecutionActivityName, mock.Anything, mock.Anything).Return(nil)
+	env.OnActivity(CompletePlanExecutionActivityName, mock.Anything, input).Return(nil)
+
+	env.ExecuteWorkflow(PlanWorkflow, input)
+
+	if !env.IsWorkflowCompleted() {
+		t.Fatal("workflow did not complete")
+	}
+	if err := env.GetWorkflowError(); err != nil {
+		t.Fatalf("workflow failed: %v", err)
+	}
+	if !reflect.DeepEqual(createdSteps, []string{"write-draft", "adapt-for-linkedin"}) {
+		t.Fatalf("created steps = %#v", createdSteps)
+	}
+	if !reflect.DeepEqual(ranSteps, []string{"write-draft", "adapt-for-linkedin"}) {
+		t.Fatalf("ran steps = %#v", ranSteps)
+	}
+}
+
 func TestPlanWorkflowFailsMissingExecutorBinding(t *testing.T) {
 	env := newPlanWorkflowTestEnv(t)
 

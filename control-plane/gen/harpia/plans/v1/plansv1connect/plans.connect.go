@@ -57,6 +57,9 @@ const (
 	// PlanServiceCreatePlanExecutionProcedure is the fully-qualified name of the PlanService's
 	// CreatePlanExecution RPC.
 	PlanServiceCreatePlanExecutionProcedure = "/harpia.plans.v1.PlanService/CreatePlanExecution"
+	// PlanServiceRetryPlanExecutionProcedure is the fully-qualified name of the PlanService's
+	// RetryPlanExecution RPC.
+	PlanServiceRetryPlanExecutionProcedure = "/harpia.plans.v1.PlanService/RetryPlanExecution"
 	// PlanServiceGetPlanExecutionProcedure is the fully-qualified name of the PlanService's
 	// GetPlanExecution RPC.
 	PlanServiceGetPlanExecutionProcedure = "/harpia.plans.v1.PlanService/GetPlanExecution"
@@ -84,6 +87,7 @@ type PlanServiceClient interface {
 	ListPlanConfigurations(context.Context, *connect.Request[v1.ListPlanConfigurationsRequest]) (*connect.ServerStreamForClient[v1.ListPlanConfigurationsResponse], error)
 	// Execution (MVP stubs — messages defined for downstream workflow wiring).
 	CreatePlanExecution(context.Context, *connect.Request[v1.CreatePlanExecutionRequest]) (*connect.Response[v1.CreatePlanExecutionResponse], error)
+	RetryPlanExecution(context.Context, *connect.Request[v1.RetryPlanExecutionRequest]) (*connect.Response[v1.RetryPlanExecutionResponse], error)
 	GetPlanExecution(context.Context, *connect.Request[v1.GetPlanExecutionRequest]) (*connect.Response[v1.GetPlanExecutionResponse], error)
 	ListPlanExecutions(context.Context, *connect.Request[v1.ListPlanExecutionsRequest]) (*connect.ServerStreamForClient[v1.ListPlanExecutionsResponse], error)
 	GetStepExecution(context.Context, *connect.Request[v1.GetStepExecutionRequest]) (*connect.Response[v1.GetStepExecutionResponse], error)
@@ -149,6 +153,12 @@ func NewPlanServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(planServiceMethods.ByName("CreatePlanExecution")),
 			connect.WithClientOptions(opts...),
 		),
+		retryPlanExecution: connect.NewClient[v1.RetryPlanExecutionRequest, v1.RetryPlanExecutionResponse](
+			httpClient,
+			baseURL+PlanServiceRetryPlanExecutionProcedure,
+			connect.WithSchema(planServiceMethods.ByName("RetryPlanExecution")),
+			connect.WithClientOptions(opts...),
+		),
 		getPlanExecution: connect.NewClient[v1.GetPlanExecutionRequest, v1.GetPlanExecutionResponse](
 			httpClient,
 			baseURL+PlanServiceGetPlanExecutionProcedure,
@@ -186,6 +196,7 @@ type planServiceClient struct {
 	updatePlanConfiguration *connect.Client[v1.UpdatePlanConfigurationRequest, v1.UpdatePlanConfigurationResponse]
 	listPlanConfigurations  *connect.Client[v1.ListPlanConfigurationsRequest, v1.ListPlanConfigurationsResponse]
 	createPlanExecution     *connect.Client[v1.CreatePlanExecutionRequest, v1.CreatePlanExecutionResponse]
+	retryPlanExecution      *connect.Client[v1.RetryPlanExecutionRequest, v1.RetryPlanExecutionResponse]
 	getPlanExecution        *connect.Client[v1.GetPlanExecutionRequest, v1.GetPlanExecutionResponse]
 	listPlanExecutions      *connect.Client[v1.ListPlanExecutionsRequest, v1.ListPlanExecutionsResponse]
 	getStepExecution        *connect.Client[v1.GetStepExecutionRequest, v1.GetStepExecutionResponse]
@@ -232,6 +243,11 @@ func (c *planServiceClient) CreatePlanExecution(ctx context.Context, req *connec
 	return c.createPlanExecution.CallUnary(ctx, req)
 }
 
+// RetryPlanExecution calls harpia.plans.v1.PlanService.RetryPlanExecution.
+func (c *planServiceClient) RetryPlanExecution(ctx context.Context, req *connect.Request[v1.RetryPlanExecutionRequest]) (*connect.Response[v1.RetryPlanExecutionResponse], error) {
+	return c.retryPlanExecution.CallUnary(ctx, req)
+}
+
 // GetPlanExecution calls harpia.plans.v1.PlanService.GetPlanExecution.
 func (c *planServiceClient) GetPlanExecution(ctx context.Context, req *connect.Request[v1.GetPlanExecutionRequest]) (*connect.Response[v1.GetPlanExecutionResponse], error) {
 	return c.getPlanExecution.CallUnary(ctx, req)
@@ -265,6 +281,7 @@ type PlanServiceHandler interface {
 	ListPlanConfigurations(context.Context, *connect.Request[v1.ListPlanConfigurationsRequest], *connect.ServerStream[v1.ListPlanConfigurationsResponse]) error
 	// Execution (MVP stubs — messages defined for downstream workflow wiring).
 	CreatePlanExecution(context.Context, *connect.Request[v1.CreatePlanExecutionRequest]) (*connect.Response[v1.CreatePlanExecutionResponse], error)
+	RetryPlanExecution(context.Context, *connect.Request[v1.RetryPlanExecutionRequest]) (*connect.Response[v1.RetryPlanExecutionResponse], error)
 	GetPlanExecution(context.Context, *connect.Request[v1.GetPlanExecutionRequest]) (*connect.Response[v1.GetPlanExecutionResponse], error)
 	ListPlanExecutions(context.Context, *connect.Request[v1.ListPlanExecutionsRequest], *connect.ServerStream[v1.ListPlanExecutionsResponse]) error
 	GetStepExecution(context.Context, *connect.Request[v1.GetStepExecutionRequest]) (*connect.Response[v1.GetStepExecutionResponse], error)
@@ -326,6 +343,12 @@ func NewPlanServiceHandler(svc PlanServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(planServiceMethods.ByName("CreatePlanExecution")),
 		connect.WithHandlerOptions(opts...),
 	)
+	planServiceRetryPlanExecutionHandler := connect.NewUnaryHandler(
+		PlanServiceRetryPlanExecutionProcedure,
+		svc.RetryPlanExecution,
+		connect.WithSchema(planServiceMethods.ByName("RetryPlanExecution")),
+		connect.WithHandlerOptions(opts...),
+	)
 	planServiceGetPlanExecutionHandler := connect.NewUnaryHandler(
 		PlanServiceGetPlanExecutionProcedure,
 		svc.GetPlanExecution,
@@ -368,6 +391,8 @@ func NewPlanServiceHandler(svc PlanServiceHandler, opts ...connect.HandlerOption
 			planServiceListPlanConfigurationsHandler.ServeHTTP(w, r)
 		case PlanServiceCreatePlanExecutionProcedure:
 			planServiceCreatePlanExecutionHandler.ServeHTTP(w, r)
+		case PlanServiceRetryPlanExecutionProcedure:
+			planServiceRetryPlanExecutionHandler.ServeHTTP(w, r)
 		case PlanServiceGetPlanExecutionProcedure:
 			planServiceGetPlanExecutionHandler.ServeHTTP(w, r)
 		case PlanServiceListPlanExecutionsProcedure:
@@ -415,6 +440,10 @@ func (UnimplementedPlanServiceHandler) ListPlanConfigurations(context.Context, *
 
 func (UnimplementedPlanServiceHandler) CreatePlanExecution(context.Context, *connect.Request[v1.CreatePlanExecutionRequest]) (*connect.Response[v1.CreatePlanExecutionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("harpia.plans.v1.PlanService.CreatePlanExecution is not implemented"))
+}
+
+func (UnimplementedPlanServiceHandler) RetryPlanExecution(context.Context, *connect.Request[v1.RetryPlanExecutionRequest]) (*connect.Response[v1.RetryPlanExecutionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("harpia.plans.v1.PlanService.RetryPlanExecution is not implemented"))
 }
 
 func (UnimplementedPlanServiceHandler) GetPlanExecution(context.Context, *connect.Request[v1.GetPlanExecutionRequest]) (*connect.Response[v1.GetPlanExecutionResponse], error) {

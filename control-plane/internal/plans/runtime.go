@@ -4,9 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
 
 	"github.com/harpia/control-plane/internal/workflow"
 )
@@ -200,6 +203,247 @@ func (r *RuntimeRepository) CompletePlanExecution(ctx context.Context, tenantID,
 func (r *RuntimeRepository) FailPlanExecution(ctx context.Context, tenantID, executionID uuid.UUID) error {
 	now := time.Now().UTC()
 	return r.plans.UpdateExecutionStatus(ctx, tenantID, executionID, ExecutionStatusFailed, &now)
+}
+
+func (r *RuntimeRepository) PrepareRetryFromStep(
+	ctx context.Context,
+	tenantID uuid.UUID,
+	planExecutionID uuid.UUID,
+	failedStepExecutionID uuid.UUID,
+) (*PlanExecution, workflow.PlanWorkflowInput, error) {
+	if r == nil || r.plans == nil {
+		return nil, workflow.PlanWorkflowInput{}, fmt.Errorf("plan runtime repository is not configured")
+	}
+
+	execution, err := r.plans.GetExecution(ctx, tenantID, planExecutionID)
+	if err != nil {
+		return nil, workflow.PlanWorkflowInput{}, fmt.Errorf("load plan execution: %w", err)
+	}
+	if execution.Status != ExecutionStatusFailed {
+		return nil, workflow.PlanWorkflowInput{}, fmt.Errorf("plan execution status %q is not failed", execution.Status)
+	}
+
+	snapshot, err := unmarshalPlanExecutionSnapshot(execution.PlanConfigurationSnapshot)
+	if err != nil {
+		return nil, workflow.PlanWorkflowInput{}, fmt.Errorf("load plan execution snapshot: %w", err)
+	}
+	retryPreparation, err := buildRetryPlanWorkflowInput(snapshot, execution, failedStepExecutionID)
+	if err != nil {
+		return nil, workflow.PlanWorkflowInput{}, err
+	}
+
+	now := time.Now().UTC()
+	retryExecution, err := r.plans.CreateExecution(ctx, &PlanExecution{
+		ID:                        retryPreparation.retryExecutionID,
+		TenantID:                  tenantID,
+		PlanConfigurationID:       execution.PlanConfigurationID,
+		PlanConfigurationSnapshot: execution.PlanConfigurationSnapshot,
+		Status:                    ExecutionStatusPending,
+		TriggeredAt:               &now,
+	})
+	if err != nil {
+		return nil, workflow.PlanWorkflowInput{}, fmt.Errorf("create retry plan execution: %w", err)
+	}
+
+	return retryExecution, workflow.PlanWorkflowInput{
+		TenantID:                tenantID.String(),
+		PlanExecutionID:         retryExecution.ID.String(),
+		RetryFromStepKey:        retryPreparation.retryFromStepKey,
+		RetryStepArtifactsByKey: retryPreparation.reusedArtifactsByStep,
+	}, nil
+}
+
+type retryPlanInput struct {
+	retryExecutionID      uuid.UUID
+	retryFromStepKey      string
+	reusedArtifactsByStep map[string]workflow.ArtifactRef
+}
+
+func buildRetryPlanWorkflowInput(
+	snapshot workflow.PlanExecutionSnapshot,
+	execution *PlanExecution,
+	failedStepExecutionID uuid.UUID,
+) (retryPlanInput, error) {
+	if execution == nil {
+		return retryPlanInput{}, fmt.Errorf("plan execution is required")
+	}
+	if execution.Status != ExecutionStatusFailed {
+		return retryPlanInput{}, fmt.Errorf("plan execution status %q is not failed", execution.Status)
+	}
+	order, err := workflowTopologicalSteps(snapshot.Template)
+	if err != nil {
+		return retryPlanInput{}, err
+	}
+
+	failedStep, ok := findExecutionStepByID(execution.StepExecutions, failedStepExecutionID)
+	if !ok {
+		return retryPlanInput{}, fmt.Errorf("step execution %q does not belong to plan execution %q", failedStepExecutionID, execution.ID)
+	}
+	if failedStep.Status != StepStatusFailed {
+		return retryPlanInput{}, fmt.Errorf("step execution %q status %q is not failed", failedStepExecutionID, failedStep.Status)
+	}
+	retryStepKey := strings.TrimSpace(failedStep.PlanStepKey)
+	if retryStepKey == "" {
+		return retryPlanInput{}, fmt.Errorf("step execution %q has empty plan step key", failedStepExecutionID)
+	}
+
+	retryIndex := -1
+	stepByKey := make(map[string]*plansStepTemplate, len(order))
+	for i, step := range order {
+		stepByKey[step.Key] = step
+		if step.Key == retryStepKey {
+			retryIndex = i
+		}
+	}
+	if retryIndex < 0 {
+		return retryPlanInput{}, fmt.Errorf("retry step %q is not part of the snapshot template", retryStepKey)
+	}
+	if retryIndex == 0 {
+		return retryPlanInput{
+			retryExecutionID:      retryExecutionID(execution.ID, failedStepExecutionID),
+			retryFromStepKey:      retryStepKey,
+			reusedArtifactsByStep: map[string]workflow.ArtifactRef{},
+		}, nil
+	}
+
+	latestByStep := latestStepAttempts(execution.StepExecutions)
+	reusedArtifacts := make(map[string]workflow.ArtifactRef, retryIndex)
+	for _, step := range order[:retryIndex] {
+		attempt, exists := latestByStep[step.Key]
+		if !exists {
+			return retryPlanInput{}, fmt.Errorf("cannot retry from step %q: upstream step %q has no execution attempt", retryStepKey, step.Key)
+		}
+		if attempt.Status != StepStatusCompleted {
+			return retryPlanInput{}, fmt.Errorf("cannot retry from step %q: upstream step %q status is %q", retryStepKey, step.Key, attempt.Status)
+		}
+		artifactID := strings.TrimSpace(attempt.OutputArtifactID)
+		if artifactID == "" {
+			return retryPlanInput{}, fmt.Errorf("cannot retry from step %q: upstream step %q has no output artifact", retryStepKey, step.Key)
+		}
+		reusedArtifacts[step.Key] = workflow.ArtifactRef{
+			Source:          "step_output",
+			StepKey:         step.Key,
+			ArtifactID:      artifactID,
+			ArtifactTypeKey: step.OutputArtifactTypeID,
+		}
+	}
+
+	return retryPlanInput{
+		retryExecutionID:      retryExecutionID(execution.ID, failedStepExecutionID),
+		retryFromStepKey:      retryStepKey,
+		reusedArtifactsByStep: reusedArtifacts,
+	}, nil
+}
+
+type plansStepTemplate struct {
+	Key                  string
+	OutputArtifactTypeID string
+	Position             int
+}
+
+func workflowTopologicalSteps(template *plansv1.PlanTemplate) ([]*plansStepTemplate, error) {
+	if template == nil {
+		return nil, fmt.Errorf("plan template is required")
+	}
+	steps := make([]*plansStepTemplate, 0, len(template.Steps))
+	indexByKey := make(map[string]int, len(template.Steps))
+	for idx, step := range template.Steps {
+		if step == nil {
+			return nil, fmt.Errorf("plan template step at index %d is nil", idx)
+		}
+		key := strings.TrimSpace(step.Key)
+		if key == "" {
+			return nil, fmt.Errorf("plan template step at index %d has empty key", idx)
+		}
+		if _, exists := indexByKey[key]; exists {
+			return nil, fmt.Errorf("duplicate plan step key %q", key)
+		}
+		indexByKey[key] = idx
+		steps = append(steps, &plansStepTemplate{Key: key, OutputArtifactTypeID: step.OutputArtifactTypeId, Position: idx})
+	}
+	if len(steps) == 0 {
+		return nil, fmt.Errorf("plan template has no steps")
+	}
+
+	inDegree := make(map[string]int, len(steps))
+	dependents := make(map[string][]string, len(steps))
+	for _, step := range steps {
+		inDegree[step.Key] = 0
+	}
+	for _, edge := range template.Edges {
+		if edge == nil {
+			continue
+		}
+		from := strings.TrimSpace(edge.FromStepKey)
+		to := strings.TrimSpace(edge.ToStepKey)
+		if _, ok := inDegree[from]; !ok {
+			return nil, fmt.Errorf("dependency references unknown from_step_key %q", from)
+		}
+		if _, ok := inDegree[to]; !ok {
+			return nil, fmt.Errorf("dependency references unknown to_step_key %q", to)
+		}
+		dependents[from] = append(dependents[from], to)
+		inDegree[to]++
+	}
+
+	stepByKey := make(map[string]*plansStepTemplate, len(steps))
+	for _, step := range steps {
+		stepByKey[step.Key] = step
+	}
+	ready := make([]string, 0, len(steps))
+	for key, degree := range inDegree {
+		if degree == 0 {
+			ready = append(ready, key)
+		}
+	}
+	sort.SliceStable(ready, func(i, j int) bool {
+		return indexByKey[ready[i]] < indexByKey[ready[j]]
+	})
+
+	ordered := make([]*plansStepTemplate, 0, len(steps))
+	for len(ready) > 0 {
+		key := ready[0]
+		ready = ready[1:]
+		ordered = append(ordered, stepByKey[key])
+		for _, dependent := range dependents[key] {
+			inDegree[dependent]--
+			if inDegree[dependent] == 0 {
+				ready = append(ready, dependent)
+				sort.SliceStable(ready, func(i, j int) bool {
+					return indexByKey[ready[i]] < indexByKey[ready[j]]
+				})
+			}
+		}
+	}
+	if len(ordered) != len(steps) {
+		return nil, fmt.Errorf("plan template dependency graph contains a cycle")
+	}
+	return ordered, nil
+}
+
+func latestStepAttempts(steps []StepExecution) map[string]StepExecution {
+	latest := make(map[string]StepExecution, len(steps))
+	for _, step := range steps {
+		current, exists := latest[step.PlanStepKey]
+		if !exists || step.Attempt > current.Attempt || (step.Attempt == current.Attempt && step.CreatedAt.After(current.CreatedAt)) {
+			latest[step.PlanStepKey] = step
+		}
+	}
+	return latest
+}
+
+func findExecutionStepByID(steps []StepExecution, stepExecutionID uuid.UUID) (StepExecution, bool) {
+	for _, step := range steps {
+		if step.ID == stepExecutionID {
+			return step, true
+		}
+	}
+	return StepExecution{}, false
+}
+
+func retryExecutionID(planExecutionID uuid.UUID, failedStepExecutionID uuid.UUID) uuid.UUID {
+	seed := fmt.Sprintf("retry:%s:%s", planExecutionID.String(), failedStepExecutionID.String())
+	return uuid.NewSHA1(uuid.NameSpaceURL, []byte(seed))
 }
 
 func parseRuntimeTenantExecution(tenantIDRaw, executionIDRaw string) (uuid.UUID, uuid.UUID, error) {

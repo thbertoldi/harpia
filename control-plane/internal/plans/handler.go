@@ -22,11 +22,16 @@ type PlanHandler struct {
 	executors       ExecutorLookup
 	validator       *BindingValidator
 	schedule        *ScheduleManager
+	runtime         PlanExecutionRetryer
 	workflowStarter PlanWorkflowStarter
 }
 
 type PlanWorkflowStarter interface {
 	StartPlanWorkflow(ctx context.Context, input workflow.PlanWorkflowInput) (client.WorkflowRun, error)
+}
+
+type PlanExecutionRetryer interface {
+	PrepareRetryFromStep(ctx context.Context, tenantID uuid.UUID, planExecutionID uuid.UUID, failedStepExecutionID uuid.UUID) (*PlanExecution, workflow.PlanWorkflowInput, error)
 }
 
 func NewPlanHandler(repo *Repository, executors ExecutorLookup, schedule *ScheduleManager, starters ...PlanWorkflowStarter) (*PlanHandler, error) {
@@ -45,6 +50,7 @@ func NewPlanHandler(repo *Repository, executors ExecutorLookup, schedule *Schedu
 		executors:       executors,
 		validator:       NewBindingValidator(executors),
 		schedule:        schedule,
+		runtime:         NewRuntimeRepository(repo, executors),
 		workflowStarter: starter,
 	}, nil
 }
@@ -366,6 +372,45 @@ func (h *PlanHandler) CreatePlanExecution(ctx context.Context, req *connect.Requ
 
 	return connect.NewResponse(&plansv1.CreatePlanExecutionResponse{
 		PlanExecution: executionToProto(execution),
+	}), nil
+}
+
+func (h *PlanHandler) RetryPlanExecution(ctx context.Context, req *connect.Request[plansv1.RetryPlanExecutionRequest]) (*connect.Response[plansv1.RetryPlanExecutionResponse], error) {
+	tenantID, err := identity.RequireTenant(ctx, req.Msg.TenantId)
+	if err != nil {
+		return nil, err
+	}
+	if h.runtime == nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("plan runtime is unavailable"))
+	}
+	if h.workflowStarter == nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("workflow engine is unavailable"))
+	}
+
+	executionID, err := uuid.Parse(req.Msg.PlanExecutionId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("parse plan execution id: %w", err))
+	}
+	stepExecutionID, err := uuid.Parse(req.Msg.StepExecutionId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("parse step execution id: %w", err))
+	}
+
+	retryExecution, workflowInput, err := h.runtime.PrepareRetryFromStep(ctx, tenantID, executionID, stepExecutionID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+
+	if _, err := h.workflowStarter.StartPlanWorkflow(ctx, workflowInput); err != nil {
+		completedAt := time.Now().UTC()
+		if markErr := h.repo.UpdateExecutionStatus(ctx, tenantID, retryExecution.ID, ExecutionStatusFailed, &completedAt); markErr != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("start retry plan workflow: %w; additionally failed to mark execution failed: %v", err, markErr))
+		}
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("start retry plan workflow: %w", err))
+	}
+
+	return connect.NewResponse(&plansv1.RetryPlanExecutionResponse{
+		PlanExecution: executionToProto(retryExecution),
 	}), nil
 }
 

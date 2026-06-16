@@ -42,6 +42,9 @@ class PlanService(Protocol):
     async def create_plan_execution(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.CreatePlanExecutionRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.CreatePlanExecutionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def retry_plan_execution(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.RetryPlanExecutionRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.RetryPlanExecutionResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def get_plan_execution(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.GetPlanExecutionRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.GetPlanExecutionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -139,6 +142,16 @@ class PlanServiceASGIApplication(ConnectASGIApplication[PlanService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.create_plan_execution,
+                ),
+                "/harpia.plans.v1.PlanService/RetryPlanExecution": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RetryPlanExecution",
+                        service_name="harpia.plans.v1.PlanService",
+                        input=harpia_dot_plans_dot_v1_dot_plans__pb2.RetryPlanExecutionRequest,
+                        output=harpia_dot_plans_dot_v1_dot_plans__pb2.RetryPlanExecutionResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.retry_plan_execution,
                 ),
                 "/harpia.plans.v1.PlanService/GetPlanExecution": Endpoint.unary(
                     method=MethodInfo(
@@ -354,6 +367,26 @@ class PlanServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def retry_plan_execution(
+        self,
+        request: harpia_dot_plans_dot_v1_dot_plans__pb2.RetryPlanExecutionRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_plans_dot_v1_dot_plans__pb2.RetryPlanExecutionResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RetryPlanExecution",
+                service_name="harpia.plans.v1.PlanService",
+                input=harpia_dot_plans_dot_v1_dot_plans__pb2.RetryPlanExecutionRequest,
+                output=harpia_dot_plans_dot_v1_dot_plans__pb2.RetryPlanExecutionResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def get_plan_execution(
         self,
         request: harpia_dot_plans_dot_v1_dot_plans__pb2.GetPlanExecutionRequest,
@@ -455,6 +488,8 @@ class PlanServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def create_plan_execution(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.CreatePlanExecutionRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.CreatePlanExecutionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def retry_plan_execution(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.RetryPlanExecutionRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.RetryPlanExecutionResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_plan_execution(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.GetPlanExecutionRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.GetPlanExecutionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_plan_executions(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.ListPlanExecutionsRequest, ctx: RequestContext) -> Iterator[harpia_dot_plans_dot_v1_dot_plans__pb2.ListPlanExecutionsResponse]:
@@ -548,6 +583,16 @@ class PlanServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.create_plan_execution,
+                ),
+                "/harpia.plans.v1.PlanService/RetryPlanExecution": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RetryPlanExecution",
+                        service_name="harpia.plans.v1.PlanService",
+                        input=harpia_dot_plans_dot_v1_dot_plans__pb2.RetryPlanExecutionRequest,
+                        output=harpia_dot_plans_dot_v1_dot_plans__pb2.RetryPlanExecutionResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.retry_plan_execution,
                 ),
                 "/harpia.plans.v1.PlanService/GetPlanExecution": EndpointSync.unary(
                     method=MethodInfo(
@@ -757,6 +802,26 @@ class PlanServiceClientSync(ConnectClientSync):
                 service_name="harpia.plans.v1.PlanService",
                 input=harpia_dot_plans_dot_v1_dot_plans__pb2.CreatePlanExecutionRequest,
                 output=harpia_dot_plans_dot_v1_dot_plans__pb2.CreatePlanExecutionResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def retry_plan_execution(
+        self,
+        request: harpia_dot_plans_dot_v1_dot_plans__pb2.RetryPlanExecutionRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_plans_dot_v1_dot_plans__pb2.RetryPlanExecutionResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RetryPlanExecution",
+                service_name="harpia.plans.v1.PlanService",
+                input=harpia_dot_plans_dot_v1_dot_plans__pb2.RetryPlanExecutionRequest,
+                output=harpia_dot_plans_dot_v1_dot_plans__pb2.RetryPlanExecutionResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
