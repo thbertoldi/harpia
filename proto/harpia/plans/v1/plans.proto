@@ -18,6 +18,7 @@ service PlanService {
 
   // Execution (MVP stubs — messages defined for downstream workflow wiring).
   rpc CreatePlanExecution(CreatePlanExecutionRequest) returns (CreatePlanExecutionResponse);
+  rpc RetryPlanExecution(RetryPlanExecutionRequest) returns (RetryPlanExecutionResponse);
   rpc GetPlanExecution(GetPlanExecutionRequest) returns (GetPlanExecutionResponse);
   rpc ListPlanExecutions(ListPlanExecutionsRequest) returns (stream ListPlanExecutionsResponse);
   rpc GetStepExecution(GetStepExecutionRequest) returns (GetStepExecutionResponse);
@@ -267,6 +268,16 @@ message CreatePlanExecutionRequest {
 }
 
 message CreatePlanExecutionResponse {
+  PlanExecution plan_execution = 1;
+}
+
+message RetryPlanExecutionRequest {
+  string tenant_id = 1;
+  string plan_execution_id = 2;
+  string step_execution_id = 3;
+}
+
+message RetryPlanExecutionResponse {
   PlanExecution plan_execution = 1;
 }
 

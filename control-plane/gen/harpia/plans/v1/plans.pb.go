@@ -2272,6 +2272,110 @@ func (x *CreatePlanExecutionResponse) GetPlanExecution() *PlanExecution {
 	return nil
 }
 
+type RetryPlanExecutionRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	TenantId        string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	PlanExecutionId string                 `protobuf:"bytes,2,opt,name=plan_execution_id,json=planExecutionId,proto3" json:"plan_execution_id,omitempty"`
+	StepExecutionId string                 `protobuf:"bytes,3,opt,name=step_execution_id,json=stepExecutionId,proto3" json:"step_execution_id,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *RetryPlanExecutionRequest) Reset() {
+	*x = RetryPlanExecutionRequest{}
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RetryPlanExecutionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RetryPlanExecutionRequest) ProtoMessage() {}
+
+func (x *RetryPlanExecutionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RetryPlanExecutionRequest.ProtoReflect.Descriptor instead.
+func (*RetryPlanExecutionRequest) Descriptor() ([]byte, []int) {
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *RetryPlanExecutionRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *RetryPlanExecutionRequest) GetPlanExecutionId() string {
+	if x != nil {
+		return x.PlanExecutionId
+	}
+	return ""
+}
+
+func (x *RetryPlanExecutionRequest) GetStepExecutionId() string {
+	if x != nil {
+		return x.StepExecutionId
+	}
+	return ""
+}
+
+type RetryPlanExecutionResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PlanExecution *PlanExecution         `protobuf:"bytes,1,opt,name=plan_execution,json=planExecution,proto3" json:"plan_execution,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RetryPlanExecutionResponse) Reset() {
+	*x = RetryPlanExecutionResponse{}
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RetryPlanExecutionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RetryPlanExecutionResponse) ProtoMessage() {}
+
+func (x *RetryPlanExecutionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RetryPlanExecutionResponse.ProtoReflect.Descriptor instead.
+func (*RetryPlanExecutionResponse) Descriptor() ([]byte, []int) {
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *RetryPlanExecutionResponse) GetPlanExecution() *PlanExecution {
+	if x != nil {
+		return x.PlanExecution
+	}
+	return nil
+}
+
 type GetPlanExecutionRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	TenantId        string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
@@ -2282,7 +2386,7 @@ type GetPlanExecutionRequest struct {
 
 func (x *GetPlanExecutionRequest) Reset() {
 	*x = GetPlanExecutionRequest{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[28]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2294,7 +2398,7 @@ func (x *GetPlanExecutionRequest) String() string {
 func (*GetPlanExecutionRequest) ProtoMessage() {}
 
 func (x *GetPlanExecutionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[28]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2307,7 +2411,7 @@ func (x *GetPlanExecutionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPlanExecutionRequest.ProtoReflect.Descriptor instead.
 func (*GetPlanExecutionRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{28}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *GetPlanExecutionRequest) GetTenantId() string {
@@ -2333,7 +2437,7 @@ type GetPlanExecutionResponse struct {
 
 func (x *GetPlanExecutionResponse) Reset() {
 	*x = GetPlanExecutionResponse{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[29]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2345,7 +2449,7 @@ func (x *GetPlanExecutionResponse) String() string {
 func (*GetPlanExecutionResponse) ProtoMessage() {}
 
 func (x *GetPlanExecutionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[29]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2358,7 +2462,7 @@ func (x *GetPlanExecutionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPlanExecutionResponse.ProtoReflect.Descriptor instead.
 func (*GetPlanExecutionResponse) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{29}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *GetPlanExecutionResponse) GetPlanExecution() *PlanExecution {
@@ -2380,7 +2484,7 @@ type ListPlanExecutionsRequest struct {
 
 func (x *ListPlanExecutionsRequest) Reset() {
 	*x = ListPlanExecutionsRequest{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[30]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2392,7 +2496,7 @@ func (x *ListPlanExecutionsRequest) String() string {
 func (*ListPlanExecutionsRequest) ProtoMessage() {}
 
 func (x *ListPlanExecutionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[30]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2405,7 +2509,7 @@ func (x *ListPlanExecutionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPlanExecutionsRequest.ProtoReflect.Descriptor instead.
 func (*ListPlanExecutionsRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{30}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *ListPlanExecutionsRequest) GetTenantId() string {
@@ -2446,7 +2550,7 @@ type ListPlanExecutionsResponse struct {
 
 func (x *ListPlanExecutionsResponse) Reset() {
 	*x = ListPlanExecutionsResponse{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[31]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2458,7 +2562,7 @@ func (x *ListPlanExecutionsResponse) String() string {
 func (*ListPlanExecutionsResponse) ProtoMessage() {}
 
 func (x *ListPlanExecutionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[31]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2471,7 +2575,7 @@ func (x *ListPlanExecutionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPlanExecutionsResponse.ProtoReflect.Descriptor instead.
 func (*ListPlanExecutionsResponse) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{31}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *ListPlanExecutionsResponse) GetPlanExecutions() []*PlanExecution {
@@ -2498,7 +2602,7 @@ type GetStepExecutionRequest struct {
 
 func (x *GetStepExecutionRequest) Reset() {
 	*x = GetStepExecutionRequest{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[32]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2510,7 +2614,7 @@ func (x *GetStepExecutionRequest) String() string {
 func (*GetStepExecutionRequest) ProtoMessage() {}
 
 func (x *GetStepExecutionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[32]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2523,7 +2627,7 @@ func (x *GetStepExecutionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStepExecutionRequest.ProtoReflect.Descriptor instead.
 func (*GetStepExecutionRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{32}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *GetStepExecutionRequest) GetTenantId() string {
@@ -2549,7 +2653,7 @@ type GetStepExecutionResponse struct {
 
 func (x *GetStepExecutionResponse) Reset() {
 	*x = GetStepExecutionResponse{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[33]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2561,7 +2665,7 @@ func (x *GetStepExecutionResponse) String() string {
 func (*GetStepExecutionResponse) ProtoMessage() {}
 
 func (x *GetStepExecutionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[33]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2574,7 +2678,7 @@ func (x *GetStepExecutionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStepExecutionResponse.ProtoReflect.Descriptor instead.
 func (*GetStepExecutionResponse) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{33}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *GetStepExecutionResponse) GetStepExecution() *StepExecution {
@@ -2596,7 +2700,7 @@ type ListStepExecutionsRequest struct {
 
 func (x *ListStepExecutionsRequest) Reset() {
 	*x = ListStepExecutionsRequest{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[34]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2608,7 +2712,7 @@ func (x *ListStepExecutionsRequest) String() string {
 func (*ListStepExecutionsRequest) ProtoMessage() {}
 
 func (x *ListStepExecutionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[34]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2621,7 +2725,7 @@ func (x *ListStepExecutionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListStepExecutionsRequest.ProtoReflect.Descriptor instead.
 func (*ListStepExecutionsRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{34}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *ListStepExecutionsRequest) GetTenantId() string {
@@ -2662,7 +2766,7 @@ type ListStepExecutionsResponse struct {
 
 func (x *ListStepExecutionsResponse) Reset() {
 	*x = ListStepExecutionsResponse{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[35]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2674,7 +2778,7 @@ func (x *ListStepExecutionsResponse) String() string {
 func (*ListStepExecutionsResponse) ProtoMessage() {}
 
 func (x *ListStepExecutionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[35]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2687,7 +2791,7 @@ func (x *ListStepExecutionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListStepExecutionsResponse.ProtoReflect.Descriptor instead.
 func (*ListStepExecutionsResponse) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{35}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *ListStepExecutionsResponse) GetStepExecutions() []*StepExecution {
@@ -2869,6 +2973,12 @@ const file_harpia_plans_v1_plans_proto_rawDesc = "" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x122\n" +
 	"\x15plan_configuration_id\x18\x02 \x01(\tR\x13planConfigurationId\"d\n" +
 	"\x1bCreatePlanExecutionResponse\x12E\n" +
+	"\x0eplan_execution\x18\x01 \x01(\v2\x1e.harpia.plans.v1.PlanExecutionR\rplanExecution\"\x90\x01\n" +
+	"\x19RetryPlanExecutionRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12*\n" +
+	"\x11plan_execution_id\x18\x02 \x01(\tR\x0fplanExecutionId\x12*\n" +
+	"\x11step_execution_id\x18\x03 \x01(\tR\x0fstepExecutionId\"c\n" +
+	"\x1aRetryPlanExecutionResponse\x12E\n" +
 	"\x0eplan_execution\x18\x01 \x01(\v2\x1e.harpia.plans.v1.PlanExecutionR\rplanExecution\"b\n" +
 	"\x17GetPlanExecutionRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12*\n" +
@@ -2934,8 +3044,7 @@ const file_harpia_plans_v1_plans_proto_rawDesc = "" +
 	"*STEP_EXECUTION_STATUS_AWAITING_ELICITATION\x10\x03\x12+\n" +
 	"'STEP_EXECUTION_STATUS_AWAITING_APPROVAL\x10\x04\x12#\n" +
 	"\x1fSTEP_EXECUTION_STATUS_COMPLETED\x10\x05\x12 \n" +
-	"\x1cSTEP_EXECUTION_STATUS_FAILED\x10\x062\xea\n" +
-	"\n" +
+	"\x1cSTEP_EXECUTION_STATUS_FAILED\x10\x062\xd9\v\n" +
 	"\vPlanService\x12d\n" +
 	"\x0fGetPlanTemplate\x12'.harpia.plans.v1.GetPlanTemplateRequest\x1a(.harpia.plans.v1.GetPlanTemplateResponse\x12s\n" +
 	"\x14GetPlanTemplateByKey\x12,.harpia.plans.v1.GetPlanTemplateByKeyRequest\x1a-.harpia.plans.v1.GetPlanTemplateByKeyResponse\x12l\n" +
@@ -2944,7 +3053,8 @@ const file_harpia_plans_v1_plans_proto_rawDesc = "" +
 	"\x14GetPlanConfiguration\x12,.harpia.plans.v1.GetPlanConfigurationRequest\x1a-.harpia.plans.v1.GetPlanConfigurationResponse\x12|\n" +
 	"\x17UpdatePlanConfiguration\x12/.harpia.plans.v1.UpdatePlanConfigurationRequest\x1a0.harpia.plans.v1.UpdatePlanConfigurationResponse\x12{\n" +
 	"\x16ListPlanConfigurations\x12..harpia.plans.v1.ListPlanConfigurationsRequest\x1a/.harpia.plans.v1.ListPlanConfigurationsResponse0\x01\x12p\n" +
-	"\x13CreatePlanExecution\x12+.harpia.plans.v1.CreatePlanExecutionRequest\x1a,.harpia.plans.v1.CreatePlanExecutionResponse\x12g\n" +
+	"\x13CreatePlanExecution\x12+.harpia.plans.v1.CreatePlanExecutionRequest\x1a,.harpia.plans.v1.CreatePlanExecutionResponse\x12m\n" +
+	"\x12RetryPlanExecution\x12*.harpia.plans.v1.RetryPlanExecutionRequest\x1a+.harpia.plans.v1.RetryPlanExecutionResponse\x12g\n" +
 	"\x10GetPlanExecution\x12(.harpia.plans.v1.GetPlanExecutionRequest\x1a).harpia.plans.v1.GetPlanExecutionResponse\x12o\n" +
 	"\x12ListPlanExecutions\x12*.harpia.plans.v1.ListPlanExecutionsRequest\x1a+.harpia.plans.v1.ListPlanExecutionsResponse0\x01\x12g\n" +
 	"\x10GetStepExecution\x12(.harpia.plans.v1.GetStepExecutionRequest\x1a).harpia.plans.v1.GetStepExecutionResponse\x12o\n" +
@@ -2965,7 +3075,7 @@ func file_harpia_plans_v1_plans_proto_rawDescGZIP() []byte {
 }
 
 var file_harpia_plans_v1_plans_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
-var file_harpia_plans_v1_plans_proto_msgTypes = make([]protoimpl.MessageInfo, 36)
+var file_harpia_plans_v1_plans_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
 var file_harpia_plans_v1_plans_proto_goTypes = []any{
 	(ExecutorKind)(0),                       // 0: harpia.plans.v1.ExecutorKind
 	(PlanConfigurationStatus)(0),            // 1: harpia.plans.v1.PlanConfigurationStatus
@@ -3001,14 +3111,16 @@ var file_harpia_plans_v1_plans_proto_goTypes = []any{
 	(*ListPlanConfigurationsResponse)(nil),  // 31: harpia.plans.v1.ListPlanConfigurationsResponse
 	(*CreatePlanExecutionRequest)(nil),      // 32: harpia.plans.v1.CreatePlanExecutionRequest
 	(*CreatePlanExecutionResponse)(nil),     // 33: harpia.plans.v1.CreatePlanExecutionResponse
-	(*GetPlanExecutionRequest)(nil),         // 34: harpia.plans.v1.GetPlanExecutionRequest
-	(*GetPlanExecutionResponse)(nil),        // 35: harpia.plans.v1.GetPlanExecutionResponse
-	(*ListPlanExecutionsRequest)(nil),       // 36: harpia.plans.v1.ListPlanExecutionsRequest
-	(*ListPlanExecutionsResponse)(nil),      // 37: harpia.plans.v1.ListPlanExecutionsResponse
-	(*GetStepExecutionRequest)(nil),         // 38: harpia.plans.v1.GetStepExecutionRequest
-	(*GetStepExecutionResponse)(nil),        // 39: harpia.plans.v1.GetStepExecutionResponse
-	(*ListStepExecutionsRequest)(nil),       // 40: harpia.plans.v1.ListStepExecutionsRequest
-	(*ListStepExecutionsResponse)(nil),      // 41: harpia.plans.v1.ListStepExecutionsResponse
+	(*RetryPlanExecutionRequest)(nil),       // 34: harpia.plans.v1.RetryPlanExecutionRequest
+	(*RetryPlanExecutionResponse)(nil),      // 35: harpia.plans.v1.RetryPlanExecutionResponse
+	(*GetPlanExecutionRequest)(nil),         // 36: harpia.plans.v1.GetPlanExecutionRequest
+	(*GetPlanExecutionResponse)(nil),        // 37: harpia.plans.v1.GetPlanExecutionResponse
+	(*ListPlanExecutionsRequest)(nil),       // 38: harpia.plans.v1.ListPlanExecutionsRequest
+	(*ListPlanExecutionsResponse)(nil),      // 39: harpia.plans.v1.ListPlanExecutionsResponse
+	(*GetStepExecutionRequest)(nil),         // 40: harpia.plans.v1.GetStepExecutionRequest
+	(*GetStepExecutionResponse)(nil),        // 41: harpia.plans.v1.GetStepExecutionResponse
+	(*ListStepExecutionsRequest)(nil),       // 42: harpia.plans.v1.ListStepExecutionsRequest
+	(*ListStepExecutionsResponse)(nil),      // 43: harpia.plans.v1.ListStepExecutionsResponse
 }
 var file_harpia_plans_v1_plans_proto_depIdxs = []int32{
 	7,  // 0: harpia.plans.v1.PlanTemplate.steps:type_name -> harpia.plans.v1.PlanStep
@@ -3049,39 +3161,42 @@ var file_harpia_plans_v1_plans_proto_depIdxs = []int32{
 	1,  // 35: harpia.plans.v1.ListPlanConfigurationsRequest.status:type_name -> harpia.plans.v1.PlanConfigurationStatus
 	10, // 36: harpia.plans.v1.ListPlanConfigurationsResponse.plan_configurations:type_name -> harpia.plans.v1.PlanConfiguration
 	16, // 37: harpia.plans.v1.CreatePlanExecutionResponse.plan_execution:type_name -> harpia.plans.v1.PlanExecution
-	16, // 38: harpia.plans.v1.GetPlanExecutionResponse.plan_execution:type_name -> harpia.plans.v1.PlanExecution
-	16, // 39: harpia.plans.v1.ListPlanExecutionsResponse.plan_executions:type_name -> harpia.plans.v1.PlanExecution
-	17, // 40: harpia.plans.v1.GetStepExecutionResponse.step_execution:type_name -> harpia.plans.v1.StepExecution
-	17, // 41: harpia.plans.v1.ListStepExecutionsResponse.step_executions:type_name -> harpia.plans.v1.StepExecution
-	18, // 42: harpia.plans.v1.PlanService.GetPlanTemplate:input_type -> harpia.plans.v1.GetPlanTemplateRequest
-	20, // 43: harpia.plans.v1.PlanService.GetPlanTemplateByKey:input_type -> harpia.plans.v1.GetPlanTemplateByKeyRequest
-	22, // 44: harpia.plans.v1.PlanService.ListPlanTemplates:input_type -> harpia.plans.v1.ListPlanTemplatesRequest
-	24, // 45: harpia.plans.v1.PlanService.CreatePlanConfiguration:input_type -> harpia.plans.v1.CreatePlanConfigurationRequest
-	26, // 46: harpia.plans.v1.PlanService.GetPlanConfiguration:input_type -> harpia.plans.v1.GetPlanConfigurationRequest
-	28, // 47: harpia.plans.v1.PlanService.UpdatePlanConfiguration:input_type -> harpia.plans.v1.UpdatePlanConfigurationRequest
-	30, // 48: harpia.plans.v1.PlanService.ListPlanConfigurations:input_type -> harpia.plans.v1.ListPlanConfigurationsRequest
-	32, // 49: harpia.plans.v1.PlanService.CreatePlanExecution:input_type -> harpia.plans.v1.CreatePlanExecutionRequest
-	34, // 50: harpia.plans.v1.PlanService.GetPlanExecution:input_type -> harpia.plans.v1.GetPlanExecutionRequest
-	36, // 51: harpia.plans.v1.PlanService.ListPlanExecutions:input_type -> harpia.plans.v1.ListPlanExecutionsRequest
-	38, // 52: harpia.plans.v1.PlanService.GetStepExecution:input_type -> harpia.plans.v1.GetStepExecutionRequest
-	40, // 53: harpia.plans.v1.PlanService.ListStepExecutions:input_type -> harpia.plans.v1.ListStepExecutionsRequest
-	19, // 54: harpia.plans.v1.PlanService.GetPlanTemplate:output_type -> harpia.plans.v1.GetPlanTemplateResponse
-	21, // 55: harpia.plans.v1.PlanService.GetPlanTemplateByKey:output_type -> harpia.plans.v1.GetPlanTemplateByKeyResponse
-	23, // 56: harpia.plans.v1.PlanService.ListPlanTemplates:output_type -> harpia.plans.v1.ListPlanTemplatesResponse
-	25, // 57: harpia.plans.v1.PlanService.CreatePlanConfiguration:output_type -> harpia.plans.v1.CreatePlanConfigurationResponse
-	27, // 58: harpia.plans.v1.PlanService.GetPlanConfiguration:output_type -> harpia.plans.v1.GetPlanConfigurationResponse
-	29, // 59: harpia.plans.v1.PlanService.UpdatePlanConfiguration:output_type -> harpia.plans.v1.UpdatePlanConfigurationResponse
-	31, // 60: harpia.plans.v1.PlanService.ListPlanConfigurations:output_type -> harpia.plans.v1.ListPlanConfigurationsResponse
-	33, // 61: harpia.plans.v1.PlanService.CreatePlanExecution:output_type -> harpia.plans.v1.CreatePlanExecutionResponse
-	35, // 62: harpia.plans.v1.PlanService.GetPlanExecution:output_type -> harpia.plans.v1.GetPlanExecutionResponse
-	37, // 63: harpia.plans.v1.PlanService.ListPlanExecutions:output_type -> harpia.plans.v1.ListPlanExecutionsResponse
-	39, // 64: harpia.plans.v1.PlanService.GetStepExecution:output_type -> harpia.plans.v1.GetStepExecutionResponse
-	41, // 65: harpia.plans.v1.PlanService.ListStepExecutions:output_type -> harpia.plans.v1.ListStepExecutionsResponse
-	54, // [54:66] is the sub-list for method output_type
-	42, // [42:54] is the sub-list for method input_type
-	42, // [42:42] is the sub-list for extension type_name
-	42, // [42:42] is the sub-list for extension extendee
-	0,  // [0:42] is the sub-list for field type_name
+	16, // 38: harpia.plans.v1.RetryPlanExecutionResponse.plan_execution:type_name -> harpia.plans.v1.PlanExecution
+	16, // 39: harpia.plans.v1.GetPlanExecutionResponse.plan_execution:type_name -> harpia.plans.v1.PlanExecution
+	16, // 40: harpia.plans.v1.ListPlanExecutionsResponse.plan_executions:type_name -> harpia.plans.v1.PlanExecution
+	17, // 41: harpia.plans.v1.GetStepExecutionResponse.step_execution:type_name -> harpia.plans.v1.StepExecution
+	17, // 42: harpia.plans.v1.ListStepExecutionsResponse.step_executions:type_name -> harpia.plans.v1.StepExecution
+	18, // 43: harpia.plans.v1.PlanService.GetPlanTemplate:input_type -> harpia.plans.v1.GetPlanTemplateRequest
+	20, // 44: harpia.plans.v1.PlanService.GetPlanTemplateByKey:input_type -> harpia.plans.v1.GetPlanTemplateByKeyRequest
+	22, // 45: harpia.plans.v1.PlanService.ListPlanTemplates:input_type -> harpia.plans.v1.ListPlanTemplatesRequest
+	24, // 46: harpia.plans.v1.PlanService.CreatePlanConfiguration:input_type -> harpia.plans.v1.CreatePlanConfigurationRequest
+	26, // 47: harpia.plans.v1.PlanService.GetPlanConfiguration:input_type -> harpia.plans.v1.GetPlanConfigurationRequest
+	28, // 48: harpia.plans.v1.PlanService.UpdatePlanConfiguration:input_type -> harpia.plans.v1.UpdatePlanConfigurationRequest
+	30, // 49: harpia.plans.v1.PlanService.ListPlanConfigurations:input_type -> harpia.plans.v1.ListPlanConfigurationsRequest
+	32, // 50: harpia.plans.v1.PlanService.CreatePlanExecution:input_type -> harpia.plans.v1.CreatePlanExecutionRequest
+	34, // 51: harpia.plans.v1.PlanService.RetryPlanExecution:input_type -> harpia.plans.v1.RetryPlanExecutionRequest
+	36, // 52: harpia.plans.v1.PlanService.GetPlanExecution:input_type -> harpia.plans.v1.GetPlanExecutionRequest
+	38, // 53: harpia.plans.v1.PlanService.ListPlanExecutions:input_type -> harpia.plans.v1.ListPlanExecutionsRequest
+	40, // 54: harpia.plans.v1.PlanService.GetStepExecution:input_type -> harpia.plans.v1.GetStepExecutionRequest
+	42, // 55: harpia.plans.v1.PlanService.ListStepExecutions:input_type -> harpia.plans.v1.ListStepExecutionsRequest
+	19, // 56: harpia.plans.v1.PlanService.GetPlanTemplate:output_type -> harpia.plans.v1.GetPlanTemplateResponse
+	21, // 57: harpia.plans.v1.PlanService.GetPlanTemplateByKey:output_type -> harpia.plans.v1.GetPlanTemplateByKeyResponse
+	23, // 58: harpia.plans.v1.PlanService.ListPlanTemplates:output_type -> harpia.plans.v1.ListPlanTemplatesResponse
+	25, // 59: harpia.plans.v1.PlanService.CreatePlanConfiguration:output_type -> harpia.plans.v1.CreatePlanConfigurationResponse
+	27, // 60: harpia.plans.v1.PlanService.GetPlanConfiguration:output_type -> harpia.plans.v1.GetPlanConfigurationResponse
+	29, // 61: harpia.plans.v1.PlanService.UpdatePlanConfiguration:output_type -> harpia.plans.v1.UpdatePlanConfigurationResponse
+	31, // 62: harpia.plans.v1.PlanService.ListPlanConfigurations:output_type -> harpia.plans.v1.ListPlanConfigurationsResponse
+	33, // 63: harpia.plans.v1.PlanService.CreatePlanExecution:output_type -> harpia.plans.v1.CreatePlanExecutionResponse
+	35, // 64: harpia.plans.v1.PlanService.RetryPlanExecution:output_type -> harpia.plans.v1.RetryPlanExecutionResponse
+	37, // 65: harpia.plans.v1.PlanService.GetPlanExecution:output_type -> harpia.plans.v1.GetPlanExecutionResponse
+	39, // 66: harpia.plans.v1.PlanService.ListPlanExecutions:output_type -> harpia.plans.v1.ListPlanExecutionsResponse
+	41, // 67: harpia.plans.v1.PlanService.GetStepExecution:output_type -> harpia.plans.v1.GetStepExecutionResponse
+	43, // 68: harpia.plans.v1.PlanService.ListStepExecutions:output_type -> harpia.plans.v1.ListStepExecutionsResponse
+	56, // [56:69] is the sub-list for method output_type
+	43, // [43:56] is the sub-list for method input_type
+	43, // [43:43] is the sub-list for extension type_name
+	43, // [43:43] is the sub-list for extension extendee
+	0,  // [0:43] is the sub-list for field type_name
 }
 
 func init() { file_harpia_plans_v1_plans_proto_init() }
@@ -3091,14 +3206,14 @@ func file_harpia_plans_v1_plans_proto_init() {
 	}
 	file_harpia_plans_v1_plans_proto_msgTypes[16].OneofWrappers = []any{}
 	file_harpia_plans_v1_plans_proto_msgTypes[24].OneofWrappers = []any{}
-	file_harpia_plans_v1_plans_proto_msgTypes[30].OneofWrappers = []any{}
+	file_harpia_plans_v1_plans_proto_msgTypes[32].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_harpia_plans_v1_plans_proto_rawDesc), len(file_harpia_plans_v1_plans_proto_rawDesc)),
 			NumEnums:      6,
-			NumMessages:   36,
+			NumMessages:   38,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
