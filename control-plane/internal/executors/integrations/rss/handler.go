@@ -9,27 +9,26 @@ import (
 
 	artifactsv1 "github.com/harpia/control-plane/gen/harpia/artifacts/v1"
 	"github.com/harpia/control-plane/internal/artifacts"
-	"github.com/harpia/control-plane/internal/executors"
+	"github.com/harpia/control-plane/internal/executors/catalog"
+	"github.com/harpia/control-plane/internal/executors/runtime"
 )
 
-const retryableFeedFetchCode = "FeedFetchError"
-
 type Handler struct {
-	artifacts executors.ExecutorArtifactStore
+	artifacts runtime.ExecutorArtifactStore
 	feeds     FeedFetcher
 }
 
-func NewHandler(artifacts executors.ExecutorArtifactStore, feeds FeedFetcher) *Handler {
+func NewHandler(artifacts runtime.ExecutorArtifactStore, feeds FeedFetcher) *Handler {
 	return &Handler{artifacts: artifacts, feeds: feeds}
 }
 
 func (h *Handler) SKUKey() string {
-	return executors.SKURSSNewsFeed
+	return catalog.SKURSSNewsFeed
 }
 
-func (h *Handler) Execute(ctx context.Context, req executors.IntegrationExecutionRequest) (executors.IntegrationExecutionResult, error) {
+func (h *Handler) Execute(ctx context.Context, req runtime.IntegrationExecutionRequest) (runtime.IntegrationExecutionResult, error) {
 	if h == nil || h.artifacts == nil || h.feeds == nil {
-		return executors.IntegrationExecutionResult{}, fmt.Errorf("rss integration handler is not configured")
+		return runtime.IntegrationExecutionResult{}, fmt.Errorf("rss integration handler is not configured")
 	}
 
 	config, err := ParseInstallationConfig(req.Installation.ConfigJSON)
@@ -53,8 +52,8 @@ func (h *Handler) Execute(ctx context.Context, req executors.IntegrationExecutio
 	if err != nil {
 		var feedErr *FeedFetchError
 		if errors.As(err, &feedErr) {
-			return executors.IntegrationExecutionResult{}, executors.NewRetryableError(
-				retryableFeedFetchCode,
+			return runtime.IntegrationExecutionResult{}, runtime.NewRetryableError(
+				runtime.ErrCodeFeedFetch,
 				feedErr.Error(),
 				err,
 			)
@@ -64,32 +63,32 @@ func (h *Handler) Execute(ctx context.Context, req executors.IntegrationExecutio
 
 	payload, err := protojson.Marshal(newsList)
 	if err != nil {
-		return executors.IntegrationExecutionResult{}, fmt.Errorf("marshal news list: %w", err)
+		return runtime.IntegrationExecutionResult{}, fmt.Errorf("marshal news list: %w", err)
 	}
 
-	outputArtifactID, err := h.artifacts.CreateValidatedPayload(ctx, executors.CreateArtifactRequest{
+	outputArtifactID, err := h.artifacts.CreateValidatedPayload(ctx, runtime.CreateArtifactRequest{
 		TenantID:              req.TenantID,
-		OutputArtifactTypeRef: req.OutputArtifactTypeKey,
+		OutputArtifactTypeKey: req.OutputArtifactTypeKey,
 		StepExecutionID:       req.StepExecutionID,
 		Payload:               payload,
 	})
 	if err != nil {
-		return executors.IntegrationExecutionResult{}, fmt.Errorf("create news list artifact: %w", err)
+		return runtime.IntegrationExecutionResult{}, fmt.Errorf("create news list artifact: %w", err)
 	}
 
-	return executors.IntegrationExecutionResult{
-		Status:           executors.IntegrationStatusCompleted,
+	return runtime.IntegrationExecutionResult{
+		Status:           runtime.IntegrationStatusCompleted,
 		OutputArtifactID: outputArtifactID,
 	}, nil
 }
 
-func failedResult(err error) executors.IntegrationExecutionResult {
+func failedResult(err error) runtime.IntegrationExecutionResult {
 	message := "integration failed"
 	if err != nil {
 		message = err.Error()
 	}
-	return executors.IntegrationExecutionResult{
-		Status: executors.IntegrationStatusFailed,
+	return runtime.IntegrationExecutionResult{
+		Status: runtime.IntegrationStatusFailed,
 		Error:  message,
 	}
 }

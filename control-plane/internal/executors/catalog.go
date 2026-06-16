@@ -1,9 +1,10 @@
 package executors
 
-// Catalog SKU keys. Single source of truth for executor routing and seed data.
+import "github.com/harpia/control-plane/internal/executors/catalog"
+
 const (
-	SKURSSNewsFeed           = "rss-news-feed"
-	SKULinkedInPublish       = "linkedin-publish"
-	SKUNewsletterWriterSenior = "newsletter-writer-senior"
-	SKULinkedInVoiceSenior   = "linkedin-voice-senior"
+	SKURSSNewsFeed            = catalog.SKURSSNewsFeed
+	SKULinkedInPublish        = catalog.SKULinkedInPublish
+	SKUNewsletterWriterSenior = catalog.SKUNewsletterWriterSenior
+	SKULinkedInVoiceSenior    = catalog.SKULinkedInVoiceSenior
 )

@@ -27,7 +27,7 @@ import (
 	"github.com/harpia/control-plane/internal/config"
 	"github.com/harpia/control-plane/internal/database"
 	"github.com/harpia/control-plane/internal/executors"
-	"github.com/harpia/control-plane/internal/executors/integrations/rss"
+	"github.com/harpia/control-plane/internal/executors/bootstrap"
 	"github.com/harpia/control-plane/internal/feedback"
 	"github.com/harpia/control-plane/internal/identity"
 	"github.com/harpia/control-plane/internal/plans"
@@ -87,14 +87,14 @@ func runWorker(ctx context.Context, cfg *config.Config) {
 		fatal("create garage store failed", "error", err)
 	}
 
-	artifactStore := executors.NewExecutorArtifactStore(artifactRepo, garageStore)
-	integrationRegistry := executors.NewIntegrationRegistry(
-		rss.NewHandler(artifactStore, rss.NewHTTPFeedFetcher(nil)),
-	)
+	executorRuntime := bootstrap.NewRuntime(bootstrap.Dependencies{
+		ArtifactRepo: artifactRepo,
+		PayloadStore: garageStore,
+	})
 
 	planActivities := &workflow.PlanActivities{
 		Runtime:      plans.NewRuntimeRepository(planRepo, executorRepo),
-		Integrations: integrationRegistry,
+		Integrations: executorRuntime.Integrations,
 	}
 
 	c, err := client.Dial(client.Options{HostPort: cfg.TemporalHost})
@@ -212,7 +212,7 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 		fatal("create plan handler failed", "error", err)
 	}
 
-	executorHandler, err := executors.NewHandler(executorRepo)
+	executorHandler, err := executors.NewHandler(executorRepo, executors.DefaultConfigValidators())
 	if err != nil {
 		fatal("create executor handler failed", "error", err)
 	}
