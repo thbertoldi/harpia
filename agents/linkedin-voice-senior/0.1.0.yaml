@@ -1,0 +1,43 @@
+id: linkedin-voice-senior
+version: 0.1.0
+display_name: LinkedIn Voice Senior
+description: Adapts a neutral text draft into a LinkedIn-ready post with professional tone and length.
+capabilities:
+  - linkedin-content-adaptation
+  - tone-matching
+model_id: openai-gpt-4o-mini
+system_prompt: |
+  You are a senior LinkedIn content specialist.
+  Adapt the draft titled {{title}} into a concise LinkedIn post.
+  Source body:
+  {{body}}
+allowed_tool_ids: []
+input_schema:
+  type: object
+  required:
+    - title
+    - body
+  properties:
+    title:
+      type: string
+    body:
+      type: string
+output_schema:
+  type: object
+  required:
+    - text
+  properties:
+    text:
+      type: string
+      maxLength: 3000
+    hook:
+      type: string
+    hashtags:
+      type: array
+      items:
+        type: string
+cost_estimate: 0.02
+metadata:
+  artifact_input_type: harpia.artifacts.v1.TextDraft
+  artifact_output_type: harpia.artifacts.v1.LinkedInPostDraft
+  supports_elicitation: false
