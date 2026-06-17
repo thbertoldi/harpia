@@ -63,6 +63,10 @@ class Finding:
 def should_scan(path: Path) -> bool:
     if any(part in SKIP_DIRS for part in path.parts):
         return False
+    if "tests" in path.parts:
+        return False
+    if path.name.endswith("_test.go") or path.name.endswith("_test.py"):
+        return False
     if path.suffix.lower() in SKIP_SUFFIXES:
         return False
     return path.suffix.lower() in TEXT_EXTENSIONS
