@@ -23,4 +23,9 @@ const (
 	ApprovalRequestStatusPending  = "pending"
 	ApprovalRequestStatusApproved = "approved"
 	ApprovalRequestStatusRejected = "rejected"
+
+	ElicitationStatusPending   = "pending"
+	ElicitationStatusAnswered  = "answered"
+	ElicitationStatusTimedOut  = "timed_out"
+	ElicitationStatusCancelled = "cancelled"
 )

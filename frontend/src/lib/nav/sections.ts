@@ -4,6 +4,7 @@ import {
   Bot,
   Eye,
   LayoutDashboard,
+  MessagesSquare,
   Plug,
   ScrollText,
 } from "lucide-svelte";
@@ -31,6 +32,12 @@ export const navSectionDefs: NavSectionDef[] = [
     i18nKey: "nav.oversee",
     href: "/oversee",
     icon: Eye,
+    visibleTo: "all",
+  },
+  {
+    i18nKey: "nav.elicitations",
+    href: "/elicitations",
+    icon: MessagesSquare,
     visibleTo: "all",
   },
   {
