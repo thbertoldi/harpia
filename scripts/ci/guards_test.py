@@ -17,6 +17,7 @@ sys.path.insert(0, str(SCRIPT_DIR))
 
 import guard_rule_disablement
 import guard_runtime_and_deps
+import scan_api_key_patterns
 import guard_scope_inflation
 
 
@@ -148,6 +149,30 @@ Only src/a.txt is expected.
         self.assertTrue(result["detected"])
         self.assertFalse(result["label_required"])
         self.assertTrue(any(item["kind"] == "trivial-complexity-file-count" for item in result["warnings"]))
+
+    def test_api_key_scanner_detects_realistic_key_pattern(self) -> None:
+        with tempfile.TemporaryDirectory() as raw_dir:
+            repo = Path(raw_dir)
+            (repo / "src").mkdir(parents=True, exist_ok=True)
+            (repo / "src" / "sample.py").write_text('token = "sk-ant-thisshouldtrigger123456789"\n')
+
+            findings = scan_api_key_patterns.scan_repo(repo)
+
+        self.assertEqual(len(findings), 1)
+        self.assertIn("sample.py", str(findings[0].path))
+
+    def test_api_key_scanner_respects_allowlist_pragma(self) -> None:
+        with tempfile.TemporaryDirectory() as raw_dir:
+            repo = Path(raw_dir)
+            (repo / "src").mkdir(parents=True, exist_ok=True)
+            (repo / "src" / "fixture.py").write_text(
+                "# pragma: allowlist secret\n"
+                'token = "sk-ant-thisisfixturevalue123456"\n'
+            )
+
+            findings = scan_api_key_patterns.scan_repo(repo)
+
+        self.assertEqual(findings, [])
 
 
 if __name__ == "__main__":

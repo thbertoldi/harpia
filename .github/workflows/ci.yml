@@ -33,6 +33,9 @@ jobs:
             run: |
               bun install --frozen-lockfile
               bun run lint
+          - lang: api-key-scan
+            working-directory: .
+            run: python scripts/ci/scan_api_key_patterns.py
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -42,7 +45,7 @@ jobs:
           cache: true
           cache-dependency-path: control-plane/go.sum
       - uses: actions/setup-python@v5
-        if: matrix.lang == 'python'
+        if: matrix.lang == 'python' || matrix.lang == 'api-key-scan'
         with:
           python-version: "3.12"
       - uses: oven-sh/setup-bun@v2
