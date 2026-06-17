@@ -4,7 +4,8 @@ export type HarpiaPermission =
   | "manageIntegrations"
   | "manageAgents"
   | "viewAudit"
-  | "configurePlans";
+  | "configurePlans"
+  | "manageTenantSettings";
 
 const ROLE_PERMISSIONS: Record<HarpiaRole, ReadonlySet<HarpiaPermission>> = {
   Leader: new Set([
@@ -12,12 +13,14 @@ const ROLE_PERMISSIONS: Record<HarpiaRole, ReadonlySet<HarpiaPermission>> = {
     "manageAgents",
     "viewAudit",
     "configurePlans",
+    "manageTenantSettings",
   ]),
   Engineer: new Set([
     "manageIntegrations",
     "manageAgents",
     "viewAudit",
     "configurePlans",
+    "manageTenantSettings",
   ]),
   Overseer: new Set(["viewAudit"]),
 };
@@ -99,6 +102,12 @@ export function canConfigurePlans(
   user: { role?: string } | null | undefined,
 ): boolean {
   return hasPermission(user, "configurePlans");
+}
+
+export function canManageTenantSettings(
+  user: { role?: string } | null | undefined,
+): boolean {
+  return hasPermission(user, "manageTenantSettings");
 }
 
 /** @deprecated Use canManageIntegrations or canManageAgents instead. */
