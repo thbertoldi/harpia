@@ -27,6 +27,7 @@ harpia-agent = "harpia_agents.main:main"
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.24.0",
+    "pytest-httpx>=0.36.2",
     "ruff>=0.8.0",
     "mypy>=1.13.0",
 ]
@@ -44,8 +45,16 @@ line-length = 100
 extend-exclude = ["**/gen/", ".venv/", "build/"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "N", "W", "UP"]
+select = ["E", "F", "I", "N", "W", "UP", "TID"]
 ignore = ["E501"]  # line-length handled by formatter
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"anthropic".msg = "Use harpia_agents.llm.providers instead of direct anthropic SDK imports."
+"openai".msg = "Use harpia_agents.llm.providers instead of direct openai SDK imports."
+"ollama".msg = "Use harpia_agents.llm.providers instead of direct ollama SDK imports."
+
+[tool.ruff.lint.per-file-ignores]
+"src/harpia_agents/llm/providers/*.py" = ["TID251"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Protocol
 
 from google.protobuf.json_format import MessageToDict, ParseDict
 from harpia.artifacts.v1.artifacts_pb2 import LinkedInPostDraft, TextDraft
@@ -12,40 +11,17 @@ from langgraph.graph import END, StateGraph
 from pydantic import BaseModel, ConfigDict
 
 from harpia_agents.agents.manifest import AgentType
+from harpia_agents.llm import ChatMessage, LLMRegistry
 
 MANIFEST_ID = "linkedin-voice-senior"
 MANIFEST_PATH = Path(__file__).resolve().parents[4] / "agents" / MANIFEST_ID / "0.1.0.yaml"
-MANIFEST = AgentType.from_yaml(MANIFEST_PATH)
+_KNOWN_MODEL_IDS = tuple(model.model_id for model in LLMRegistry.default().list_models())
+MANIFEST = AgentType.from_yaml(MANIFEST_PATH, model_ids=_KNOWN_MODEL_IDS)
 _OUTPUT_SCHEMA = MANIFEST.to_dict()["output_schema"]
 _OUTPUT_REQUIRED_FIELDS = tuple(_OUTPUT_SCHEMA.get("required", []))
 _MAX_TEXT_LENGTH = int(_OUTPUT_SCHEMA.get("properties", {}).get("text", {}).get("maxLength", 3000))
 
 type AgentRunResult = LinkedInPostDraft
-
-
-class LLMClient(Protocol):
-    """LLM client port used by the LinkedIn voice agent."""
-
-    async def adapt_for_linkedin(
-        self,
-        *,
-        title: str,
-        body: str,
-    ) -> str: ...
-
-
-class TemplateLLMClient:
-    """Default deterministic implementation used when no API client is injected."""
-
-    async def adapt_for_linkedin(
-        self,
-        *,
-        title: str,
-        body: str,
-    ) -> str:
-        trimmed_body = body.strip()
-        preview = trimmed_body[:280] + ("..." if len(trimmed_body) > 280 else "")
-        return f"{title}\n\n{preview}"
 
 
 class LinkedInVoiceState(BaseModel):
@@ -104,7 +80,7 @@ def parse_text_draft_payload(input_text_draft: TextDraft | Mapping[str, object])
     return parsed
 
 
-def _build_graph(*, llm_client: LLMClient):
+def _build_graph(*, llm_registry: LLMRegistry, model_id: str):
     graph: StateGraph[LinkedInVoiceState, None, LinkedInVoiceState, LinkedInVoiceState] = (
         StateGraph(LinkedInVoiceState)
     )
@@ -115,7 +91,23 @@ def _build_graph(*, llm_client: LLMClient):
         if not title or not body:
             raise ValueError("input_schema violation: `title` and `body` must be non-empty strings")
 
-        adapted_text = await llm_client.adapt_for_linkedin(title=title, body=body)
+        result = await llm_registry.complete(
+            model_id=model_id,
+            messages=[
+                ChatMessage(
+                    role="system",
+                    content=(
+                        "You are a senior LinkedIn content specialist. Adapt the input into a polished "
+                        "LinkedIn post while preserving factual meaning."
+                    ),
+                ),
+                ChatMessage(
+                    role="user",
+                    content=f"title: {title}\n\nbody:\n{body}",
+                ),
+            ],
+        )
+        adapted_text = result.content
         post_draft = LinkedInPostDraft(
             hook=_build_hook(title),
             text=adapted_text.strip()[:_MAX_TEXT_LENGTH],
@@ -133,11 +125,12 @@ def _build_graph(*, llm_client: LLMClient):
 async def run(
     input_text_draft: TextDraft | Mapping[str, object],
     *,
-    llm_client: LLMClient,
+    llm_registry: LLMRegistry,
+    model_id: str = MANIFEST.model_id,
 ) -> AgentRunResult:
     """Run LinkedIn voice adaptation and return a LinkedIn post draft."""
     text_draft = parse_text_draft_payload(input_text_draft)
-    graph = _build_graph(llm_client=llm_client)
+    graph = _build_graph(llm_registry=llm_registry, model_id=model_id)
     state = LinkedInVoiceState(text_draft=text_draft)
     result_state = LinkedInVoiceState.model_validate(await graph.ainvoke(state.model_dump()))
 

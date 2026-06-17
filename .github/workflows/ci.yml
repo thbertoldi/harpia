@@ -65,8 +65,7 @@ jobs:
           - lang: python
             working-directory: agent-runtime
             run: |
-              pip install -e .
-              pip install pytest pytest-asyncio
+              pip install -e ".[dev]"
               pytest tests/ --tb=short
           - lang: svelte
             working-directory: frontend

@@ -37,7 +37,8 @@ async def test_execute_task_surfaces_structured_elicitation(monkeypatch) -> None
     )
     monkeypatch.setattr(services, "has_runner", lambda _agent_id: True)
 
-    async def fake_run(_agent_id, *, input_news_list):  # noqa: ANN001, ANN202
+    async def fake_run(_agent_id, *, input_news_list, llm_registry):  # noqa: ANN001, ANN202
+        del llm_registry
         return elicitation
 
     monkeypatch.setattr(services, "run_registered_agent", fake_run)
@@ -50,16 +51,11 @@ async def test_execute_task_surfaces_structured_elicitation(monkeypatch) -> None
         task_description="{}",
     )
 
-    responses = [
-        response async for response in impl.execute_task(request, FakeRequestContext())
-    ]
+    responses = [response async for response in impl.execute_task(request, FakeRequestContext())]
 
     assert len(responses) == 1
     response = responses[0]
-    assert (
-        response.status
-        == AgentInstanceStatus.AGENT_INSTANCE_STATUS_AWAITING_FEEDBACK
-    )
+    assert response.status == AgentInstanceStatus.AGENT_INSTANCE_STATUS_AWAITING_FEEDBACK
     # Structured prompt is preserved.
     assert response.feedback_request.question == elicitation.question
     # Schema fields are carried as the response options.
