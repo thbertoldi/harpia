@@ -12,6 +12,14 @@ from harpia_agents.agents.newsletter_writer import ElicitationRequest
 from harpia_agents.agents.registry import run_registered_agent
 from harpia_agents.graph import TaskState, build_graph
 from harpia_agents.identity import require_temporal_tenant
+from harpia_agents.llm import LLMRegistry
+
+_LLM_REGISTRY: LLMRegistry = LLMRegistry.default()
+
+
+def configure_llm_registry(registry: LLMRegistry) -> None:
+    global _LLM_REGISTRY
+    _LLM_REGISTRY = registry
 
 
 @activity.defn
@@ -98,6 +106,7 @@ async def run_agent_activity(input_payload: dict) -> dict:
     result = await run_registered_agent(
         manifest_id,
         input_news_list=_extract_news_list_payload(input_payload),
+        llm_registry=_LLM_REGISTRY,
         elicitation_responses=_extract_elicitation_responses(input_payload),
     )
     if isinstance(result, ElicitationRequest):

@@ -9,11 +9,14 @@ from harpia_agents.agents.linkedin_voice import (
     linkedin_post_draft_to_mapping,
     run,
 )
+from harpia_agents.llm import LLMRegistry
 
 
-class FakeLLMClient:
-    async def adapt_for_linkedin(self, *, title, body):  # noqa: ANN001
-        return f"LinkedIn-ready: {title}\n\n{body[:500]}"
+def _registry(response: str) -> LLMRegistry:
+    return LLMRegistry.for_testing(
+        model_ids=["openai-gpt-4o-mini"],
+        responses=[response],
+    )
 
 
 def _text_draft() -> TextDraft:
@@ -49,7 +52,10 @@ def _validate_linkedin_post_draft_payload(payload: dict[str, object]) -> None:
 
 @pytest.mark.asyncio
 async def test_run_returns_linkedin_post_draft_from_text_draft() -> None:
-    result = await run(_text_draft(), llm_client=FakeLLMClient())
+    result = await run(
+        _text_draft(),
+        llm_registry=_registry("LinkedIn-ready: Weekly AI Governance Brief\n\nShort body"),
+    )
 
     assert isinstance(result, LinkedInPostDraft)
     assert result.text
@@ -61,7 +67,10 @@ async def test_run_returns_linkedin_post_draft_from_text_draft() -> None:
 
 @pytest.mark.asyncio
 async def test_run_output_passes_artifact_schema_validation() -> None:
-    result = await run(_text_draft(), llm_client=FakeLLMClient())
+    result = await run(
+        _text_draft(),
+        llm_registry=_registry("LinkedIn-ready: Weekly AI Governance Brief\n\nShort body"),
+    )
     payload = linkedin_post_draft_to_mapping(result)
 
     _validate_linkedin_post_draft_payload(payload)

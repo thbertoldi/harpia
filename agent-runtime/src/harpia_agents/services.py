@@ -29,6 +29,7 @@ from harpia_agents.agents.newsletter_writer import ElicitationRequest
 from harpia_agents.agents.registry import has_runner, run_registered_agent
 from harpia_agents.graph import TaskState, build_graph
 from harpia_agents.identity import require_selected_tenant, require_tenant
+from harpia_agents.llm import LLMRegistry
 
 if TYPE_CHECKING:
     from connectrpc.request import RequestContext
@@ -36,6 +37,9 @@ if TYPE_CHECKING:
 
 class AgentServiceImpl(AgentService):
     """ConnectRPC AgentService implementation with LangGraph integration."""
+
+    def __init__(self, *, llm_registry: LLMRegistry | None = None) -> None:
+        self._llm_registry = llm_registry or LLMRegistry.default()
 
     async def register_agent_type(
         self,
@@ -71,6 +75,7 @@ class AgentServiceImpl(AgentService):
         ctx: RequestContext,
     ) -> MatchAgentResponse:
         require_tenant(ctx, request.tenant_id)
+        # TODO(#35): embeddings use a separate abstraction from chat completion providers.
         embedder = OpenAIEmbeddings()
         await embedder.aembed_query(request.task_description)
         return MatchAgentResponse(matches=[])
@@ -93,6 +98,7 @@ class AgentServiceImpl(AgentService):
                     result = await run_registered_agent(
                         request.agent_type_id,
                         input_news_list=payload,
+                        llm_registry=self._llm_registry,
                     )
                     if isinstance(result, ElicitationRequest):
                         yield ExecuteTaskResponse(

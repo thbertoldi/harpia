@@ -3,21 +3,22 @@
 from __future__ import annotations
 
 import uuid
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol
 
 from google.protobuf.json_format import MessageToDict, ParseDict
-from harpia.artifacts.v1.artifacts_pb2 import NewsArticle, NewsList, TextDraft
+from harpia.artifacts.v1.artifacts_pb2 import NewsList, TextDraft
 from langgraph.graph import END, StateGraph
 from pydantic import BaseModel, ConfigDict, Field
 
 from harpia_agents.agents.manifest import AgentType
+from harpia_agents.llm import ChatMessage, LLMRegistry
 
 MANIFEST_ID = "newsletter-writer-senior"
 MANIFEST_PATH = Path(__file__).resolve().parents[4] / "agents" / MANIFEST_ID / "0.1.0.yaml"
-MANIFEST = AgentType.from_yaml(MANIFEST_PATH)
+_KNOWN_MODEL_IDS = tuple(model.model_id for model in LLMRegistry.default().list_models())
+MANIFEST = AgentType.from_yaml(MANIFEST_PATH, model_ids=_KNOWN_MODEL_IDS)
 _OUTPUT_REQUIRED_FIELDS = tuple(MANIFEST.to_dict()["output_schema"].get("required", []))
 
 
@@ -31,37 +32,6 @@ class ElicitationRequest:
 
 
 type AgentRunResult = TextDraft | ElicitationRequest
-
-
-class LLMClient(Protocol):
-    """LLM client port used by the newsletter writer."""
-
-    async def generate_draft(
-        self,
-        *,
-        articles: Sequence[NewsArticle],
-        tone: str,
-        topics_to_avoid: Sequence[str],
-    ) -> str: ...
-
-
-class TemplateLLMClient:
-    """Default deterministic implementation used when no API client is injected."""
-
-    async def generate_draft(
-        self,
-        *,
-        articles: Sequence[NewsArticle],
-        tone: str,
-        topics_to_avoid: Sequence[str],
-    ) -> str:
-        avoid_text = ", ".join(topics_to_avoid) if topics_to_avoid else "none"
-        return (
-            f"## Weekly News Brief\n"
-            f"Tone: {tone}.\n"
-            f"Topics to avoid: {avoid_text}.\n"
-            f"Covers {len(articles)} curated stories."
-        )
 
 
 class NewsletterState(BaseModel):
@@ -131,7 +101,7 @@ def parse_news_list_payload(input_news_list: NewsList | Mapping[str, object]) ->
     return parsed
 
 
-def _build_graph(*, llm_client: LLMClient):
+def _build_graph(*, llm_registry: LLMRegistry, model_id: str):
     graph: StateGraph[NewsletterState, None, NewsletterState, NewsletterState] = StateGraph(
         NewsletterState
     )
@@ -151,11 +121,32 @@ def _build_graph(*, llm_client: LLMClient):
             }
 
         topics_to_avoid = _topics_to_avoid(state.elicitation_responses.get("topics_to_avoid"))
-        llm_body = await llm_client.generate_draft(
-            articles=list(state.news_list.articles),
-            tone=tone,
-            topics_to_avoid=topics_to_avoid,
+        article_lines = [
+            f"- title={article.title}; summary={article.summary}; url={article.url}; source={article.source}"
+            for article in state.news_list.articles
+        ]
+        llm_result = await llm_registry.complete(
+            model_id=model_id,
+            messages=[
+                ChatMessage(
+                    role="system",
+                    content=(
+                        "You are a senior newsletter writer. Produce a concise markdown newsletter body "
+                        "that can be merged with a sources appendix."
+                    ),
+                ),
+                ChatMessage(
+                    role="user",
+                    content=(
+                        f"tone={tone}\n"
+                        f"topics_to_avoid={','.join(topics_to_avoid) if topics_to_avoid else 'none'}\n"
+                        "articles:\n"
+                        f"{chr(10).join(article_lines)}"
+                    ),
+                ),
+            ],
         )
+        llm_body = llm_result.content.strip() or "## Weekly News Brief"
         draft = TextDraft(
             title=_build_title(state.news_list),
             body=_render_body(llm_body=llm_body, news_list=state.news_list),
@@ -172,12 +163,13 @@ def _build_graph(*, llm_client: LLMClient):
 async def run(
     input_news_list: NewsList | Mapping[str, object],
     *,
-    llm_client: LLMClient,
+    llm_registry: LLMRegistry,
+    model_id: str = MANIFEST.model_id,
     elicitation_responses: Mapping[str, str] | None = None,
 ) -> AgentRunResult:
     """Run newsletter writer and return either a draft or elicitation request."""
     news_list = parse_news_list_payload(input_news_list)
-    graph = _build_graph(llm_client=llm_client)
+    graph = _build_graph(llm_registry=llm_registry, model_id=model_id)
     state = NewsletterState(
         news_list=news_list,
         elicitation_responses=dict(elicitation_responses or {}),

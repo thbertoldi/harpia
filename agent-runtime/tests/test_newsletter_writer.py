@@ -2,13 +2,14 @@ import pytest
 from harpia.artifacts.v1.artifacts_pb2 import NewsArticle, NewsList, TextDraft
 
 from harpia_agents.agents.newsletter_writer import ElicitationRequest, run
+from harpia_agents.llm import LLMRegistry
 
 
-class FakeLLMClient:
-    async def generate_draft(self, *, articles, tone, topics_to_avoid):  # noqa: ANN001
-        joined_titles = ", ".join(article.title for article in articles)
-        avoided = ", ".join(topics_to_avoid) if topics_to_avoid else "none"
-        return f"## Draft ({tone})\nStories: {joined_titles}\nAvoided: {avoided}"
+def _registry(response: str = "## Draft\nGenerated content") -> LLMRegistry:
+    return LLMRegistry.for_testing(
+        model_ids=["openai-gpt-4o-mini"],
+        responses=[response],
+    )
 
 
 def _news_list() -> NewsList:
@@ -36,7 +37,7 @@ def _news_list() -> NewsList:
 async def test_run_returns_text_draft_referencing_each_article() -> None:
     result = await run(
         _news_list(),
-        llm_client=FakeLLMClient(),
+        llm_registry=_registry("## Draft (professional)\nStories listed"),
         elicitation_responses={"tone": "professional", "topics_to_avoid": "rumors"},
     )
 
@@ -50,7 +51,7 @@ async def test_run_returns_text_draft_referencing_each_article() -> None:
 
 @pytest.mark.asyncio
 async def test_run_emits_elicitation_request_when_tone_missing() -> None:
-    result = await run(_news_list(), llm_client=FakeLLMClient())
+    result = await run(_news_list(), llm_registry=_registry())
 
     assert isinstance(result, ElicitationRequest)
     assert result.required_fields == ("tone", "topics_to_avoid")
@@ -61,7 +62,7 @@ async def test_run_emits_elicitation_request_when_tone_missing() -> None:
 async def test_run_completes_after_elicitation_response() -> None:
     result = await run(
         _news_list(),
-        llm_client=FakeLLMClient(),
+        llm_registry=_registry("## Draft (friendly)\nStories"),
         elicitation_responses={"tone": "friendly"},
     )
 
