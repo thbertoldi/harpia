@@ -97,6 +97,7 @@ class AgentServiceImpl(AgentService):
                         raise ValueError("task_description must be a JSON object")
                     result = await run_registered_agent(
                         request.agent_type_id,
+                        tenant_id=tenant_id,
                         input_news_list=payload,
                         llm_registry=self._llm_registry,
                     )

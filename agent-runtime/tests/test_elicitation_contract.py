@@ -37,8 +37,9 @@ async def test_execute_task_surfaces_structured_elicitation(monkeypatch) -> None
     )
     monkeypatch.setattr(services, "has_runner", lambda _agent_id: True)
 
-    async def fake_run(_agent_id, *, input_news_list, llm_registry):  # noqa: ANN001, ANN202
-        del llm_registry
+    async def fake_run(_agent_id, *, tenant_id=None, input_news_list, llm_registry):  # noqa: ANN001, ANN202
+        assert tenant_id == "dev"
+        del input_news_list, llm_registry
         return elicitation
 
     monkeypatch.setattr(services, "run_registered_agent", fake_run)
