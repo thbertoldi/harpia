@@ -18,14 +18,16 @@ import (
 )
 
 type PlanHandler struct {
-	repo            *Repository
-	executors       ExecutorLookup
-	validator       *BindingValidator
-	schedule        *ScheduleManager
-	runtime         PlanExecutionRetryer
-	workflowStarter PlanWorkflowStarter
-	elicitations    ElicitationStore
-	signaler        PlanElicitationSignaler
+	repo             *Repository
+	executors        ExecutorLookup
+	validator        *BindingValidator
+	schedule         *ScheduleManager
+	runtime          PlanExecutionRetryer
+	workflowStarter  PlanWorkflowStarter
+	elicitations     ElicitationStore
+	signaler         PlanElicitationSignaler
+	approvals        ApprovalStore
+	approvalSignaler PlanApprovalSignaler
 }
 
 type PlanWorkflowStarter interface {
@@ -55,9 +57,13 @@ func NewPlanHandler(repo *Repository, executors ExecutorLookup, schedule *Schedu
 		runtime:         NewRuntimeRepository(repo, executors),
 		workflowStarter: starter,
 		elicitations:    repo,
+		approvals:       repo,
 	}
 	if signaler, ok := starter.(PlanElicitationSignaler); ok {
 		handler.signaler = signaler
+	}
+	if approvalSignaler, ok := starter.(PlanApprovalSignaler); ok {
+		handler.approvalSignaler = approvalSignaler
 	}
 	return handler, nil
 }

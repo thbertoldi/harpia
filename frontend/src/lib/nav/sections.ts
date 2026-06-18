@@ -8,6 +8,7 @@ import {
   Plug,
   ScrollText,
   Settings,
+  ShieldCheck,
 } from "lucide-svelte";
 import { hasPermission } from "$lib/auth-roles";
 import type { NavSectionDef, ResolvedNavSection } from "./types";
@@ -39,6 +40,12 @@ export const navSectionDefs: NavSectionDef[] = [
     i18nKey: "nav.elicitations",
     href: "/elicitations",
     icon: MessagesSquare,
+    visibleTo: "all",
+  },
+  {
+    i18nKey: "nav.approvals",
+    href: "/approvals",
+    icon: ShieldCheck,
     visibleTo: "all",
   },
   {

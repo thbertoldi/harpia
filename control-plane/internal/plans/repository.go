@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -719,6 +720,119 @@ func (r *Repository) ResolvePlanApprovalRequest(
 		return fmt.Errorf("resolve plan approval request: %w", err)
 	}
 	return nil
+}
+
+const planApprovalRequestColumns = `id, tenant_id, plan_execution_id, step_execution_id, plan_step_key,
+	COALESCE(input_artifact_id, ''), status, COALESCE(decision_reason, ''),
+	requested_at, decided_at, created_at, updated_at`
+
+func scanPlanApprovalRequest(row pgx.Row, dest *PlanApprovalRequest) error {
+	return row.Scan(
+		&dest.ID, &dest.TenantID, &dest.PlanExecutionID, &dest.StepExecutionID,
+		&dest.PlanStepKey, &dest.InputArtifactID, &dest.Status, &dest.DecisionReason,
+		&dest.RequestedAt, &dest.DecidedAt, &dest.CreatedAt, &dest.UpdatedAt,
+	)
+}
+
+func (r *Repository) GetPlanApprovalRequest(ctx context.Context, tenantID uuid.UUID, approvalID string) (*PlanApprovalRequest, error) {
+	var request PlanApprovalRequest
+	err := database.WithTenant(ctx, r.pool, tenantID, func(q database.Querier) error {
+		row := q.QueryRow(ctx,
+			`SELECT `+planApprovalRequestColumns+`
+			 FROM plan_approval_requests
+			 WHERE id = $1 AND tenant_id = $2`,
+			approvalID, tenantID,
+		)
+		return scanPlanApprovalRequest(row, &request)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("get plan approval request: %w", err)
+	}
+	return &request, nil
+}
+
+func (r *Repository) ListPlanApprovalRequests(ctx context.Context, tenantID uuid.UUID, filters ApprovalFilters) ([]*PlanApprovalRequest, error) {
+	limit := filters.Limit
+	if limit <= 0 {
+		limit = 50
+	}
+	requests := make([]*PlanApprovalRequest, 0)
+	err := database.WithTenant(ctx, r.pool, tenantID, func(q database.Querier) error {
+		conditions := []string{"tenant_id = $1"}
+		args := []any{tenantID}
+		if filters.StepExecutionID != nil {
+			args = append(args, *filters.StepExecutionID)
+			conditions = append(conditions, fmt.Sprintf("step_execution_id = $%d::uuid", len(args)))
+		}
+		if filters.PlanExecutionID != nil {
+			args = append(args, *filters.PlanExecutionID)
+			conditions = append(conditions, fmt.Sprintf("plan_execution_id = $%d::uuid", len(args)))
+		}
+		if strings.TrimSpace(filters.Status) != "" {
+			args = append(args, filters.Status)
+			conditions = append(conditions, fmt.Sprintf("status = $%d", len(args)))
+		}
+		args = append(args, limit)
+		limitPlaceholder := len(args)
+		args = append(args, filters.Offset)
+		offsetPlaceholder := len(args)
+
+		query := `SELECT ` + planApprovalRequestColumns + `
+			 FROM plan_approval_requests
+			 WHERE ` + strings.Join(conditions, " AND ") + `
+			 ORDER BY requested_at DESC
+			 LIMIT $` + fmt.Sprint(limitPlaceholder) + ` OFFSET $` + fmt.Sprint(offsetPlaceholder)
+
+		rows, err := q.Query(ctx, query, args...)
+		if err != nil {
+			return fmt.Errorf("list plan approval requests: %w", err)
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var request PlanApprovalRequest
+			if err := scanPlanApprovalRequest(rows, &request); err != nil {
+				return err
+			}
+			row := request
+			requests = append(requests, &row)
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list plan approval requests: %w", err)
+	}
+	return requests, nil
+}
+
+func (r *Repository) MarkApprovalDecided(
+	ctx context.Context,
+	tenantID uuid.UUID,
+	approvalID string,
+	approved bool,
+	reason string,
+) (*PlanApprovalRequest, error) {
+	status := ApprovalRequestStatusRejected
+	if approved {
+		status = ApprovalRequestStatusApproved
+	}
+	var updated PlanApprovalRequest
+	err := database.WithTenant(ctx, r.pool, tenantID, func(q database.Querier) error {
+		row := q.QueryRow(ctx,
+			`UPDATE plan_approval_requests
+			 SET status = $1,
+			     decision_reason = $2,
+			     decided_at = now(),
+			     updated_at = now()
+			 WHERE id = $3 AND tenant_id = $4 AND status = $5
+			 RETURNING `+planApprovalRequestColumns,
+			status, reason, approvalID, tenantID, ApprovalRequestStatusPending,
+		)
+		return scanPlanApprovalRequest(row, &updated)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("mark approval decided: %w", err)
+	}
+	return &updated, nil
 }
 
 func (r *Repository) GetStepExecution(ctx context.Context, tenantID, stepExecutionID uuid.UUID) (*StepExecution, error) {

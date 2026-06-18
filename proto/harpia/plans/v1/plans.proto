@@ -30,6 +30,13 @@ service PlanService {
   rpc GetElicitation(GetElicitationRequest) returns (GetElicitationResponse);
   rpc RespondToElicitation(RespondToElicitationRequest) returns (RespondToElicitationResponse);
   rpc WatchElicitations(WatchElicitationsRequest) returns (stream WatchElicitationsResponse);
+
+  // Publish approval gate (E5.2, FR-13, UX-DR6).
+  // Overseers approve or reject LinkedInPostDraft artifacts before publish steps run.
+  rpc ListApprovalRequests(ListApprovalRequestsRequest) returns (ListApprovalRequestsResponse);
+  rpc GetApprovalRequest(GetApprovalRequestRequest) returns (GetApprovalRequestResponse);
+  rpc RespondToApprovalRequest(RespondToApprovalRequestRequest) returns (RespondToApprovalRequestResponse);
+  rpc WatchApprovalRequests(WatchApprovalRequestsRequest) returns (stream WatchApprovalRequestsResponse);
 }
 
 message PlanTemplate {
@@ -437,4 +444,77 @@ message WatchElicitationsRequest {
 
 message WatchElicitationsResponse {
   repeated ElicitationRequest elicitations = 1;
+}
+
+// ============================================================
+// Publish approval gate (E5.2)
+// ============================================================
+
+// ApprovalRequest is a human gate for a risky transition such as publishing a
+// LinkedInPostDraft externally. Distinct from ElicitationRequest even though
+// both pause StepExecution and resume via Temporal signals.
+message ApprovalRequest {
+  string id = 1;
+  string tenant_id = 2;
+  string step_execution_id = 3;
+  string plan_execution_id = 4;
+  string plan_step_key = 5;
+  // Artifact preview source (typically LinkedInPostDraft from adapt-for-linkedin).
+  string input_artifact_id = 6;
+  ApprovalRequestStatus status = 7;
+  string decision_reason = 8;
+  string requested_at = 9;
+  string decided_at = 10;
+}
+
+enum ApprovalRequestStatus {
+  APPROVAL_REQUEST_STATUS_UNSPECIFIED = 0;
+  APPROVAL_REQUEST_STATUS_PENDING = 1;
+  APPROVAL_REQUEST_STATUS_APPROVED = 2;
+  APPROVAL_REQUEST_STATUS_REJECTED = 3;
+}
+
+message ListApprovalRequestsRequest {
+  string tenant_id = 1;
+  optional string step_execution_id = 2;
+  optional string plan_execution_id = 3;
+  optional ApprovalRequestStatus status = 4;
+  int32 page_size = 5;
+  string page_token = 6;
+}
+
+message ListApprovalRequestsResponse {
+  repeated ApprovalRequest approval_requests = 1;
+  string next_page_token = 2;
+}
+
+message GetApprovalRequestRequest {
+  string tenant_id = 1;
+  string approval_request_id = 2;
+}
+
+message GetApprovalRequestResponse {
+  ApprovalRequest approval_request = 1;
+}
+
+message RespondToApprovalRequestRequest {
+  string tenant_id = 1;
+  string approval_request_id = 2;
+  bool approved = 3;
+  // Required when approved=false; optional on approve.
+  string reason = 4;
+}
+
+message RespondToApprovalRequestResponse {
+  ApprovalRequest approval_request = 1;
+}
+
+message WatchApprovalRequestsRequest {
+  string tenant_id = 1;
+  optional string step_execution_id = 2;
+  optional string plan_execution_id = 3;
+}
+
+message WatchApprovalRequestsResponse {
+  repeated ApprovalRequest approval_requests = 1;
 }

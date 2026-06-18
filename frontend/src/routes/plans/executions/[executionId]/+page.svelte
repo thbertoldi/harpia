@@ -359,6 +359,19 @@
                     </div>
                   </div>
 
+                  {#if row.status === StepExecutionStatus.AWAITING_APPROVAL && row.approvalRequestId && execution}
+                    <div class="border-t border-plumage/30 pt-2">
+                      <a
+                        href={resolve(
+                          `/plans/executions/${execution.id}/approvals/${row.approvalRequestId}`,
+                        )}
+                        class="inline-flex items-center gap-2 rounded-md border border-talon-gold/50 bg-talon-gold/10 px-3 py-1.5 font-body text-xs text-talon-gold transition-colors hover:bg-talon-gold/20"
+                      >
+                        {translate("plans.execution.reviewApproval", $locale)}
+                      </a>
+                    </div>
+                  {/if}
+
                   {#if row.canRetry}
                     <div class="border-t border-plumage/30 pt-2">
                       <button
