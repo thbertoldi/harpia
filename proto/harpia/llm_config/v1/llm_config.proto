@@ -1,0 +1,150 @@
+syntax = "proto3";
+
+package harpia.llm_config.v1;
+
+
+// LLMConfigService manages tenant-scoped LLM provider configuration and the
+// internal resolver used by the agent runtime to obtain provider credentials
+// at task execution time.
+//
+// Background: see issue #33 design note `docs/notes/2026-06-16-tenant-llm-config-design.md`.
+// Bounded context: provider secret/config lifecycle is intentionally separated
+// from IdentityService (tenants/users) to keep cross-cutting concerns clean.
+//
+// Authorization (defense in depth):
+//   - Public mutating RPCs (Set, Delete, Rotate) require `tenant.admin` on the
+//     target tenant. The control-plane enforces this in the handler; DB RLS
+//     blocks any cross-tenant row leak even if middleware regresses.
+//   - The internal resolver RPC is reachable only over the trusted internal
+//     transport (mTLS / in-cluster Connect); external traffic must not reach
+//     it. Decrypted secrets never traverse the public API surface.
+service LLMConfigService {
+  // SetLLMProviderConfig creates or updates a tenant's provider configuration.
+  // The raw API key is write-only and never echoed back; the handler envelope-
+  // encrypts it before persistence.
+  rpc SetLLMProviderConfig(SetLLMProviderConfigRequest) returns (SetLLMProviderConfigResponse);
+
+  // GetLLMProviderConfigs returns metadata about a tenant's configured providers.
+  // Responses never contain ciphertext or plaintext keys, only `has_key` and metadata.
+  rpc GetLLMProviderConfigs(GetLLMProviderConfigsRequest) returns (GetLLMProviderConfigsResponse);
+
+  // DeleteLLMProviderConfig removes a tenant's provider configuration row.
+  rpc DeleteLLMProviderConfig(DeleteLLMProviderConfigRequest) returns (DeleteLLMProviderConfigResponse);
+
+  // RotateLLMProviderConfigKey replaces the stored API key with a new value,
+  // generating a fresh per-row DEK and wrapping it with the active KEK version.
+  rpc RotateLLMProviderConfigKey(RotateLLMProviderConfigKeyRequest) returns (RotateLLMProviderConfigKeyResponse);
+
+  // ResolveLLMProviderForTenant is an internal-only RPC used by trusted runtimes
+  // (agent-runtime, Temporal workers) to obtain a short-lived, opaque credential
+  // bundle for one execution context. Implements the fallback chain:
+  //   1. tenant key/config when present and permitted;
+  //   2. platform key/config when tenant key is absent;
+  //   3. terminal error when neither is available.
+  rpc ResolveLLMProviderForTenant(ResolveLLMProviderForTenantRequest) returns (ResolveLLMProviderForTenantResponse);
+}
+
+// ManagedBy expresses how a config row's credential lifecycle is managed.
+// `MANAGED_BY_TENANT_SELF` is BYO-key (the tenant supplied the credential).
+// `MANAGED_BY_PLATFORM` reserves space for platform-managed credentials (e.g.,
+// shared platform pool). `MANAGED_BY_PROXY_VIRTUAL` is the forward-compat hook
+// for a future LiteLLM-Proxy direction (see design §10); not implemented now.
+enum ManagedBy {
+  MANAGED_BY_UNSPECIFIED = 0;
+  MANAGED_BY_TENANT_SELF = 1;
+  MANAGED_BY_PLATFORM = 2;
+  MANAGED_BY_PROXY_VIRTUAL = 3;
+}
+
+// Stable error reason strings carried in `connect.ErrorDetail` /
+// `connect.Error.Message` for the fallback resolution chain. They are emitted
+// as raw strings (not a proto enum) so the wire surface stays stable even if
+// new error reasons are added. Clients branch on these constants:
+//   - "LLM_NO_PROVIDER_CONFIGURED"
+//   - "LLM_PROVIDER_BLOCKED_BY_PLATFORM"
+//   - "LLM_KEY_DECRYPTION_FAILED"
+
+// LLMProviderConfigMetadata is the safe, non-secret view of a tenant config row.
+message LLMProviderConfigMetadata {
+  string id = 1;
+  string tenant_id = 2;
+  string provider = 3;
+  string default_model = 4;
+  repeated string allowed_models = 5;
+  bool has_key = 6;
+  ManagedBy managed_by = 7;
+  string kek_version = 8;
+  string last_rotated_at = 9;
+  string created_at = 10;
+  string updated_at = 11;
+}
+
+message SetLLMProviderConfigRequest {
+  string tenant_id = 1;
+  string provider = 2;
+  // Write-only. The handler envelope-encrypts this before persistence and
+  // never logs or echoes it. Use empty string to keep the existing stored key
+  // when updating other fields.
+  string api_key = 3;
+  string default_model = 4;
+  repeated string allowed_models = 5;
+  ManagedBy managed_by = 6;
+}
+
+message SetLLMProviderConfigResponse {
+  LLMProviderConfigMetadata config = 1;
+}
+
+message GetLLMProviderConfigsRequest {
+  string tenant_id = 1;
+}
+
+message GetLLMProviderConfigsResponse {
+  repeated LLMProviderConfigMetadata configs = 1;
+}
+
+message DeleteLLMProviderConfigRequest {
+  string tenant_id = 1;
+  string provider = 2;
+}
+
+message DeleteLLMProviderConfigResponse {}
+
+message RotateLLMProviderConfigKeyRequest {
+  string tenant_id = 1;
+  string provider = 2;
+  // Write-only replacement key. The handler envelope-encrypts it with a fresh
+  // per-row DEK wrapped by the active KEK version.
+  string new_api_key = 3;
+}
+
+message RotateLLMProviderConfigKeyResponse {
+  LLMProviderConfigMetadata config = 1;
+}
+
+// CredentialBundle is the short-lived, opaque credential payload returned to
+// trusted internal callers for a single execution context. Callers should
+// pass `api_key` directly to the provider SDK and never log it.
+message CredentialBundle {
+  string provider = 1;
+  // Plaintext API key. Travels only over the trusted internal transport.
+  // Treated as a secret by the runtime: wrapped in a redacted-secret type
+  // immediately on receipt and never serialized to logs.
+  string api_key = 2;
+  string default_model = 3;
+  repeated string allowed_models = 4;
+  // Source of the credential: TENANT_SELF when the tenant supplied it,
+  // PLATFORM when fallback resolved to platform key.
+  ManagedBy source = 5;
+}
+
+message ResolveLLMProviderForTenantRequest {
+  string tenant_id = 1;
+  string provider = 2;
+  // Optional model hint; resolver may use it to validate allowed_models.
+  string requested_model = 3;
+}
+
+message ResolveLLMProviderForTenantResponse {
+  CredentialBundle credentials = 1;
+}

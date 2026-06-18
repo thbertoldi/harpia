@@ -27,6 +27,7 @@ type Config struct {
 	OpenFGAAuthorizationModelID string
 
 	AllowDevAuth               bool
+	InternalAuthToken          string
 	AuthCacheTTL               time.Duration
 	AuthCacheMaxEntries        int
 	AutoProvisionDefaultTenant bool
@@ -54,6 +55,7 @@ func Load() *Config {
 		OpenFGAAuthorizationModelID: envStr("OPENFGA_AUTHORIZATION_MODEL_ID", ""),
 
 		AllowDevAuth:               allowDevAuth,
+		InternalAuthToken:          envStr("HARPIA_INTERNAL_AUTH_TOKEN", ""),
 		AuthCacheTTL:               envDuration("HARPIA_AUTH_CACHE_TTL", 60*time.Second),
 		AuthCacheMaxEntries:        envInt("HARPIA_AUTH_CACHE_MAX_ENTRIES", 1024),
 		AutoProvisionDefaultTenant: envBool("HARPIA_AUTO_PROVISION_DEFAULT_TENANT", allowDevAuth),

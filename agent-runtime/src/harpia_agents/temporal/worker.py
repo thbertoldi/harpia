@@ -105,6 +105,7 @@ async def run_agent_activity(input_payload: dict) -> dict:
 
     result = await run_registered_agent(
         manifest_id,
+        tenant_id=str(input_payload.get("tenant_id", "")),
         input_news_list=_extract_news_list_payload(input_payload),
         llm_registry=_LLM_REGISTRY,
         elicitation_responses=_extract_elicitation_responses(input_payload),

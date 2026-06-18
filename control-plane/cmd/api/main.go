@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -19,6 +20,7 @@ import (
 	"github.com/harpia/control-plane/gen/harpia/executors/v1/executorsv1connect"
 	"github.com/harpia/control-plane/gen/harpia/feedback/v1/feedbackv1connect"
 	"github.com/harpia/control-plane/gen/harpia/identity/v1/identityv1connect"
+	"github.com/harpia/control-plane/gen/harpia/llm_config/v1/llm_configv1connect"
 	"github.com/harpia/control-plane/gen/harpia/plans/v1/plansv1connect"
 	"github.com/harpia/control-plane/gen/harpia/tasks/v1/tasksv1connect"
 	"github.com/harpia/control-plane/internal/agents"
@@ -30,6 +32,8 @@ import (
 	"github.com/harpia/control-plane/internal/executors/bootstrap"
 	"github.com/harpia/control-plane/internal/feedback"
 	"github.com/harpia/control-plane/internal/identity"
+	"github.com/harpia/control-plane/internal/llm_config"
+	cryptoenv "github.com/harpia/control-plane/internal/llm_config/crypto"
 	"github.com/harpia/control-plane/internal/plans"
 	"github.com/harpia/control-plane/internal/server"
 	"github.com/harpia/control-plane/internal/storage"
@@ -232,6 +236,25 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	if err != nil {
 		fatal("create artifact handler failed", "error", err)
 	}
+	llmRepo := llm_config.NewRepository(pool)
+	llmKeyring, err := loadLLMKeyring(cfg, logger)
+	if err != nil {
+		fatal("load llm keyring failed", "error", err)
+	}
+	llmResolver := llm_config.NewResolver(
+		llmRepo,
+		llmKeyring,
+		llm_config.NewEnvPlatformKeyStore(),
+		llm_config.BlockedProvidersFromEnv(),
+	)
+	llmHandler, err := llm_config.NewHandler(llm_config.HandlerOptions{
+		Repo:     llmRepo,
+		Keyring:  llmKeyring,
+		Resolver: llmResolver,
+	})
+	if err != nil {
+		fatal("create llm config handler failed", "error", err)
+	}
 
 	mux := http.NewServeMux()
 
@@ -272,6 +295,14 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	artifactsPath, artifactsHandler := artifactsv1connect.NewArtifactServiceHandler(artifactHandler, requestContext)
 	identityPath, identityHandler := identityv1connect.NewIdentityServiceHandler(identity.NewIdentityHandler(), requestContext)
 	feedbackPath, feedbackHandler := feedbackv1connect.NewFeedbackServiceHandler(feedback.NewFeedbackHandler(), requestContext)
+	llmConfigPath, llmConfigHandler := llm_configv1connect.NewLLMConfigServiceHandler(llm_config.NewPublicHandler(llmHandler), requestContext)
+	internalLLMPath, internalLLMHandler := llm_config.NewInternalResolveHandler(
+		llmHandler,
+		connect.WithInterceptors(identity.NewInternalServiceInterceptor(identity.InternalServiceOptions{
+			Token:        cfg.InternalAuthToken,
+			AllowDevAuth: cfg.AllowDevAuth,
+		})),
+	)
 
 	mux.Handle(agentsPath, agentsHandler)
 	mux.Handle(executorsPath, executorsHandler)
@@ -280,6 +311,8 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	mux.Handle(artifactsPath, artifactsHandler)
 	mux.Handle(identityPath, identityHandler)
 	mux.Handle(feedbackPath, feedbackHandler)
+	mux.Handle(llmConfigPath, llmConfigHandler)
+	mux.Handle(internalLLMPath, internalLLMHandler)
 
 	var wrapped http.Handler = mux
 	wrapped = withLogging(logger)(wrapped)
@@ -313,6 +346,36 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	}
 
 	logger.Info("server stopped")
+}
+
+func loadLLMKeyring(cfg *config.Config, logger *slog.Logger) (*cryptoenv.Keyring, error) {
+	keyringCfg := cryptoenv.DefaultKeyringConfig()
+	keyringCfg.MountDir = os.Getenv("HARPIA_LLM_KEK_MOUNT_DIR")
+
+	keyring, err := cryptoenv.LoadKeyring(keyringCfg)
+	if err == nil {
+		return keyring, nil
+	}
+	if !cfg.AllowDevAuth {
+		return nil, err
+	}
+
+	devKey := make([]byte, 32)
+	if _, readErr := rand.Read(devKey); readErr != nil {
+		return nil, fmt.Errorf("generate dev llm kek: %w", readErr)
+	}
+	keyring, keyringErr := cryptoenv.NewKeyring(
+		[]cryptoenv.KEKMaterial{{Version: "dev", Key: devKey}},
+		"dev",
+	)
+	if keyringErr != nil {
+		return nil, fmt.Errorf("create dev llm keyring: %w", keyringErr)
+	}
+	logger.Warn(
+		"llm kek not configured; using ephemeral dev keyring",
+		"error", err.Error(),
+	)
+	return keyring, nil
 }
 
 func withLogging(logger *slog.Logger) func(http.Handler) http.Handler {
