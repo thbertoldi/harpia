@@ -8,7 +8,7 @@ import {
 
 describe("nav sections registry", () => {
   it("includes base sections for all roles", () => {
-    expect(filterNavSections("Leader")).toHaveLength(8);
+    expect(filterNavSections("Leader")).toHaveLength(9);
     expect(filterNavSections(undefined)).toHaveLength(5);
   });
 
@@ -77,6 +77,7 @@ describe("nav sections registry", () => {
       "t:nav.integrations",
       "t:nav.audit",
       "t:nav.agents",
+      "t:nav.settings",
     ]);
   });
 });
@@ -106,6 +107,7 @@ describe("navSectionDefs", () => {
       "/integrations",
       "/audit",
       "/agents",
+      "/settings",
     ]);
   });
 });

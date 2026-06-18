@@ -7,6 +7,7 @@ import {
   MessagesSquare,
   Plug,
   ScrollText,
+  Settings,
 } from "lucide-svelte";
 import { hasPermission } from "$lib/auth-roles";
 import type { NavSectionDef, ResolvedNavSection } from "./types";
@@ -63,6 +64,12 @@ export const navSectionDefs: NavSectionDef[] = [
     href: "/agents",
     icon: Bot,
     requiredPermission: "manageAgents",
+  },
+  {
+    i18nKey: "nav.settings",
+    href: "/settings",
+    icon: Settings,
+    requiredPermission: "manageTenantSettings",
   },
 ];
 
