@@ -38,9 +38,11 @@ func NewEnvPlatformKeyStore() *EnvPlatformKeyStore {
 
 // Lookup implements PlatformKeyStore.
 func (s *EnvPlatformKeyStore) Lookup(provider string) (string, bool) {
-	if provider == "" {
+	normalized, err := normalizeProvider(provider)
+	if err != nil {
 		return "", false
 	}
+	provider = normalized
 	if v, ok := s.cache.Load(provider); ok {
 		key, _ := v.(string)
 		return key, key != ""
@@ -68,7 +70,11 @@ func NewStaticPlatformKeyStore(keys map[string]string) *StaticPlatformKeyStore {
 
 // Lookup implements PlatformKeyStore.
 func (s *StaticPlatformKeyStore) Lookup(provider string) (string, bool) {
-	v, ok := s.keys[provider]
+	normalized, err := normalizeProvider(provider)
+	if err != nil {
+		return "", false
+	}
+	v, ok := s.keys[normalized]
 	return v, ok && v != ""
 }
 

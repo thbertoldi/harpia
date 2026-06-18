@@ -100,9 +100,11 @@ func NewResolver(repo *Repository, keyring *cryptoenv.Keyring, platform Platform
 // LLM_PROVIDER_BLOCKED_BY_PLATFORM (design §6 makes provider-blocking the
 // signal for "platform policy disallowed the call").
 func (r *Resolver) Resolve(ctx context.Context, tenantID uuid.UUID, provider, requestedModel string) (*ResolvedCredential, error) {
-	if provider == "" {
-		return nil, &ResolveError{Reason: ReasonNoProviderConfigured, Wrapped: errors.New("provider is required")}
+	normalized, err := normalizeProvider(provider)
+	if err != nil {
+		return nil, &ResolveError{Reason: ReasonNoProviderConfigured, Wrapped: err}
 	}
+	provider = normalized
 
 	if _, blocked := r.blockedProviders[provider]; blocked {
 		return nil, &ResolveError{Reason: ReasonProviderBlockedByPlatform, Wrapped: fmt.Errorf("provider %q is blocked by platform policy", provider)}

@@ -32,3 +32,13 @@ credentials for trusted internal callers.
 
 `GetLLMProviderConfigs` always returns metadata only. Secret material is never
 included in public responses.
+
+## Internal resolver transport
+
+- Public Connect mux registers `PublicHandler`, which rejects
+  `ResolveLLMProviderForTenant`.
+- Trusted runtimes call `/internal/harpia.llm_config.v1.LLMConfigService/ResolveLLMProviderForTenant`
+  with `HARPIA_INTERNAL_AUTH_TOKEN` (dev fallback: `dev-internal-token` when
+  `HARPIA_ALLOW_DEV_AUTH=true`).
+- Provider identifiers are normalized to lowercase at the handler and resolver
+  boundary.

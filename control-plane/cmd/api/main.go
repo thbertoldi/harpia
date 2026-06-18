@@ -295,7 +295,14 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	artifactsPath, artifactsHandler := artifactsv1connect.NewArtifactServiceHandler(artifactHandler, requestContext)
 	identityPath, identityHandler := identityv1connect.NewIdentityServiceHandler(identity.NewIdentityHandler(), requestContext)
 	feedbackPath, feedbackHandler := feedbackv1connect.NewFeedbackServiceHandler(feedback.NewFeedbackHandler(), requestContext)
-	llmConfigPath, llmConfigHandler := llm_configv1connect.NewLLMConfigServiceHandler(llmHandler, requestContext)
+	llmConfigPath, llmConfigHandler := llm_configv1connect.NewLLMConfigServiceHandler(llm_config.NewPublicHandler(llmHandler), requestContext)
+	internalLLMPath, internalLLMHandler := llm_config.NewInternalResolveHandler(
+		llmHandler,
+		connect.WithInterceptors(identity.NewInternalServiceInterceptor(identity.InternalServiceOptions{
+			Token:        cfg.InternalAuthToken,
+			AllowDevAuth: cfg.AllowDevAuth,
+		})),
+	)
 
 	mux.Handle(agentsPath, agentsHandler)
 	mux.Handle(executorsPath, executorsHandler)
@@ -305,6 +312,7 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	mux.Handle(identityPath, identityHandler)
 	mux.Handle(feedbackPath, feedbackHandler)
 	mux.Handle(llmConfigPath, llmConfigHandler)
+	mux.Handle(internalLLMPath, internalLLMHandler)
 
 	var wrapped http.Handler = mux
 	wrapped = withLogging(logger)(wrapped)

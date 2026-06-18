@@ -33,8 +33,8 @@ interface LLMConfigClient {
 }
 ```
 
-**Today:** `getLLMConfigClient()` (the factory in `llm-config-client.ts`)
-returns a `MockLLMConfigClient` (in-memory, keyed by provider).
+**Today:** `getLLMConfigClient()` returns a ConnectRPC client backed by the
+public `LLMConfigService` RPCs from #33.
 
 **When #33 merges:**
 

@@ -3,13 +3,9 @@
  *
  * Mirrors the RPC contract defined in the #33 design note
  * (docs/notes/2026-06-16-tenant-llm-config-design.md, section 5).
- *
- * The factory today returns the mock client backed by an in-memory map.
- *
- * TODO(#54-followup): swap to ConnectRPC client generated from
- * proto/harpia/llm_config/v1 once #33 merges and `bun run buf:generate`
- * is wired into the frontend build.
  */
+
+import { ConnectLLMConfigClient } from "./llm-config-client.connect";
 
 // ---------------------------------------------------------------------------
 // Stable error codes from the design note (section 6 — fallback chain)
@@ -107,18 +103,14 @@ export interface LLMConfigClient {
 }
 
 // ---------------------------------------------------------------------------
-// Factory — returns mock today; swap here when #33 merges
+// Factory
 // ---------------------------------------------------------------------------
-
-import { MockLLMConfigClient } from "./llm-config-client.mock";
 
 let _client: LLMConfigClient | null = null;
 
 export function getLLMConfigClient(): LLMConfigClient {
   if (!_client) {
-    // TODO(#54-followup): swap to ConnectRPC client generated from
-    // proto/harpia/llm_config/v1 once #33 merges and buf:generate runs.
-    _client = new MockLLMConfigClient();
+    _client = new ConnectLLMConfigClient();
   }
   return _client;
 }

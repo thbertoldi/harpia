@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -15,10 +16,8 @@ import (
 )
 
 // AdminRole is the role string the request-context interceptor emits for
-// users with admin privileges in the selected tenant. Mutating LLM config
-// RPCs gate on this role (design §8). When OpenFGA tuples become the
-// canonical authz source, replace this with an FGA check_relation call
-// inside `requireTenantAdmin`.
+// users with Leader-level tenant admin privileges. Mutating LLM config RPCs
+// gate on this role (design §8). Engineer retains read-only metadata access.
 const AdminRole = "admin"
 
 // Handler implements the LLMConfigService RPCs.
@@ -74,17 +73,21 @@ func (h *Handler) SetLLMProviderConfig(ctx context.Context, req *connect.Request
 	if err := validateProvider(req.Msg.Provider); err != nil {
 		return nil, err
 	}
+	provider, err := normalizeProvider(req.Msg.Provider)
+	if err != nil {
+		return nil, err
+	}
 
 	managedBy := managedByFromProto(req.Msg.ManagedBy)
 
 	if req.Msg.ApiKey == "" {
-		if _, err := h.repo.GetByProvider(ctx, tenantID, req.Msg.Provider); err != nil {
+		if _, err := h.repo.GetByProvider(ctx, tenantID, provider); err != nil {
 			if errors.Is(err, ErrNotFound) {
 				return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("api_key is required for new configurations"))
 			}
 			return nil, connect.NewError(connect.CodeInternal, err)
 		}
-		updated, err := h.repo.UpdateMetadata(ctx, tenantID, req.Msg.Provider, req.Msg.DefaultModel, req.Msg.AllowedModels, managedBy)
+		updated, err := h.repo.UpdateMetadata(ctx, tenantID, provider, req.Msg.DefaultModel, req.Msg.AllowedModels, managedBy)
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInternal, err)
 		}
@@ -98,7 +101,7 @@ func (h *Handler) SetLLMProviderConfig(ctx context.Context, req *connect.Request
 
 	saved, err := h.repo.Upsert(ctx, tenantID, &Config{
 		TenantID:      tenantID,
-		Provider:      req.Msg.Provider,
+		Provider:      provider,
 		KEKVersion:    record.KEKVersion,
 		EncryptedDEK:  record.EncryptedDEK,
 		EncryptedKey:  record.EncryptedPayload,
@@ -139,7 +142,11 @@ func (h *Handler) DeleteLLMProviderConfig(ctx context.Context, req *connect.Requ
 	if err := validateProvider(req.Msg.Provider); err != nil {
 		return nil, err
 	}
-	if err := h.repo.Delete(ctx, tenantID, req.Msg.Provider); err != nil {
+	provider, err := normalizeProvider(req.Msg.Provider)
+	if err != nil {
+		return nil, err
+	}
+	if err := h.repo.Delete(ctx, tenantID, provider); err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return nil, connect.NewError(connect.CodeNotFound, err)
 		}
@@ -159,10 +166,14 @@ func (h *Handler) RotateLLMProviderConfigKey(ctx context.Context, req *connect.R
 	if err := validateProvider(req.Msg.Provider); err != nil {
 		return nil, err
 	}
+	provider, err := normalizeProvider(req.Msg.Provider)
+	if err != nil {
+		return nil, err
+	}
 	if req.Msg.NewApiKey == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("new_api_key is required"))
 	}
-	existing, err := h.repo.GetByProvider(ctx, tenantID, req.Msg.Provider)
+	existing, err := h.repo.GetByProvider(ctx, tenantID, provider)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return nil, connect.NewError(connect.CodeNotFound, err)
@@ -175,7 +186,7 @@ func (h *Handler) RotateLLMProviderConfigKey(ctx context.Context, req *connect.R
 	}
 	saved, err := h.repo.Upsert(ctx, tenantID, &Config{
 		TenantID:      tenantID,
-		Provider:      req.Msg.Provider,
+		Provider:      provider,
 		KEKVersion:    record.KEKVersion,
 		EncryptedDEK:  record.EncryptedDEK,
 		EncryptedKey:  record.EncryptedPayload,
@@ -191,11 +202,6 @@ func (h *Handler) RotateLLMProviderConfigKey(ctx context.Context, req *connect.R
 
 // ResolveLLMProviderForTenant is the internal-only resolver entrypoint used by
 // trusted runtimes (agent-runtime, Temporal worker).
-//
-// Authorization model: this handler must only be reached over the trusted
-// internal transport. Routing/middleware ensures external traffic cannot hit
-// this path; here we still call requireResolverCaller as a belt-and-braces
-// check that the request context exists.
 func (h *Handler) ResolveLLMProviderForTenant(ctx context.Context, req *connect.Request[llmconfigv1.ResolveLLMProviderForTenantRequest]) (*connect.Response[llmconfigv1.ResolveLLMProviderForTenantResponse], error) {
 	tenantID, err := requireResolverCaller(ctx, req.Msg.TenantId)
 	if err != nil {
@@ -204,7 +210,11 @@ func (h *Handler) ResolveLLMProviderForTenant(ctx context.Context, req *connect.
 	if err := validateProvider(req.Msg.Provider); err != nil {
 		return nil, err
 	}
-	resolved, err := h.resolver.Resolve(ctx, tenantID, req.Msg.Provider, req.Msg.RequestedModel)
+	provider, err := normalizeProvider(req.Msg.Provider)
+	if err != nil {
+		return nil, err
+	}
+	resolved, err := h.resolver.Resolve(ctx, tenantID, provider, req.Msg.RequestedModel)
 	if err != nil {
 		return nil, toResolveConnectError(err)
 	}
@@ -253,10 +263,15 @@ func requireTenantAdmin(ctx context.Context, requestedTenantID string) (uuid.UUI
 	return tenantID, nil
 }
 
-// requireResolverCaller does the minimum check on the internal resolver
-// endpoint: a tenant context must be present. Network-level isolation is
-// assumed to keep external callers out.
+// requireResolverCaller enforces that only trusted internal runtimes can
+// receive decrypted credential bundles.
 func requireResolverCaller(ctx context.Context, requestedTenantID string) (uuid.UUID, error) {
+	if !identity.IsInternalServiceCaller(ctx) {
+		return uuid.Nil, connect.NewError(
+			connect.CodePermissionDenied,
+			errors.New("internal service authorization required"),
+		)
+	}
 	return identity.RequireTenant(ctx, requestedTenantID)
 }
 
@@ -270,7 +285,7 @@ func hasRole(roles []string, role string) bool {
 }
 
 func validateProvider(provider string) error {
-	if provider == "" {
+	if strings.TrimSpace(provider) == "" {
 		return connect.NewError(connect.CodeInvalidArgument, errors.New("provider is required"))
 	}
 	return nil

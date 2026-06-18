@@ -5,6 +5,7 @@ import { ExecutorService } from "$lib/gen/harpia/executors/v1/executors_pb";
 import { FeedbackService } from "$lib/gen/harpia/feedback/v1/feedback_pb";
 import { IdentityService } from "$lib/gen/harpia/identity/v1/identity_pb";
 import { PlanService } from "$lib/gen/harpia/plans/v1/plans_pb";
+import { LLMConfigService } from "$lib/gen/harpia/llm_config/v1/llm_config_pb";
 import { TaskService } from "$lib/gen/harpia/tasks/v1/tasks_pb";
 import { transport } from "$lib/transport";
 
@@ -15,6 +16,7 @@ export const agentClient = createClient(AgentService, transport);
 export const artifactClient = createClient(ArtifactService, transport);
 export const planClient = createClient(PlanService, transport);
 export const executorClient = createClient(ExecutorService, transport);
+export const llmConfigClient = createClient(LLMConfigService, transport);
 
 export type {
   FeedbackRequest,

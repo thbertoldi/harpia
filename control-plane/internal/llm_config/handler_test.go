@@ -67,6 +67,10 @@ func withRequestContext(tenantID uuid.UUID, role string) context.Context {
 	})
 }
 
+func withInternalRequestContext(tenantID uuid.UUID, role string) context.Context {
+	return identity.WithInternalServiceCaller(withRequestContext(tenantID, role))
+}
+
 func TestSetLLMProviderConfigRequiresAdminRole(t *testing.T) {
 	t.Parallel()
 
@@ -82,6 +86,93 @@ func TestSetLLMProviderConfigRequiresAdminRole(t *testing.T) {
 			TenantId: tenantID.String(),
 			Provider: "openai",
 			ApiKey:   "sk-test-value",
+		}),
+	)
+	if err == nil {
+		t.Fatal("expected permission denied")
+	}
+	if got := connect.CodeOf(err); got != connect.CodePermissionDenied {
+		t.Fatalf("code = %v, want %v", got, connect.CodePermissionDenied)
+	}
+}
+
+func TestSetLLMProviderConfigRejectsEngineerRole(t *testing.T) {
+	t.Parallel()
+
+	tenantID := uuid.New()
+	handler := &Handler{
+		repo:     &stubRepo{},
+		resolver: &stubResolver{},
+	}
+
+	_, err := handler.SetLLMProviderConfig(
+		withRequestContext(tenantID, "engineer"),
+		connect.NewRequest(&llmconfigv1.SetLLMProviderConfigRequest{
+			TenantId: tenantID.String(),
+			Provider: "openai",
+			ApiKey:   "sk-test-value",
+		}),
+	)
+	if err == nil {
+		t.Fatal("expected permission denied")
+	}
+	if got := connect.CodeOf(err); got != connect.CodePermissionDenied {
+		t.Fatalf("code = %v, want %v", got, connect.CodePermissionDenied)
+	}
+}
+
+func TestGetLLMProviderConfigsAllowsEngineerReadOnly(t *testing.T) {
+	t.Parallel()
+
+	tenantID := uuid.New()
+	handler := &Handler{
+		repo: &stubRepo{
+			listByTenantFn: func(_ context.Context, gotTenantID uuid.UUID) ([]Config, error) {
+				return []Config{{TenantID: gotTenantID, Provider: "openai"}}, nil
+			},
+		},
+		resolver: &stubResolver{},
+	}
+
+	_, err := handler.GetLLMProviderConfigs(
+		withRequestContext(tenantID, "engineer"),
+		connect.NewRequest(&llmconfigv1.GetLLMProviderConfigsRequest{
+			TenantId: tenantID.String(),
+		}),
+	)
+	if err != nil {
+		t.Fatalf("GetLLMProviderConfigs: %v", err)
+	}
+}
+
+func TestPublicHandlerRejectsResolveOnPublicSurface(t *testing.T) {
+	t.Parallel()
+
+	handler := NewPublicHandler(&Handler{repo: &stubRepo{}, resolver: &stubResolver{}})
+	_, err := handler.ResolveLLMProviderForTenant(
+		context.Background(),
+		connect.NewRequest(&llmconfigv1.ResolveLLMProviderForTenantRequest{
+			TenantId: uuid.New().String(),
+			Provider: "openai",
+		}),
+	)
+	if err == nil {
+		t.Fatal("expected permission denied")
+	}
+	if got := connect.CodeOf(err); got != connect.CodePermissionDenied {
+		t.Fatalf("code = %v, want %v", got, connect.CodePermissionDenied)
+	}
+}
+
+func TestResolveRequiresInternalServiceCaller(t *testing.T) {
+	t.Parallel()
+
+	handler := &Handler{repo: &stubRepo{}, resolver: &stubResolver{}}
+	_, err := handler.ResolveLLMProviderForTenant(
+		withRequestContext(uuid.New(), AdminRole),
+		connect.NewRequest(&llmconfigv1.ResolveLLMProviderForTenantRequest{
+			TenantId: uuid.New().String(),
+			Provider: "openai",
 		}),
 	)
 	if err == nil {
@@ -186,7 +277,7 @@ func TestResolveLLMProviderForTenantMapsStableErrorCodes(t *testing.T) {
 			}
 
 			_, err := handler.ResolveLLMProviderForTenant(
-				withRequestContext(tenantID, AdminRole),
+				withInternalRequestContext(tenantID, AdminRole),
 				connect.NewRequest(&llmconfigv1.ResolveLLMProviderForTenantRequest{
 					TenantId: tenantID.String(),
 					Provider: "openai",

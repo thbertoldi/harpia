@@ -3,6 +3,7 @@ import {
   canConfigurePlans,
   canManageAgents,
   canManageIntegrations,
+  canManageTenantSettings,
   canViewAudit,
   getUserRole,
   hasPermission,
@@ -52,14 +53,16 @@ describe("permission matrix", () => {
     expect(canManageAgents(leader)).toBe(true);
     expect(canViewAudit(leader)).toBe(true);
     expect(canConfigurePlans(leader)).toBe(true);
+    expect(canManageTenantSettings(leader)).toBe(true);
   });
 
-  it("grants Engineer the same configuration access as before", () => {
+  it("grants Engineer tenant settings access", () => {
     const engineer = { role: "Engineer" };
     expect(canManageIntegrations(engineer)).toBe(true);
     expect(canManageAgents(engineer)).toBe(true);
     expect(canViewAudit(engineer)).toBe(true);
     expect(canConfigurePlans(engineer)).toBe(true);
+    expect(canManageTenantSettings(engineer)).toBe(true);
   });
 
   it("keeps Overseer limited to audit visibility", () => {

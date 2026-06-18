@@ -15,6 +15,23 @@ from harpia.llm_config.v1.llm_config_pb2 import (
 from harpia_agents.llm.secrets import RedactedSecret
 
 
+def _resolver_base_url() -> str:
+    explicit = os.environ.get("HARPIA_CONTROL_PLANE_INTERNAL_URL", "").strip()
+    if explicit:
+        return explicit.rstrip("/")
+    public = os.environ.get("HARPIA_CONTROL_PLANE_URL", "http://localhost:8080").rstrip("/")
+    return f"{public}/internal"
+
+
+def _default_internal_auth_token() -> str:
+    configured = os.environ.get("HARPIA_INTERNAL_AUTH_TOKEN", "").strip()
+    if configured:
+        return configured
+    if os.environ.get("HARPIA_ALLOW_DEV_AUTH", "").lower() in {"1", "true", "yes"}:
+        return "dev-internal-token"
+    return ""
+
+
 @dataclass(frozen=True, slots=True)
 class ResolvedProviderCredentials:
     provider: str
@@ -46,9 +63,9 @@ class TenantLLMResolver:
         timeout_ms: int = 5000,
     ) -> None:
         self._client = client or LLMConfigServiceClient(
-            base_url=base_url or os.environ.get("HARPIA_CONTROL_PLANE_URL", "http://localhost:8080")
+            base_url=base_url or _resolver_base_url()
         )
-        self._auth_token = auth_token or os.environ.get("HARPIA_INTERNAL_AUTH_TOKEN", "dev-token")
+        self._auth_token = auth_token if auth_token is not None else _default_internal_auth_token()
         self._timeout_ms = timeout_ms
 
     async def resolve(
@@ -58,6 +75,8 @@ class TenantLLMResolver:
         provider: str,
         requested_model: str = "",
     ) -> ResolvedProviderCredentials:
+        if not self._auth_token:
+            raise ConnectError("HARPIA_INTERNAL_AUTH_TOKEN is required outside dev mode")
         headers = {
             "Authorization": f"Bearer {self._auth_token}",
             "X-Tenant-ID": tenant_id,
