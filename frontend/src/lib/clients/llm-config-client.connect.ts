@@ -45,7 +45,11 @@ function toDomainManagedBy(value: ProtoManagedBy): ManagedBy {
 }
 
 function toDomainProvider(provider: string): LLMProvider {
-  if (provider === "anthropic" || provider === "openai" || provider === "ollama") {
+  if (
+    provider === "anthropic" ||
+    provider === "openai" ||
+    provider === "ollama"
+  ) {
     return provider;
   }
   throw new Error(`unsupported provider: ${provider}`);
