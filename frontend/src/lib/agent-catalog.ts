@@ -12,6 +12,7 @@ import {
 } from "$lib/mocks/agent-catalog";
 import type { AuditEvent } from "$lib/mocks/audit-events";
 import { appendMockAuditEvent } from "$lib/audit/audit-store";
+import { allowsMockFallback } from "$lib/dev-mocks";
 import { agentClient } from "$lib/rpc";
 
 export type { AgentCatalogEntry } from "$lib/mocks/agent-catalog";
@@ -84,7 +85,10 @@ export async function loadAgentCatalog(
       AGENT_CATALOG_API_TIMEOUT_MS,
     );
     if (agentTypes.length === 0) {
-      return { entries: mockAgentCatalog(locale), source: "mock" };
+      if (allowsMockFallback()) {
+        return { entries: mockAgentCatalog(locale), source: "mock" };
+      }
+      throw new Error("Agent catalog is empty.");
     }
 
     const entries = agentTypes.map((agentType) => {
@@ -94,11 +98,14 @@ export async function loadAgentCatalog(
 
     return { entries, source: "api" };
   } catch (error) {
-    return {
-      entries: mockAgentCatalog(locale),
-      source: "mock",
-      error: toUserMessage(error),
-    };
+    if (allowsMockFallback()) {
+      return {
+        entries: mockAgentCatalog(locale),
+        source: "mock",
+        error: toUserMessage(error),
+      };
+    }
+    throw error;
   }
 }
 

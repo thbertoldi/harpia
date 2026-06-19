@@ -25,10 +25,12 @@ const {
   listPlanConfigurations,
   createPlanConfiguration,
   updatePlanConfiguration,
+  allowsMockFallback,
 } = vi.hoisted(() => ({
   listPlanConfigurations: vi.fn(),
   createPlanConfiguration: vi.fn(),
   updatePlanConfiguration: vi.fn(),
+  allowsMockFallback: vi.fn(() => false),
 }));
 
 vi.mock("$lib/rpc", () => ({
@@ -43,11 +45,16 @@ vi.mock("$lib/auth", () => ({
   requireTenantId: () => "dev",
 }));
 
+vi.mock("$lib/dev-mocks", () => ({
+  allowsMockFallback,
+}));
+
 describe("behavior policies", () => {
   beforeEach(() => {
     listPlanConfigurations.mockReset();
     createPlanConfiguration.mockReset();
     updatePlanConfiguration.mockReset();
+    allowsMockFallback.mockReturnValue(false);
     clearMockPlanConfigurations();
   });
 
@@ -143,7 +150,18 @@ describe("behavior policies", () => {
     expect(result.policies.elicitationTimeoutHours).toBe(6);
   });
 
-  it("falls back to mock storage when listing configurations fails", async () => {
+  it("rejects when listing configurations fails without mock fallback", async () => {
+    listPlanConfigurations.mockImplementation(() => {
+      throw new Error("network error");
+    });
+
+    await expect(
+      loadBehaviorPoliciesForTemplate(WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_ID),
+    ).rejects.toThrow("network error");
+  });
+
+  it("falls back to mock storage when listing configurations fails with mock fallback enabled", async () => {
+    allowsMockFallback.mockReturnValue(true);
     listPlanConfigurations.mockImplementation(() => {
       throw new Error("network error");
     });
@@ -224,7 +242,20 @@ describe("behavior policies", () => {
     expect(result.source).toBe("api");
   });
 
-  it("persists to mock storage when the API save fails", async () => {
+  it("rejects when the API save fails without mock fallback", async () => {
+    createPlanConfiguration.mockRejectedValue(new Error("network error"));
+
+    await expect(
+      saveBehaviorPoliciesForTemplate(
+        WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_ID,
+        1,
+        DEFAULT_BEHAVIOR_POLICIES,
+      ),
+    ).rejects.toThrow("network error");
+  });
+
+  it("persists to mock storage when the API save fails with mock fallback enabled", async () => {
+    allowsMockFallback.mockReturnValue(true);
     createPlanConfiguration.mockRejectedValue(new Error("network error"));
 
     const result = await saveBehaviorPoliciesForTemplate(

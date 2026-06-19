@@ -12,7 +12,7 @@
   let executions = $state<PlanExecution[]>([]);
   let loading = $state(true);
   let loadError = $state<string | null>(null);
-  let source = $state<"api" | "mock">("mock");
+  let source = $state<"api" | "mock">("api");
 
   $effect(() => {
     void fetchExecutions();
@@ -64,13 +64,13 @@
         {translate("executions.list.subheading", $locale)}
       </p>
     </div>
-    <span
-      class="rounded-full border border-plumage px-2.5 py-1 font-mono text-[10px] tracking-wider text-crown-ash uppercase"
-    >
-      {source === "api"
-        ? translate("plans.source.live", $locale)
-        : translate("plans.source.mock", $locale)}
-    </span>
+    {#if source === "api"}
+      <span
+        class="rounded-full border border-plumage px-2.5 py-1 font-mono text-[10px] tracking-wider text-crown-ash uppercase"
+      >
+        {translate("plans.source.live", $locale)}
+      </span>
+    {/if}
   </div>
 
   {#if loading}
@@ -81,6 +81,23 @@
           >{translate("executions.list.loading", $locale)}</span
         >
       </div>
+    </div>
+  {:else if loadError && executions.length === 0}
+    <div
+      class="flex min-h-[40vh] flex-col items-center justify-center rounded-lg border border-dashed border-plumage bg-obsidian-light/30 px-6 py-12 text-center"
+    >
+      <AlertTriangle class="mb-4 size-12 text-red-400" />
+      <HarpyHeading tag="h2" class="mb-2 text-xl text-cream">
+        {translate("executions.list.loadError", $locale)}
+      </HarpyHeading>
+      <p class="max-w-md font-mono text-xs text-crown-ash">{loadError}</p>
+      <button
+        type="button"
+        onclick={() => fetchExecutions()}
+        class="mt-4 rounded-md border border-plumage px-4 py-2 font-body text-sm text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
+      >
+        {translate("common.retry", $locale)}
+      </button>
     </div>
   {:else if executions.length === 0}
     <div
@@ -95,7 +112,7 @@
       </p>
     </div>
   {:else}
-    {#if loadError}
+    {#if loadError && source === "mock"}
       <div
         class="mb-3 rounded-md border border-talon-gold/30 bg-talon-gold/5 px-3 py-2"
       >
@@ -127,19 +144,6 @@
           </span>
         </a>
       {/each}
-    </div>
-  {/if}
-
-  {#if !loading && loadError && executions.length === 0}
-    <div class="mt-4 text-center">
-      <AlertTriangle class="mx-auto mb-2 size-6 text-red-400" />
-      <button
-        type="button"
-        onclick={() => fetchExecutions()}
-        class="rounded-md border border-plumage px-4 py-2 font-body text-sm text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
-      >
-        {translate("common.retry", $locale)}
-      </button>
     </div>
   {/if}
 </div>

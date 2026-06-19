@@ -23,7 +23,7 @@
   let entries = $state<PlanCatalogEntry[]>([]);
   let loading = $state(true);
   let loadError = $state<string | null>(null);
-  let dataSource = $state<"api" | "mock">("mock");
+  let dataSource = $state<"api" | "mock">("api");
 
   $effect(() => {
     void fetchCatalog();
@@ -91,13 +91,13 @@
       >
         {translate("executions.list.heading", $locale)}
       </a>
-      <span
-        class="rounded-full border border-plumage px-2.5 py-1 font-mono text-[10px] tracking-wider text-crown-ash uppercase"
-      >
-        {dataSource === "api"
-          ? translate("plans.source.live", $locale)
-          : translate("plans.source.mock", $locale)}
-      </span>
+      {#if dataSource === "api"}
+        <span
+          class="rounded-full border border-plumage px-2.5 py-1 font-mono text-[10px] tracking-wider text-crown-ash uppercase"
+        >
+          {translate("plans.source.live", $locale)}
+        </span>
+      {/if}
     </div>
   </div>
 
@@ -137,7 +137,7 @@
       </p>
     </div>
   {:else}
-    {#if loadError}
+    {#if loadError && dataSource === "mock"}
       <div
         class="mx-4 mb-2 rounded-md border border-talon-gold/30 bg-talon-gold/5 px-3 py-2 lg:mx-6"
       >

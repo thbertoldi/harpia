@@ -9,6 +9,7 @@ import {
   PlanStepSchema,
   PlanTemplateSchema,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
+import { allowsMockFallback } from "$lib/dev-mocks";
 import { planClient } from "$lib/rpc";
 
 export type PlanTemplateSource = "api" | "mock";
@@ -172,7 +173,7 @@ async function fetchPlanTemplateFromApi(
   return response.planTemplate;
 }
 
-/** Loads a plan template by UUID or key; falls back to mock data when API is unavailable. */
+/** Loads a plan template by UUID or key; mock fallback only when explicitly enabled for dev/test. */
 export async function loadPlanTemplate(
   templateIdOrKey: string,
   locale: Locale = "en",
@@ -180,7 +181,7 @@ export async function loadPlanTemplate(
   try {
     const template = await fetchPlanTemplateFromApi(templateIdOrKey);
     if (!template) {
-      if (matchesMockTemplate(templateIdOrKey)) {
+      if (allowsMockFallback() && matchesMockTemplate(templateIdOrKey)) {
         return {
           template: mockWeeklyNewsletterLinkedInTemplate(locale),
           source: "mock",
@@ -192,7 +193,7 @@ export async function loadPlanTemplate(
 
     return { template, source: "api" };
   } catch (error) {
-    if (matchesMockTemplate(templateIdOrKey)) {
+    if (allowsMockFallback() && matchesMockTemplate(templateIdOrKey)) {
       return {
         template: mockWeeklyNewsletterLinkedInTemplate(locale),
         source: "mock",

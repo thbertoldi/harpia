@@ -13,7 +13,8 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   webServer: {
-    command: `PUBLIC_DEV_LOGIN_ENABLED=true PUBLIC_ZITADEL_CLIENT_ID=e2e-client bun run dev --host ${host} --port ${port}`,
+    // E2E runs without a live API; opt into dev mock fallback explicitly (issue #205).
+    command: `PUBLIC_DEV_LOGIN_ENABLED=true PUBLIC_ZITADEL_CLIENT_ID=e2e-client VITE_ALLOW_MOCK_FALLBACK=true bun run dev --host ${host} --port ${port}`,
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

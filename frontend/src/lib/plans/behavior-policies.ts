@@ -10,6 +10,7 @@ import {
   type PlanBehaviorPolicies,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
 import { requireTenantId } from "$lib/auth";
+import { allowsMockFallback } from "$lib/dev-mocks";
 import { planClient } from "$lib/rpc";
 import { WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_ID } from "$lib/plans/plan-template";
 
@@ -62,7 +63,10 @@ function mockStorageKey(tenantId: string, templateId: string): string {
 }
 
 function supportsMockFallback(templateId: string): boolean {
-  return templateId === WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_ID;
+  return (
+    allowsMockFallback() &&
+    templateId === WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_ID
+  );
 }
 
 export function clearMockPlanConfigurations(): void {

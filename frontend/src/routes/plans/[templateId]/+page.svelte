@@ -23,7 +23,7 @@
   let template = $state<PlanTemplate | null>(null);
   let loading = $state(true);
   let loadError = $state<string | null>(null);
-  let dataSource = $state<PlanTemplateSource>("mock");
+  let dataSource = $state<PlanTemplateSource>("api");
 
   $effect(() => {
     void fetchTemplate(page.params.templateId);
@@ -92,13 +92,13 @@
         </p>
       </div>
       <div class="flex flex-col items-end gap-2">
-        <span
-          class="rounded-full border border-plumage px-2.5 py-1 font-mono text-[10px] tracking-wider text-crown-ash uppercase"
-        >
-          {dataSource === "api"
-            ? translate("plans.detail.liveApi", $locale)
-            : translate("plans.detail.mockData", $locale)}
-        </span>
+        {#if dataSource === "api"}
+          <span
+            class="rounded-full border border-plumage px-2.5 py-1 font-mono text-[10px] tracking-wider text-crown-ash uppercase"
+          >
+            {translate("plans.detail.liveApi", $locale)}
+          </span>
+        {/if}
         <a
           href={resolve(`/plans/${page.params.templateId}/configure/policies`)}
           class="inline-flex items-center gap-2 rounded-md border border-talon-gold/60 bg-talon-gold/10 px-3 py-1.5 font-body text-xs text-talon-gold transition-colors hover:bg-talon-gold/20"
@@ -116,7 +116,7 @@
       </div>
     </div>
 
-    {#if loadError}
+    {#if loadError && dataSource === "mock"}
       <div
         class="mb-4 rounded-md border border-talon-gold/30 bg-talon-gold/5 px-3 py-2"
       >

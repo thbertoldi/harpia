@@ -7,10 +7,12 @@ import {
   isPlanTemplateUuid,
 } from "$lib/plans/plan-template";
 
-const { getPlanTemplate, getPlanTemplateByKey } = vi.hoisted(() => ({
-  getPlanTemplate: vi.fn(),
-  getPlanTemplateByKey: vi.fn(),
-}));
+const { getPlanTemplate, getPlanTemplateByKey, allowsMockFallback } =
+  vi.hoisted(() => ({
+    getPlanTemplate: vi.fn(),
+    getPlanTemplateByKey: vi.fn(),
+    allowsMockFallback: vi.fn(() => false),
+  }));
 
 vi.mock("$lib/rpc", () => ({
   planClient: {
@@ -19,10 +21,15 @@ vi.mock("$lib/rpc", () => ({
   },
 }));
 
+vi.mock("$lib/dev-mocks", () => ({
+  allowsMockFallback,
+}));
+
 describe("plan template loader", () => {
   beforeEach(() => {
     getPlanTemplate.mockReset();
     getPlanTemplateByKey.mockReset();
+    allowsMockFallback.mockReturnValue(false);
   });
 
   it("detects UUID template identifiers", () => {
@@ -76,7 +83,16 @@ describe("plan template loader", () => {
     expect(result.source).toBe("api");
   });
 
-  it("falls back to mock data when the API fails for a known template", async () => {
+  it("rejects when the API fails without explicit mock fallback", async () => {
+    getPlanTemplateByKey.mockRejectedValue(new Error("network error"));
+
+    await expect(
+      loadPlanTemplate(WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_KEY),
+    ).rejects.toThrow("network error");
+  });
+
+  it("falls back to mock data when mock fallback is explicitly enabled", async () => {
+    allowsMockFallback.mockReturnValue(true);
     getPlanTemplateByKey.mockRejectedValue(new Error("network error"));
 
     const result = await loadPlanTemplate(

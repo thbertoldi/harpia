@@ -1,5 +1,6 @@
 import { getSession, getTenant, requireTenantId } from "$lib/auth";
 import { toUserMessage } from "$lib/connect-errors";
+import { allowsMockFallback } from "$lib/dev-mocks";
 import {
   mockPlanExecution,
   mockPlanExecutionsList,
@@ -143,23 +144,22 @@ export async function loadPlanExecution(
     }
     return { execution: response.planExecution, source: "api" };
   } catch (error) {
-    resetMockPlanExecution(executionId);
-    return {
-      execution: mockPlanExecution(executionId),
-      source: "mock",
-      error: toUserMessage(error),
-    };
+    if (allowsMockFallback()) {
+      resetMockPlanExecution(executionId);
+      return {
+        execution: mockPlanExecution(executionId),
+        source: "mock",
+        error: toUserMessage(error),
+      };
+    }
+    throw error;
   }
 }
 
 export async function loadPlanExecutions(): Promise<PlanExecutionsResult> {
   const tenantId = resolveTenantId();
   if (!tenantId) {
-    return {
-      executions: mockPlanExecutionsList(),
-      source: "mock",
-      error: "Select a tenant to load plan executions.",
-    };
+    throw new Error("Select a tenant to load plan executions.");
   }
 
   try {
@@ -172,18 +172,21 @@ export async function loadPlanExecutions(): Promise<PlanExecutionsResult> {
       executions.push(...response.planExecutions);
     }
     if (executions.length === 0) {
-      return { executions: mockPlanExecutionsList(), source: "mock" };
+      return { executions, source: "api" };
     }
     executions.sort((left, right) =>
       right.updatedAt.localeCompare(left.updatedAt),
     );
     return { executions, source: "api" };
   } catch (error) {
-    return {
-      executions: mockPlanExecutionsList(),
-      source: "mock",
-      error: toUserMessage(error),
-    };
+    if (allowsMockFallback()) {
+      return {
+        executions: mockPlanExecutionsList(),
+        source: "mock",
+        error: toUserMessage(error),
+      };
+    }
+    throw error;
   }
 }
 
@@ -215,9 +218,11 @@ export function startPlanExecutionStream(
       if (stopped) return;
 
       if (!tenantId) {
-        const mockExecution = nextMockPlanExecution(executionId);
-        handlers.onExecution?.(mockExecution);
-        handlers.onSteps(mockExecution.stepExecutions);
+        if (allowsMockFallback()) {
+          const mockExecution = nextMockPlanExecution(executionId);
+          handlers.onExecution?.(mockExecution);
+          handlers.onSteps(mockExecution.stepExecutions);
+        }
         return;
       }
 

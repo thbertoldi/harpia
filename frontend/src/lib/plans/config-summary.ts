@@ -11,6 +11,7 @@ import {
   getMockSkuListPrice,
   mockExecutorContext,
 } from "$lib/mocks/plan-catalog";
+import { allowsMockFallback } from "$lib/dev-mocks";
 import { executorClient } from "$lib/rpc";
 import type { PlanConfigDraft } from "$lib/plans/plan-config-draft";
 
@@ -229,25 +230,31 @@ async function fetchExecutorSkusFromApi(): Promise<ExecutorSKU[]> {
   return skus;
 }
 
-/** Loads executor SKUs for list-price resolution; falls back to mock catalog. */
+/** Loads executor SKUs for list-price resolution; mock fallback only when explicitly enabled. */
 export async function loadExecutorSkuCatalog(): Promise<ExecutorSkuCatalog> {
   try {
     const skus = await fetchExecutorSkusFromApi();
     if (skus.length === 0) {
-      return {
-        skus: mockExecutorContext().skus,
-        source: "mock",
-        error: "Empty executor SKU catalog",
-      };
+      if (allowsMockFallback()) {
+        return {
+          skus: mockExecutorContext().skus,
+          source: "mock",
+          error: "Empty executor SKU catalog",
+        };
+      }
+      throw new Error("Executor SKU catalog is empty.");
     }
 
     return { skus, source: "api" };
   } catch (error) {
-    return {
-      skus: mockExecutorContext().skus,
-      source: "mock",
-      error: toUserMessage(error),
-    };
+    if (allowsMockFallback()) {
+      return {
+        skus: mockExecutorContext().skus,
+        source: "mock",
+        error: toUserMessage(error),
+      };
+    }
+    throw error;
   }
 }
 
