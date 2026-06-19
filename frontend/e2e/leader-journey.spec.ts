@@ -30,8 +30,8 @@ test("Leader completes submit-to-result journey via watch stream", async ({
 
   expect(taskApi.getCreateCallCount()).toBeGreaterThan(0);
 
-  await expect(page).toHaveURL(/\/tasks(#|%23|$)/);
-  const createdTaskId = page.url().split("#").at(1);
+  await expect(page).toHaveURL(/\/tasks(\?id=|$)/);
+  const createdTaskId = new URL(page.url()).searchParams.get("id");
   expect(createdTaskId).toBeTruthy();
 
   await expect

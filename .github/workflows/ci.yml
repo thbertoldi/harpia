@@ -141,7 +141,7 @@ jobs:
             context: control-plane
             dockerfile: control-plane/Containerfile
           - name: agent-runtime
-            context: agent-runtime
+            context: .
             dockerfile: agent-runtime/Containerfile
           - name: frontend
             context: frontend

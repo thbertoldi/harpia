@@ -56,19 +56,27 @@ export interface AgentCatalogEntry {
   recentInvocations: AgentInvocation[];
 }
 
-function localizeAgentType(agentType: AgentType, locale: Locale): AgentType {
+function catalogAgentContentKey(agentType: AgentType): string {
+  return agentType.name || agentType.id;
+}
+
+export function localizeAgentType(
+  agentType: AgentType,
+  locale: Locale,
+): AgentType {
+  const key = catalogAgentContentKey(agentType);
   return create(AgentTypeSchema, {
     ...agentType,
     displayName: resolveLocalizedContent(
-      `catalog.agent.${agentType.id}.displayName`,
+      `catalog.agent.${key}.displayName`,
       locale,
     ),
     description: resolveLocalizedContent(
-      `catalog.agent.${agentType.id}.description`,
+      `catalog.agent.${key}.description`,
       locale,
     ),
     systemPrompt: resolveLocalizedContent(
-      `catalog.agent.${agentType.id}.prompt`,
+      `catalog.agent.${key}.prompt`,
       locale,
     ),
   });
@@ -274,6 +282,40 @@ export const AGENT_CATALOG_META: Record<string, AgentCatalogMeta> = {
       },
     ],
   },
+  "newsletter-writer-senior": {
+    activeVersion: "0.1.0",
+    trustScore: 88,
+    tenantVisibility: "global",
+    lastUpdated: "2026-06-01T10:00:00Z",
+    yamlSourceUrl:
+      "https://github.com/harpia/harpia/blob/trunk/agents/newsletter-writer-senior/0.1.0.yaml",
+    boundTools: [],
+    versionHistory: [
+      {
+        version: "0.1.0",
+        deployedAt: "2026-06-01T10:00:00Z",
+        status: "active",
+      },
+    ],
+    recentInvocations: [],
+  },
+  "linkedin-voice-senior": {
+    activeVersion: "0.1.0",
+    trustScore: 86,
+    tenantVisibility: "global",
+    lastUpdated: "2026-06-01T10:00:00Z",
+    yamlSourceUrl:
+      "https://github.com/harpia/harpia/blob/trunk/agents/linkedin-voice-senior/0.1.0.yaml",
+    boundTools: [],
+    versionHistory: [
+      {
+        version: "0.1.0",
+        deployedAt: "2026-06-01T10:00:00Z",
+        status: "active",
+      },
+    ],
+    recentInvocations: [],
+  },
 };
 
 let runtimeAgentCatalogMeta: Record<string, AgentCatalogMeta> =
@@ -371,8 +413,9 @@ export function mergeCatalogEntry(
     recentInvocations: [],
   };
 
+  const metaKey = agentType.name || agentType.id;
   const resolved = localizeCatalogMeta(
-    meta ?? AGENT_CATALOG_META[agentType.id] ?? fallbackMeta,
+    meta ?? AGENT_CATALOG_META[metaKey] ?? fallbackMeta,
     locale,
   );
 

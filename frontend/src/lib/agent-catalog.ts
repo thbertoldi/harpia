@@ -4,9 +4,11 @@ import type { Locale } from "$lib/i18n";
 import {
   AGENT_CATALOG_META,
   bindMockToolToAgent,
+  localizeAgentType,
   mergeCatalogEntry,
   mockAgentCatalog,
   runMockAgentInvocation,
+  type AgentCatalogMeta,
   type AgentCatalogEntry,
   type BoundTool,
 } from "$lib/mocks/agent-catalog";
@@ -39,7 +41,14 @@ type InvocationResult = {
 };
 
 function resolveAgentKey(agentType: AgentType): string {
-  return agentType.id || agentType.name;
+  return agentType.name || agentType.id;
+}
+
+function resolveCatalogMeta(
+  agentType: AgentType,
+): AgentCatalogMeta | undefined {
+  const key = resolveAgentKey(agentType);
+  return AGENT_CATALOG_META[key] ?? AGENT_CATALOG_META[agentType.id];
 }
 
 async function fetchAgentTypesFromApi(): Promise<AgentType[]> {
@@ -88,12 +97,16 @@ export async function loadAgentCatalog(
       if (allowsMockFallback()) {
         return { entries: mockAgentCatalog(locale), source: "mock" };
       }
-      throw new Error("Agent catalog is empty.");
+      return { entries: [], source: "api" };
     }
 
     const entries = agentTypes.map((agentType) => {
-      const key = resolveAgentKey(agentType);
-      return mergeCatalogEntry(agentType, AGENT_CATALOG_META[key], locale);
+      const localized = localizeAgentType(agentType, locale);
+      return mergeCatalogEntry(
+        localized,
+        resolveCatalogMeta(agentType),
+        locale,
+      );
     });
 
     return { entries, source: "api" };

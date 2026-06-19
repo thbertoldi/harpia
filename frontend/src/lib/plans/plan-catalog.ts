@@ -15,6 +15,7 @@ import {
 } from "$lib/mocks/plan-catalog";
 import { getSession, getTenant } from "$lib/auth";
 import { allowsMockFallback } from "$lib/dev-mocks";
+import { localizePlanTemplate } from "$lib/plans/plan-template";
 import { executorClient, planClient } from "$lib/rpc";
 
 export type PlanCatalogSource = "api" | "mock";
@@ -337,7 +338,7 @@ export async function loadPlanCatalog(
   }
 
   const entries = templates.map((template) =>
-    buildPlanCatalogEntry(template, context),
+    buildPlanCatalogEntry(localizePlanTemplate(template, locale), context),
   );
 
   return { entries, source, error };

@@ -181,7 +181,13 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	if err := executors.EnsureDevEntitlements(ctx, pool, tenantID); err != nil {
 		fatal("seed dev executor entitlements failed", "error", err)
 	}
-	logger.Info("executor catalog and dev entitlements ensured")
+	if err := agents.EnsureAgentTypesForTenant(ctx, pool, tenantID); err != nil {
+		fatal("seed agent types failed", "error", err)
+	}
+	if err := executors.EnsureTenantAgentInstallations(ctx, pool, tenantID); err != nil {
+		fatal("seed agent installations failed", "error", err)
+	}
+	logger.Info("executor catalog, entitlements, and agent bootstrap ensured")
 
 	taskRepo := tasks.NewRepository(pool)
 	planRepo := plans.NewRepository(pool)

@@ -58,6 +58,33 @@ func (r *Repository) Create(ctx context.Context, tenantID uuid.UUID, agentType *
 	return &created, nil
 }
 
+func (r *Repository) UpsertByName(ctx context.Context, tenantID uuid.UUID, agentType *AgentType) (*AgentType, error) {
+	var upserted AgentType
+	err := database.WithTenant(ctx, r.pool, tenantID, func(q database.Querier) error {
+		row := q.QueryRow(ctx,
+			`INSERT INTO agent_types (tenant_id, name, description, input_schema, output_schema, mcp_servers, enabled)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7)
+			 ON CONFLICT (tenant_id, name) DO UPDATE SET
+			   description = EXCLUDED.description,
+			   enabled = EXCLUDED.enabled
+			 RETURNING id, tenant_id, name, description, input_schema, output_schema, mcp_servers, enabled, created_at`,
+			tenantID, agentType.Name, agentType.Description, agentType.InputSchema,
+			agentType.OutputSchema, agentType.MCPServers, agentType.Enabled,
+		)
+
+		return row.Scan(
+			&upserted.ID, &upserted.TenantID, &upserted.Name, &upserted.Description,
+			&upserted.InputSchema, &upserted.OutputSchema, &upserted.MCPServers,
+			&upserted.Enabled, &upserted.CreatedAt,
+		)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("upsert agent type: %w", err)
+	}
+
+	return &upserted, nil
+}
+
 func (r *Repository) GetByID(ctx context.Context, tenantID, id uuid.UUID) (*AgentType, error) {
 	var agentType AgentType
 	err := database.WithTenant(ctx, r.pool, tenantID, func(q database.Querier) error {

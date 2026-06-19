@@ -306,3 +306,14 @@ def _mapping_to_struct(value: Mapping[str, Any]) -> Struct:
 
 def _struct_to_mapping(value: Struct) -> dict[str, Any]:
     return dict(MessageToDict(value, preserving_proto_field_name=True))
+
+
+def resolve_manifest_path(manifest_id: str, version: str = "0.1.0") -> Path:
+    """Locate agents/{id}/{version}.yaml from repo root or container /app layout."""
+    relative = Path("agents") / manifest_id / f"{version}.yaml"
+    start = Path(__file__).resolve().parent
+    for base in (start, *start.parents):
+        candidate = base / relative
+        if candidate.is_file():
+            return candidate
+    raise FileNotFoundError(f"agent manifest not found: {relative.as_posix()}")

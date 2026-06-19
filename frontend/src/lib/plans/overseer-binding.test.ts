@@ -23,7 +23,6 @@ describe("overseer binding helpers", () => {
   it("identifies agent-backed steps from the weekly newsletter template", () => {
     const agentSteps = getAgentBackedSteps(template);
     expect(agentSteps.map((step) => step.stepKey)).toEqual([
-      "fetch-news",
       "write-draft",
       "adapt-for-linkedin",
     ]);
@@ -54,7 +53,7 @@ describe("overseer binding helpers", () => {
 
   it("fails promotion when agent steps lack overseer bindings", () => {
     const partialBindings = assignSelfAsOverseerForSteps(
-      [{ stepKey: "fetch-news", title: "Fetch News" }],
+      [{ stepKey: "write-draft", title: "Write Draft" }],
       sessionUser,
     );
 
@@ -65,12 +64,8 @@ describe("overseer binding helpers", () => {
     );
 
     expect(result.ok).toBe(false);
-    expect(result.missingStepKeys).toEqual([
-      "write-draft",
-      "adapt-for-linkedin",
-    ]);
+    expect(result.missingStepKeys).toEqual(["adapt-for-linkedin"]);
     expect(formatOverseerPromotionErrors(result.issues)).toEqual([
-      'Agent step "Write Draft" (write-draft) is missing an overseer.',
       'Agent step "Adapt for LinkedIn" (adapt-for-linkedin) is missing an overseer.',
     ]);
   });

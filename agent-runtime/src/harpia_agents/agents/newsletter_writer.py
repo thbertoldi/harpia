@@ -5,18 +5,17 @@ from __future__ import annotations
 import uuid
 from collections.abc import Mapping
 from dataclasses import dataclass
-from pathlib import Path
 
 from google.protobuf.json_format import MessageToDict, ParseDict
 from harpia.artifacts.v1.artifacts_pb2 import NewsList, TextDraft
 from langgraph.graph import END, StateGraph
 from pydantic import BaseModel, ConfigDict, Field
 
-from harpia_agents.agents.manifest import AgentType
+from harpia_agents.agents.manifest import AgentType, resolve_manifest_path
 from harpia_agents.llm import ChatMessage, LLMRegistry
 
 MANIFEST_ID = "newsletter-writer-senior"
-MANIFEST_PATH = Path(__file__).resolve().parents[4] / "agents" / MANIFEST_ID / "0.1.0.yaml"
+MANIFEST_PATH = resolve_manifest_path(MANIFEST_ID)
 _KNOWN_MODEL_IDS = tuple(model.model_id for model in LLMRegistry.default().list_models())
 MANIFEST = AgentType.from_yaml(MANIFEST_PATH, model_ids=_KNOWN_MODEL_IDS)
 _OUTPUT_REQUIRED_FIELDS = tuple(MANIFEST.to_dict()["output_schema"].get("required", []))

@@ -63,11 +63,11 @@ export function mockWeeklyNewsletterLinkedInTemplate(
         ),
         inputArtifactTypeId: "harpia.artifacts.v1.DateRange",
         outputArtifactTypeId: "harpia.artifacts.v1.NewsList",
-        defaultExecutorSkuKey: "news-fetcher",
+        defaultExecutorSkuKey: "rss-news-feed",
         executorRequirement: {
-          executorKind: ExecutorKind.AGENT,
-          requiredCapabilities: ["news-fetch"],
-          connectionType: "",
+          executorKind: ExecutorKind.INTEGRATION,
+          requiredCapabilities: [],
+          connectionType: "rss_feed",
         },
       }),
       create(PlanStepSchema, {
@@ -83,10 +83,10 @@ export function mockWeeklyNewsletterLinkedInTemplate(
         ),
         inputArtifactTypeId: "harpia.artifacts.v1.NewsList",
         outputArtifactTypeId: "harpia.artifacts.v1.TextDraft",
-        defaultExecutorSkuKey: "newsletter-writer",
+        defaultExecutorSkuKey: "newsletter-writer-senior",
         executorRequirement: {
           executorKind: ExecutorKind.AGENT,
-          requiredCapabilities: ["writing"],
+          requiredCapabilities: [],
           connectionType: "",
         },
       }),
@@ -103,10 +103,10 @@ export function mockWeeklyNewsletterLinkedInTemplate(
         ),
         inputArtifactTypeId: "harpia.artifacts.v1.TextDraft",
         outputArtifactTypeId: "harpia.artifacts.v1.LinkedInPostDraft",
-        defaultExecutorSkuKey: "linkedin-adapter",
+        defaultExecutorSkuKey: "linkedin-voice-senior",
         executorRequirement: {
           executorKind: ExecutorKind.AGENT,
-          requiredCapabilities: ["social-adaptation"],
+          requiredCapabilities: [],
           connectionType: "",
         },
       }),
@@ -123,11 +123,11 @@ export function mockWeeklyNewsletterLinkedInTemplate(
         ),
         inputArtifactTypeId: "harpia.artifacts.v1.LinkedInPostDraft",
         outputArtifactTypeId: "harpia.artifacts.v1.PublishConfirmation",
-        defaultExecutorSkuKey: "linkedin-publisher",
+        defaultExecutorSkuKey: "linkedin-publish",
         executorRequirement: {
           executorKind: ExecutorKind.INTEGRATION,
-          requiredCapabilities: ["linkedin-publish"],
-          connectionType: "linkedin",
+          requiredCapabilities: [],
+          connectionType: "oauth_linkedin",
         },
       }),
     ],
@@ -147,6 +147,39 @@ export function mockWeeklyNewsletterLinkedInTemplate(
     ],
     createdAt: "2026-01-01T00:00:00Z",
     updatedAt: "2026-01-01T00:00:00Z",
+  });
+}
+
+export function localizePlanTemplate(
+  template: PlanTemplate,
+  locale: Locale,
+): PlanTemplate {
+  if (template.key !== WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_KEY) {
+    return template;
+  }
+
+  const contentPrefix = `catalog.plan.${template.key}`;
+
+  return create(PlanTemplateSchema, {
+    ...template,
+    name: resolveLocalizedContent(`${contentPrefix}.name`, locale),
+    description: resolveLocalizedContent(
+      `${contentPrefix}.description`,
+      locale,
+    ),
+    steps: template.steps.map((step) =>
+      create(PlanStepSchema, {
+        ...step,
+        title: resolveLocalizedContent(
+          `${contentPrefix}.step.${step.key}.title`,
+          locale,
+        ),
+        description: resolveLocalizedContent(
+          `${contentPrefix}.step.${step.key}.description`,
+          locale,
+        ),
+      }),
+    ),
   });
 }
 
@@ -191,7 +224,10 @@ export async function loadPlanTemplate(
       throw new Error("Plan template not found");
     }
 
-    return { template, source: "api" };
+    return {
+      template: localizePlanTemplate(template, locale),
+      source: "api",
+    };
   } catch (error) {
     if (allowsMockFallback() && matchesMockTemplate(templateIdOrKey)) {
       return {

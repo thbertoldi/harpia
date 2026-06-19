@@ -2,6 +2,7 @@ package executors
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -56,7 +57,7 @@ var DefaultCatalogSeeds = []CatalogSeed{
 			InputArtifactTypeKeys:  []string{"harpia.artifacts.v1.NewsList"},
 			OutputArtifactTypeKeys: []string{"harpia.artifacts.v1.TextDraft"},
 			ManifestID:             "newsletter-writer-senior",
-			ManifestVersion:        "1.0.0",
+			ManifestVersion:        "0.1.0",
 		},
 	},
 	{
@@ -70,7 +71,7 @@ var DefaultCatalogSeeds = []CatalogSeed{
 			InputArtifactTypeKeys:  []string{"harpia.artifacts.v1.TextDraft"},
 			OutputArtifactTypeKeys: []string{"harpia.artifacts.v1.LinkedInPostDraft"},
 			ManifestID:             "linkedin-voice-senior",
-			ManifestVersion:        "1.0.0",
+			ManifestVersion:        "0.1.0",
 		},
 	},
 }
@@ -104,5 +105,55 @@ func EnsureDevEntitlements(ctx context.Context, pool *pgxpool.Pool, tenantID uui
 			return fmt.Errorf("seed entitlement for %q: %w", seed.Key, err)
 		}
 	}
+	return nil
+}
+
+// EnsureTenantAgentInstallations provisions default agent executor installations for
+// entitled agent SKUs when none exist yet. Integrations remain user-configured.
+func EnsureTenantAgentInstallations(ctx context.Context, pool *pgxpool.Pool, tenantID uuid.UUID) error {
+	repo := NewRepository(pool)
+	entitlements, err := repo.ListEntitlements(ctx, tenantID, nil, 100, 0)
+	if err != nil {
+		return fmt.Errorf("list entitlements: %w", err)
+	}
+
+	for _, entitlement := range entitlements {
+		sku, err := repo.GetSKUByID(ctx, entitlement.ExecutorSKUID)
+		if err != nil {
+			return fmt.Errorf("load sku for entitlement: %w", err)
+		}
+		if sku.Kind != KindAgent {
+			continue
+		}
+
+		existing, err := repo.ListInstallations(ctx, tenantID, KindAgent, &sku.ID, 1, 0)
+		if err != nil {
+			return fmt.Errorf("list agent installations for %q: %w", sku.Key, err)
+		}
+		if len(existing) > 0 {
+			continue
+		}
+
+		manifestID := sku.Compatibility.ManifestID
+		manifestVersion := sku.Compatibility.ManifestVersion
+		if manifestID == "" || manifestVersion == "" {
+			return fmt.Errorf("agent sku %q is missing manifest metadata", sku.Key)
+		}
+
+		_, err = repo.CreateInstallation(ctx, &ExecutorInstallation{
+			TenantID:        tenantID,
+			ExecutorSKUID:   sku.ID,
+			Kind:            KindAgent,
+			DisplayName:     sku.DisplayName,
+			Enabled:         true,
+			ConfigJSON:      json.RawMessage("{}"),
+			ManifestID:      &manifestID,
+			ManifestVersion: &manifestVersion,
+		})
+		if err != nil {
+			return fmt.Errorf("create agent installation for %q: %w", sku.Key, err)
+		}
+	}
+
 	return nil
 }
