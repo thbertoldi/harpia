@@ -1,4 +1,5 @@
 import { toUserMessage } from "$lib/connect-errors";
+import { allowsMockFallback } from "$lib/dev-mocks";
 import {
   MOCK_PLAN_EXECUTION_ID,
   mockPlanExecutionDetail,
@@ -159,7 +160,7 @@ export async function loadPlanExecutionDetail(
       source: "api",
     };
   } catch (error) {
-    if (executionId === MOCK_PLAN_EXECUTION_ID) {
+    if (allowsMockFallback() && executionId === MOCK_PLAN_EXECUTION_ID) {
       const mock = mockPlanExecutionDetail();
       return {
         execution: mock.execution,

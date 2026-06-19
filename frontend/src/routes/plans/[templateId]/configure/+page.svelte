@@ -41,7 +41,7 @@
   let loadError = $state<string | null>(null);
   let saveError = $state<string | null>(null);
   let saveNotice = $state<string | null>(null);
-  let dataSource = $state<"api" | "mock">("mock");
+  let dataSource = $state<"api" | "mock">("api");
 
   const validation = $derived.by(() => {
     if (!template || !context) {
@@ -174,13 +174,13 @@
       <ArrowLeft class="size-4" />
       {translate("plans.configure.backToCatalog", $locale)}
     </a>
-    <span
-      class="rounded-full border border-plumage px-2.5 py-1 font-mono text-[10px] tracking-wider text-crown-ash uppercase"
-    >
-      {dataSource === "api"
-        ? translate("plans.source.live", $locale)
-        : translate("plans.source.mock", $locale)}
-    </span>
+    {#if dataSource === "api"}
+      <span
+        class="rounded-full border border-plumage px-2.5 py-1 font-mono text-[10px] tracking-wider text-crown-ash uppercase"
+      >
+        {translate("plans.source.live", $locale)}
+      </span>
+    {/if}
   </div>
 
   {#if loading}

@@ -14,6 +14,7 @@ import {
   type MockExecutorContext,
 } from "$lib/mocks/plan-catalog";
 import { getSession, getTenant } from "$lib/auth";
+import { allowsMockFallback } from "$lib/dev-mocks";
 import { executorClient, planClient } from "$lib/rpc";
 
 export type PlanCatalogSource = "api" | "mock";
@@ -301,13 +302,22 @@ export async function loadPlanCatalog(
   try {
     templates = await fetchPlanTemplatesFromApi();
     if (templates.length === 0) {
-      templates = mockPlanTemplates(locale);
-      source = "mock";
+      if (allowsMockFallback()) {
+        templates = mockPlanTemplates(locale);
+        source = "mock";
+        error = "Empty response from plan service";
+      } else {
+        throw new Error("Plan catalog is empty.");
+      }
     }
   } catch (err) {
-    templates = mockPlanTemplates(locale);
-    source = "mock";
-    error = toUserMessage(err);
+    if (allowsMockFallback()) {
+      templates = mockPlanTemplates(locale);
+      source = "mock";
+      error = toUserMessage(err);
+    } else {
+      throw err;
+    }
   }
 
   const tenantId = resolveTenantId();
@@ -319,11 +329,10 @@ export async function loadPlanCatalog(
     }
     context = await fetchExecutorContextFromApi(tenantId);
   } catch (err) {
-    if (source === "mock") {
+    if (allowsMockFallback() && source === "mock") {
       context = mockExecutorContext(tenantId ?? "dev", locale);
     } else {
-      context = { skus: [], entitlements: [], installations: [] };
-      error = error ?? toUserMessage(err);
+      throw err;
     }
   }
 

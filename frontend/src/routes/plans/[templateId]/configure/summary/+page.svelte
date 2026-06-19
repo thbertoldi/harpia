@@ -21,8 +21,8 @@
   let summary = $state<ConfigCostSummary | null>(null);
   let loading = $state(true);
   let loadError = $state<string | null>(null);
-  let templateSource = $state<PlanTemplateSource>("mock");
-  let priceSource = $state<"api" | "mock">("mock");
+  let templateSource = $state<PlanTemplateSource>("api");
+  let priceSource = $state<"api" | "mock">("api");
   let priceWarning = $state<string | null>(null);
 
   $effect(() => {
@@ -115,13 +115,14 @@
         {template.name}
       </p>
       <p class="mt-2 font-mono text-[10px] text-crown-ash-dark">
-        {template.key} · {templateSource === "api"
-          ? translate("plans.detail.liveApi", $locale)
-          : translate("plans.detail.mockData", $locale)}
+        {template.key}
+        {#if templateSource === "api"}
+          · {translate("plans.detail.liveApi", $locale)}
+        {/if}
       </p>
     </div>
 
-    {#if priceWarning}
+    {#if priceWarning && priceSource === "mock"}
       <div
         class="mb-4 rounded-md border border-talon-gold/30 bg-talon-gold/5 px-3 py-2"
       >

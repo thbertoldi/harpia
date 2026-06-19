@@ -19,6 +19,7 @@ import {
 } from "$lib/gen/harpia/plans/v1/plans_pb";
 import { mockExecutorContext } from "$lib/mocks/plan-catalog";
 import { getSession, getTenant } from "$lib/auth";
+import { allowsMockFallback } from "$lib/dev-mocks";
 import { executorClient, planClient } from "$lib/rpc";
 import {
   type ExecutorContext,
@@ -499,11 +500,15 @@ export async function loadSlotBindingPageData(
   try {
     context = await fetchExecutorContextFromApi(tenantId);
   } catch (err) {
-    context = mockExecutorContext(tenantId, locale);
-    if (source === "api") {
-      source = "mock";
+    if (allowsMockFallback()) {
+      context = mockExecutorContext(tenantId, locale);
+      if (source === "api") {
+        source = "mock";
+      }
+      error = error ?? toUserMessage(err);
+    } else {
+      throw err;
     }
-    error = error ?? toUserMessage(err);
   }
 
   let configuration: PlanConfiguration | null = null;
@@ -514,14 +519,21 @@ export async function loadSlotBindingPageData(
       templateResult.template.id,
     );
   } catch (err) {
-    configuration = readMockConfiguration(tenantId, templateResult.template.id);
-    if (source === "api") {
-      source = "mock";
+    if (allowsMockFallback()) {
+      configuration = readMockConfiguration(
+        tenantId,
+        templateResult.template.id,
+      );
+      if (source === "api") {
+        source = "mock";
+      }
+      error = error ?? toUserMessage(err);
+    } else {
+      throw err;
     }
-    error = error ?? toUserMessage(err);
   }
 
-  if (!configuration) {
+  if (!configuration && allowsMockFallback()) {
     configuration = readMockConfiguration(tenantId, templateResult.template.id);
   }
 
@@ -583,6 +595,10 @@ export async function savePlanConfiguration(
       validation,
     };
   } catch (err) {
+    if (!allowsMockFallback()) {
+      throw err;
+    }
+
     const configuration = create(PlanConfigurationSchema, {
       id: existing?.id ?? `mock-config-${template.id}`,
       tenantId,

@@ -145,7 +145,7 @@
       </button>
     </div>
   {:else}
-    {#if loadError}
+    {#if loadError && dataSource === "mock"}
       <div
         class="mb-4 rounded-md border border-talon-gold/30 bg-talon-gold/5 px-3 py-2"
       >

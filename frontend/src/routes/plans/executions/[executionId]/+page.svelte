@@ -174,13 +174,13 @@
     >
       {translate("plans.execution.backToPlans", $locale)}
     </a>
-    <span
-      class="rounded-full border border-plumage px-2.5 py-1 font-mono text-[10px] tracking-wider text-crown-ash uppercase"
-    >
-      {source === "api"
-        ? translate("plans.source.live", $locale)
-        : translate("plans.source.mock", $locale)}
-    </span>
+    {#if source === "api"}
+      <span
+        class="rounded-full border border-plumage px-2.5 py-1 font-mono text-[10px] tracking-wider text-crown-ash uppercase"
+      >
+        {translate("plans.source.live", $locale)}
+      </span>
+    {/if}
   </div>
 
   {#if loading}
@@ -246,7 +246,7 @@
           <span class="font-mono">{formatDateTime(execution.completedAt)}</span>
         </p>
       </div>
-      {#if loadError}
+      {#if loadError && source === "mock"}
         <p class="mt-3 font-mono text-xs text-talon-gold">
           {translate("plans.execution.mockWarning", $locale)}
           {loadError}
