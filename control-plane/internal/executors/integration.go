@@ -10,19 +10,19 @@ const (
 )
 
 type (
-	InputArtifactRef              = runtime.InputArtifactRef
-	InstallationSnapshot          = runtime.InstallationSnapshot
-	IntegrationExecutionRequest   = runtime.IntegrationExecutionRequest
-	IntegrationExecutionResult    = runtime.IntegrationExecutionResult
-	IntegrationHandler            = runtime.IntegrationHandler
-	IntegrationRunner             = runtime.IntegrationRunner
-	IntegrationRegistry           = runtime.IntegrationRegistry
-	RetryableError                = runtime.RetryableError
-	ExecutorArtifactStore         = runtime.ExecutorArtifactStore
-	ExecutorArtifactStoreAdapter  = runtime.ExecutorArtifactStoreAdapter
-	CreateArtifactRequest         = runtime.CreateArtifactRequest
-	ConfigValidatorRegistry       = runtime.ConfigValidatorRegistry
-	ConfigValidator               = runtime.ConfigValidator
+	InputArtifactRef             = runtime.InputArtifactRef
+	InstallationSnapshot         = runtime.InstallationSnapshot
+	IntegrationExecutionRequest  = runtime.IntegrationExecutionRequest
+	IntegrationExecutionResult   = runtime.IntegrationExecutionResult
+	IntegrationHandler           = runtime.IntegrationHandler
+	IntegrationRunner            = runtime.IntegrationRunner
+	IntegrationRegistry          = runtime.IntegrationRegistry
+	RetryableError               = runtime.RetryableError
+	ExecutorArtifactStore        = runtime.ExecutorArtifactStore
+	ExecutorArtifactStoreAdapter = runtime.ExecutorArtifactStoreAdapter
+	CreateArtifactRequest        = runtime.CreateArtifactRequest
+	ConfigValidatorRegistry      = runtime.ConfigValidatorRegistry
+	ConfigValidator              = runtime.ConfigValidator
 )
 
 var (

@@ -12,11 +12,11 @@ import (
 type contextKey struct{}
 
 type TenantMembership struct {
-	TenantID  uuid.UUID
-	Slug      string
-	Name      string
-	Role      string
-	ThemeKey  string
+	TenantID uuid.UUID
+	Slug     string
+	Name     string
+	Role     string
+	ThemeKey string
 }
 
 type RequestContext struct {

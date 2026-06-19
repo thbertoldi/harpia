@@ -8,7 +8,7 @@ import (
 
 func TestDBKindRoundTrip(t *testing.T) {
 	cases := []struct {
-		db   string
+		db    string
 		proto executorsv1.ExecutorKind
 	}{
 		{KindIntegration, executorsv1.ExecutorKind_EXECUTOR_KIND_INTEGRATION},

@@ -10,6 +10,7 @@
     ShieldCheck,
     Zap,
   } from "lucide-svelte";
+  import { resolve } from "$app/paths";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
   import { locale, translate } from "$lib/i18n";
   import { getTenant } from "$lib/auth";
@@ -38,6 +39,21 @@
     openai: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"],
     ollama: ["llama3:8b", "llama3:70b", "mistral:7b"],
   };
+
+  const SETTINGS_SECTIONS = [
+    { key: "settings.nav.tenant", href: "/settings#tenant", icon: Building2 },
+    {
+      key: "settings.nav.llmProviders",
+      href: "/settings#llm-providers",
+      icon: Key,
+    },
+    { key: "settings.nav.quotas", href: "/settings#quotas", icon: Zap },
+    {
+      key: "settings.nav.billing",
+      href: "/settings#billing",
+      icon: CreditCard,
+    },
+  ] as const;
 
   // ---------------------------------------------------------------------------
   // State
@@ -306,9 +322,9 @@
     class="mb-8 flex flex-wrap gap-2"
     aria-label={translate("settings.nav.ariaLabel", $locale)}
   >
-    {#each [{ key: "settings.nav.tenant", href: "#tenant", icon: Building2 }, { key: "settings.nav.llmProviders", href: "#llm-providers", icon: Key }, { key: "settings.nav.quotas", href: "#quotas", icon: Zap }, { key: "settings.nav.billing", href: "#billing", icon: CreditCard }] as section (section.href)}
+    {#each SETTINGS_SECTIONS as section (section.href)}
       <a
-        href={section.href}
+        href={resolve(section.href)}
         class="flex items-center gap-1.5 rounded-md border border-plumage px-3 py-1.5 font-body text-sm text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
       >
         <section.icon class="size-3.5" />

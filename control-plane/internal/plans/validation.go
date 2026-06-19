@@ -26,12 +26,12 @@ type ExecutorLookup interface {
 }
 
 type BindingValidationError struct {
-	StepKey            string
-	ExecutorSKUID      string
-	ExecutorSKUKey     string
+	StepKey                string
+	ExecutorSKUID          string
+	ExecutorSKUKey         string
 	ExecutorInstallationID string
-	Reason             string
-	Code               connect.Code
+	Reason                 string
+	Code                   connect.Code
 }
 
 func (e *BindingValidationError) Error() string {
