@@ -28,9 +28,7 @@ beforeEach(() => {
 describe("approval inbox", () => {
   it("loads pending approval requests", async () => {
     listMock.mockResolvedValue({
-      approvalRequests: [
-        { id: "a1", status: ApprovalRequestStatus.PENDING },
-      ],
+      approvalRequests: [{ id: "a1", status: ApprovalRequestStatus.PENDING }],
     });
     const items = await loadInboxApprovals("tenant-1");
     expect(items).toHaveLength(1);

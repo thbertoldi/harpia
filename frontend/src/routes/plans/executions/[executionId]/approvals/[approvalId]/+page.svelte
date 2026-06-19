@@ -169,7 +169,9 @@
     </section>
 
     {#if approval.inputArtifactId}
-      <section class="rounded-lg border border-plumage bg-obsidian-light/30 p-4">
+      <section
+        class="rounded-lg border border-plumage bg-obsidian-light/30 p-4"
+      >
         <h2 class="mb-3 font-heading text-lg font-semibold text-cream">
           {translate("approvals.detail.previewHeading", $locale)}
         </h2>
@@ -202,7 +204,10 @@
         </p>
 
         <div class="space-y-3">
-          <label for="reject-reason" class="block font-body text-xs text-crown-ash">
+          <label
+            for="reject-reason"
+            class="block font-body text-xs text-crown-ash"
+          >
             {translate("approvals.detail.rejectReasonLabel", $locale)}
           </label>
           <textarea

@@ -12,14 +12,18 @@ export type WatchApprovalRequestsOptions = {
   planExecutionId?: string;
 };
 
-export function isTerminalApprovalStatus(status: ApprovalRequestStatus): boolean {
+export function isTerminalApprovalStatus(
+  status: ApprovalRequestStatus,
+): boolean {
   return (
     status === ApprovalRequestStatus.APPROVED ||
     status === ApprovalRequestStatus.REJECTED
   );
 }
 
-export function isApprovalActionDisabled(status: ApprovalRequestStatus): boolean {
+export function isApprovalActionDisabled(
+  status: ApprovalRequestStatus,
+): boolean {
   return status !== ApprovalRequestStatus.PENDING;
 }
 
