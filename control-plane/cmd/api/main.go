@@ -17,6 +17,7 @@ import (
 
 	"github.com/harpia/control-plane/gen/harpia/agents/v1/agentsv1connect"
 	"github.com/harpia/control-plane/gen/harpia/artifacts/v1/artifactsv1connect"
+	"github.com/harpia/control-plane/gen/harpia/budget/v1/budgetv1connect"
 	"github.com/harpia/control-plane/gen/harpia/executors/v1/executorsv1connect"
 	"github.com/harpia/control-plane/gen/harpia/feedback/v1/feedbackv1connect"
 	"github.com/harpia/control-plane/gen/harpia/identity/v1/identityv1connect"
@@ -25,6 +26,7 @@ import (
 	"github.com/harpia/control-plane/gen/harpia/tasks/v1/tasksv1connect"
 	"github.com/harpia/control-plane/internal/agents"
 	"github.com/harpia/control-plane/internal/artifacts"
+	"github.com/harpia/control-plane/internal/budget"
 	"github.com/harpia/control-plane/internal/cache"
 	"github.com/harpia/control-plane/internal/config"
 	"github.com/harpia/control-plane/internal/database"
@@ -255,6 +257,12 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	if err != nil {
 		fatal("create llm config handler failed", "error", err)
 	}
+	budgetHandler, err := budget.NewHandler(budget.HandlerOptions{
+		Repo: budget.NewRepository(pool),
+	})
+	if err != nil {
+		fatal("create budget handler failed", "error", err)
+	}
 
 	mux := http.NewServeMux()
 
@@ -296,8 +304,16 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	identityPath, identityHandler := identityv1connect.NewIdentityServiceHandler(identity.NewIdentityHandler(), requestContext)
 	feedbackPath, feedbackHandler := feedbackv1connect.NewFeedbackServiceHandler(feedback.NewFeedbackHandler(), requestContext)
 	llmConfigPath, llmConfigHandler := llm_configv1connect.NewLLMConfigServiceHandler(llm_config.NewPublicHandler(llmHandler), requestContext)
+	budgetPath, budgetConnectHandler := budgetv1connect.NewBudgetPolicyServiceHandler(budgetHandler, requestContext)
 	internalLLMPath, internalLLMHandler := llm_config.NewInternalResolveHandler(
 		llmHandler,
+		connect.WithInterceptors(identity.NewInternalServiceInterceptor(identity.InternalServiceOptions{
+			Token:        cfg.InternalAuthToken,
+			AllowDevAuth: cfg.AllowDevAuth,
+		})),
+	)
+	internalBudgetPath, internalBudgetConnectHandler := budgetv1connect.NewBudgetPolicyServiceHandler(
+		budgetHandler,
 		connect.WithInterceptors(identity.NewInternalServiceInterceptor(identity.InternalServiceOptions{
 			Token:        cfg.InternalAuthToken,
 			AllowDevAuth: cfg.AllowDevAuth,
@@ -312,7 +328,9 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	mux.Handle(identityPath, identityHandler)
 	mux.Handle(feedbackPath, feedbackHandler)
 	mux.Handle(llmConfigPath, llmConfigHandler)
+	mux.Handle(budgetPath, budgetConnectHandler)
 	mux.Handle(internalLLMPath, internalLLMHandler)
+	mux.Handle("/internal"+internalBudgetPath, http.StripPrefix("/internal", internalBudgetConnectHandler))
 
 	var wrapped http.Handler = mux
 	wrapped = withLogging(logger)(wrapped)

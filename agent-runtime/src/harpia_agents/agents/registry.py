@@ -18,6 +18,12 @@ from harpia_agents.agents.newsletter_writer import (
 from harpia_agents.agents.newsletter_writer import (
     run as run_newsletter_writer,
 )
+from harpia_agents.budget import (
+    BudgetClient,
+    BudgetContext,
+    BudgetedLLMRegistry,
+    budget_policy_enabled,
+)
 from harpia_agents.llm import LLMRegistry
 from harpia_agents.llm.provider import LLMProvider
 from harpia_agents.llm.providers.anthropic import AnthropicProvider
@@ -162,6 +168,15 @@ async def run_registered_agent(
         elicitation_responses=elicitation_responses,
     )
     registry.resolve(model_id)
+    if tenant_id and budget_policy_enabled():
+        registry = BudgetedLLMRegistry(
+            registry,
+            budget_client=BudgetClient(),
+            context=BudgetContext(
+                tenant_id=tenant_id,
+                agent_type=manifest_id,
+            ),
+        )
 
     return await runner(
         resolved_input,
