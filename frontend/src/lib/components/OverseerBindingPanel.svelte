@@ -4,6 +4,7 @@
   import type {
     OverseerBinding,
     PlanTemplate,
+    SlotBinding,
   } from "$lib/gen/harpia/plans/v1/plans_pb";
   import { PlanConfigurationStatus } from "$lib/gen/harpia/plans/v1/plans_pb";
   import { locale, translate } from "$lib/i18n";
@@ -22,12 +23,14 @@
   let {
     template,
     bindings = $bindable([]),
+    slotBindings = [],
     sessionUser,
     onSaveDraft,
     onPromote,
   }: {
     template: PlanTemplate;
     bindings?: OverseerBinding[];
+    slotBindings?: SlotBinding[];
     sessionUser: User;
     onSaveDraft?: (bindings: OverseerBinding[]) => void | Promise<void>;
     onPromote?: (
@@ -40,13 +43,18 @@
   let saveError = $state<string | null>(null);
   let promoteError = $state<string | null>(null);
 
-  const requiredSteps = $derived(getOverseerRequiredSteps(template));
-  const draftWarning = $derived(getDraftOverseerWarning(template, bindings));
+  const requiredSteps = $derived(
+    getOverseerRequiredSteps(template, slotBindings),
+  );
+  const draftWarning = $derived(
+    getDraftOverseerWarning(template, bindings, slotBindings),
+  );
   const runnableValidation = $derived(
     validateOverseerBindings(
       template,
       bindings,
       PlanConfigurationStatus.RUNNABLE,
+      slotBindings,
     ),
   );
 
@@ -99,7 +107,12 @@
     saveError = null;
     promoteError = null;
 
-    const validation = validateOverseerBindings(template, bindings, status);
+    const validation = validateOverseerBindings(
+      template,
+      bindings,
+      status,
+      slotBindings,
+    );
     if (!validation.ok) {
       promoteError = formatOverseerPromotionErrors(validation.issues).join(" ");
       return;

@@ -10,25 +10,27 @@
     loadBehaviorPoliciesForTemplate,
     saveBehaviorPoliciesForTemplate,
     type BehaviorPoliciesFormValues,
-    type PlanConfigurationSource,
   } from "$lib/plans/behavior-policies";
   import { loadPlanTemplate } from "$lib/plans/plan-template";
-  import type { PlanConfiguration } from "$lib/gen/harpia/plans/v1/plans_pb";
+  import type {
+    PlanConfiguration,
+    PlanTemplate,
+  } from "$lib/gen/harpia/plans/v1/plans_pb";
 
   let loading = $state(true);
   let loadError = $state<string | null>(null);
   let saveError = $state<string | null>(null);
   let saveNotice = $state<string | null>(null);
   let saving = $state(false);
-  let templateName = $state("");
-  let templateId = $state("");
-  let templateVersion = $state(1);
+  let template = $state<PlanTemplate | null>(null);
   let configuration = $state<PlanConfiguration | null>(null);
   let policies = $state<BehaviorPoliciesFormValues | null>(null);
-  let dataSource = $state<PlanConfigurationSource>("api");
 
   $effect(() => {
-    void loadPage(page.params.templateId);
+    const templateId = page.params.templateId;
+    if (templateId) {
+      void loadPage(templateId);
+    }
   });
 
   async function loadPage(templateIdOrKey: string) {
@@ -43,17 +45,12 @@
         templateResult.template.id,
       );
 
-      templateName = templateResult.template.name;
-      templateId = templateResult.template.id;
-      templateVersion = templateResult.template.version;
+      template = templateResult.template;
       configuration = policiesResult.configuration;
       policies = policiesResult.policies;
-      dataSource = policiesResult.source;
-
-      if (policiesResult.error && policiesResult.source === "mock") {
-        loadError = policiesResult.error;
-      }
     } catch (error) {
+      template = null;
+      configuration = null;
       policies = null;
       loadError =
         error instanceof Error
@@ -65,7 +62,7 @@
   }
 
   async function handleSave() {
-    if (!policies) {
+    if (!template || !policies) {
       return;
     }
 
@@ -75,19 +72,13 @@
 
     try {
       const result = await saveBehaviorPoliciesForTemplate(
-        templateId,
-        templateVersion,
+        template,
         policies,
         configuration,
       );
 
       configuration = result.configuration;
-      dataSource = result.source;
       saveNotice = translate("plans.policies.saved", $locale);
-
-      if (result.error && result.source === "mock") {
-        loadError = result.error;
-      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "";
       saveError = message.startsWith("plans.policies.")
@@ -114,7 +105,7 @@
     </HarpyHeading>
     <p class="mt-1 font-body text-sm text-crown-ash">
       {translate("plans.policies.subheading", $locale, {
-        template: templateName || page.params.templateId,
+        template: template?.name || page.params.templateId || "",
       })}
     </p>
   </div>
@@ -138,30 +129,23 @@
         <p class="mt-1 font-mono text-xs text-crown-ash">{loadError}</p>
       {/if}
       <button
-        onclick={() => loadPage(page.params.templateId)}
+        onclick={() => {
+          const templateId = page.params.templateId;
+          if (templateId) {
+            void loadPage(templateId);
+          }
+        }}
         class="mt-4 cursor-pointer rounded-md border border-plumage px-4 py-2 font-body text-sm text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
       >
         {translate("plans.retry", $locale)}
       </button>
     </div>
   {:else}
-    {#if loadError && dataSource === "mock"}
-      <div
-        class="mb-4 rounded-md border border-talon-gold/30 bg-talon-gold/5 px-3 py-2"
-      >
-        <p class="font-mono text-xs text-talon-gold">
-          {translate("plans.policies.mockFallback", $locale)}
-          {loadError}
-        </p>
-      </div>
-    {/if}
-
     <PlanPoliciesForm
       bind:values={policies}
       {saving}
       {saveError}
       {saveNotice}
-      {dataSource}
       onSave={handleSave}
     />
   {/if}

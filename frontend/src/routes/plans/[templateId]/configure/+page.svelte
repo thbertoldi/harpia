@@ -21,7 +21,10 @@
     type CompatibleInstallationOption,
   } from "$lib/plans/slot-binding";
   import type { SkuLockReason } from "$lib/plans/plan-catalog";
-  import { PlanConfigurationStatus } from "$lib/gen/harpia/plans/v1/plans_pb";
+  import {
+    PlanConfigurationStatus,
+    type PlanConfiguration,
+  } from "$lib/gen/harpia/plans/v1/plans_pb";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
   import { locale, translate } from "$lib/i18n";
 
@@ -34,6 +37,7 @@
   let configurationStatus = $state<PlanConfigurationStatus>(
     PlanConfigurationStatus.DRAFT,
   );
+  let configuration = $state<PlanConfiguration | null>(null);
   let selections = $state<Record<string, string>>({});
   let loading = $state(true);
   let saving = $state(false);
@@ -55,7 +59,10 @@
   });
 
   $effect(() => {
-    void fetchPageData(page.params.templateId);
+    const templateId = page.params.templateId;
+    if (templateId) {
+      void fetchPageData(templateId);
+    }
   });
 
   async function fetchPageData(templateId: string) {
@@ -67,6 +74,7 @@
       const result = await loadSlotBindingPageData(templateId, $locale);
       template = result.template;
       context = result.context;
+      configuration = result.configuration;
       dataSource = result.source;
       configurationStatus =
         result.configuration?.status ?? PlanConfigurationStatus.DRAFT;
@@ -79,6 +87,7 @@
     } catch (error) {
       template = null;
       context = null;
+      configuration = null;
       loadError =
         error instanceof Error
           ? error.message
@@ -129,7 +138,9 @@
         selections,
         context,
         status,
+        configuration,
       );
+      configuration = result.configuration;
       configurationStatus = result.configuration.status;
       selections = slotBindingsToSelections(result.configuration.slotBindings);
 
@@ -202,7 +213,12 @@
         <p class="mt-1 font-mono text-xs text-crown-ash">{loadError}</p>
       {/if}
       <button
-        onclick={() => fetchPageData(page.params.templateId)}
+        onclick={() => {
+          const templateId = page.params.templateId;
+          if (templateId) {
+            void fetchPageData(templateId);
+          }
+        }}
         class="mt-4 cursor-pointer rounded-md border border-plumage px-4 py-2 font-body text-sm text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
       >
         {translate("plans.retry", $locale)}
@@ -330,11 +346,13 @@
           </div>
 
           <label
+            for={`installation-${step.key}`}
             class="mb-2 block font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
           >
             {translate("plans.configure.installationLabel", $locale)}
           </label>
           <select
+            id={`installation-${step.key}`}
             class="mb-3 w-full rounded-md border border-plumage bg-obsidian px-3 py-2 font-body text-sm text-cream transition-colors outline-none focus:border-talon-gold"
             value={selections[step.key] ?? ""}
             onchange={(event) => {

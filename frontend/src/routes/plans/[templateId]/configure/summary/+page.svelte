@@ -9,7 +9,8 @@
     loadExecutorSkuCatalog,
     type ConfigCostSummary,
   } from "$lib/plans/config-summary";
-  import { getPlanConfigDraft } from "$lib/plans/plan-config-draft";
+  import { planConfigDraftFromConfiguration } from "$lib/plans/plan-config-draft";
+  import { loadPlanConfigurationForTemplate } from "$lib/plans/plan-configuration";
   import {
     loadPlanTemplate,
     type PlanTemplateSource,
@@ -26,7 +27,10 @@
   let priceWarning = $state<string | null>(null);
 
   $effect(() => {
-    void fetchSummary(page.params.templateId);
+    const templateId = page.params.templateId;
+    if (templateId) {
+      void fetchSummary(templateId);
+    }
   });
 
   async function fetchSummary(templateId: string) {
@@ -53,7 +57,14 @@
           : skuCatalog.error;
       }
 
-      const draft = getPlanConfigDraft(templateId);
+      const configuration = await loadPlanConfigurationForTemplate(
+        templateResult.template.id,
+      );
+      if (!configuration) {
+        throw new Error(translate("plans.summary.noConfiguration", $locale));
+      }
+
+      const draft = planConfigDraftFromConfiguration(configuration);
       summary = buildConfigCostSummary(
         templateResult.template,
         draft,
@@ -100,7 +111,12 @@
         <p class="mt-1 font-mono text-xs text-crown-ash">{loadError}</p>
       {/if}
       <button
-        onclick={() => fetchSummary(page.params.templateId)}
+        onclick={() => {
+          const templateId = page.params.templateId;
+          if (templateId) {
+            void fetchSummary(templateId);
+          }
+        }}
         class="mt-4 cursor-pointer rounded-md border border-plumage px-4 py-2 font-body text-sm text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
       >
         {translate("plans.summary.retry", $locale)}

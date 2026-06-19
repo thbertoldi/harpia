@@ -1,20 +1,22 @@
 import { create } from "@bufbuild/protobuf";
-import { toUserMessage } from "$lib/connect-errors";
-import type { PlanConfiguration } from "$lib/gen/harpia/plans/v1/plans_pb";
+import type {
+  PlanConfiguration,
+  PlanTemplate,
+} from "$lib/gen/harpia/plans/v1/plans_pb";
 import {
   ElicitationTimeoutBehavior,
   PlanBehaviorPoliciesSchema,
-  PlanConfigurationSchema,
   PlanConfigurationStatus,
   PublishApprovalMode,
   type PlanBehaviorPolicies,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
-import { requireTenantId } from "$lib/auth";
-import { allowsMockFallback } from "$lib/dev-mocks";
-import { planClient } from "$lib/rpc";
-import { WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_ID } from "$lib/plans/plan-template";
+import {
+  loadPlanConfigurationForTemplate,
+  savePlanConfigurationRecord,
+  type PlanConfigurationSource,
+} from "$lib/plans/plan-configuration";
 
-export type PlanConfigurationSource = "api" | "mock";
+export type { PlanConfigurationSource };
 
 export interface BehaviorPoliciesFormValues {
   elicitationTimeoutBehavior: ElicitationTimeoutBehavior;
@@ -52,26 +54,6 @@ export const DEFAULT_BEHAVIOR_POLICIES: BehaviorPoliciesFormValues = {
   elicitationTimeoutHours: 48,
   publishApprovalMode: PublishApprovalMode.REQUIRE_APPROVAL,
 };
-
-export const MOCK_PLAN_CONFIGURATION_ID =
-  "c1000000-0000-4000-8000-000000000001";
-
-const mockConfigurations = new Map<string, PlanConfiguration>();
-
-function mockStorageKey(tenantId: string, templateId: string): string {
-  return `${tenantId}:${templateId}`;
-}
-
-function supportsMockFallback(templateId: string): boolean {
-  return (
-    allowsMockFallback() &&
-    templateId === WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_ID
-  );
-}
-
-export function clearMockPlanConfigurations(): void {
-  mockConfigurations.clear();
-}
 
 export function elicitationBehaviorLabelKey(
   behavior: ElicitationTimeoutBehavior,
@@ -166,112 +148,22 @@ export function validateBehaviorPolicies(
   return null;
 }
 
-async function listConfigurationsForTemplate(
-  tenantId: string,
-  templateId: string,
-): Promise<PlanConfiguration[]> {
-  const configurations: PlanConfiguration[] = [];
-
-  for await (const page of planClient.listPlanConfigurations({
-    tenantId,
-    pageSize: 100,
-    pageToken: "",
-  })) {
-    configurations.push(
-      ...page.planConfigurations.filter(
-        (config) => config.planTemplateId === templateId,
-      ),
-    );
-  }
-
-  return configurations;
-}
-
-function pickPreferredConfiguration(
-  configurations: PlanConfiguration[],
-): PlanConfiguration | null {
-  if (configurations.length === 0) {
-    return null;
-  }
-
-  const draft = configurations.find(
-    (config) => config.status === PlanConfigurationStatus.DRAFT,
-  );
-  return draft ?? configurations[0] ?? null;
-}
-
-function loadMockConfiguration(
-  tenantId: string,
-  templateId: string,
-): PlanConfiguration | null {
-  return mockConfigurations.get(mockStorageKey(tenantId, templateId)) ?? null;
-}
-
-function saveMockConfiguration(
-  tenantId: string,
-  templateId: string,
-  templateVersion: number,
-  values: BehaviorPoliciesFormValues,
-  existing?: PlanConfiguration | null,
-): PlanConfiguration {
-  const now = new Date().toISOString();
-  const configuration = create(PlanConfigurationSchema, {
-    id: existing?.id ?? MOCK_PLAN_CONFIGURATION_ID,
-    tenantId,
-    workspaceId: tenantId,
-    planTemplateId: templateId,
-    planTemplateVersion: templateVersion,
-    status: existing?.status ?? PlanConfigurationStatus.DRAFT,
-    seedArtifacts: existing?.seedArtifacts ?? [],
-    slotBindings: existing?.slotBindings ?? [],
-    overseerBindings: existing?.overseerBindings ?? [],
-    behaviorPolicies: policiesToProto(values),
-    schedule: existing?.schedule,
-    createdAt: existing?.createdAt ?? now,
-    updatedAt: now,
-  });
-
-  mockConfigurations.set(mockStorageKey(tenantId, templateId), configuration);
-  return configuration;
-}
-
-/** Loads behavior policies for a plan template, falling back to mock storage when needed. */
+/** Loads behavior policies for a persisted plan configuration. */
 export async function loadBehaviorPoliciesForTemplate(
   templateId: string,
 ): Promise<BehaviorPoliciesLoadResult> {
-  const tenantId = requireTenantId();
+  const configuration = await loadPlanConfigurationForTemplate(templateId);
 
-  try {
-    const configurations = await listConfigurationsForTemplate(
-      tenantId,
-      templateId,
-    );
-    const configuration = pickPreferredConfiguration(configurations);
-
-    return {
-      configuration,
-      policies: policiesFromProto(configuration?.behaviorPolicies),
-      source: "api",
-    };
-  } catch (error) {
-    if (!supportsMockFallback(templateId)) {
-      throw error;
-    }
-
-    const configuration = loadMockConfiguration(tenantId, templateId);
-    return {
-      configuration,
-      policies: policiesFromProto(configuration?.behaviorPolicies),
-      source: "mock",
-      error: toUserMessage(error),
-    };
-  }
+  return {
+    configuration,
+    policies: policiesFromProto(configuration?.behaviorPolicies),
+    source: "api",
+  };
 }
 
-/** Persists behavior policies via Create/UpdatePlanConfiguration with mock fallback. */
+/** Persists behavior policies via Create/UpdatePlanConfiguration. */
 export async function saveBehaviorPoliciesForTemplate(
-  templateId: string,
-  templateVersion: number,
+  template: PlanTemplate,
   values: BehaviorPoliciesFormValues,
   existingConfiguration?: PlanConfiguration | null,
 ): Promise<BehaviorPoliciesSaveResult> {
@@ -280,62 +172,12 @@ export async function saveBehaviorPoliciesForTemplate(
     throw new Error(validationError);
   }
 
-  const tenantId = requireTenantId();
-  const behaviorPolicies = policiesToProto(values);
+  const configuration = await savePlanConfigurationRecord({
+    template,
+    existingConfiguration,
+    status: existingConfiguration?.status ?? PlanConfigurationStatus.DRAFT,
+    behaviorPolicies: policiesToProto(values),
+  });
 
-  try {
-    if (existingConfiguration?.id) {
-      const response = await planClient.updatePlanConfiguration({
-        tenantId,
-        planConfigurationId: existingConfiguration.id,
-        status: existingConfiguration.status,
-        seedArtifacts: existingConfiguration.seedArtifacts,
-        slotBindings: existingConfiguration.slotBindings,
-        overseerBindings: existingConfiguration.overseerBindings,
-        behaviorPolicies,
-        schedule: existingConfiguration.schedule,
-      });
-
-      if (!response.planConfiguration) {
-        throw new Error("UpdatePlanConfiguration returned no configuration");
-      }
-
-      return { configuration: response.planConfiguration, source: "api" };
-    }
-
-    const response = await planClient.createPlanConfiguration({
-      tenantId,
-      workspaceId: tenantId,
-      planTemplateId: templateId,
-      status: PlanConfigurationStatus.DRAFT,
-      seedArtifacts: [],
-      slotBindings: [],
-      overseerBindings: [],
-      behaviorPolicies,
-    });
-
-    if (!response.planConfiguration) {
-      throw new Error("CreatePlanConfiguration returned no configuration");
-    }
-
-    return { configuration: response.planConfiguration, source: "api" };
-  } catch (error) {
-    if (!supportsMockFallback(templateId)) {
-      throw error;
-    }
-
-    const configuration = saveMockConfiguration(
-      tenantId,
-      templateId,
-      templateVersion,
-      values,
-      existingConfiguration,
-    );
-
-    return {
-      configuration,
-      source: "mock",
-      error: toUserMessage(error),
-    };
-  }
+  return { configuration, source: "api" };
 }

@@ -5,13 +5,16 @@
   import { getSession } from "$lib/auth";
   import OverseerBindingPanel from "$lib/components/OverseerBindingPanel.svelte";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
-  import type { OverseerBinding } from "$lib/gen/harpia/plans/v1/plans_pb";
+  import type {
+    OverseerBinding,
+    PlanConfiguration,
+  } from "$lib/gen/harpia/plans/v1/plans_pb";
   import { PlanConfigurationStatus } from "$lib/gen/harpia/plans/v1/plans_pb";
   import { locale, translate } from "$lib/i18n";
   import {
-    loadOverseerBindingsDraft,
-    saveOverseerBindingsDraft,
-  } from "$lib/plans/overseer-binding";
+    loadPlanConfigurationForTemplate,
+    savePlanConfigurationRecord,
+  } from "$lib/plans/plan-configuration";
   import {
     loadPlanTemplate,
     type PlanTemplateSource,
@@ -22,13 +25,17 @@
   let template = $state<
     Awaited<ReturnType<typeof loadPlanTemplate>>["template"] | null
   >(null);
+  let configuration = $state<PlanConfiguration | null>(null);
   let bindings = $state<OverseerBinding[]>([]);
   let loading = $state(true);
   let loadError = $state<string | null>(null);
   let dataSource = $state<PlanTemplateSource>("api");
 
   $effect(() => {
-    void fetchTemplate(page.params.templateId);
+    const templateId = page.params.templateId;
+    if (templateId) {
+      void fetchTemplate(templateId);
+    }
   });
 
   async function fetchTemplate(templateId: string) {
@@ -37,14 +44,20 @@
 
     try {
       const result = await loadPlanTemplate(templateId, $locale);
+      const savedConfiguration = await loadPlanConfigurationForTemplate(
+        result.template.id,
+      );
       template = result.template;
+      configuration = savedConfiguration;
       dataSource = result.source;
-      bindings = loadOverseerBindingsDraft(templateId);
+      bindings = savedConfiguration?.overseerBindings ?? [];
       if (result.error && result.source === "mock") {
         loadError = result.error;
       }
     } catch (error) {
       template = null;
+      configuration = null;
+      bindings = [];
       loadError =
         error instanceof Error
           ? error.message
@@ -55,17 +68,38 @@
   }
 
   async function handleSaveDraft(nextBindings: OverseerBinding[]) {
-    bindings = nextBindings;
-    saveOverseerBindingsDraft(page.params.templateId, nextBindings);
+    if (!template) {
+      return;
+    }
+
+    const saved = await savePlanConfigurationRecord({
+      template,
+      existingConfiguration: configuration,
+      status: PlanConfigurationStatus.DRAFT,
+      overseerBindings: nextBindings,
+    });
+
+    configuration = saved;
+    bindings = saved.overseerBindings;
   }
 
   async function handlePromote(
     nextBindings: OverseerBinding[],
     status: PlanConfigurationStatus,
   ) {
-    bindings = nextBindings;
-    saveOverseerBindingsDraft(page.params.templateId, nextBindings);
-    void status;
+    if (!template) {
+      return;
+    }
+
+    const saved = await savePlanConfigurationRecord({
+      template,
+      existingConfiguration: configuration,
+      status,
+      overseerBindings: nextBindings,
+    });
+
+    configuration = saved;
+    bindings = saved.overseerBindings;
   }
 </script>
 
@@ -134,6 +168,7 @@
     <OverseerBindingPanel
       {template}
       bind:bindings
+      slotBindings={configuration?.slotBindings ?? []}
       sessionUser={session.user}
       onSaveDraft={handleSaveDraft}
       onPromote={handlePromote}

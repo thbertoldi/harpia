@@ -27,8 +27,6 @@ export interface OverseerValidationResult {
   missingStepKeys: string[];
 }
 
-const OVERSEER_DRAFT_STORAGE_PREFIX = "harpia_overseer_bindings_";
-
 const PROMOTION_STATUSES = new Set<PlanConfigurationStatus>([
   PlanConfigurationStatus.RUNNABLE,
   PlanConfigurationStatus.SCHEDULED,
@@ -181,62 +179,5 @@ export function formatOverseerPromotionErrors(
 ): string[] {
   return issues.map((issue) =>
     formatMissingOverseerError(issue.stepKey, issue.stepTitle),
-  );
-}
-
-export function overseerDraftStorageKey(templateId: string): string {
-  return `${OVERSEER_DRAFT_STORAGE_PREFIX}${templateId}`;
-}
-
-export function loadOverseerBindingsDraft(
-  templateId: string,
-): OverseerBinding[] {
-  if (typeof localStorage === "undefined") {
-    return [];
-  }
-
-  const stored = localStorage.getItem(overseerDraftStorageKey(templateId));
-  if (!stored) {
-    return [];
-  }
-
-  try {
-    const parsed = JSON.parse(stored) as Array<{
-      stepKey?: string;
-      overseerUserId?: string;
-    }>;
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-
-    return parsed
-      .filter((item) => item.stepKey && item.overseerUserId)
-      .map((item) =>
-        create(OverseerBindingSchema, {
-          stepKey: item.stepKey!,
-          overseerUserId: item.overseerUserId!,
-        }),
-      );
-  } catch {
-    return [];
-  }
-}
-
-export function saveOverseerBindingsDraft(
-  templateId: string,
-  bindings: OverseerBinding[],
-): void {
-  if (typeof localStorage === "undefined") {
-    return;
-  }
-
-  const payload = bindings.map((binding) => ({
-    stepKey: binding.stepKey,
-    overseerUserId: binding.overseerUserId,
-  }));
-
-  localStorage.setItem(
-    overseerDraftStorageKey(templateId),
-    JSON.stringify(payload),
   );
 }
