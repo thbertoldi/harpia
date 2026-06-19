@@ -18,8 +18,8 @@ import (
 )
 
 type Handler struct {
-	repo               *Repository
-	configValidators   *ConfigValidatorRegistry
+	repo             *Repository
+	configValidators *ConfigValidatorRegistry
 }
 
 func NewHandler(repo *Repository, configValidators *ConfigValidatorRegistry) (*Handler, error) {
@@ -314,7 +314,12 @@ func (h *Handler) CreateExecutorInstallation(ctx context.Context, req *connect.R
 	case KindIntegration:
 		status := "disconnected"
 		configJSON := json.RawMessage("{}")
-		if detail, ok := req.Msg.InitialDetail.(*executorsv1.CreateExecutorInstallationRequest_Integration); ok && detail.Integration != nil {
+		switch detail := req.Msg.InitialDetail.(type) {
+		case nil:
+		case *executorsv1.CreateExecutorInstallationRequest_Integration:
+			if detail.Integration == nil {
+				break
+			}
 			status, err = connectionStatusToDB(detail.Integration.ConnectionStatus)
 			if err != nil {
 				return nil, connect.NewError(connect.CodeInvalidArgument, err)
@@ -325,6 +330,8 @@ func (h *Handler) CreateExecutorInstallation(ctx context.Context, req *connect.R
 				}
 				configJSON = json.RawMessage(detail.Integration.ConfigJson)
 			}
+		default:
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("integration executor installation requires integration detail"))
 		}
 		if trimmed := strings.TrimSpace(string(configJSON)); trimmed != "" && trimmed != "{}" && trimmed != "null" {
 			if err := h.configValidators.Validate(sku.Key, configJSON); err != nil {
@@ -336,13 +343,20 @@ func (h *Handler) CreateExecutorInstallation(ctx context.Context, req *connect.R
 	case KindAgent:
 		manifestID := sku.Compatibility.ManifestID
 		manifestVersion := sku.Compatibility.ManifestVersion
-		if detail, ok := req.Msg.InitialDetail.(*executorsv1.CreateExecutorInstallationRequest_Agent); ok && detail.Agent != nil {
+		switch detail := req.Msg.InitialDetail.(type) {
+		case nil:
+		case *executorsv1.CreateExecutorInstallationRequest_Agent:
+			if detail.Agent == nil {
+				break
+			}
 			if detail.Agent.ManifestId != "" {
 				manifestID = detail.Agent.ManifestId
 			}
 			if detail.Agent.ManifestVersion != "" {
 				manifestVersion = detail.Agent.ManifestVersion
 			}
+		default:
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("agent executor installation requires agent detail"))
 		}
 		if manifestID == "" || manifestVersion == "" {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("agent installation requires manifest_id and manifest_version"))
@@ -360,6 +374,116 @@ func (h *Handler) CreateExecutorInstallation(ctx context.Context, req *connect.R
 
 	return connect.NewResponse(&executorsv1.CreateExecutorInstallationResponse{
 		Installation: installationToProto(created),
+	}), nil
+}
+
+func (h *Handler) UpdateExecutorInstallation(ctx context.Context, req *connect.Request[executorsv1.UpdateExecutorInstallationRequest]) (*connect.Response[executorsv1.UpdateExecutorInstallationResponse], error) {
+	tenantID, err := identity.RequireTenant(ctx, req.Msg.TenantId)
+	if err != nil {
+		return nil, err
+	}
+
+	installationID, err := uuid.Parse(req.Msg.InstallationId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	existing, err := h.repo.GetInstallationByID(ctx, tenantID, installationID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, err)
+		}
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	sku, err := h.repo.GetSKUByID(ctx, existing.ExecutorSKUID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, errors.New("executor sku not found"))
+		}
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	entitlements, err := h.repo.ListEntitlements(ctx, tenantID, &existing.ExecutorSKUID, 1, 0)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	if len(entitlements) == 0 {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("tenant is not entitled to this executor sku"))
+	}
+
+	updated := *existing
+	if strings.TrimSpace(req.Msg.DisplayName) != "" {
+		updated.DisplayName = strings.TrimSpace(req.Msg.DisplayName)
+	}
+	if req.Msg.Enabled != nil {
+		updated.Enabled = *req.Msg.Enabled
+	}
+
+	switch existing.Kind {
+	case KindIntegration:
+		switch detail := req.Msg.Detail.(type) {
+		case nil:
+		case *executorsv1.UpdateExecutorInstallationRequest_Integration:
+			if detail.Integration == nil {
+				break
+			}
+			status, err := connectionStatusToDB(detail.Integration.ConnectionStatus)
+			if err != nil {
+				return nil, connect.NewError(connect.CodeInvalidArgument, err)
+			}
+			configJSON := json.RawMessage("{}")
+			if detail.Integration.ConfigJson != "" {
+				if !json.Valid([]byte(detail.Integration.ConfigJson)) {
+					return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("integration config_json must be valid JSON"))
+				}
+				configJSON = json.RawMessage(detail.Integration.ConfigJson)
+			}
+			if trimmed := strings.TrimSpace(string(configJSON)); trimmed != "" && trimmed != "{}" && trimmed != "null" {
+				if err := h.configValidators.Validate(sku.Key, configJSON); err != nil {
+					return nil, connect.NewError(connect.CodeInvalidArgument, err)
+				}
+			}
+			updated.ConnectionStatus = &status
+			updated.ConfigJSON = configJSON
+			updated.ManifestID = nil
+			updated.ManifestVersion = nil
+		default:
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("integration executor installation requires integration detail"))
+		}
+	case KindAgent:
+		switch detail := req.Msg.Detail.(type) {
+		case nil:
+		case *executorsv1.UpdateExecutorInstallationRequest_Agent:
+			if detail.Agent == nil {
+				break
+			}
+			manifestID := strings.TrimSpace(detail.Agent.ManifestId)
+			manifestVersion := strings.TrimSpace(detail.Agent.ManifestVersion)
+			if manifestID == "" || manifestVersion == "" {
+				return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("agent installation requires manifest_id and manifest_version"))
+			}
+			updated.ManifestID = &manifestID
+			updated.ManifestVersion = &manifestVersion
+			updated.ConnectionStatus = nil
+			updated.ConfigJSON = json.RawMessage("{}")
+		default:
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("agent executor installation requires agent detail"))
+		}
+	default:
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("unsupported executor kind %q", existing.Kind))
+	}
+
+	saved, err := h.repo.UpdateInstallation(ctx, &updated)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, err)
+		}
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	return connect.NewResponse(&executorsv1.UpdateExecutorInstallationResponse{
+		Installation: installationToProto(saved),
 	}), nil
 }
 
