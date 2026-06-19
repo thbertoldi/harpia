@@ -1,0 +1,137 @@
+syntax = "proto3";
+
+package harpia.budget.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// BudgetPolicyService owns tenant LLM quota checks and the append-only usage
+// ledger. Tenant admins may manage quotas through the public API; runtime write
+// paths require the internal service transport.
+service BudgetPolicyService {
+  rpc SetTenantQuota(SetTenantQuotaRequest) returns (SetTenantQuotaResponse);
+  rpc GetQuota(GetQuotaRequest) returns (GetQuotaResponse);
+
+  // Runtime-only: checks quota and records an estimated spend hold before an
+  // LLM invocation. Implementations return ResourceExhausted for hard-cap
+  // breaches.
+  rpc ReserveBudget(ReserveBudgetRequest) returns (ReserveBudgetResponse);
+
+  // Runtime-only: appends an LLM usage event and updates usage summaries.
+  rpc RecordUsage(RecordUsageRequest) returns (RecordUsageResponse);
+
+  // Runtime-only reconciliation hook for scheduled aggregation jobs.
+  rpc RebuildUsageSummary(RebuildUsageSummaryRequest) returns (RebuildUsageSummaryResponse);
+}
+
+enum QuotaPeriod {
+  QUOTA_PERIOD_UNSPECIFIED = 0;
+  QUOTA_PERIOD_DAILY = 1;
+  QUOTA_PERIOD_MONTHLY = 2;
+}
+
+message Money {
+  string currency = 1;
+  int64 amount_micros = 2;
+}
+
+message TenantQuota {
+  string tenant_id = 1;
+  // Empty provider means tenant-wide quota across all LLM providers.
+  string provider = 2;
+  QuotaPeriod period = 3;
+  Money budget = 4;
+  bool hard_cap = 5;
+  // Fraction in (0, 1]; defaults to 0.8 when omitted.
+  double warning_threshold = 6;
+  string updated_at = 7;
+}
+
+message SetTenantQuotaRequest {
+  string tenant_id = 1;
+  string provider = 2;
+  QuotaPeriod period = 3;
+  Money budget = 4;
+  bool hard_cap = 5;
+  double warning_threshold = 6;
+}
+
+message SetTenantQuotaResponse {
+  TenantQuota quota = 1;
+}
+
+message GetQuotaRequest {
+  string tenant_id = 1;
+  string provider = 2;
+}
+
+message ProviderQuota {
+  string tenant_id = 1;
+  string provider = 2;
+  QuotaPeriod period = 3;
+  Money budget = 4;
+  Money used = 5;
+  Money reserved = 6;
+  Money remaining = 7;
+  int64 input_tokens = 8;
+  int64 output_tokens = 9;
+  int64 event_count = 10;
+  bool hard_cap = 11;
+  bool warning = 12;
+  google.protobuf.Timestamp period_start = 13;
+  google.protobuf.Timestamp period_end = 14;
+}
+
+message GetQuotaResponse {
+  repeated ProviderQuota quotas = 1;
+}
+
+message ReserveBudgetRequest {
+  string tenant_id = 1;
+  string provider = 2;
+  string task_id = 3;
+  string subtask_id = 4;
+  string plan_execution_id = 5;
+  string step_execution_id = 6;
+  string agent_type = 7;
+  Money estimated_cost = 8;
+  string idempotency_key = 9;
+  google.protobuf.Timestamp expires_at = 10;
+}
+
+message ReserveBudgetResponse {
+  string reservation_id = 1;
+  Money remaining = 2;
+  bool quota_warning = 3;
+  google.protobuf.Timestamp expires_at = 4;
+}
+
+message RecordUsageRequest {
+  string tenant_id = 1;
+  string reservation_id = 2;
+  string idempotency_key = 3;
+  string task_id = 4;
+  string subtask_id = 5;
+  string plan_execution_id = 6;
+  string step_execution_id = 7;
+  string agent_type = 8;
+  string provider = 9;
+  string model = 10;
+  int64 input_tokens = 11;
+  int64 output_tokens = 12;
+  Money cost = 13;
+  google.protobuf.Timestamp occurred_at = 14;
+}
+
+message RecordUsageResponse {
+  string usage_event_id = 1;
+  Money remaining = 2;
+  bool quota_warning = 3;
+}
+
+message RebuildUsageSummaryRequest {
+  string tenant_id = 1;
+  google.protobuf.Timestamp from = 2;
+  google.protobuf.Timestamp to = 3;
+}
+
+message RebuildUsageSummaryResponse {}
