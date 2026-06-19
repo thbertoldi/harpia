@@ -121,7 +121,7 @@ func TestHandlerExecuteSuccessWithPlanTemplateTypeKey(t *testing.T) {
 		OutputArtifactTypeKey: artifacts.TypeKeyNewsList,
 		InputArtifacts: []runtime.InputArtifactRef{{
 			ArtifactTypeKey: artifacts.TypeKeyDateRange,
-			LiteralJSON:  `{"startDate":"2026-01-01","endDate":"2026-01-07"}`,
+			LiteralJSON:     `{"startDate":"2026-01-01","endDate":"2026-01-07"}`,
 		}},
 		Installation: runtime.InstallationSnapshot{
 			ExecutorSKUKey: executors.SKURSSNewsFeed,
@@ -145,7 +145,7 @@ func TestHandlerExecuteInvalidConfig(t *testing.T) {
 		TenantID: uuid.MustParse("22222222-2222-2222-2222-222222222222"),
 		InputArtifacts: []runtime.InputArtifactRef{{
 			ArtifactTypeKey: artifacts.TypeKeyDateRange,
-			LiteralJSON:  `{"startDate":"2026-01-01","endDate":"2026-01-07"}`,
+			LiteralJSON:     `{"startDate":"2026-01-01","endDate":"2026-01-07"}`,
 		}},
 		Installation: runtime.InstallationSnapshot{
 			ConfigJSON: json.RawMessage(`{}`),
@@ -165,7 +165,7 @@ func TestHandlerExecuteDeadFeedReturnsRetryableError(t *testing.T) {
 		TenantID: uuid.MustParse("22222222-2222-2222-2222-222222222222"),
 		InputArtifacts: []runtime.InputArtifactRef{{
 			ArtifactTypeKey: artifacts.TypeKeyDateRange,
-			LiteralJSON:  `{"startDate":"2026-01-01","endDate":"2026-01-07"}`,
+			LiteralJSON:     `{"startDate":"2026-01-01","endDate":"2026-01-07"}`,
 		}},
 		Installation: runtime.InstallationSnapshot{
 			ConfigJSON: json.RawMessage(`{"feeds":["https://example.com/rss"]}`),

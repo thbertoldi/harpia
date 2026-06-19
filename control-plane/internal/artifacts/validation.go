@@ -14,11 +14,11 @@ import (
 var ErrInvalidPayload = errors.New("invalid artifact payload")
 
 const (
-	TypeKeyDateRange            = "harpia.artifacts.v1.DateRange"
-	TypeKeyNewsList             = "harpia.artifacts.v1.NewsList"
-	TypeKeyTextDraft            = "harpia.artifacts.v1.TextDraft"
-	TypeKeyLinkedInPostDraft    = "harpia.artifacts.v1.LinkedInPostDraft"
-	TypeKeyPublishConfirmation  = "harpia.artifacts.v1.PublishConfirmation"
+	TypeKeyDateRange           = "harpia.artifacts.v1.DateRange"
+	TypeKeyNewsList            = "harpia.artifacts.v1.NewsList"
+	TypeKeyTextDraft           = "harpia.artifacts.v1.TextDraft"
+	TypeKeyLinkedInPostDraft   = "harpia.artifacts.v1.LinkedInPostDraft"
+	TypeKeyPublishConfirmation = "harpia.artifacts.v1.PublishConfirmation"
 )
 
 func ValidatePayload(typeKey string, payload []byte) error {

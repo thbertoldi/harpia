@@ -11,7 +11,7 @@
     Zap,
   } from "lucide-svelte";
   import { resolve } from "$app/paths";
-  import HarpyHeading from "$lib/components/HarpyHeading.svelte";
+  import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
   import { locale, translate } from "$lib/i18n";
   import { getTenant } from "$lib/auth";
   import {
@@ -39,6 +39,21 @@
     openai: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"],
     ollama: ["llama3:8b", "llama3:70b", "mistral:7b"],
   };
+
+  const SETTINGS_SECTIONS = [
+    { key: "settings.nav.tenant", href: "/settings#tenant", icon: Building2 },
+    {
+      key: "settings.nav.llmProviders",
+      href: "/settings#llm-providers",
+      icon: Key,
+    },
+    { key: "settings.nav.quotas", href: "/settings#quotas", icon: Zap },
+    {
+      key: "settings.nav.billing",
+      href: "/settings#billing",
+      icon: CreditCard,
+    },
+  ] as const;
 
   // ---------------------------------------------------------------------------
   // State
@@ -307,7 +322,7 @@
     class="mb-8 flex flex-wrap gap-2"
     aria-label={translate("settings.nav.ariaLabel", $locale)}
   >
-    {#each [{ key: "settings.nav.tenant", href: "#tenant", icon: Building2 }, { key: "settings.nav.llmProviders", href: "#llm-providers", icon: Key }, { key: "settings.nav.quotas", href: "#quotas", icon: Zap }, { key: "settings.nav.billing", href: "#billing", icon: CreditCard }] as section (section.href)}
+    {#each SETTINGS_SECTIONS as section (section.href)}
       <a
         href={resolve(section.href)}
         class="flex items-center gap-1.5 rounded-md border border-plumage px-3 py-1.5 font-body text-sm text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
@@ -354,11 +369,13 @@
           <!-- Name field (read-only) -->
           <div>
             <label
+              for="tenant-name"
               class="mb-1 block font-mono text-xs tracking-wider text-crown-ash-dark uppercase"
             >
               {translate("settings.tenant.name", $locale)}
             </label>
             <input
+              id="tenant-name"
               type="text"
               value={tenant?.name ?? ""}
               readonly
@@ -370,11 +387,13 @@
           <!-- Slug field (read-only) -->
           <div>
             <label
+              for="tenant-slug"
               class="mb-1 block font-mono text-xs tracking-wider text-crown-ash-dark uppercase"
             >
               {translate("settings.tenant.slug", $locale)}
             </label>
             <input
+              id="tenant-slug"
               type="text"
               value={tenant?.id ?? ""}
               readonly
@@ -706,11 +725,13 @@
           <!-- Monthly budget (disabled) -->
           <div>
             <label
+              for="quota-monthly-budget"
               class="mb-1.5 block font-mono text-xs tracking-wider text-crown-ash-dark uppercase"
             >
               {translate("settings.quotas.monthlyBudget", $locale)}
             </label>
             <input
+              id="quota-monthly-budget"
               type="number"
               disabled
               placeholder="—"
@@ -721,11 +742,15 @@
           <!-- Hard cap toggle (disabled) -->
           <div class="flex items-center gap-3">
             <input
+              id="quota-hard-cap"
               type="checkbox"
               disabled
               class="cursor-not-allowed opacity-50"
             />
-            <label class="font-body text-sm text-crown-ash opacity-50">
+            <label
+              for="quota-hard-cap"
+              class="font-body text-sm text-crown-ash opacity-50"
+            >
               {translate("settings.quotas.hardCap", $locale)}
             </label>
           </div>

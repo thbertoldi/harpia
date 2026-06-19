@@ -230,7 +230,7 @@ func TestValidateSlotBindingsRunnableAcceptsReadyBindings(t *testing.T) {
 			},
 		},
 		skus: map[uuid.UUID]*executors.ExecutorSKU{
-			skuID: {ID: skuID, Key: "rss-news-feed", Kind: executors.KindIntegration},
+			skuID:      {ID: skuID, Key: "rss-news-feed", Kind: executors.KindIntegration},
 			agentSKUID: {ID: agentSKUID, Key: "linkedin-voice-senior", Kind: executors.KindAgent},
 		},
 		entitledSKUs: map[uuid.UUID]bool{skuID: true, agentSKUID: true},

@@ -45,8 +45,8 @@ func mapIntegrationRequest(tenantID uuid.UUID, input ExecutorActivityInput) exec
 	for _, ref := range input.InputArtifacts {
 		inputArtifacts = append(inputArtifacts, executors.InputArtifactRef{
 			ArtifactTypeKey: ref.ArtifactTypeKey,
-			ArtifactID:   ref.ArtifactID,
-			LiteralJSON:  ref.LiteralJSON,
+			ArtifactID:      ref.ArtifactID,
+			LiteralJSON:     ref.LiteralJSON,
 		})
 	}
 
@@ -56,10 +56,10 @@ func mapIntegrationRequest(tenantID uuid.UUID, input ExecutorActivityInput) exec
 	}
 
 	return executors.IntegrationExecutionRequest{
-		TenantID:             tenantID,
-		StepExecutionID:      input.StepExecutionID,
-		PlanStepKey:          input.PlanStepKey,
-		InputArtifacts:       inputArtifacts,
+		TenantID:              tenantID,
+		StepExecutionID:       input.StepExecutionID,
+		PlanStepKey:           input.PlanStepKey,
+		InputArtifacts:        inputArtifacts,
 		OutputArtifactTypeKey: input.OutputArtifactTypeKey,
 		Installation: executors.InstallationSnapshot{
 			ID:             input.ExecutorInstallationSnapshot.ID,

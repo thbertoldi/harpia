@@ -27,7 +27,7 @@ func TestRunIntegrationActivityMapsRetryableError(t *testing.T) {
 		StepExecutionID: "step-fetch-news",
 		InputArtifacts: []workflow.ArtifactRef{{
 			ArtifactTypeKey: artifacts.TypeKeyDateRange,
-			LiteralJSON:  `{"startDate":"2026-01-01","endDate":"2026-01-07"}`,
+			LiteralJSON:     `{"startDate":"2026-01-01","endDate":"2026-01-07"}`,
 		}},
 		ExecutorInstallationSnapshot: workflow.ExecutorInstallationSnapshot{
 			ExecutorSKUKey: executors.SKURSSNewsFeed,
