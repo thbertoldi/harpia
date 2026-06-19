@@ -9,7 +9,6 @@
     publishModeLabelKey,
     validateBehaviorPolicies,
     type BehaviorPoliciesFormValues,
-    type PlanConfigurationSource,
   } from "$lib/plans/behavior-policies";
   import {
     ElicitationTimeoutBehavior,
@@ -23,14 +22,12 @@
     saving = false,
     saveError = null,
     saveNotice = null,
-    dataSource = "api",
     onSave,
   }: {
     values: BehaviorPoliciesFormValues;
     saving?: boolean;
     saveError?: string | null;
     saveNotice?: string | null;
-    dataSource?: PlanConfigurationSource;
     onSave: () => void | Promise<void>;
   } = $props();
 
@@ -215,12 +212,6 @@
 
   {#if saveNotice}
     <p class="font-body text-sm text-green-400">{saveNotice}</p>
-  {/if}
-
-  {#if dataSource === "mock"}
-    <p class="font-mono text-xs text-talon-gold">
-      {translate("plans.policies.mockFallback", $locale)}
-    </p>
   {/if}
 
   <div class="flex justify-end">

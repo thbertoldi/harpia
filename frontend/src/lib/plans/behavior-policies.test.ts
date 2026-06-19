@@ -1,36 +1,39 @@
 import { create } from "@bufbuild/protobuf";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  clearMockPlanConfigurations,
   DEFAULT_BEHAVIOR_POLICIES,
   elicitationBehaviorLabelKey,
   loadBehaviorPoliciesForTemplate,
-  MOCK_PLAN_CONFIGURATION_ID,
   policiesFromProto,
   policiesToProto,
   publishModeLabelKey,
   saveBehaviorPoliciesForTemplate,
   validateBehaviorPolicies,
 } from "$lib/plans/behavior-policies";
-import { WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_ID } from "$lib/plans/plan-template";
 import {
   ElicitationTimeoutBehavior,
+  ExecutorKind,
+  OverseerBindingSchema,
   PlanBehaviorPoliciesSchema,
   PlanConfigurationSchema,
   PlanConfigurationStatus,
+  SlotBindingSchema,
   PublishApprovalMode,
+  type PlanConfiguration,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
+import {
+  mockWeeklyNewsletterLinkedInTemplate,
+  WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_ID,
+} from "$lib/plans/plan-template";
 
 const {
   listPlanConfigurations,
   createPlanConfiguration,
   updatePlanConfiguration,
-  allowsMockFallback,
 } = vi.hoisted(() => ({
   listPlanConfigurations: vi.fn(),
   createPlanConfiguration: vi.fn(),
   updatePlanConfiguration: vi.fn(),
-  allowsMockFallback: vi.fn(() => false),
 }));
 
 vi.mock("$lib/rpc", () => ({
@@ -45,17 +48,20 @@ vi.mock("$lib/auth", () => ({
   requireTenantId: () => "dev",
 }));
 
-vi.mock("$lib/dev-mocks", () => ({
-  allowsMockFallback,
-}));
+const CONFIGURATION_ID = "c1000000-0000-4000-8000-000000000001";
+
+function listConfigurations(configurations: PlanConfiguration[]) {
+  return (async function* () {
+    yield { planConfigurations: configurations };
+  })();
+}
 
 describe("behavior policies", () => {
   beforeEach(() => {
     listPlanConfigurations.mockReset();
     createPlanConfiguration.mockReset();
     updatePlanConfiguration.mockReset();
-    allowsMockFallback.mockReturnValue(false);
-    clearMockPlanConfigurations();
+    listPlanConfigurations.mockReturnValue(listConfigurations([]));
   });
 
   it("provides sensible defaults", () => {
@@ -120,9 +126,9 @@ describe("behavior policies", () => {
 
   it("loads policies from the API when a configuration exists", async () => {
     const configuration = create(PlanConfigurationSchema, {
-      id: MOCK_PLAN_CONFIGURATION_ID,
+      id: CONFIGURATION_ID,
       tenantId: "dev",
-      workspaceId: "dev",
+      workspaceId: "",
       planTemplateId: WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_ID,
       planTemplateVersion: 1,
       status: PlanConfigurationStatus.DRAFT,
@@ -135,22 +141,18 @@ describe("behavior policies", () => {
       updatedAt: "2026-01-01T00:00:00Z",
     });
 
-    listPlanConfigurations.mockReturnValue(
-      (async function* () {
-        yield { planConfigurations: [configuration] };
-      })(),
-    );
+    listPlanConfigurations.mockReturnValue(listConfigurations([configuration]));
 
     const result = await loadBehaviorPoliciesForTemplate(
       WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_ID,
     );
 
     expect(result.source).toBe("api");
-    expect(result.configuration?.id).toBe(MOCK_PLAN_CONFIGURATION_ID);
+    expect(result.configuration?.id).toBe(CONFIGURATION_ID);
     expect(result.policies.elicitationTimeoutHours).toBe(6);
   });
 
-  it("rejects when listing configurations fails without mock fallback", async () => {
+  it("rejects when listing configurations fails", async () => {
     listPlanConfigurations.mockImplementation(() => {
       throw new Error("network error");
     });
@@ -160,29 +162,14 @@ describe("behavior policies", () => {
     ).rejects.toThrow("network error");
   });
 
-  it("falls back to mock storage when listing configurations fails with mock fallback enabled", async () => {
-    allowsMockFallback.mockReturnValue(true);
-    listPlanConfigurations.mockImplementation(() => {
-      throw new Error("network error");
-    });
-
-    const result = await loadBehaviorPoliciesForTemplate(
-      WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_ID,
-    );
-
-    expect(result.source).toBe("mock");
-    expect(result.configuration).toBeNull();
-    expect(result.policies).toEqual(DEFAULT_BEHAVIOR_POLICIES);
-    expect(result.error).toContain("network error");
-  });
-
   it("creates a configuration through the API", async () => {
+    const template = mockWeeklyNewsletterLinkedInTemplate();
     const saved = create(PlanConfigurationSchema, {
-      id: MOCK_PLAN_CONFIGURATION_ID,
+      id: CONFIGURATION_ID,
       tenantId: "dev",
-      workspaceId: "dev",
-      planTemplateId: WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_ID,
-      planTemplateVersion: 1,
+      workspaceId: "",
+      planTemplateId: template.id,
+      planTemplateVersion: template.version,
       status: PlanConfigurationStatus.DRAFT,
       behaviorPolicies: policiesToProto(DEFAULT_BEHAVIOR_POLICIES),
       createdAt: "2026-01-01T00:00:00Z",
@@ -192,24 +179,45 @@ describe("behavior policies", () => {
     createPlanConfiguration.mockResolvedValue({ planConfiguration: saved });
 
     const result = await saveBehaviorPoliciesForTemplate(
-      WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_ID,
-      1,
+      template,
       DEFAULT_BEHAVIOR_POLICIES,
     );
 
-    expect(createPlanConfiguration).toHaveBeenCalled();
+    expect(createPlanConfiguration).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: "dev",
+        workspaceId: "",
+        planTemplateId: template.id,
+        status: PlanConfigurationStatus.DRAFT,
+      }),
+    );
     expect(result.source).toBe("api");
-    expect(result.configuration.id).toBe(MOCK_PLAN_CONFIGURATION_ID);
+    expect(result.configuration.id).toBe(CONFIGURATION_ID);
   });
 
-  it("updates an existing configuration through the API", async () => {
+  it("updates an existing configuration through the API without dropping other fields", async () => {
+    const template = mockWeeklyNewsletterLinkedInTemplate();
     const existing = create(PlanConfigurationSchema, {
-      id: MOCK_PLAN_CONFIGURATION_ID,
+      id: CONFIGURATION_ID,
       tenantId: "dev",
-      workspaceId: "dev",
-      planTemplateId: WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_ID,
-      planTemplateVersion: 1,
-      status: PlanConfigurationStatus.DRAFT,
+      workspaceId: "",
+      planTemplateId: template.id,
+      planTemplateVersion: template.version,
+      status: PlanConfigurationStatus.RUNNABLE,
+      slotBindings: [
+        create(SlotBindingSchema, {
+          stepKey: "write-draft",
+          executorKind: ExecutorKind.AGENT,
+          executorSkuId: "sku-writer",
+          executorInstallationId: "install-writer",
+        }),
+      ],
+      overseerBindings: [
+        create(OverseerBindingSchema, {
+          stepKey: "write-draft",
+          overseerUserId: "dev-overseer",
+        }),
+      ],
       behaviorPolicies: policiesToProto(DEFAULT_BEHAVIOR_POLICIES),
       createdAt: "2026-01-01T00:00:00Z",
       updatedAt: "2026-01-01T00:00:00Z",
@@ -228,56 +236,29 @@ describe("behavior policies", () => {
     });
 
     const result = await saveBehaviorPoliciesForTemplate(
-      WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_ID,
-      1,
+      template,
       updatedValues,
       existing,
     );
 
     expect(updatePlanConfiguration).toHaveBeenCalledWith(
       expect.objectContaining({
-        planConfigurationId: MOCK_PLAN_CONFIGURATION_ID,
+        tenantId: "dev",
+        planConfigurationId: CONFIGURATION_ID,
+        status: PlanConfigurationStatus.RUNNABLE,
+        slotBindings: existing.slotBindings,
+        overseerBindings: existing.overseerBindings,
       }),
     );
     expect(result.source).toBe("api");
   });
 
-  it("rejects when the API save fails without mock fallback", async () => {
+  it("rejects when the API save fails", async () => {
+    const template = mockWeeklyNewsletterLinkedInTemplate();
     createPlanConfiguration.mockRejectedValue(new Error("network error"));
 
     await expect(
-      saveBehaviorPoliciesForTemplate(
-        WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_ID,
-        1,
-        DEFAULT_BEHAVIOR_POLICIES,
-      ),
+      saveBehaviorPoliciesForTemplate(template, DEFAULT_BEHAVIOR_POLICIES),
     ).rejects.toThrow("network error");
-  });
-
-  it("persists to mock storage when the API save fails with mock fallback enabled", async () => {
-    allowsMockFallback.mockReturnValue(true);
-    createPlanConfiguration.mockRejectedValue(new Error("network error"));
-
-    const result = await saveBehaviorPoliciesForTemplate(
-      WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_ID,
-      1,
-      DEFAULT_BEHAVIOR_POLICIES,
-    );
-
-    expect(result.source).toBe("mock");
-    expect(result.configuration.planTemplateId).toBe(
-      WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_ID,
-    );
-    expect(result.error).toContain("network error");
-
-    listPlanConfigurations.mockImplementation(() => {
-      throw new Error("still offline");
-    });
-    const loaded = await loadBehaviorPoliciesForTemplate(
-      WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_ID,
-    );
-
-    expect(loaded.configuration?.id).toBe(MOCK_PLAN_CONFIGURATION_ID);
-    expect(loaded.policies).toEqual(DEFAULT_BEHAVIOR_POLICIES);
   });
 });

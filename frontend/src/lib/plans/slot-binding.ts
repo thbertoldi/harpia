@@ -1,5 +1,4 @@
 import { create } from "@bufbuild/protobuf";
-import { toUserMessage } from "$lib/connect-errors";
 import type { Locale } from "$lib/i18n";
 import {
   ExecutorKind as CatalogExecutorKind,
@@ -9,7 +8,6 @@ import {
 } from "$lib/gen/harpia/executors/v1/executors_pb";
 import {
   ExecutorKind as PlanExecutorKind,
-  PlanConfigurationSchema,
   PlanConfigurationStatus,
   SlotBindingSchema,
   type PlanConfiguration,
@@ -17,16 +15,18 @@ import {
   type PlanTemplate,
   type SlotBinding,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
-import { mockExecutorContext } from "$lib/mocks/plan-catalog";
-import { getSession, getTenant } from "$lib/auth";
-import { allowsMockFallback } from "$lib/dev-mocks";
-import { executorClient, planClient } from "$lib/rpc";
+import { requireTenantId } from "$lib/auth";
+import { executorClient } from "$lib/rpc";
 import {
   type ExecutorContext,
   isInstallationReady,
   resolveSkuLockState,
   type SkuLockReason,
 } from "$lib/plans/plan-catalog";
+import {
+  loadPlanConfigurationForTemplate,
+  savePlanConfigurationRecord,
+} from "$lib/plans/plan-configuration";
 import { loadPlanTemplate } from "$lib/plans/plan-template";
 
 export type SlotBindingSource = "api" | "mock";
@@ -71,16 +71,6 @@ export interface SaveConfigurationResult {
   error?: string;
 }
 
-const mockConfigurations = new Map<string, PlanConfiguration>();
-
-function resolveTenantId(): string | undefined {
-  return getTenant()?.id ?? getSession()?.tenant?.id;
-}
-
-function mockConfigurationKey(tenantId: string, templateId: string): string {
-  return `${tenantId}:${templateId}`;
-}
-
 export function planExecutorKindToCatalogKind(
   kind: PlanExecutorKind,
 ): CatalogExecutorKind {
@@ -123,6 +113,11 @@ export function isInstallationCompatibleWithStep(
   skus: ExecutorSKU[],
   entitlements: ExecutorEntitlement[],
 ): boolean {
+  const requirement = step.executorRequirement;
+  if (!requirement) {
+    return false;
+  }
+
   if (!installation.enabled) {
     return false;
   }
@@ -132,12 +127,7 @@ export function isInstallationCompatibleWithStep(
     return false;
   }
 
-  if (
-    !executorKindsMatch(
-      step.executorRequirement.executorKind,
-      installation.kind,
-    )
-  ) {
+  if (!executorKindsMatch(requirement.executorKind, installation.kind)) {
     return false;
   }
 
@@ -148,10 +138,10 @@ export function isInstallationCompatibleWithStep(
     return false;
   }
 
-  const connectionType = step.executorRequirement.connectionType.trim();
+  const connectionType = requirement.connectionType.trim();
   if (
     connectionType &&
-    step.executorRequirement.executorKind === PlanExecutorKind.INTEGRATION &&
+    requirement.executorKind === PlanExecutorKind.INTEGRATION &&
     sku.kind !== CatalogExecutorKind.INTEGRATION
   ) {
     return false;
@@ -257,7 +247,8 @@ export function buildSlotBinding(
 ): SlotBinding {
   return create(SlotBindingSchema, {
     stepKey: step.key,
-    executorKind: step.executorRequirement.executorKind,
+    executorKind:
+      step.executorRequirement?.executorKind ?? PlanExecutorKind.UNSPECIFIED,
     executorSkuId: sku.id,
     executorInstallationId: installation.id,
   });
@@ -446,96 +437,20 @@ async function fetchExecutorContextFromApi(
   return { skus, entitlements, installations };
 }
 
-async function fetchConfigurationFromApi(
-  tenantId: string,
-  templateId: string,
-): Promise<PlanConfiguration | null> {
-  for await (const page of planClient.listPlanConfigurations({
-    tenantId,
-    pageSize: 100,
-    pageToken: "",
-  })) {
-    const match = page.planConfigurations.find(
-      (configuration) => configuration.planTemplateId === templateId,
-    );
-    if (match) {
-      return match;
-    }
-  }
-
-  return null;
-}
-
-function readMockConfiguration(
-  tenantId: string,
-  templateId: string,
-): PlanConfiguration | null {
-  return (
-    mockConfigurations.get(mockConfigurationKey(tenantId, templateId)) ?? null
-  );
-}
-
-function writeMockConfiguration(
-  tenantId: string,
-  configuration: PlanConfiguration,
-): PlanConfiguration {
-  mockConfigurations.set(
-    mockConfigurationKey(tenantId, configuration.planTemplateId),
-    configuration,
-  );
-  return configuration;
-}
-
 /** Loads template, executor context, and any saved configuration for the configure UI. */
 export async function loadSlotBindingPageData(
   templateIdOrKey: string,
   locale: Locale = "en",
 ): Promise<SlotBindingPageData> {
   const templateResult = await loadPlanTemplate(templateIdOrKey, locale);
-  const tenantId = resolveTenantId() ?? "dev";
-  let source: SlotBindingSource = templateResult.source;
-  let error = templateResult.error;
-  let context: ExecutorContext;
+  const tenantId = requireTenantId();
+  const source: SlotBindingSource = templateResult.source;
+  const error = templateResult.error;
 
-  try {
-    context = await fetchExecutorContextFromApi(tenantId);
-  } catch (err) {
-    if (allowsMockFallback()) {
-      context = mockExecutorContext(tenantId, locale);
-      if (source === "api") {
-        source = "mock";
-      }
-      error = error ?? toUserMessage(err);
-    } else {
-      throw err;
-    }
-  }
-
-  let configuration: PlanConfiguration | null = null;
-
-  try {
-    configuration = await fetchConfigurationFromApi(
-      tenantId,
-      templateResult.template.id,
-    );
-  } catch (err) {
-    if (allowsMockFallback()) {
-      configuration = readMockConfiguration(
-        tenantId,
-        templateResult.template.id,
-      );
-      if (source === "api") {
-        source = "mock";
-      }
-      error = error ?? toUserMessage(err);
-    } else {
-      throw err;
-    }
-  }
-
-  if (!configuration && allowsMockFallback()) {
-    configuration = readMockConfiguration(tenantId, templateResult.template.id);
-  }
+  const [context, configuration] = await Promise.all([
+    fetchExecutorContextFromApi(tenantId),
+    loadPlanConfigurationForTemplate(templateResult.template.id, tenantId),
+  ]);
 
   return {
     template: templateResult.template,
@@ -546,12 +461,13 @@ export async function loadSlotBindingPageData(
   };
 }
 
-/** Persists slot bindings as DRAFT or RUNNABLE; mock fallback when API is unavailable. */
+/** Persists slot bindings as DRAFT or RUNNABLE through the backend PlanConfiguration API. */
 export async function savePlanConfiguration(
   template: PlanTemplate,
   selections: Record<string, string>,
   context: ExecutorContext,
   status: PlanConfigurationStatus,
+  existingConfiguration?: PlanConfiguration | null,
 ): Promise<SaveConfigurationResult> {
   const slotBindings = selectionsToSlotBindings(template, selections, context);
   const validation = validateSlotBindings(template, slotBindings, context);
@@ -563,63 +479,16 @@ export async function savePlanConfiguration(
     throw new Error("All plan steps must be bound to ready installations.");
   }
 
-  const tenantId = resolveTenantId() ?? "dev";
-  const existing = readMockConfiguration(tenantId, template.id);
-  const now = new Date().toISOString();
-
-  const payload = {
-    tenantId,
-    workspaceId: tenantId,
-    planTemplateId: template.id,
-    planTemplateVersion: template.version,
+  const configuration = await savePlanConfigurationRecord({
+    template,
+    existingConfiguration,
     status,
     slotBindings,
+  });
+
+  return {
+    configuration,
+    source: "api",
+    validation,
   };
-
-  try {
-    const response = existing?.id
-      ? await planClient.updatePlanConfiguration({
-          planConfigurationId: existing.id,
-          ...payload,
-        })
-      : await planClient.createPlanConfiguration(payload);
-
-    const configuration = response.planConfiguration;
-    if (configuration) {
-      writeMockConfiguration(tenantId, configuration);
-    }
-
-    return {
-      configuration: configuration!,
-      source: "api",
-      validation,
-    };
-  } catch (err) {
-    if (!allowsMockFallback()) {
-      throw err;
-    }
-
-    const configuration = create(PlanConfigurationSchema, {
-      id: existing?.id ?? `mock-config-${template.id}`,
-      tenantId,
-      workspaceId: tenantId,
-      planTemplateId: template.id,
-      planTemplateVersion: template.version,
-      status,
-      seedArtifacts: existing?.seedArtifacts ?? [],
-      slotBindings,
-      overseerBindings: existing?.overseerBindings ?? [],
-      createdAt: existing?.createdAt ?? now,
-      updatedAt: now,
-    });
-
-    writeMockConfiguration(tenantId, configuration);
-
-    return {
-      configuration,
-      source: "mock",
-      validation,
-      error: toUserMessage(err),
-    };
-  }
 }

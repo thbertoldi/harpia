@@ -1,14 +1,18 @@
 import { create } from "@bufbuild/protobuf";
 import { describe, expect, it } from "vitest";
 import {
-  ExecutorKind,
+  ExecutorKind as CatalogExecutorKind,
   ExecutorSKUSchema,
   ListPriceSchema,
 } from "$lib/gen/harpia/executors/v1/executors_pb";
 import {
+  ExecutorKind as PlanExecutorKind,
   ElicitationTimeoutBehavior,
+  OverseerBindingSchema,
   PlanBehaviorPoliciesSchema,
+  PlanConfigurationSchema,
   PublishApprovalMode,
+  SlotBindingSchema,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
 import {
   buildConfigCostSummary,
@@ -17,14 +21,64 @@ import {
   resolveListPrice,
   sumLineItemCosts,
 } from "$lib/plans/config-summary";
-import { getPlanConfigDraft } from "$lib/plans/plan-config-draft";
+import { planConfigDraftFromConfiguration } from "$lib/plans/plan-config-draft";
 import {
   mockExecutorContext,
+  SKU_IDS,
   WEEKLY_NEWSLETTER_TEMPLATE,
 } from "$lib/mocks/plan-catalog";
 
 describe("config summary", () => {
-  const draft = getPlanConfigDraft(WEEKLY_NEWSLETTER_TEMPLATE.id);
+  const draft = planConfigDraftFromConfiguration(
+    create(PlanConfigurationSchema, {
+      id: "config-weekly-newsletter",
+      tenantId: "dev",
+      planTemplateId: WEEKLY_NEWSLETTER_TEMPLATE.id,
+      planTemplateVersion: WEEKLY_NEWSLETTER_TEMPLATE.version,
+      slotBindings: [
+        create(SlotBindingSchema, {
+          stepKey: "fetch-news",
+          executorKind: PlanExecutorKind.INTEGRATION,
+          executorSkuId: SKU_IDS.rssNewsFeed,
+          executorInstallationId: "inst-rss",
+        }),
+        create(SlotBindingSchema, {
+          stepKey: "write-draft",
+          executorKind: PlanExecutorKind.AGENT,
+          executorSkuId: SKU_IDS.newsletterWriter,
+          executorInstallationId: "inst-writer",
+        }),
+        create(SlotBindingSchema, {
+          stepKey: "adapt-for-linkedin",
+          executorKind: PlanExecutorKind.AGENT,
+          executorSkuId: SKU_IDS.linkedinVoice,
+          executorInstallationId: "inst-writer",
+        }),
+        create(SlotBindingSchema, {
+          stepKey: "publish-linkedin",
+          executorKind: PlanExecutorKind.INTEGRATION,
+          executorSkuId: SKU_IDS.linkedinPublish,
+          executorInstallationId: "inst-linkedin",
+        }),
+      ],
+      overseerBindings: [
+        create(OverseerBindingSchema, {
+          stepKey: "write-draft",
+          overseerUserId: "dev-overseer",
+        }),
+        create(OverseerBindingSchema, {
+          stepKey: "adapt-for-linkedin",
+          overseerUserId: "dev-overseer",
+        }),
+      ],
+      behaviorPolicies: create(PlanBehaviorPoliciesSchema, {
+        elicitationTimeoutBehavior:
+          ElicitationTimeoutBehavior.PAUSE_UNTIL_ANSWERED,
+        elicitationTimeoutHours: 48,
+        publishApprovalMode: PublishApprovalMode.REQUIRE_APPROVAL,
+      }),
+    }),
+  );
   const skus = mockExecutorContext().skus;
 
   it("resolves list price from SKU metadata with mock fallback", () => {
@@ -33,7 +87,7 @@ describe("config summary", () => {
       key: "rss-news-feed",
       displayName: "RSS News Feed",
       description: "",
-      kind: ExecutorKind.INTEGRATION,
+      kind: CatalogExecutorKind.INTEGRATION,
       listPrice: create(ListPriceSchema, {
         priceCents: 500n,
         currency: "USD",
