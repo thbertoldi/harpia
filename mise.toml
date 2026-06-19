@@ -28,7 +28,7 @@ run = "podman build -t harpia-api:latest -f control-plane/Containerfile control-
 
 [tasks.build-container-agent]
 description = "Build agent-runtime container image"
-run = "podman build -t harpia-agent:latest -f agent-runtime/Containerfile agent-runtime/"
+run = "podman build -t harpia-agent:latest -f agent-runtime/Containerfile ."
 
 [tasks.build-container-web]
 description = "Build frontend container image"

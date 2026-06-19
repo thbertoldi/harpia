@@ -11,6 +11,7 @@
   import { page } from "$app/state";
   import { resolve } from "$app/paths";
   import { formatArtifactTypeLabel } from "$lib/plans/artifact-flow";
+  import { toUserMessage } from "$lib/connect-errors";
   import {
     getCompatibleInstallationsForStep,
     loadSlotBindingPageData,
@@ -156,10 +157,7 @@
 
       return true;
     } catch (error) {
-      saveError =
-        error instanceof Error
-          ? error.message
-          : translate("plans.configure.saveError", $locale);
+      saveError = toUserMessage(error);
       return false;
     } finally {
       saving = false;

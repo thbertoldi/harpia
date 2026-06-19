@@ -24,12 +24,19 @@ k8s_yaml('deploy/dev/kind/api.yaml')
 
 docker_build(
     'harpia-agent',
-    context='./agent-runtime',
+    context='.',
     dockerfile='./agent-runtime/Containerfile',
     live_update=[
         sync('./agent-runtime/src', '/app/src'),
+        sync('./agents', '/app/agents'),
+        run(
+            'python -m compileall -q /app/src',
+            trigger=['./agent-runtime/src'],
+        ),
     ],
 )
+k8s_resource('harpia-agent', port_forwards=['18000:8000'])
+
 k8s_yaml('deploy/dev/kind/agent.yaml')
 
 # ---- Infrastructure (pre-built images, no build needed) ----
@@ -73,6 +80,7 @@ local_resource(
         'database/migrations/000001_initial_schema.sql',
         'database/migrations/000002_schema_sync.sql',
         'database/migrations/000003_tenant_rls_hardening.sql',
+        'database/migrations/000011_plan_template_executor_metadata.sql',
     ],
     labels=['infra'],
 )

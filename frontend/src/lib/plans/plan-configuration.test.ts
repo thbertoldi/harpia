@@ -55,10 +55,10 @@ describe("plan configuration persistence", () => {
     listPlanConfigurations.mockReturnValue(listConfigurations([]));
   });
 
-  it("uses a workspace id only when the tenant id is a UUID", () => {
+  it("leaves workspace id empty until workspace resolution exists", () => {
     expect(workspaceIdForTenant("dev")).toBe("");
     expect(workspaceIdForTenant("123e4567-e89b-42d3-a456-426614174000")).toBe(
-      "123e4567-e89b-42d3-a456-426614174000",
+      "",
     );
   });
 

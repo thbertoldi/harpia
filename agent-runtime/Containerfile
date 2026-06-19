@@ -2,20 +2,28 @@ FROM python:3.12-slim AS builder
 
 WORKDIR /app
 
-RUN pip install uv
+RUN pip install --no-cache-dir uv
 
-COPY pyproject.toml uv.lock ./
-RUN uv pip install --system --target /app/packages -r <(uv pip compile pyproject.toml --no-dev)
+COPY agent-runtime/pyproject.toml agent-runtime/uv.lock ./
+RUN uv pip compile pyproject.toml -o requirements.txt && \
+    uv pip install --system --target /app/packages -r requirements.txt
 
-FROM gcr.io/distroless/python3.12-debian12
+FROM python:3.12-slim
 
 WORKDIR /app
 
-COPY --from=builder /app/packages /app/packages
-COPY src/ ./src/
+RUN useradd --system --home /app --no-create-home agent
 
-ENV PYTHONPATH=/app/packages
+COPY --from=builder /app/packages /app/packages
+COPY agent-runtime/src/ ./src/
+COPY agents/ ./agents/
+
+ENV PYTHONPATH=/app/packages:/app/src \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+USER agent
 
 EXPOSE 8000
 
-ENTRYPOINT ["/usr/bin/python3", "-m", "harpia_agents.main"]
+ENTRYPOINT ["python", "-m", "harpia_agents.main"]

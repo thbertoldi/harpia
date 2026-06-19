@@ -323,7 +323,7 @@ export function validateSlotBindings(
     const errors: string[] = [];
 
     if (!binding?.executorInstallationId) {
-      warnings.push(`Step "${step.title}" has no executor installation bound.`);
+      warnings.push("plans.validation.stepUnbound");
       steps.push({
         stepKey: step.key,
         bound: false,
@@ -339,7 +339,7 @@ export function validateSlotBindings(
       (entry) => entry.id === binding.executorInstallationId,
     );
     if (!installation) {
-      errors.push(`Step "${step.title}" references a missing installation.`);
+      errors.push("plans.validation.missingInstallation");
       steps.push({
         stepKey: step.key,
         bound: true,
@@ -359,9 +359,7 @@ export function validateSlotBindings(
       context.entitlements,
     );
     if (!compatible) {
-      errors.push(
-        `Step "${step.title}" is bound to an incompatible installation.`,
-      );
+      errors.push("plans.validation.incompatibleInstallation");
     }
 
     const sku = context.skus.find(

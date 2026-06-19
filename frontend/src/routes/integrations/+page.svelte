@@ -215,7 +215,7 @@
         {#each cards as card (card.sku.id)}
           {@const form = formFor(card)}
           <article
-            class="rounded-lg border border-plumage bg-obsidian-light/60 p-5"
+            class="flex flex-col rounded-lg border border-plumage bg-obsidian-light/60 p-5"
             data-testid={`integration-card-${card.sku.key}`}
           >
             <div class="flex items-start justify-between gap-3">
@@ -271,7 +271,7 @@
                 </p>
               </div>
             {:else}
-              <div class="mt-5 space-y-4">
+              <div class="mt-5 flex flex-1 flex-col space-y-4">
                 <div>
                   <label
                     for={`display-name-${card.sku.key}`}
@@ -355,7 +355,7 @@
                   {translate("integrations.enabled", $locale)}
                 </label>
 
-                <div class="flex flex-wrap items-center gap-3">
+                <div class="mt-auto flex flex-wrap items-center gap-3 pt-2">
                   <button
                     type="button"
                     onclick={() => handleSave(card)}
