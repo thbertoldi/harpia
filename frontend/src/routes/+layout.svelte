@@ -4,6 +4,7 @@
   import TenantSelector from "$lib/components/TenantSelector.svelte";
   import FeedbackBadge from "$lib/components/FeedbackBadge.svelte";
   import ElicitationBadge from "$lib/components/ElicitationBadge.svelte";
+  import ApprovalBadge from "$lib/components/ApprovalBadge.svelte";
   import BrandLockup from "$lib/components/BrandLockup.svelte";
   import { logout, getTenant } from "$lib/auth";
   import { page } from "$app/state";
@@ -131,6 +132,9 @@
               {/if}
               {#if section.href === "/elicitations"}
                 <ElicitationBadge />
+              {/if}
+              {#if section.href === "/approvals"}
+                <ApprovalBadge />
               {/if}
             </a>
           {/each}

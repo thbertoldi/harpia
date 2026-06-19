@@ -32,6 +32,7 @@ export type StepExecutionDisplayRow = {
   status: StepExecutionStatus;
   inputArtifactId: string;
   outputArtifactId: string;
+  approvalRequestId: string;
   createdAt: string;
   updatedAt: string;
   attempt: number;
@@ -102,6 +103,7 @@ export function mapStepExecutionsToDisplayRows(
     status: stepExecution.status,
     inputArtifactId: stepExecution.inputArtifactId,
     outputArtifactId: stepExecution.outputArtifactId,
+    approvalRequestId: stepExecution.approvalRequestId,
     createdAt: stepExecution.createdAt,
     updatedAt: stepExecution.updatedAt,
     attempt: stepExecution.attempt,
