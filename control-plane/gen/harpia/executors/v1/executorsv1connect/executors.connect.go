@@ -57,6 +57,9 @@ const (
 	// ExecutorServiceCreateExecutorInstallationProcedure is the fully-qualified name of the
 	// ExecutorService's CreateExecutorInstallation RPC.
 	ExecutorServiceCreateExecutorInstallationProcedure = "/harpia.executors.v1.ExecutorService/CreateExecutorInstallation"
+	// ExecutorServiceUpdateExecutorInstallationProcedure is the fully-qualified name of the
+	// ExecutorService's UpdateExecutorInstallation RPC.
+	ExecutorServiceUpdateExecutorInstallationProcedure = "/harpia.executors.v1.ExecutorService/UpdateExecutorInstallation"
 )
 
 // ExecutorServiceClient is a client for the harpia.executors.v1.ExecutorService service.
@@ -77,6 +80,8 @@ type ExecutorServiceClient interface {
 	GetExecutorInstallation(context.Context, *connect.Request[v1.GetExecutorInstallationRequest]) (*connect.Response[v1.GetExecutorInstallationResponse], error)
 	// CreateExecutorInstallation creates a tenant-scoped executable instance.
 	CreateExecutorInstallation(context.Context, *connect.Request[v1.CreateExecutorInstallationRequest]) (*connect.Response[v1.CreateExecutorInstallationResponse], error)
+	// UpdateExecutorInstallation updates tenant-scoped executable configuration.
+	UpdateExecutorInstallation(context.Context, *connect.Request[v1.UpdateExecutorInstallationRequest]) (*connect.Response[v1.UpdateExecutorInstallationResponse], error)
 }
 
 // NewExecutorServiceClient constructs a client for the harpia.executors.v1.ExecutorService service.
@@ -138,6 +143,12 @@ func NewExecutorServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(executorServiceMethods.ByName("CreateExecutorInstallation")),
 			connect.WithClientOptions(opts...),
 		),
+		updateExecutorInstallation: connect.NewClient[v1.UpdateExecutorInstallationRequest, v1.UpdateExecutorInstallationResponse](
+			httpClient,
+			baseURL+ExecutorServiceUpdateExecutorInstallationProcedure,
+			connect.WithSchema(executorServiceMethods.ByName("UpdateExecutorInstallation")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -151,6 +162,7 @@ type executorServiceClient struct {
 	listExecutorInstallations  *connect.Client[v1.ListExecutorInstallationsRequest, v1.ListExecutorInstallationsResponse]
 	getExecutorInstallation    *connect.Client[v1.GetExecutorInstallationRequest, v1.GetExecutorInstallationResponse]
 	createExecutorInstallation *connect.Client[v1.CreateExecutorInstallationRequest, v1.CreateExecutorInstallationResponse]
+	updateExecutorInstallation *connect.Client[v1.UpdateExecutorInstallationRequest, v1.UpdateExecutorInstallationResponse]
 }
 
 // ListExecutorSKUs calls harpia.executors.v1.ExecutorService.ListExecutorSKUs.
@@ -193,6 +205,11 @@ func (c *executorServiceClient) CreateExecutorInstallation(ctx context.Context, 
 	return c.createExecutorInstallation.CallUnary(ctx, req)
 }
 
+// UpdateExecutorInstallation calls harpia.executors.v1.ExecutorService.UpdateExecutorInstallation.
+func (c *executorServiceClient) UpdateExecutorInstallation(ctx context.Context, req *connect.Request[v1.UpdateExecutorInstallationRequest]) (*connect.Response[v1.UpdateExecutorInstallationResponse], error) {
+	return c.updateExecutorInstallation.CallUnary(ctx, req)
+}
+
 // ExecutorServiceHandler is an implementation of the harpia.executors.v1.ExecutorService service.
 type ExecutorServiceHandler interface {
 	// ListExecutorSKUs returns the global commercial catalog.
@@ -211,6 +228,8 @@ type ExecutorServiceHandler interface {
 	GetExecutorInstallation(context.Context, *connect.Request[v1.GetExecutorInstallationRequest]) (*connect.Response[v1.GetExecutorInstallationResponse], error)
 	// CreateExecutorInstallation creates a tenant-scoped executable instance.
 	CreateExecutorInstallation(context.Context, *connect.Request[v1.CreateExecutorInstallationRequest]) (*connect.Response[v1.CreateExecutorInstallationResponse], error)
+	// UpdateExecutorInstallation updates tenant-scoped executable configuration.
+	UpdateExecutorInstallation(context.Context, *connect.Request[v1.UpdateExecutorInstallationRequest]) (*connect.Response[v1.UpdateExecutorInstallationResponse], error)
 }
 
 // NewExecutorServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -268,6 +287,12 @@ func NewExecutorServiceHandler(svc ExecutorServiceHandler, opts ...connect.Handl
 		connect.WithSchema(executorServiceMethods.ByName("CreateExecutorInstallation")),
 		connect.WithHandlerOptions(opts...),
 	)
+	executorServiceUpdateExecutorInstallationHandler := connect.NewUnaryHandler(
+		ExecutorServiceUpdateExecutorInstallationProcedure,
+		svc.UpdateExecutorInstallation,
+		connect.WithSchema(executorServiceMethods.ByName("UpdateExecutorInstallation")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/harpia.executors.v1.ExecutorService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ExecutorServiceListExecutorSKUsProcedure:
@@ -286,6 +311,8 @@ func NewExecutorServiceHandler(svc ExecutorServiceHandler, opts ...connect.Handl
 			executorServiceGetExecutorInstallationHandler.ServeHTTP(w, r)
 		case ExecutorServiceCreateExecutorInstallationProcedure:
 			executorServiceCreateExecutorInstallationHandler.ServeHTTP(w, r)
+		case ExecutorServiceUpdateExecutorInstallationProcedure:
+			executorServiceUpdateExecutorInstallationHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -325,4 +352,8 @@ func (UnimplementedExecutorServiceHandler) GetExecutorInstallation(context.Conte
 
 func (UnimplementedExecutorServiceHandler) CreateExecutorInstallation(context.Context, *connect.Request[v1.CreateExecutorInstallationRequest]) (*connect.Response[v1.CreateExecutorInstallationResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("harpia.executors.v1.ExecutorService.CreateExecutorInstallation is not implemented"))
+}
+
+func (UnimplementedExecutorServiceHandler) UpdateExecutorInstallation(context.Context, *connect.Request[v1.UpdateExecutorInstallationRequest]) (*connect.Response[v1.UpdateExecutorInstallationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("harpia.executors.v1.ExecutorService.UpdateExecutorInstallation is not implemented"))
 }

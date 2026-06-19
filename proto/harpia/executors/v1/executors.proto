@@ -28,6 +28,9 @@ service ExecutorService {
 
   // CreateExecutorInstallation creates a tenant-scoped executable instance.
   rpc CreateExecutorInstallation(CreateExecutorInstallationRequest) returns (CreateExecutorInstallationResponse);
+
+  // UpdateExecutorInstallation updates tenant-scoped executable configuration.
+  rpc UpdateExecutorInstallation(UpdateExecutorInstallationRequest) returns (UpdateExecutorInstallationResponse);
 }
 
 enum ExecutorKind {
@@ -188,5 +191,20 @@ message CreateExecutorInstallationRequest {
 }
 
 message CreateExecutorInstallationResponse {
+  ExecutorInstallation installation = 1;
+}
+
+message UpdateExecutorInstallationRequest {
+  string tenant_id = 1;
+  string installation_id = 2;
+  string display_name = 3;
+  optional bool enabled = 4;
+  oneof detail {
+    IntegrationInstallation integration = 5;
+    AgentInstallation agent = 6;
+  }
+}
+
+message UpdateExecutorInstallationResponse {
   ExecutorInstallation installation = 1;
 }

@@ -290,6 +290,40 @@ func (r *Repository) CreateInstallation(ctx context.Context, installation *Execu
 	return created, nil
 }
 
+func (r *Repository) UpdateInstallation(ctx context.Context, installation *ExecutorInstallation) (*ExecutorInstallation, error) {
+	var updated *ExecutorInstallation
+	err := database.WithTenant(ctx, r.pool, installation.TenantID, func(q database.Querier) error {
+		row := q.QueryRow(ctx,
+			`UPDATE executor_installations
+			 SET display_name = $3,
+			     enabled = $4,
+			     connection_status = $5,
+			     config_json = $6,
+			     manifest_id = $7,
+			     manifest_version = $8,
+			     updated_at = now()
+			 WHERE tenant_id = $1 AND id = $2
+			 RETURNING id, tenant_id, executor_sku_id, kind, display_name, enabled,
+			           connection_status, config_json, manifest_id, manifest_version, created_at, updated_at`,
+			installation.TenantID,
+			installation.ID,
+			installation.DisplayName,
+			installation.Enabled,
+			installation.ConnectionStatus,
+			installation.ConfigJSON,
+			installation.ManifestID,
+			installation.ManifestVersion,
+		)
+		var scanErr error
+		updated, scanErr = scanInstallation(row)
+		return scanErr
+	})
+	if err != nil {
+		return nil, err
+	}
+	return updated, nil
+}
+
 func scanSKU(row pgx.Row) (*ExecutorSKU, error) {
 	var sku ExecutorSKU
 	var compatibilityJSON []byte

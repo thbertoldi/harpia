@@ -1,212 +1,146 @@
 <script lang="ts">
   import {
-    Plus,
+    AlertTriangle,
+    CheckCircle2,
+    Link2,
     Loader2,
-    ChevronDown,
-    ChevronRight,
     Plug,
     ShieldAlert,
-    Link2,
-    Wrench,
-    CheckCircle2,
-    AlertTriangle,
-    X,
   } from "lucide-svelte";
   import { page } from "$app/state";
   import { resolve } from "$app/paths";
-  import { canManageIntegrations } from "$lib/auth";
+  import { canManageIntegrations, getTenant } from "$lib/auth";
+  import { toUserMessage } from "$lib/connect-errors";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
-  import McpStatusBadge from "$lib/components/McpStatusBadge.svelte";
-  import { locale, translate } from "$lib/i18n";
+  import { ConnectionStatus } from "$lib/gen/harpia/executors/v1/executors_pb";
   import {
-    addMockMcpServer,
-    connectMockOAuthServer,
-    getMockMcpServers,
-    testMockConnection,
-    type AddMcpServerInput,
-    type McpServer,
-    type McpServerKind,
-    type StreamableHttpConfig,
-    type StdioConfig,
-  } from "$lib/mocks/mcp-servers";
+    connectionStatusLabelKey,
+    formValuesFromCard,
+    loadDemoIntegrationContext,
+    saveDemoIntegrationInstallation,
+    validateIntegrationForm,
+    type DemoIntegrationCard,
+    type DemoIntegrationFormValues,
+  } from "$lib/integrations/executor-installations";
+  import { locale, translate } from "$lib/i18n";
 
   const user = $derived(page.data.user);
   const integrationAccess = $derived(canManageIntegrations(user));
 
-  let servers = $state<McpServer[]>([]);
-  let expandedServerIds = $state<string[]>([]);
-  let showAddForm = $state(false);
-  let addKind = $state<McpServerKind>("stdio");
-  let addName = $state("");
-  let addCommand = $state("npx");
-  let addArgs = $state("-y @modelcontextprotocol/server-filesystem /workspace");
-  let addEnv = $state("");
-  let addUrl = $state("https://");
-  let addHeaders = $state("");
-  let testing = $state(false);
-  let testResult = $state<{ ok: boolean; message: string } | null>(null);
-  let saving = $state(false);
-  let connectingId = $state<string | null>(null);
+  let cards = $state<DemoIntegrationCard[]>([]);
+  let forms = $state<Record<string, DemoIntegrationFormValues>>({});
+  let tenantId = $state<string | null>(null);
+  let initialized = $state(false);
+  let loading = $state(false);
+  let loadError = $state<string | null>(null);
   let actionError = $state<string | null>(null);
-  let bindNotice = $state<string | null>(null);
+  let savingKey = $state<string | null>(null);
+  let savedKey = $state<string | null>(null);
 
   $effect(() => {
-    if (integrationAccess) {
-      servers = getMockMcpServers();
+    if (!integrationAccess || initialized) {
+      return;
     }
+    initialized = true;
+    void loadIntegrations();
   });
 
-  function isExpanded(serverId: string): boolean {
-    return expandedServerIds.includes(serverId);
-  }
-
-  function toggleExpanded(serverId: string) {
-    if (isExpanded(serverId)) {
-      expandedServerIds = expandedServerIds.filter((id) => id !== serverId);
-    } else {
-      expandedServerIds = [...expandedServerIds, serverId];
-    }
-  }
-
-  function resetAddForm() {
-    addKind = "stdio";
-    addName = "";
-    addCommand = "npx";
-    addArgs = "-y @modelcontextprotocol/server-filesystem /workspace";
-    addEnv = "";
-    addUrl = "https://";
-    addHeaders = "";
-    testResult = null;
+  async function loadIntegrations() {
+    loading = true;
+    loadError = null;
     actionError = null;
-  }
 
-  function openAddForm() {
-    resetAddForm();
-    showAddForm = true;
-  }
+    const tenant = getTenant();
+    tenantId = tenant?.id ?? null;
 
-  function closeAddForm() {
-    showAddForm = false;
-    testResult = null;
-    actionError = null;
-  }
-
-  function buildAddInput(): AddMcpServerInput {
-    if (addKind === "stdio") {
-      const config: StdioConfig = {
-        command: addCommand.trim(),
-        args: addArgs
-          .split(/\s+/)
-          .map((arg) => arg.trim())
-          .filter(Boolean),
-      };
-
-      const envLines = addEnv
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean);
-      if (envLines.length > 0) {
-        config.env = Object.fromEntries(
-          envLines.map((line) => {
-            const [key, ...rest] = line.split("=");
-            return [key.trim(), rest.join("=").trim()];
-          }),
-        );
-      }
-
-      return { name: addName, kind: addKind, config };
-    }
-
-    const config: StreamableHttpConfig = {
-      url: addUrl.trim(),
-    };
-
-    const headerLines = addHeaders
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean);
-    if (headerLines.length > 0) {
-      config.headers = Object.fromEntries(
-        headerLines.map((line) => {
-          const [key, ...rest] = line.split(":");
-          return [key.trim(), rest.join(":").trim()];
-        }),
-      );
-    }
-
-    return { name: addName, kind: addKind, config };
-  }
-
-  async function handleTestConnection() {
-    actionError = null;
-    testResult = null;
-    testing = true;
-    try {
-      const result = await testMockConnection(buildAddInput());
-      testResult = { ok: result.ok, message: result.message };
-    } catch (e) {
-      testResult = {
-        ok: false,
-        message:
-          e instanceof Error
-            ? e.message
-            : translate("integrations.error.connectionTestFailed", $locale),
-      };
-    } finally {
-      testing = false;
-    }
-  }
-
-  async function handleAddServer() {
-    actionError = null;
-    if (!addName.trim()) {
-      actionError = translate("integrations.error.serverNameRequired", $locale);
+    if (!tenantId) {
+      loading = false;
       return;
     }
 
-    saving = true;
     try {
-      const created = await addMockMcpServer(buildAddInput());
-      servers = getMockMcpServers();
-      expandedServerIds = [...expandedServerIds, created.id];
-      closeAddForm();
-    } catch (e) {
-      actionError =
-        e instanceof Error
-          ? e.message
-          : translate("integrations.error.addServerFailed", $locale);
+      const context = await loadDemoIntegrationContext(tenantId);
+      cards = context.cards;
+      forms = Object.fromEntries(
+        context.cards.map((card) => [card.sku.key, formValuesFromCard(card)]),
+      );
+    } catch (error) {
+      loadError = toUserMessage(error);
     } finally {
-      saving = false;
+      loading = false;
     }
   }
 
-  async function handleConnect(serverId: string) {
+  async function handleSave(card: DemoIntegrationCard) {
+    if (!tenantId) {
+      actionError = translate("integrations.error.noTenant", $locale);
+      return;
+    }
+
+    const values = formFor(card);
+    const validationCode = validateIntegrationForm(card.kind, values);
+    if (validationCode) {
+      actionError = translate(`integrations.error.${validationCode}`, $locale);
+      return;
+    }
+
     actionError = null;
-    bindNotice = null;
-    connectingId = serverId;
+    savedKey = null;
+    savingKey = card.sku.key;
+
     try {
-      await connectMockOAuthServer(serverId);
-      servers = getMockMcpServers();
-      expandedServerIds = [...expandedServerIds, serverId];
-    } catch (e) {
-      actionError =
-        e instanceof Error
-          ? e.message
-          : translate("integrations.error.oauthFailed", $locale);
+      await saveDemoIntegrationInstallation({ tenantId, card, values });
+      await loadIntegrations();
+      savedKey = card.sku.key;
+    } catch (error) {
+      actionError = translate("integrations.error.saveFailed", $locale, {
+        error: toUserMessage(error),
+      });
     } finally {
-      connectingId = null;
+      savingKey = null;
     }
   }
 
-  function handleBindToAgent(server: McpServer, toolName: string) {
-    bindNotice = translate("integrations.bindNotice", $locale, {
-      tool: toolName,
-      server: server.name,
-    });
+  function formFor(card: DemoIntegrationCard): DemoIntegrationFormValues {
+    return forms[card.sku.key] ?? formValuesFromCard(card);
   }
 
-  function kindLabel(kind: McpServerKind): string {
-    return kind === "stdio" ? "stdio" : "streamable HTTP";
+  function updateForm(
+    card: DemoIntegrationCard,
+    patch: Partial<DemoIntegrationFormValues>,
+  ) {
+    forms = {
+      ...forms,
+      [card.sku.key]: {
+        ...formFor(card),
+        ...patch,
+      },
+    };
+  }
+
+  function inputValue(event: Event): string {
+    return (event.currentTarget as HTMLInputElement).value;
+  }
+
+  function textareaValue(event: Event): string {
+    return (event.currentTarget as HTMLTextAreaElement).value;
+  }
+
+  function checkedValue(event: Event): boolean {
+    return (event.currentTarget as HTMLInputElement).checked;
+  }
+
+  function statusClasses(status: ConnectionStatus): string {
+    switch (status) {
+      case ConnectionStatus.CONNECTED:
+        return "border-green-500/30 bg-green-500/10 text-green-300";
+      case ConnectionStatus.ERROR:
+        return "border-red-500/30 bg-red-500/10 text-red-300";
+      case ConnectionStatus.CONNECTING:
+        return "border-talon-gold/30 bg-talon-gold/10 text-talon-gold";
+      default:
+        return "border-plumage bg-obsidian text-crown-ash";
+    }
   }
 </script>
 
@@ -231,23 +165,13 @@
       </a>
     </div>
   {:else}
-    <div class="mb-6 flex items-center justify-between gap-4">
-      <div>
-        <HarpyHeading tag="h1" class="text-2xl text-cream">
-          {translate("integrations.heading", $locale)}
-        </HarpyHeading>
-        <p class="mt-1 font-body text-sm text-crown-ash">
-          {translate("integrations.subheading", $locale)}
-        </p>
-      </div>
-      <button
-        onclick={openAddForm}
-        data-testid="integrations-add-server"
-        class="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-md bg-talon-gold px-4 py-2 font-body text-sm font-medium text-obsidian transition-all hover:bg-talon-gold-bright"
-      >
-        <Plus class="size-4" />
-        {translate("integrations.addServer", $locale)}
-      </button>
+    <div class="mb-6">
+      <HarpyHeading tag="h1" class="text-2xl text-cream">
+        {translate("integrations.heading", $locale)}
+      </HarpyHeading>
+      <p class="mt-1 max-w-2xl font-body text-sm text-crown-ash">
+        {translate("integrations.subheading", $locale)}
+      </p>
     </div>
 
     {#if actionError}
@@ -259,323 +183,218 @@
       </div>
     {/if}
 
-    {#if bindNotice}
+    {#if loading}
       <div
-        class="mb-4 flex items-start gap-2 rounded-md border border-talon-gold/30 bg-talon-gold/10 px-4 py-3"
-        data-testid="integrations-bind-notice"
+        class="flex items-center gap-2 rounded-lg border border-plumage bg-obsidian-light/60 px-4 py-5"
       >
-        <Link2 class="mt-0.5 size-4 shrink-0 text-talon-gold" />
-        <p class="font-body text-sm text-cream">{bindNotice}</p>
+        <Loader2 class="size-4 animate-spin text-talon-gold" />
+        <p class="font-body text-sm text-crown-ash">
+          {translate("integrations.loading", $locale)}
+        </p>
+      </div>
+    {:else if !tenantId}
+      <div
+        class="flex items-start gap-2 rounded-md border border-talon-gold/30 bg-talon-gold/10 px-4 py-3"
+      >
+        <AlertTriangle class="mt-0.5 size-4 shrink-0 text-talon-gold" />
+        <p class="font-body text-sm text-cream">
+          {translate("integrations.noTenant", $locale)}
+        </p>
+      </div>
+    {:else if loadError}
+      <div
+        class="flex items-start gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3"
+      >
+        <AlertTriangle class="mt-0.5 size-4 shrink-0 text-red-400" />
+        <p class="font-body text-sm text-red-300">
+          {translate("integrations.loadError", $locale, { error: loadError })}
+        </p>
+      </div>
+    {:else}
+      <div class="grid gap-4 md:grid-cols-2">
+        {#each cards as card (card.sku.id)}
+          {@const form = formFor(card)}
+          <article
+            class="rounded-lg border border-plumage bg-obsidian-light/60 p-5"
+            data-testid={`integration-card-${card.sku.key}`}
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="mb-2 flex items-center gap-2">
+                  {#if card.kind === "rss"}
+                    <Plug class="size-4 text-talon-gold" />
+                  {:else}
+                    <Link2 class="size-4 text-talon-gold" />
+                  {/if}
+                  <HarpyHeading tag="h2" class="text-lg text-cream">
+                    {card.sku.displayName}
+                  </HarpyHeading>
+                </div>
+                <p class="font-body text-sm text-crown-ash">
+                  {translate(`integrations.${card.kind}.description`, $locale)}
+                </p>
+              </div>
+              <span
+                class="inline-flex shrink-0 rounded-full border px-2 py-0.5 font-body text-xs {statusClasses(
+                  card.connectionStatus,
+                )}"
+              >
+                {translate(
+                  connectionStatusLabelKey(card.connectionStatus),
+                  $locale,
+                )}
+              </span>
+            </div>
+
+            <dl class="mt-4 grid gap-2 font-body text-xs text-crown-ash">
+              <div class="flex items-center justify-between gap-3">
+                <dt>{translate("integrations.sku", $locale)}</dt>
+                <dd class="font-mono text-crown-ash-dark">{card.sku.key}</dd>
+              </div>
+              {#if card.installation}
+                <div class="flex items-center justify-between gap-3">
+                  <dt>{translate("integrations.installationId", $locale)}</dt>
+                  <dd class="truncate font-mono text-crown-ash-dark">
+                    {card.installation.id}
+                  </dd>
+                </div>
+              {/if}
+            </dl>
+
+            {#if !card.entitlement}
+              <div
+                class="mt-4 flex items-start gap-2 rounded-md border border-talon-gold/30 bg-talon-gold/10 px-3 py-2"
+              >
+                <AlertTriangle class="mt-0.5 size-4 shrink-0 text-talon-gold" />
+                <p class="font-body text-sm text-cream">
+                  {translate("integrations.notEntitled", $locale)}
+                </p>
+              </div>
+            {:else}
+              <div class="mt-5 space-y-4">
+                <div>
+                  <label
+                    for={`display-name-${card.sku.key}`}
+                    class="mb-1 block font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
+                  >
+                    {translate("integrations.displayName", $locale)}
+                  </label>
+                  <input
+                    id={`display-name-${card.sku.key}`}
+                    value={form.displayName}
+                    oninput={(event) =>
+                      updateForm(card, { displayName: inputValue(event) })}
+                    class="w-full rounded-md border border-plumage bg-obsidian px-3 py-2 font-body text-sm text-cream outline-none focus:border-talon-gold"
+                  />
+                </div>
+
+                {#if card.kind === "rss"}
+                  <div>
+                    <label
+                      for={`feeds-${card.sku.key}`}
+                      class="mb-1 block font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
+                    >
+                      {translate("integrations.rss.feedUrls", $locale)}
+                    </label>
+                    <textarea
+                      id={`feeds-${card.sku.key}`}
+                      rows="5"
+                      value={form.feedsText}
+                      placeholder={translate(
+                        "integrations.rss.feedUrlsPlaceholder",
+                        $locale,
+                      )}
+                      oninput={(event) =>
+                        updateForm(card, { feedsText: textareaValue(event) })}
+                      class="w-full rounded-md border border-plumage bg-obsidian px-3 py-2 font-mono text-xs text-cream outline-none focus:border-talon-gold"
+                    ></textarea>
+                    <p class="mt-1 font-body text-xs text-crown-ash-dark">
+                      {translate("integrations.rss.feedUrlsHelp", $locale)}
+                    </p>
+                  </div>
+                {:else}
+                  <div>
+                    <label
+                      for={`credential-${card.sku.key}`}
+                      class="mb-1 block font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
+                    >
+                      {translate("integrations.linkedin.credentialId", $locale)}
+                    </label>
+                    <input
+                      id={`credential-${card.sku.key}`}
+                      value={form.oauthCredentialId}
+                      placeholder={translate(
+                        "integrations.linkedin.credentialIdPlaceholder",
+                        $locale,
+                      )}
+                      oninput={(event) =>
+                        updateForm(card, {
+                          oauthCredentialId: inputValue(event),
+                        })}
+                      class="w-full rounded-md border border-plumage bg-obsidian px-3 py-2 font-mono text-xs text-cream outline-none focus:border-talon-gold"
+                    />
+                    <p class="mt-1 font-body text-xs text-crown-ash-dark">
+                      {translate(
+                        "integrations.linkedin.credentialIdHelp",
+                        $locale,
+                      )}
+                    </p>
+                  </div>
+                {/if}
+
+                <label
+                  class="flex items-center gap-2 font-body text-sm text-cream"
+                >
+                  <input
+                    type="checkbox"
+                    checked={form.enabled}
+                    onchange={(event) =>
+                      updateForm(card, { enabled: checkedValue(event) })}
+                    class="size-4 rounded border-plumage bg-obsidian text-talon-gold focus:ring-talon-gold"
+                  />
+                  {translate("integrations.enabled", $locale)}
+                </label>
+
+                <div class="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onclick={() => handleSave(card)}
+                    disabled={savingKey === card.sku.key}
+                    data-testid={`save-integration-${card.sku.key}`}
+                    class="inline-flex cursor-pointer items-center gap-2 rounded-md bg-talon-gold px-4 py-2 font-body text-sm font-medium text-obsidian transition-all hover:bg-talon-gold-bright disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {#if savingKey === card.sku.key}
+                      <Loader2 class="size-4 animate-spin" />
+                      {translate("integrations.saving", $locale)}
+                    {:else}
+                      <CheckCircle2 class="size-4" />
+                      {translate("integrations.save", $locale)}
+                    {/if}
+                  </button>
+                  {#if savedKey === card.sku.key}
+                    <p
+                      class="inline-flex items-center gap-1.5 font-body text-sm text-green-300"
+                      data-testid={`integration-saved-${card.sku.key}`}
+                    >
+                      <CheckCircle2 class="size-4" />
+                      {translate("integrations.saved", $locale)}
+                    </p>
+                  {/if}
+                </div>
+              </div>
+            {/if}
+          </article>
+        {:else}
+          <div
+            class="rounded-lg border border-dashed border-plumage px-6 py-12 text-center md:col-span-2"
+          >
+            <Plug class="mx-auto mb-3 size-10 text-talon-gold" />
+            <p class="font-body text-sm text-crown-ash">
+              {translate("integrations.noDemoSkus", $locale)}
+            </p>
+          </div>
+        {/each}
       </div>
     {/if}
-
-    {#if showAddForm}
-      <section
-        class="mb-6 rounded-lg border border-plumage bg-obsidian-light/60 p-5"
-      >
-        <div class="mb-4 flex items-center justify-between">
-          <HarpyHeading tag="h2" class="text-lg text-cream">
-            {translate("integrations.addMcpServer", $locale)}
-          </HarpyHeading>
-          <button
-            onclick={closeAddForm}
-            class="cursor-pointer rounded-md p-1 text-crown-ash transition-colors hover:text-cream"
-            aria-label={translate("integrations.closeAddForm", $locale)}
-          >
-            <X class="size-4" />
-          </button>
-        </div>
-
-        <div class="space-y-4">
-          <div>
-            <label
-              for="server-name"
-              class="mb-1 block font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
-            >
-              {translate("integrations.serverName", $locale)}
-            </label>
-            <input
-              id="server-name"
-              bind:value={addName}
-              placeholder={translate(
-                "integrations.serverNamePlaceholder",
-                $locale,
-              )}
-              class="w-full rounded-md border border-plumage bg-obsidian px-3 py-2 font-body text-sm text-cream outline-none focus:border-talon-gold"
-            />
-          </div>
-
-          <div>
-            <p
-              class="mb-2 font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
-            >
-              {translate("integrations.transportKind", $locale)}
-            </p>
-            <div class="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onclick={() => (addKind = "stdio")}
-                class="cursor-pointer rounded-md border px-3 py-1.5 font-body text-sm transition-colors {addKind ===
-                'stdio'
-                  ? 'border-talon-gold bg-talon-gold/10 text-talon-gold'
-                  : 'border-plumage text-crown-ash hover:border-talon-gold/50 hover:text-cream'}"
-              >
-                stdio
-              </button>
-              <button
-                type="button"
-                onclick={() => (addKind = "streamable_http")}
-                class="cursor-pointer rounded-md border px-3 py-1.5 font-body text-sm transition-colors {addKind ===
-                'streamable_http'
-                  ? 'border-talon-gold bg-talon-gold/10 text-talon-gold'
-                  : 'border-plumage text-crown-ash hover:border-talon-gold/50 hover:text-cream'}"
-              >
-                streamable HTTP
-              </button>
-            </div>
-          </div>
-
-          {#if addKind === "stdio"}
-            <div class="grid gap-4 md:grid-cols-2">
-              <div>
-                <label
-                  for="server-command"
-                  class="mb-1 block font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
-                >
-                  {translate("integrations.command", $locale)}
-                </label>
-                <input
-                  id="server-command"
-                  bind:value={addCommand}
-                  class="w-full rounded-md border border-plumage bg-obsidian px-3 py-2 font-body text-sm text-cream outline-none focus:border-talon-gold"
-                />
-              </div>
-              <div>
-                <label
-                  for="server-args"
-                  class="mb-1 block font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
-                >
-                  {translate("integrations.arguments", $locale)}
-                </label>
-                <input
-                  id="server-args"
-                  bind:value={addArgs}
-                  class="w-full rounded-md border border-plumage bg-obsidian px-3 py-2 font-body text-sm text-cream outline-none focus:border-talon-gold"
-                />
-              </div>
-            </div>
-            <div>
-              <label
-                for="server-env"
-                class="mb-1 block font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
-              >
-                {translate("integrations.environment", $locale)}
-              </label>
-              <textarea
-                id="server-env"
-                bind:value={addEnv}
-                rows="3"
-                class="w-full rounded-md border border-plumage bg-obsidian px-3 py-2 font-mono text-xs text-cream outline-none focus:border-talon-gold"
-              ></textarea>
-            </div>
-          {:else}
-            <div>
-              <label
-                for="server-url"
-                class="mb-1 block font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
-              >
-                {translate("integrations.endpointUrl", $locale)}
-              </label>
-              <input
-                id="server-url"
-                bind:value={addUrl}
-                class="w-full rounded-md border border-plumage bg-obsidian px-3 py-2 font-body text-sm text-cream outline-none focus:border-talon-gold"
-              />
-            </div>
-            <div>
-              <label
-                for="server-headers"
-                class="mb-1 block font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
-              >
-                {translate("integrations.headers", $locale)}
-              </label>
-              <textarea
-                id="server-headers"
-                bind:value={addHeaders}
-                rows="3"
-                class="w-full rounded-md border border-plumage bg-obsidian px-3 py-2 font-mono text-xs text-cream outline-none focus:border-talon-gold"
-              ></textarea>
-            </div>
-          {/if}
-
-          {#if testResult}
-            <div
-              class="flex items-start gap-2 rounded-md border px-3 py-2 {testResult.ok
-                ? 'border-green-500/30 bg-green-500/10'
-                : 'border-red-500/30 bg-red-500/10'}"
-            >
-              {#if testResult.ok}
-                <CheckCircle2 class="mt-0.5 size-4 shrink-0 text-green-400" />
-                <p class="font-body text-sm text-green-300">
-                  {testResult.message}
-                </p>
-              {:else}
-                <AlertTriangle class="mt-0.5 size-4 shrink-0 text-red-400" />
-                <p class="font-body text-sm text-red-300">
-                  {testResult.message}
-                </p>
-              {/if}
-            </div>
-          {/if}
-
-          <div class="flex flex-wrap gap-3">
-            <button
-              onclick={handleTestConnection}
-              disabled={testing || saving}
-              data-testid="integrations-test-connection"
-              class="inline-flex cursor-pointer items-center gap-2 rounded-md border border-plumage px-4 py-2 font-body text-sm text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {#if testing}
-                <Loader2 class="size-4 animate-spin" />
-              {:else}
-                <Plug class="size-4" />
-              {/if}
-              {translate("integrations.testConnection", $locale)}
-            </button>
-            <button
-              onclick={handleAddServer}
-              disabled={saving || testing}
-              data-testid="integrations-register-server"
-              class="inline-flex cursor-pointer items-center gap-2 rounded-md bg-talon-gold px-4 py-2 font-body text-sm font-medium text-obsidian transition-all hover:bg-talon-gold-bright disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {#if saving}
-                <Loader2 class="size-4 animate-spin" />
-              {:else}
-                <Plus class="size-4" />
-              {/if}
-              {translate("integrations.registerServer", $locale)}
-            </button>
-          </div>
-        </div>
-      </section>
-    {/if}
-
-    <div class="space-y-3">
-      {#each servers as server (server.id)}
-        <article
-          class="rounded-lg border border-plumage bg-obsidian-light/60 transition-colors hover:border-talon-gold/40"
-          data-testid={`mcp-server-${server.id}`}
-        >
-          <div class="flex flex-wrap items-start justify-between gap-3 p-4">
-            <button
-              type="button"
-              onclick={() => toggleExpanded(server.id)}
-              class="flex min-w-0 flex-1 cursor-pointer items-start gap-3 text-left"
-            >
-              {#if isExpanded(server.id)}
-                <ChevronDown class="mt-1 size-4 shrink-0 text-talon-gold" />
-              {:else}
-                <ChevronRight class="mt-1 size-4 shrink-0 text-crown-ash" />
-              {/if}
-              <div class="min-w-0">
-                <div class="flex flex-wrap items-center gap-2">
-                  <p class="font-heading text-base font-semibold text-cream">
-                    {server.name}
-                  </p>
-                  <span
-                    class="rounded-full border border-plumage px-2 py-0.5 font-mono text-[10px] tracking-wider text-crown-ash uppercase"
-                  >
-                    {kindLabel(server.kind)}
-                  </span>
-                </div>
-                <p
-                  class="mt-1 font-mono text-[10px] tracking-wider text-crown-ash-dark uppercase"
-                >
-                  {server.toolCount} tool{server.toolCount === 1 ? "" : "s"}
-                </p>
-                {#if server.lastError}
-                  <p class="mt-2 font-body text-xs text-red-400">
-                    {server.lastError}
-                  </p>
-                {/if}
-              </div>
-            </button>
-
-            <div class="flex shrink-0 flex-wrap items-center gap-2">
-              <McpStatusBadge status={server.status} />
-              {#if server.status === "auth_required"}
-                <button
-                  onclick={() => handleConnect(server.id)}
-                  disabled={connectingId === server.id}
-                  class="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-talon-gold/50 bg-talon-gold/10 px-3 py-1.5 font-body text-xs text-talon-gold transition-colors hover:bg-talon-gold/20 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {#if connectingId === server.id}
-                    <Loader2 class="size-3.5 animate-spin" />
-                  {:else}
-                    <Link2 class="size-3.5" />
-                  {/if}
-                  {translate("integrations.connect", $locale)}
-                </button>
-              {/if}
-            </div>
-          </div>
-
-          {#if isExpanded(server.id)}
-            <div class="border-t border-plumage/60 px-4 py-4">
-              <div class="mb-3 flex items-center gap-2">
-                <Wrench class="size-4 text-talon-gold" />
-                <p class="font-body text-sm font-medium text-cream">
-                  {translate("integrations.tools", $locale)}
-                </p>
-              </div>
-
-              {#if server.tools.length === 0}
-                <p class="font-body text-sm text-crown-ash">
-                  {translate("integrations.noToolsYet", $locale)}
-                  {#if server.status === "auth_required"}
-                    {translate("integrations.connectToDiscover", $locale)}
-                  {/if}
-                </p>
-              {:else}
-                <ul class="space-y-2">
-                  {#each server.tools as tool (tool.name)}
-                    <li
-                      class="flex flex-wrap items-start justify-between gap-3 rounded-md border border-plumage/60 bg-obsidian/50 px-3 py-2"
-                      data-testid={`mcp-tool-${server.id}-${tool.name}`}
-                    >
-                      <div class="min-w-0">
-                        <p class="font-mono text-xs text-talon-gold">
-                          {tool.name}
-                        </p>
-                        <p class="mt-0.5 font-body text-xs text-crown-ash">
-                          {tool.description}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onclick={() => handleBindToAgent(server, tool.name)}
-                        data-testid={`mcp-bind-${server.id}-${tool.name}`}
-                        class="cursor-pointer rounded-md border border-plumage px-2.5 py-1 font-body text-[11px] text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
-                      >
-                        {translate("integrations.bindToAgent", $locale)}
-                      </button>
-                    </li>
-                  {/each}
-                </ul>
-              {/if}
-            </div>
-          {/if}
-        </article>
-      {:else}
-        <div
-          class="rounded-lg border border-dashed border-plumage px-6 py-12 text-center"
-        >
-          <Plug class="mx-auto mb-3 size-10 text-talon-gold" />
-          <p class="font-body text-sm text-crown-ash">
-            {translate("integrations.noServers", $locale)}
-          </p>
-        </div>
-      {/each}
-    </div>
   {/if}
 </div>
