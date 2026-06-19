@@ -60,7 +60,10 @@ function catalogAgentContentKey(agentType: AgentType): string {
   return agentType.name || agentType.id;
 }
 
-export function localizeAgentType(agentType: AgentType, locale: Locale): AgentType {
+export function localizeAgentType(
+  agentType: AgentType,
+  locale: Locale,
+): AgentType {
   const key = catalogAgentContentKey(agentType);
   return create(AgentTypeSchema, {
     ...agentType,

@@ -25,7 +25,8 @@ export interface PlanConfigurationSaveInput {
   schedule?: PlanSchedule;
 }
 
-export function workspaceIdForTenant(_tenantId: string): string {
+export function workspaceIdForTenant(tenantId: string): string {
+  void tenantId;
   return "";
 }
 

@@ -163,7 +163,10 @@ export function localizePlanTemplate(
   return create(PlanTemplateSchema, {
     ...template,
     name: resolveLocalizedContent(`${contentPrefix}.name`, locale),
-    description: resolveLocalizedContent(`${contentPrefix}.description`, locale),
+    description: resolveLocalizedContent(
+      `${contentPrefix}.description`,
+      locale,
+    ),
     steps: template.steps.map((step) =>
       create(PlanStepSchema, {
         ...step,
