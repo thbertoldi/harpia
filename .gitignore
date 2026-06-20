@@ -68,3 +68,6 @@ deploy/**/charts/*.tgz
 # Temporal
 temporalite.db
 control-plane/api
+
+# Brainstorming companion mockups
+.superpowers/
