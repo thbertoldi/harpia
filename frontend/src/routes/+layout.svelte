@@ -30,6 +30,14 @@
   } from "$lib/i18n";
   import { isNavSectionActive } from "$lib/nav/active";
   import { resolveNavSections } from "$lib/nav/sections";
+  import { hasFeature } from "$lib/flags";
+  import {
+    canSwitchToAdminPersona,
+    readPersonaMode,
+    writePersonaMode,
+    type PersonaMode,
+  } from "$lib/personas/storage";
+  import { resolveNavSectionsM1 } from "$lib/nav/sections-m1";
 
   let { data, children } = $props();
 
@@ -47,9 +55,40 @@
     applyColorScheme(dark ? "dark" : "light");
   }
 
-  const sections = $derived(
-    resolveNavSections(data?.user?.role, (key) => translate(key, $locale)),
+  const m1Enabled = $derived(hasFeature("uxRealignment.m1"));
+
+  let personaMode = $state<PersonaMode>("operator");
+
+  $effect(() => {
+    if (m1Enabled && typeof localStorage !== "undefined") {
+      personaMode = readPersonaMode(localStorage);
+    }
+  });
+
+  const canSwitchPersona = $derived(
+    m1Enabled && canSwitchToAdminPersona(data?.user?.role),
   );
+
+  const sections = $derived(
+    m1Enabled
+      ? resolveNavSectionsM1(
+          personaMode,
+          data?.user?.role,
+          (key) => translate(key, $locale),
+        )
+      : resolveNavSections(
+          data?.user?.role,
+          (key) => translate(key, $locale),
+        ),
+  );
+
+  function togglePersona() {
+    const next: PersonaMode = personaMode === "operator" ? "admin" : "operator";
+    personaMode = next;
+    if (typeof localStorage !== "undefined") {
+      writePersonaMode(localStorage, next);
+    }
+  }
 
   function isActive(path: string) {
     return isNavSectionActive(path, page.url.pathname);
@@ -181,6 +220,22 @@
           </div>
 
           <div class="flex items-center gap-4">
+            {#if canSwitchPersona}
+              <button
+                type="button"
+                onclick={togglePersona}
+                class="flex items-center gap-2 rounded-md border border-plumage bg-obsidian-light px-3 py-1.5 text-xs text-crown-ash hover:border-talon-gold hover:text-talon-gold"
+                aria-label={translate("nav.personaToggle", $locale)}
+                title={translate("nav.personaToggle", $locale)}
+              >
+                <span class="font-medium uppercase tracking-wider">
+                  {personaMode === "operator"
+                    ? translate("nav.personaOperator", $locale)
+                    : translate("nav.personaAdmin", $locale)}
+                </span>
+                <span class="text-talon-gold">⇄</span>
+              </button>
+            {/if}
             <label class="sr-only" for="locale-switcher">
               {translate("nav.language", $locale)}
             </label>
