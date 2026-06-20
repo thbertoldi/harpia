@@ -12,16 +12,16 @@ beforeEach(() => {
 });
 
 describe("loadPendingFeedback", () => {
-  it("drains all pages and returns the combined feedbackRequests array", async () => {
-    feedbackClientMock.feedbackClient.listPendingFeedback
-      .mockResolvedValueOnce({
-        feedbackRequests: [{ id: "a" }, { id: "b" }],
-        nextPageToken: "tok2",
-      })
-      .mockResolvedValueOnce({
-        feedbackRequests: [{ id: "c" }],
-        nextPageToken: "",
-      });
+  it("drains all yielded pages and returns the combined feedbackRequests array", async () => {
+    feedbackClientMock.feedbackClient.listPendingFeedback.mockImplementation(
+      async function* () {
+        yield {
+          feedbackRequests: [{ id: "a" }, { id: "b" }],
+          nextPageToken: "tok2",
+        };
+        yield { feedbackRequests: [{ id: "c" }], nextPageToken: "" };
+      },
+    );
 
     const { loadPendingFeedback } = await import("./counts");
     const got = await loadPendingFeedback("tenant-1");
@@ -29,28 +29,20 @@ describe("loadPendingFeedback", () => {
     expect(got.map((f) => f.id)).toEqual(["a", "b", "c"]);
     expect(
       feedbackClientMock.feedbackClient.listPendingFeedback,
-    ).toHaveBeenCalledTimes(2);
+    ).toHaveBeenCalledTimes(1);
     expect(
       feedbackClientMock.feedbackClient.listPendingFeedback,
-    ).toHaveBeenNthCalledWith(1, {
+    ).toHaveBeenCalledWith({
       tenantId: "tenant-1",
       pageSize: 50,
       pageToken: "",
     });
-    expect(
-      feedbackClientMock.feedbackClient.listPendingFeedback,
-    ).toHaveBeenNthCalledWith(2, {
-      tenantId: "tenant-1",
-      pageSize: 50,
-      pageToken: "tok2",
-    });
   });
 
-  it("returns an empty array when the first page is empty", async () => {
-    feedbackClientMock.feedbackClient.listPendingFeedback.mockResolvedValueOnce(
-      {
-        feedbackRequests: [],
-        nextPageToken: "",
+  it("returns an empty array when the stream yields no items", async () => {
+    feedbackClientMock.feedbackClient.listPendingFeedback.mockImplementation(
+      async function* () {
+        // no yields
       },
     );
     const { loadPendingFeedback } = await import("./counts");
@@ -60,10 +52,12 @@ describe("loadPendingFeedback", () => {
 
 describe("countPendingFeedback", () => {
   it("returns the number of pending feedback requests", async () => {
-    feedbackClientMock.feedbackClient.listPendingFeedback.mockResolvedValueOnce(
-      {
-        feedbackRequests: [{ id: "a" }, { id: "b" }, { id: "c" }],
-        nextPageToken: "",
+    feedbackClientMock.feedbackClient.listPendingFeedback.mockImplementation(
+      async function* () {
+        yield {
+          feedbackRequests: [{ id: "a" }, { id: "b" }, { id: "c" }],
+          nextPageToken: "",
+        };
       },
     );
     const { countPendingFeedback } = await import("./counts");

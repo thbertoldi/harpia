@@ -5,19 +5,14 @@ export async function loadPendingFeedback(
   tenantId: string,
 ): Promise<FeedbackRequest[]> {
   const out: FeedbackRequest[] = [];
-  let pageToken = "";
-  while (true) {
-    const response = await feedbackClient.listPendingFeedback({
-      tenantId,
-      pageSize: 50,
-      pageToken,
-    });
+  for await (const response of feedbackClient.listPendingFeedback({
+    tenantId,
+    pageSize: 50,
+    pageToken: "",
+  })) {
     out.push(...response.feedbackRequests);
-    if (!response.nextPageToken) {
-      return out;
-    }
-    pageToken = response.nextPageToken;
   }
+  return out;
 }
 
 export async function countPendingFeedback(tenantId: string): Promise<number> {
