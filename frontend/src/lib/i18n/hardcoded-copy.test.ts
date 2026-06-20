@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import en from "./en.json";
+import pt from "./pt-BR.json";
 
 const FRONTEND_ROOT = resolve(import.meta.dirname, "../../..");
 
@@ -46,5 +48,11 @@ describe("hardcoded copy guard", () => {
         ).not.toContain(literal);
       }
     }
+  });
+});
+
+describe("i18n parity", () => {
+  it("en.json and pt-BR.json have identical key sets", () => {
+    expect(Object.keys(pt).sort()).toEqual(Object.keys(en).sort());
   });
 });
