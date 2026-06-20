@@ -14,7 +14,9 @@ const ADMIN_PERMISSIONS: HarpiaPermission[] = [
 export function readPersonaMode(
   storage: Pick<Storage, "getItem">,
 ): PersonaMode {
-  return storage.getItem(PERSONA_STORAGE_KEY) === "admin" ? "admin" : "operator";
+  return storage.getItem(PERSONA_STORAGE_KEY) === "admin"
+    ? "admin"
+    : "operator";
 }
 
 export function writePersonaMode(

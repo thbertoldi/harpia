@@ -1,4 +1,12 @@
-import { Bot, Compass, Inbox, Plug, Plus, ScrollText, Settings } from "lucide-svelte";
+import {
+  Bot,
+  Compass,
+  Inbox,
+  Plug,
+  Plus,
+  ScrollText,
+  Settings,
+} from "lucide-svelte";
 import { hasPermission, type HarpiaPermission } from "$lib/auth-roles";
 import type { PersonaMode } from "$lib/personas/storage";
 import type { NavIcon, ResolvedNavSection } from "./types";
@@ -15,7 +23,9 @@ const OPERATOR_SECTIONS: M1Section[] = [
   { i18nKey: "nav.newPlan", href: "/new", icon: Plus },
 ];
 
-const ADMIN_SECTIONS: Array<M1Section & { requiredPermission: HarpiaPermission }> = [
+const ADMIN_SECTIONS: Array<
+  M1Section & { requiredPermission: HarpiaPermission }
+> = [
   {
     i18nKey: "nav.adminIntegrations",
     href: "/admin/integrations",

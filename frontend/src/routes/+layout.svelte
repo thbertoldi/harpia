@@ -71,15 +71,10 @@
 
   const sections = $derived(
     m1Enabled
-      ? resolveNavSectionsM1(
-          personaMode,
-          data?.user?.role,
-          (key) => translate(key, $locale),
+      ? resolveNavSectionsM1(personaMode, data?.user?.role, (key) =>
+          translate(key, $locale),
         )
-      : resolveNavSections(
-          data?.user?.role,
-          (key) => translate(key, $locale),
-        ),
+      : resolveNavSections(data?.user?.role, (key) => translate(key, $locale)),
   );
 
   function togglePersona() {
@@ -228,7 +223,7 @@
                 aria-label={translate("nav.personaToggle", $locale)}
                 title={translate("nav.personaToggle", $locale)}
               >
-                <span class="font-medium uppercase tracking-wider">
+                <span class="font-medium tracking-wider uppercase">
                   {personaMode === "operator"
                     ? translate("nav.personaOperator", $locale)
                     : translate("nav.personaAdmin", $locale)}

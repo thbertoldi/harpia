@@ -22,7 +22,11 @@ describe("resolveNavSectionsM1 — operator persona", () => {
     const labels = resolveNavSectionsM1("operator", "Leader", translate).map(
       (s) => s.label,
     );
-    expect(labels).toEqual(["t:nav.needsYou", "t:nav.discover", "t:nav.newPlan"]);
+    expect(labels).toEqual([
+      "t:nav.needsYou",
+      "t:nav.discover",
+      "t:nav.newPlan",
+    ]);
   });
 });
 
