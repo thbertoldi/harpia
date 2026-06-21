@@ -6,6 +6,7 @@
   import InboxRow from "$lib/components/inbox/InboxRow.svelte";
   import InboxElicitationActions from "$lib/components/inbox/InboxElicitationActions.svelte";
   import InboxFeedbackActions from "$lib/components/inbox/InboxFeedbackActions.svelte";
+  import InboxApprovalEntry from "$lib/components/inbox/InboxApprovalEntry.svelte";
 
   type Filter = "all" | InboxItemKind;
 
@@ -107,18 +108,19 @@
     <ul class="flex flex-col gap-2">
       {#each visible as item (item.id)}
         <li>
-          <InboxRow {item}>
-            {#snippet actions()}
-              {#if item.kind === "elicitation"}
-                <InboxElicitationActions {item} />
-              {:else if item.kind === "feedback"}
-                <InboxFeedbackActions {item} />
-              {:else}
-                <!-- approval actions arrive in Task 5 -->
-                <span class="text-[11px] text-crown-ash">…</span>
-              {/if}
-            {/snippet}
-          </InboxRow>
+          {#if item.kind === "approval"}
+            <InboxApprovalEntry {item} />
+          {:else}
+            <InboxRow {item}>
+              {#snippet actions()}
+                {#if item.kind === "elicitation"}
+                  <InboxElicitationActions {item} />
+                {:else if item.kind === "feedback"}
+                  <InboxFeedbackActions {item} />
+                {/if}
+              {/snippet}
+            </InboxRow>
+          {/if}
         </li>
       {/each}
     </ul>
