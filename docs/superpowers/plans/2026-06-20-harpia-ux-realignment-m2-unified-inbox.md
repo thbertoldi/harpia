@@ -408,6 +408,7 @@ Create `frontend/src/lib/inbox/aggregator.test.ts`:
 ```ts
 import { describe, expect, it } from "vitest";
 import { watchInbox, type InboxSources } from "./aggregator";
+import type { InboxItem } from "./types";
 import type {
   ApprovalRequest,
   ElicitationRequest,
@@ -493,6 +494,8 @@ describe("watchInbox", () => {
   });
 
   it("derives summary/planName/taskName from the underlying request fields", async () => {
+    // watchInbox yields an initial empty list before any source emits (it's a
+    // loading-state marker for the page); loop until e2 actually arrives.
     const sources = singleEmitSources({
       watchElicitations: () =>
         yieldOnce([
@@ -506,8 +509,13 @@ describe("watchInbox", () => {
       loadFeedback: async () => [],
     });
     const iter = watchInbox("tenant-1", sources)[Symbol.asyncIterator]();
-    const { value } = await iter.next();
-    const item = value!.find((it) => it.id === "e2");
+    let item: InboxItem | undefined;
+    for (let i = 0; i < 5; i++) {
+      const { value, done } = await iter.next();
+      if (done) break;
+      item = value!.find((it) => it.id === "e2");
+      if (item) break;
+    }
     expect(item?.kind).toBe("elicitation");
     expect(item?.summary).toBe("Avoid which topic?");
     expect(item?.taskName).toBe("Write Draft");
