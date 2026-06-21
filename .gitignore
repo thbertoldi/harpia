@@ -71,3 +71,4 @@ control-plane/api
 
 # Brainstorming companion mockups
 .superpowers/
+.claude/worktrees/
