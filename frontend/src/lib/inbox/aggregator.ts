@@ -157,7 +157,9 @@ function toInboxApproval(req: ApprovalRequest): InboxApprovalItem {
     createdAt: req.requestedAt,
     planName: "Plan",
     taskName: req.planStepKey || req.stepExecutionId || "Task",
-    summary: "Approve to publish",
+    // Approval summaries are computed by the renderer (InboxRow) via i18n
+    // — keeping aggregator output locale-free.
+    summary: "",
     planExecutionId: req.planExecutionId,
     stepExecutionId: req.stepExecutionId,
     inputArtifactId: req.inputArtifactId,

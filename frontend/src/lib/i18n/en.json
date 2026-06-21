@@ -37,6 +37,7 @@
   "inbox.actions.approve": "Approve",
   "inbox.actions.reject": "Reject",
   "inbox.actions.preview": "Preview",
+  "inbox.summary.approval": "Approve to publish",
   "inbox.actions.hide": "Hide",
   "inbox.actions.submitting": "Sending…",
   "inbox.decision.approved": "Approved",

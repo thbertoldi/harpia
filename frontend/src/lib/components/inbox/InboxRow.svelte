@@ -27,6 +27,12 @@
       .replace("{plan}", item.planName)
       .replace("{task}", item.taskName),
   );
+
+  const displaySummary = $derived(
+    item.kind === "approval"
+      ? translate("inbox.summary.approval", $locale)
+      : item.summary,
+  );
 </script>
 
 <div
@@ -44,7 +50,9 @@
       <div class="mb-1 font-mono text-[11px] text-crown-ash">
         {sourceLabel}
       </div>
-      <div class="mb-1 text-[13px] leading-snug text-cream">{item.summary}</div>
+      <div class="mb-1 text-[13px] leading-snug text-cream">
+        {displaySummary}
+      </div>
       <div class="flex gap-3 text-[11px] text-crown-ash">
         <span>{formatRelativeTime(item.createdAt, $locale)}</span>
       </div>
