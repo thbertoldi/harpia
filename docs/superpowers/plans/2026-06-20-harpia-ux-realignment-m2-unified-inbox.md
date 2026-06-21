@@ -39,7 +39,7 @@
 - `frontend/src/lib/components/inbox/InboxElicitationActions.svelte` — "Open thread" button
 - `frontend/src/lib/components/inbox/InboxFeedbackActions.svelte` — "Open thread" button
 - `frontend/src/lib/components/inbox/InboxApprovalEntry.svelte` — wraps the full approval row + footer expansion; owns local state (expanded, submitting, decision, rejectReason)
-- `frontend/src/lib/components/inbox/InboxApprovalPreview.svelte` — renders the input artifact inline when expanded
+  (reuses the existing `frontend/src/lib/components/ArtifactPreview.svelte` for the inline preview — no new preview component created)
 - `frontend/src/routes/oversee/+page.ts` — 302 redirect loader
 - `frontend/src/routes/elicitations/+page.ts` — 302 redirect loader
 - `frontend/src/routes/approvals/+page.ts` — 302 redirect loader
