@@ -771,15 +771,15 @@ git commit -m "feat(ux-m2): add inbox aggregator and earlier-today bucketing"
 
 **Interfaces:**
 - Consumes: `countInbox` from `$lib/inbox/aggregator` (Task 2); `getTenant` from `$lib/auth`
-- Produces: an `InboxBadge` Svelte component that renders a badge styled like the legacy ones, but the count comes from `countInbox(tenantId)`. Rerenders on a 30s interval (matching the existing badges' poll cadence — verify by reading the legacy components for the exact pattern they use).
+- Produces: an `InboxBadge` Svelte component that renders a badge styled like the legacy ones, but the count comes from `countInbox(tenantId)`. Polls every 30 seconds (the legacy badges loaded once on mount and never refreshed; the new badge represents unified cross-plan state and needs to stay live).
 
-- [ ] **Step 1: Read the existing badge for the pattern**
+- [ ] **Step 1: Confirm visual styling matches the legacy badges**
 
 ```bash
-cd /home/thbertoldi/harpia && cat frontend/src/lib/components/ElicitationBadge.svelte frontend/src/lib/components/ApprovalBadge.svelte
+cd /home/thbertoldi/harpia && cat frontend/src/lib/components/ElicitationBadge.svelte
 ```
 
-Adopt the same shape — same Tailwind classes (`ml-auto inline-flex animate-pulse items-center justify-center rounded-full bg-talon-gold px-1.5 py-0.5 font-mono text-[10px] leading-none font-bold text-obsidian`), same polling cadence, same null/zero guard (`{#if count > 0}`).
+Use the same Tailwind classes verbatim (`ml-auto inline-flex animate-pulse items-center justify-center rounded-full bg-talon-gold px-1.5 py-0.5 font-mono text-[10px] leading-none font-bold text-obsidian`) and the same null/zero guard (`{#if count > 0}`). The legacy badges only loaded once on mount; the new InboxBadge below adds a 30-second polling refresh because it represents live cross-plan state.
 
 - [ ] **Step 2: Create the InboxBadge component**
 
@@ -972,6 +972,47 @@ cd frontend && npx vitest run src/lib/i18n/
 
 Expected: 13/13 pass.
 
+- [ ] **Step 3a: Add the `formatRelativeTime` i18n helper (does not exist yet)**
+
+`frontend/src/lib/i18n/format.ts` currently only exports `formatLocaleDate` and `formatLocaleDateTime`. Add `formatRelativeTime` as a new export at the end of that file:
+
+```ts
+const RELATIVE_UNITS: Array<{
+  limitSeconds: number;
+  divisorSeconds: number;
+  unit: Intl.RelativeTimeFormatUnit;
+}> = [
+  { limitSeconds: 60, divisorSeconds: 1, unit: "second" },
+  { limitSeconds: 3600, divisorSeconds: 60, unit: "minute" },
+  { limitSeconds: 86_400, divisorSeconds: 3600, unit: "hour" },
+  { limitSeconds: 604_800, divisorSeconds: 86_400, unit: "day" },
+];
+
+/**
+ * Returns a short relative-time string (e.g. "2 min ago", "1 hr ago",
+ * "ontem", "há 3 dias") for an ISO-8601 instant in the past, localised
+ * via Intl.RelativeTimeFormat. Falls back to `formatLocaleDate` for ages
+ * beyond a week.
+ */
+export function formatRelativeTime(iso: string, locale: string): string {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return "";
+  const deltaSeconds = Math.max(0, Math.floor((Date.now() - then) / 1000));
+  for (const { limitSeconds, divisorSeconds, unit } of RELATIVE_UNITS) {
+    if (deltaSeconds < limitSeconds) {
+      const value = Math.max(1, Math.floor(deltaSeconds / divisorSeconds));
+      return new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(
+        -value,
+        unit,
+      );
+    }
+  }
+  return formatLocaleDate(iso, locale);
+}
+```
+
+This pure helper takes an ISO instant and a locale and returns a localised relative-time string. No additional state, no test required for this step (covered indirectly by the inbox page's smoke check).
+
 - [ ] **Step 3: Create the shared InboxRow shell**
 
 Create `frontend/src/lib/components/inbox/InboxRow.svelte`. Note the optional `footer` snippet — Task 5's approval entry uses it to render the inline preview and reject-reason textarea inside the same card, below the 3-column row.
@@ -1040,7 +1081,7 @@ Create `frontend/src/lib/components/inbox/InboxRow.svelte`. Note the optional `f
 </div>
 ```
 
-Note: `formatRelativeTime` may not yet exist. If it doesn't, add a minimal shim in `frontend/src/lib/i18n/format.ts` that returns a string like "2 min ago" / "1 hr ago" — check first with `grep -n "formatRelativeTime\|relativeTime" frontend/src/lib/i18n/format.ts`. If absent, ADD a minimal `formatRelativeTime(iso: string, locale: string): string` that uses `Intl.RelativeTimeFormat` with sensible bucketing. Otherwise reuse the existing helper.
+Note: `formatRelativeTime` is the helper added in Step 3a above. Import path: `$lib/i18n/format`.
 
 - [ ] **Step 4: Create the elicitation actions component**
 
@@ -1106,7 +1147,6 @@ Overwrite `frontend/src/routes/inbox/+page.svelte` (currently the M1 stub) with 
   import { getTenant } from "$lib/auth";
   import { locale, translate } from "$lib/i18n";
   import { watchInbox } from "$lib/inbox/aggregator";
-  import { selectEarlierTodayItems } from "$lib/inbox/buckets";
   import type { InboxItem, InboxItemKind } from "$lib/inbox/types";
   import InboxRow from "$lib/components/inbox/InboxRow.svelte";
   import InboxElicitationActions from "$lib/components/inbox/InboxElicitationActions.svelte";
@@ -1148,10 +1188,10 @@ Overwrite `frontend/src/routes/inbox/+page.svelte` (currently the M1 stub) with 
     feedback: items.filter((it) => it.kind === "feedback").length,
   });
 
-  // M2 ships only the live "needs you" list; the earlierToday bucket is wired
-  // but populated by a separate query in M3 (recently-completed events).
-  // Until then, earlierToday remains empty.
-  const earlierToday = $derived<InboxItem[]>([]);
+  // M2 ships only the live "needs you" list. The selectEarlierTodayItems
+  // helper exists in lib/inbox/buckets but is not wired here yet — M3 will
+  // feed it recently-completed items from a separate query and render the
+  // "Earlier today" section below this one.
 </script>
 
 <svelte:head>
@@ -1264,7 +1304,6 @@ git commit -m "feat(ux-m2): render the inbox page with filters and graceful-degr
 
 **Files:**
 - Create: `frontend/src/lib/components/inbox/InboxApprovalEntry.svelte` — wrapper that owns the per-approval state (expanded, submitting, decision, rejectReason) and renders `InboxRow` with action buttons in the `actions` snippet and the preview/textarea in the `footer` snippet.
-- Create: `frontend/src/lib/components/inbox/InboxApprovalPreview.svelte`
 - Modify: `frontend/src/routes/inbox/+page.svelte` (render `InboxApprovalEntry` for approval items instead of `InboxRow + actions` directly).
 - Modify: `frontend/src/lib/i18n/en.json` (add approval preview keys)
 - Modify: `frontend/src/lib/i18n/pt-BR.json` (lockstep)
@@ -1276,14 +1315,14 @@ git commit -m "feat(ux-m2): render the inbox page with filters and graceful-degr
   - `toUserMessage` from `$lib/connect-errors` (existing helper used by the legacy detail page)
   - `InboxApprovalItem` from `$lib/inbox/types`
   - `InboxRow` from `./InboxRow.svelte` (Task 4 — note `footer` snippet support added in Task 4 specifically to host this expansion)
-  - An artifact-loader helper — read `/plans/executions/[executionId]/approvals/[approvalId]/+page.svelte` to see how the existing detail page fetches the input artifact body (look for `loadArtifact` or similar). Reuse the same loader; if it's inlined in the legacy page, extract it into `frontend/src/lib/plans/approval-artifact.ts` first (Step 2 below).
+  - **`ArtifactPreview` from `$lib/components/ArtifactPreview.svelte`** — already exists in the codebase, props `{ tenantId: string; artifactId: string }`, handles its own load/error/empty states via `$lib/artifacts/preview`. Use it directly in the footer; do NOT create an inbox-specific preview component or extract any new loader.
 - Produces: `InboxApprovalEntry` component covering four states:
   - Default: row shows `Preview / Reject / Approve` buttons; no footer.
-  - Expanded: footer shows `InboxApprovalPreview` (artifact body inline); button label changes to `Hide`.
+  - Expanded: footer renders `<ArtifactPreview ... />` inline; button label changes to `Hide`.
   - Submitting: buttons disabled.
   - Decided: row replaces buttons with a `Approved` or `Rejected` label.
 
-- [ ] **Step 1: Add the preview i18n keys**
+- [ ] **Step 1: Add the approval-flow i18n keys**
 
 In `frontend/src/lib/i18n/en.json`, insert after `inbox.actions.preview`:
 
@@ -1292,9 +1331,6 @@ In `frontend/src/lib/i18n/en.json`, insert after `inbox.actions.preview`:
   "inbox.actions.submitting": "Sending…",
   "inbox.decision.approved": "Approved",
   "inbox.decision.rejected": "Rejected",
-  "inbox.preview.empty": "No artifact attached to this approval.",
-  "inbox.preview.loading": "Loading preview…",
-  "inbox.preview.error": "Could not load the artifact.",
   "inbox.rejectReason.placeholder": "Reason (required to reject)",
 ```
 
@@ -1305,73 +1341,18 @@ In `frontend/src/lib/i18n/pt-BR.json`:
   "inbox.actions.submitting": "Enviando…",
   "inbox.decision.approved": "Aprovado",
   "inbox.decision.rejected": "Recusado",
-  "inbox.preview.empty": "Nenhum artefato anexado a esta aprovação.",
-  "inbox.preview.loading": "Carregando visualização…",
-  "inbox.preview.error": "Não foi possível carregar o artefato.",
   "inbox.rejectReason.placeholder": "Motivo (obrigatório para recusar)",
 ```
 
-- [ ] **Step 2: Inspect the legacy detail page for the artifact loader**
+(`ArtifactPreview.svelte` ships its own load/error/empty copy via `artifactPreview.*` keys — do NOT add `inbox.preview.*` keys.)
+
+- [ ] **Step 2: Confirm the existing ArtifactPreview API**
 
 ```bash
-cd /home/thbertoldi/harpia && grep -n "artifact\|Artifact\|inputArtifact" frontend/src/routes/plans/executions/\[executionId\]/approvals/\[approvalId\]/+page.svelte | head -10
+cd /home/thbertoldi/harpia && head -25 frontend/src/lib/components/ArtifactPreview.svelte
 ```
 
-Identify the function that fetches and renders the artifact body. Reuse it. If the loader is inline in the page (not extracted), extract it into a small helper at `frontend/src/lib/plans/approval-artifact.ts` exporting a `loadApprovalArtifact(tenantId, artifactId): Promise<{ text: string } | null>`-shaped function. If a suitable helper already exists in `lib/plans/`, use that instead.
-
-- [ ] **Step 3: Create the preview component**
-
-Create `frontend/src/lib/components/inbox/InboxApprovalPreview.svelte`:
-
-```svelte
-<script lang="ts">
-  import { locale, translate } from "$lib/i18n";
-  import { getTenant } from "$lib/auth";
-  // Use the loader identified in Step 2 — adjust the import accordingly.
-  import { loadApprovalArtifact } from "$lib/plans/approval-artifact";
-
-  interface Props {
-    artifactId: string;
-  }
-  let { artifactId }: Props = $props();
-
-  let body = $state<string | null>(null);
-  let loading = $state(true);
-  let errored = $state(false);
-
-  $effect(() => {
-    const tenant = getTenant();
-    if (!tenant?.id || !artifactId) {
-      loading = false;
-      return;
-    }
-    loading = true;
-    errored = false;
-    loadApprovalArtifact(tenant.id, artifactId)
-      .then((artifact) => {
-        body = artifact?.text ?? null;
-      })
-      .catch(() => {
-        errored = true;
-      })
-      .finally(() => {
-        loading = false;
-      });
-  });
-</script>
-
-<div class="mt-3 rounded border border-plumage bg-obsidian px-4 py-3 text-[13px] text-cream">
-  {#if loading}
-    <span class="text-crown-ash">{translate("inbox.preview.loading", $locale)}</span>
-  {:else if errored}
-    <span class="text-crown-ash">{translate("inbox.preview.error", $locale)}</span>
-  {:else if !body}
-    <span class="text-crown-ash">{translate("inbox.preview.empty", $locale)}</span>
-  {:else}
-    <pre class="font-body whitespace-pre-wrap">{body}</pre>
-  {/if}
-</div>
-```
+You should see props `{ tenantId: string; artifactId: string; preview?, loading?, error? }` (the last three are `$bindable` and optional — leave them unbound in the inbox use). Confirmed: just pass `tenantId` and `artifactId`.
 
 - [ ] **Step 4: Create the approval entry wrapper component**
 
@@ -1385,7 +1366,7 @@ Create `frontend/src/lib/components/inbox/InboxApprovalEntry.svelte`. This compo
   import { toUserMessage } from "$lib/connect-errors";
   import type { InboxApprovalItem } from "$lib/inbox/types";
   import InboxRow from "./InboxRow.svelte";
-  import InboxApprovalPreview from "./InboxApprovalPreview.svelte";
+  import ArtifactPreview from "$lib/components/ArtifactPreview.svelte";
 
   interface Props {
     item: InboxApprovalItem;
@@ -1398,6 +1379,8 @@ Create `frontend/src/lib/components/inbox/InboxApprovalEntry.svelte`. This compo
   let rejectReason = $state("");
   let rejectMode = $state(false);
   let errorMessage = $state<string | null>(null);
+
+  const tenantId = $derived(getTenant()?.id ?? "");
 
   async function submit(approved: boolean) {
     const tenant = getTenant();
@@ -1475,8 +1458,10 @@ Create `frontend/src/lib/components/inbox/InboxApprovalEntry.svelte`. This compo
 
   {#snippet footer()}
     {#if hasFooter}
-      {#if expanded}
-        <InboxApprovalPreview artifactId={item.inputArtifactId} />
+      {#if expanded && tenantId && item.inputArtifactId}
+        <div class="mt-3">
+          <ArtifactPreview {tenantId} artifactId={item.inputArtifactId} />
+        </div>
       {/if}
       {#if rejectMode}
         <textarea
@@ -1538,7 +1523,7 @@ Expected: zero NEW type errors; tests pass; lint clean.
 
 ```bash
 cd /home/thbertoldi/harpia
-git add frontend/src/lib/i18n/ frontend/src/lib/components/inbox/ frontend/src/lib/plans/approval-artifact.ts frontend/src/routes/inbox/+page.svelte
+git add frontend/src/lib/i18n/ frontend/src/lib/components/inbox/ frontend/src/routes/inbox/+page.svelte
 git commit -m "feat(ux-m2): inline approval preview and approve/reject in the inbox"
 ```
 
