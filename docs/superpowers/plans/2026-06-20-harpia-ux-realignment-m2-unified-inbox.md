@@ -30,7 +30,7 @@
 - `frontend/src/lib/inbox/types.ts` — discriminated union `InboxItem` (elicitation | approval | feedback)
 - `frontend/src/lib/inbox/aggregator.ts` — `watchInbox(tenantId, sources?)`, `countInbox(tenantId)`
 - `frontend/src/lib/inbox/aggregator.test.ts`
-- `frontend/src/lib/inbox/buckets.ts` — `partitionByEarlierToday(items, now, tz)` helper
+- `frontend/src/lib/inbox/buckets.ts` — `selectEarlierTodayItems(items, now, tz)` helper
 - `frontend/src/lib/inbox/buckets.test.ts`
 - `frontend/src/lib/feedback/counts.ts` — `countPendingFeedback(tenantId)`, `loadPendingFeedback(tenantId)` (matches existing per-type lib shape)
 - `frontend/src/lib/feedback/counts.test.ts`
@@ -284,7 +284,7 @@ git commit -m "feat(ux-m2): add InboxItem types and feedback count helper"
   - `const DEFAULT_INBOX_SOURCES: InboxSources` wiring the real per-type lib functions
   - `function watchInbox(tenantId: string, sources?: InboxSources): AsyncIterable<InboxItem[]>` — merges all three sources, yields the combined sorted list every time any source updates
   - `function countInbox(tenantId: string): Promise<number>` — sums all three pending counts via one-shot loads (used by the badge)
-  - `function partitionByEarlierToday(items: InboxItem[], now: Date, tz: string): { active: InboxItem[]; earlierToday: InboxItem[] }` — splits and caps earlierToday at 20
+  - `function selectEarlierTodayItems(items: InboxItem[], now: Date, tz: string): InboxItem[]` — filters to today's local calendar day, sorts most-recent-first, caps at 20
 
 - [ ] **Step 1: Write the failing test for buckets**
 
@@ -292,7 +292,7 @@ Create `frontend/src/lib/inbox/buckets.test.ts`:
 
 ```ts
 import { describe, expect, it } from "vitest";
-import { partitionByEarlierToday } from "./buckets";
+import { selectEarlierTodayItems } from "./buckets";
 import type { InboxItem } from "./types";
 
 function elicit(id: string, createdAt: string): InboxItem {
@@ -310,39 +310,36 @@ function elicit(id: string, createdAt: string): InboxItem {
   };
 }
 
-describe("partitionByEarlierToday", () => {
+describe("selectEarlierTodayItems", () => {
   const now = new Date("2026-06-20T15:30:00Z"); // 12:30 BRT
 
-  it("splits items at local midnight (today vs earlier today)", () => {
+  it("returns only items whose createdAt falls on today's local calendar day, sorted most-recent-first", () => {
     const items: InboxItem[] = [
-      elicit("a", "2026-06-20T17:00:00Z"), // future = active
-      elicit("b", "2026-06-20T14:00:00Z"), // 11:00 BRT today = active (pending)
-      elicit("c", "2026-06-20T11:00:00Z"), // 08:00 BRT today = active (pending — bucket is by status, not age)
+      elicit("today-late", "2026-06-20T18:00:00Z"),  // 15:00 BRT June 20
+      elicit("today-early", "2026-06-20T11:00:00Z"), // 08:00 BRT June 20
+      elicit("yesterday", "2026-06-20T01:00:00Z"),   // 22:00 BRT June 19
     ];
-    const result = partitionByEarlierToday(items, now, "America/Sao_Paulo");
-    expect(result.active.map((i) => i.id)).toEqual(["a", "b", "c"]);
-    expect(result.earlierToday).toEqual([]);
+    const result = selectEarlierTodayItems(items, now, "America/Sao_Paulo");
+    expect(result.map((i) => i.id)).toEqual(["today-late", "today-early"]);
   });
 
-  it("active vs earlierToday split is purely by the caller's intent — partitionByEarlierToday only caps and orders earlierToday", () => {
-    // The aggregator passes only completed-today items as input; partitionByEarlierToday
-    // sorts them most-recent-first and caps at 20. Items it receives are already classified.
+  it("caps at 20 items, keeping the 20 most recent", () => {
     const items: InboxItem[] = Array.from({ length: 25 }, (_, i) =>
       elicit(`x${i}`, `2026-06-20T${String(i).padStart(2, "0")}:00:00Z`),
     );
-    const result = partitionByEarlierToday(items, now, "America/Sao_Paulo");
-    expect(result.earlierToday).toHaveLength(20);
-    expect(result.earlierToday[0].id).toBe("x24"); // most recent
-    expect(result.earlierToday[19].id).toBe("x5"); // 20th most recent
+    const result = selectEarlierTodayItems(items, now, "America/Sao_Paulo");
+    expect(result).toHaveLength(20);
+    expect(result[0].id).toBe("x24"); // most recent of the day
+    expect(result[19].id).toBe("x5"); // 20th most recent
   });
 
-  it("filters out items not from today's local calendar day", () => {
+  it("returns an empty array when no items belong to today's local day", () => {
     const items: InboxItem[] = [
-      elicit("today", "2026-06-20T18:00:00Z"), // 15:00 BRT June 20 = today
-      elicit("yesterday", "2026-06-20T01:00:00Z"), // 22:00 BRT June 19 = yesterday
+      elicit("yesterday", "2026-06-19T20:00:00Z"),
+      elicit("yesterday-late", "2026-06-20T01:00:00Z"), // 22:00 BRT June 19
     ];
-    const result = partitionByEarlierToday(items, now, "America/Sao_Paulo");
-    expect(result.earlierToday.map((i) => i.id)).toEqual(["today"]);
+    const result = selectEarlierTodayItems(items, now, "America/Sao_Paulo");
+    expect(result).toEqual([]);
   });
 });
 ```
@@ -365,28 +362,25 @@ import type { InboxItem } from "./types";
 const EARLIER_TODAY_CAP = 20;
 
 /**
- * Split items into "active" (callers' classification, passed through) and
- * "earlierToday" (recently-completed items from today only, sorted
- * most-recent-first and capped at 20).
+ * Filter items down to those whose createdAt falls on today's local
+ * calendar day, sorted most-recent-first, capped at 20.
  *
- * The aggregator decides what's "active" vs "earlierToday" upstream; this
- * helper just sorts, filters by local calendar day, and caps.
+ * In M2 the aggregator only emits currently-pending items, so the inbox
+ * page passes an empty list here and the result is always []. M3 will
+ * start feeding recently-completed items so the "Earlier today" section
+ * actually populates. The helper exists in M2 so the page is wired
+ * end-to-end and M3 only has to swap the data source.
  */
-export function partitionByEarlierToday(
+export function selectEarlierTodayItems(
   items: InboxItem[],
   now: Date,
   tz: string,
-): { active: InboxItem[]; earlierToday: InboxItem[] } {
+): InboxItem[] {
   const todayKey = localDayKey(now, tz);
-  const earlierToday = items
+  return items
     .filter((item) => localDayKey(new Date(item.createdAt), tz) === todayKey)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, EARLIER_TODAY_CAP);
-  // For M2, all input items are "earlierToday" candidates; the aggregator
-  // separates active vs completed before calling this. Active list is
-  // therefore the caller's items minus earlierToday — but in M2 the caller
-  // passes only completed items here, so active is empty.
-  return { active: [], earlierToday };
 }
 
 function localDayKey(date: Date, tz: string): string {
@@ -899,7 +893,7 @@ git commit -m "feat(ux-m2): replace three legacy badges with unified InboxBadge"
 
 **Interfaces:**
 - Consumes:
-  - `watchInbox`, `partitionByEarlierToday` from `$lib/inbox/{aggregator,buckets}` (Task 2)
+  - `watchInbox`, `selectEarlierTodayItems` from `$lib/inbox/{aggregator,buckets}` (Task 2)
   - `getTenant`, `translate`, `locale` from `$lib`
 - Produces:
   - A renderable `/inbox` page with: header ("Needs you · N pending"), filter chips (All / Elicitations / Approvals / Feedback), active rows (sorted), "Earlier today" section, empty state
@@ -1093,7 +1087,7 @@ Overwrite `frontend/src/routes/inbox/+page.svelte` (currently the M1 stub) with 
   import { getTenant } from "$lib/auth";
   import { locale, translate } from "$lib/i18n";
   import { watchInbox } from "$lib/inbox/aggregator";
-  import { partitionByEarlierToday } from "$lib/inbox/buckets";
+  import { selectEarlierTodayItems } from "$lib/inbox/buckets";
   import type { InboxItem, InboxItemKind } from "$lib/inbox/types";
   import InboxRow from "$lib/components/inbox/InboxRow.svelte";
   import InboxElicitationActions from "$lib/components/inbox/InboxElicitationActions.svelte";
