@@ -87,6 +87,8 @@
 
 - [ ] **Step 1: Write the failing test for counts**
 
+> **IMPORTANT** — `feedbackClient.listPendingFeedback` is declared `methodKind: "server_streaming"` in the generated client (`frontend/src/lib/gen/harpia/feedback/v1/feedback_pb.ts`), which means it returns `AsyncIterable<ListPendingFeedbackResponse>` (NOT a Promise of one paginated response). Reference usage: `frontend/src/routes/oversee/+page.svelte` consumes it with `for await (const res of client.listPendingFeedback(...))`. The tests and implementation below match that streaming contract.
+
 Create `frontend/src/lib/feedback/counts.test.ts`:
 
 ```ts
@@ -104,39 +106,36 @@ beforeEach(() => {
 });
 
 describe("loadPendingFeedback", () => {
-  it("drains all pages and returns the combined feedbackRequests array", async () => {
-    feedbackClientMock.feedbackClient.listPendingFeedback
-      .mockResolvedValueOnce({
-        feedbackRequests: [{ id: "a" }, { id: "b" }],
-        nextPageToken: "tok2",
-      })
-      .mockResolvedValueOnce({
-        feedbackRequests: [{ id: "c" }],
-        nextPageToken: "",
-      });
+  it("drains all streamed responses and combines their feedbackRequests arrays", async () => {
+    feedbackClientMock.feedbackClient.listPendingFeedback.mockImplementation(
+      async function* () {
+        yield { feedbackRequests: [{ id: "a" }, { id: "b" }], nextPageToken: "tok2" };
+        yield { feedbackRequests: [{ id: "c" }], nextPageToken: "" };
+      },
+    );
 
     const { loadPendingFeedback } = await import("./counts");
     const got = await loadPendingFeedback("tenant-1");
 
     expect(got.map((f) => f.id)).toEqual(["a", "b", "c"]);
-    expect(feedbackClientMock.feedbackClient.listPendingFeedback).toHaveBeenCalledTimes(2);
-    expect(feedbackClientMock.feedbackClient.listPendingFeedback).toHaveBeenNthCalledWith(1, {
+    expect(
+      feedbackClientMock.feedbackClient.listPendingFeedback,
+    ).toHaveBeenCalledTimes(1);
+    expect(
+      feedbackClientMock.feedbackClient.listPendingFeedback,
+    ).toHaveBeenCalledWith({
       tenantId: "tenant-1",
       pageSize: 50,
       pageToken: "",
     });
-    expect(feedbackClientMock.feedbackClient.listPendingFeedback).toHaveBeenNthCalledWith(2, {
-      tenantId: "tenant-1",
-      pageSize: 50,
-      pageToken: "tok2",
-    });
   });
 
-  it("returns an empty array when the first page is empty", async () => {
-    feedbackClientMock.feedbackClient.listPendingFeedback.mockResolvedValueOnce({
-      feedbackRequests: [],
-      nextPageToken: "",
-    });
+  it("returns an empty array when the stream yields no items", async () => {
+    feedbackClientMock.feedbackClient.listPendingFeedback.mockImplementation(
+      async function* () {
+        // no yields
+      },
+    );
     const { loadPendingFeedback } = await import("./counts");
     expect(await loadPendingFeedback("tenant-1")).toEqual([]);
   });
@@ -144,10 +143,14 @@ describe("loadPendingFeedback", () => {
 
 describe("countPendingFeedback", () => {
   it("returns the number of pending feedback requests", async () => {
-    feedbackClientMock.feedbackClient.listPendingFeedback.mockResolvedValueOnce({
-      feedbackRequests: [{ id: "a" }, { id: "b" }, { id: "c" }],
-      nextPageToken: "",
-    });
+    feedbackClientMock.feedbackClient.listPendingFeedback.mockImplementation(
+      async function* () {
+        yield {
+          feedbackRequests: [{ id: "a" }, { id: "b" }, { id: "c" }],
+          nextPageToken: "",
+        };
+      },
+    );
     const { countPendingFeedback } = await import("./counts");
     expect(await countPendingFeedback("tenant-1")).toBe(3);
   });
@@ -174,19 +177,14 @@ export async function loadPendingFeedback(
   tenantId: string,
 ): Promise<FeedbackRequest[]> {
   const out: FeedbackRequest[] = [];
-  let pageToken = "";
-  while (true) {
-    const response = await feedbackClient.listPendingFeedback({
-      tenantId,
-      pageSize: 50,
-      pageToken,
-    });
+  for await (const response of feedbackClient.listPendingFeedback({
+    tenantId,
+    pageSize: 50,
+    pageToken: "",
+  })) {
     out.push(...response.feedbackRequests);
-    if (!response.nextPageToken) {
-      return out;
-    }
-    pageToken = response.nextPageToken;
   }
+  return out;
 }
 
 export async function countPendingFeedback(
