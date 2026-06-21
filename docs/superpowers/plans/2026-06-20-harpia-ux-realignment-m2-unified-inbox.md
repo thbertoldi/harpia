@@ -1411,75 +1411,77 @@ Create `frontend/src/lib/components/inbox/InboxApprovalEntry.svelte`. This compo
   const hasFooter = $derived(expanded || rejectMode || errorMessage !== null);
 </script>
 
-<InboxRow {item}>
-  {#snippet actions()}
-    {#if decision}
-      <span class="text-[11px] font-semibold text-talon-gold">
-        {translate(
-          decision === "approved"
-            ? "inbox.decision.approved"
-            : "inbox.decision.rejected",
-          $locale,
-        )}
-      </span>
-    {:else}
-      <button
-        type="button"
-        onclick={() => (expanded = !expanded)}
-        disabled={submitting}
-        class="rounded border border-plumage bg-transparent px-3 py-1.5 text-[11px] font-medium text-crown-ash hover:border-talon-gold hover:text-talon-gold disabled:opacity-50"
-      >
-        {translate(
-          expanded ? "inbox.actions.hide" : "inbox.actions.preview",
-          $locale,
-        )}
-      </button>
-      <button
-        type="button"
-        onclick={() => submit(false)}
-        disabled={submitting}
-        class="rounded border border-plumage bg-transparent px-3 py-1.5 text-[11px] font-medium text-crown-ash hover:border-red-400 hover:text-red-400 disabled:opacity-50"
-      >
-        {translate("inbox.actions.reject", $locale)}
-      </button>
-      <button
-        type="button"
-        onclick={() => submit(true)}
-        disabled={submitting}
-        class="rounded border border-talon-gold bg-talon-gold px-3 py-1.5 text-[11px] font-semibold text-obsidian hover:opacity-90 disabled:opacity-50"
-      >
-        {translate(
-          submitting ? "inbox.actions.submitting" : "inbox.actions.approve",
-          $locale,
-        )}
-      </button>
-    {/if}
-  {/snippet}
+{#snippet approvalActions()}
+  {#if decision}
+    <span class="text-[11px] font-semibold text-talon-gold">
+      {translate(
+        decision === "approved"
+          ? "inbox.decision.approved"
+          : "inbox.decision.rejected",
+        $locale,
+      )}
+    </span>
+  {:else}
+    <button
+      type="button"
+      onclick={() => (expanded = !expanded)}
+      disabled={submitting}
+      class="rounded border border-plumage bg-transparent px-3 py-1.5 text-[11px] font-medium text-crown-ash hover:border-talon-gold hover:text-talon-gold disabled:opacity-50"
+    >
+      {translate(
+        expanded ? "inbox.actions.hide" : "inbox.actions.preview",
+        $locale,
+      )}
+    </button>
+    <button
+      type="button"
+      onclick={() => submit(false)}
+      disabled={submitting}
+      class="rounded border border-plumage bg-transparent px-3 py-1.5 text-[11px] font-medium text-crown-ash hover:border-red-400 hover:text-red-400 disabled:opacity-50"
+    >
+      {translate("inbox.actions.reject", $locale)}
+    </button>
+    <button
+      type="button"
+      onclick={() => submit(true)}
+      disabled={submitting}
+      class="rounded border border-talon-gold bg-talon-gold px-3 py-1.5 text-[11px] font-semibold text-obsidian hover:opacity-90 disabled:opacity-50"
+    >
+      {translate(
+        submitting ? "inbox.actions.submitting" : "inbox.actions.approve",
+        $locale,
+      )}
+    </button>
+  {/if}
+{/snippet}
 
-  {#snippet footer()}
-    {#if hasFooter}
-      {#if expanded && tenantId && item.inputArtifactId}
-        <div class="mt-3">
-          <ArtifactPreview {tenantId} artifactId={item.inputArtifactId} />
-        </div>
-      {/if}
-      {#if rejectMode}
-        <textarea
-          class="mt-3 w-full rounded border border-plumage bg-obsidian px-3 py-2 text-[12px] text-cream focus:border-talon-gold focus:outline-none"
-          rows="2"
-          placeholder={translate("inbox.rejectReason.placeholder", $locale)}
-          bind:value={rejectReason}
-        ></textarea>
-      {/if}
-      {#if errorMessage}
-        <p class="mt-2 text-[11px] text-red-400">{errorMessage}</p>
-      {/if}
-    {/if}
-  {/snippet}
-</InboxRow>
+{#snippet approvalFooter()}
+  {#if expanded && tenantId && item.inputArtifactId}
+    <div class="mt-3">
+      <ArtifactPreview {tenantId} artifactId={item.inputArtifactId} />
+    </div>
+  {/if}
+  {#if rejectMode}
+    <textarea
+      class="mt-3 w-full rounded border border-plumage bg-obsidian px-3 py-2 text-[12px] text-cream focus:border-talon-gold focus:outline-none"
+      rows="2"
+      placeholder={translate("inbox.rejectReason.placeholder", $locale)}
+      bind:value={rejectReason}
+    ></textarea>
+  {/if}
+  {#if errorMessage}
+    <p class="mt-2 text-[11px] text-red-400">{errorMessage}</p>
+  {/if}
+{/snippet}
+
+<InboxRow
+  {item}
+  actions={approvalActions}
+  footer={hasFooter ? approvalFooter : undefined}
+/>
 ```
 
-Note: the `footer` snippet is passed regardless; Svelte renders it only when invoked. The `{#if hasFooter}` guard inside the snippet keeps the rendered output empty until any of the three reasons fires, so `InboxRow`'s footer divider doesn't appear in the default state. If you want the divider to also disappear when the footer is empty, change `InboxRow.svelte`'s `{#if footer}` to `{#if footer && hasFooter}` — but `hasFooter` lives on the entry, not the row, so prefer the pattern as written (footer-snippet-with-internal-guard) over plumbing more props through.
+Note on the conditional snippet prop: in Svelte 5, snippets ARE props. `InboxRow`'s `{#if footer}` check inspects whether a snippet was *passed*, not whether the snippet's body renders anything. Defining `approvalActions` and `approvalFooter` as named top-level snippets lets us pass `footer={hasFooter ? approvalFooter : undefined}` — when `hasFooter` is false, the prop is `undefined`, `InboxRow`'s `{#if footer}` evaluates false, and the wrapper div with the divider does not render. This is why we don't use the inline `<InboxRow>{#snippet footer()}…{/snippet}</InboxRow>` form here (that form passes the snippet unconditionally and would always trigger the wrapper).
 
 - [ ] **Step 5: Wire approval entries into the inbox page**
 
