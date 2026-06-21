@@ -600,18 +600,27 @@ export async function* watchInbox(
   tenantId: string,
   sources: InboxSources = DEFAULT_INBOX_SOURCES,
 ): AsyncIterable<InboxItem[]> {
+  // resolveNext is initialised to a noop so its type is `() => void` (no
+  // `| null` union). TypeScript narrows `let x: T | null = null` to `null` at
+  // sites after callback-only reassignments — the Promise executor below only
+  // mutates it from inside a closure, so a strict-mode compiler would treat
+  // the finally-block `resolveNext?.()` as a call on `never`. Keeping the
+  // variable always-callable sidesteps that quirk and removes the need for
+  // optional chaining.
+  const NOOP: () => void = () => {};
+
   let elicitations: ElicitationRequest[] = [];
   let approvals: ApprovalRequest[] = [];
   let feedbacks: FeedbackRequest[] = [];
   let dirty = true;
-  let resolveNext: (() => void) | null = null;
+  let resolveNext: () => void = NOOP;
   let done = false;
 
   const wake = () => {
     dirty = true;
     const r = resolveNext;
-    resolveNext = null;
-    r?.();
+    resolveNext = NOOP;
+    r();
   };
 
   const consume = async <T,>(
@@ -662,10 +671,9 @@ export async function* watchInbox(
     }
   } finally {
     done = true;
-    // Const-capture before calling so TS narrows the type — same pattern as wake().
     const r = resolveNext;
-    resolveNext = null;
-    r?.();
+    resolveNext = NOOP;
+    r();
   }
 }
 
