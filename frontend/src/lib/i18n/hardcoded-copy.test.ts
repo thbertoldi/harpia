@@ -9,7 +9,6 @@ const FRONTEND_ROOT = resolve(import.meta.dirname, "../../..");
 const HIGH_RISK_FILES = [
   "src/routes/+page.svelte",
   "src/routes/integrations/+page.svelte",
-  "src/routes/oversee/+page.svelte",
   "src/routes/tasks/ongoing/+page.svelte",
   "src/routes/agents/+page.svelte",
   "src/routes/audit/+page.svelte",

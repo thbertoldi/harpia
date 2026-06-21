@@ -122,10 +122,10 @@
 
 <div class="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-6 lg:px-6">
   <a
-    href={resolve("/approvals")}
+    href={resolve("/inbox")}
     class="font-body text-sm text-crown-ash transition-colors hover:text-talon-gold"
   >
-    {translate("approvals.detail.back", $locale)}
+    {translate("nav.needsYou", $locale)}
   </a>
 
   {#if loading}
