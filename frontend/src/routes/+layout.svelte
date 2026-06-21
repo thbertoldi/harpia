@@ -2,9 +2,7 @@
   import "../app.css";
   import { Menu, X, Sun, Moon } from "lucide-svelte";
   import TenantSelector from "$lib/components/TenantSelector.svelte";
-  import FeedbackBadge from "$lib/components/FeedbackBadge.svelte";
-  import ElicitationBadge from "$lib/components/ElicitationBadge.svelte";
-  import ApprovalBadge from "$lib/components/ApprovalBadge.svelte";
+  import InboxBadge from "$lib/components/InboxBadge.svelte";
   import BrandLockup from "$lib/components/BrandLockup.svelte";
   import { logout, getTenant } from "$lib/auth";
   import { page } from "$app/state";
@@ -161,14 +159,8 @@
                 class="text-sm font-medium"
                 style="font-family: 'DM Sans', sans-serif">{section.label}</span
               >
-              {#if section.href === "/oversee"}
-                <FeedbackBadge />
-              {/if}
-              {#if section.href === "/elicitations"}
-                <ElicitationBadge />
-              {/if}
-              {#if section.href === "/approvals"}
-                <ApprovalBadge />
+              {#if section.href === "/inbox"}
+                <InboxBadge />
               {/if}
             </a>
           {/each}
