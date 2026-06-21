@@ -473,7 +473,7 @@ describe("watchInbox", () => {
     const sources = singleEmitSources();
     const iter = watchInbox("tenant-1", sources)[Symbol.asyncIterator]();
     // Drain until we have all three kinds present.
-    let last: Awaited<ReturnType<typeof iter.next>>["value"] = [];
+    let last: InboxItem[] = [];
     for (let i = 0; i < 5; i++) {
       const { value, done } = await iter.next();
       if (done) break;
@@ -662,7 +662,10 @@ export async function* watchInbox(
     }
   } finally {
     done = true;
-    resolveNext?.();
+    // Const-capture before calling so TS narrows the type — same pattern as wake().
+    const r = resolveNext;
+    resolveNext = null;
+    r?.();
   }
 }
 
