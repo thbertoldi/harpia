@@ -787,12 +787,10 @@ Create `frontend/src/lib/components/InboxBadge.svelte`:
 
 ```svelte
 <script lang="ts">
-  import { onDestroy } from "svelte";
   import { getTenant } from "$lib/auth";
   import { countInbox } from "$lib/inbox/aggregator";
 
   let count = $state(0);
-  let timer: ReturnType<typeof setInterval> | undefined;
 
   async function refresh() {
     const tenant = getTenant();
@@ -806,14 +804,8 @@ Create `frontend/src/lib/components/InboxBadge.svelte`:
 
   $effect(() => {
     void refresh();
-    timer = setInterval(refresh, 30_000);
-    return () => {
-      if (timer) clearInterval(timer);
-    };
-  });
-
-  onDestroy(() => {
-    if (timer) clearInterval(timer);
+    const timer = setInterval(refresh, 30_000);
+    return () => clearInterval(timer);
   });
 </script>
 
