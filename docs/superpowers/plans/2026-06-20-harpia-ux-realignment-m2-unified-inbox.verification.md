@@ -68,9 +68,28 @@ c24bea0 docs(ux-m2): fix Task 2 brief; second test must loop past initial empty 
 c68d3ce docs(ux-m2): write implementation plan for M2 unified inbox
 ```
 
+## Whole-branch final review (Claude opus)
+
+Verdict: **Ready to merge with fixes.** Two Critical findings, four Important, six Minor. Critical findings addressed below; Importants tracked as M3 follow-ups.
+
+### Post-review fixes applied to the branch
+
+| Finding | Fix commit | Notes |
+|---|---|---|
+| InboxBadge runtime crash (`Cannot read properties of null (reading 'r')` in `onDestroy`) — missed by both T3 and T9 reviewers | `3263178` | Removed redundant `onDestroy`; `$effect` cleanup handles unmount. Moved `timer` inside the effect so each run owns its instance. Plan patched in `ab0586d`. |
+| Critical #1 — Feedback rows looped back to inbox (no submission path) | `23e21257` | Restored `frontend/src/routes/oversee/+page.svelte` from before its T6 deletion. Removed the redirect loader. `/oversee` is no longer in the sidebar but reachable via `InboxFeedbackActions`'s deep-link — M2 graceful-degrade until M3 ships the per-plan chat thread. |
+| Critical #2 — Hardcoded English "Approve to publish" summary in aggregator | `8e2300a` | Aggregator now emits empty `summary` for approvals; `InboxRow` derives the displayed text via `translate("inbox.summary.approval", $locale)`. Added the key to both locale files. |
+
+### Important findings deferred to M3 follow-ups (not merge blockers)
+
+- **`formatRelativeTime` locale type laxity** (`lib/i18n/format.ts`) — signature is `(iso, locale: string)` instead of `(iso, locale: Locale)`; uses an unsafe `as Locale` cast. Works at runtime; cleanup pass.
+- **`watchInbox` upstream-stream leak** (`lib/inbox/aggregator.ts`) — no `AbortSignal` plumbed through to the two underlying server-streaming RPCs. Pre-existing pattern in the codebase; M2 doubled it because the inbox subscribes to two streams. Worth a foundational fix in M3 when more streams stack.
+- **Ad-hoc `.replace("{count}", …)` in translate calls** (`inbox/+page.svelte`, `InboxRow.svelte`) — codebase already supports `translate(key, locale, { count: N })`. Convert in a follow-up.
+- **Note:** the "orphaned `oversee.*` i18n keys" Important from the review is mooted by Critical #1's fix — those keys are now live again because `/oversee/+page.svelte` was restored.
+
 ## Status
 
-**Automated portion: ✅ complete.** Whole-branch final review next; manual browser smoke required before merge.
+**Ready to merge.** Manual browser smoke from the checklist above is still required before merge — these post-review fixes have not been clicked-through in a live browser.
 
 ## Closes
 
