@@ -75,6 +75,7 @@
   "canvas.topbar.scheduleComingSoon": "Disponível em um marco futuro",
   "canvas.topbar.settings": "Configurações",
   "canvas.topbar.answer": "Responder",
+  "canvas.topbar.answerPending": "Responder ★ {count}",
   "canvas.drawer.close": "Fechar",
   "canvas.runHistory.title": "Histórico de execuções",
   "canvas.runHistory.loading": "Carregando execuções…",

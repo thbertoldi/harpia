@@ -20,17 +20,51 @@ export interface CanvasStepState {
   errorMessage?: string;
 }
 
+/** Most recently started step that is still running (linear DAG primary case). */
+function mostRecentRunningStepKey(
+  state: Record<string, CanvasStepState>,
+): string | null {
+  let bestKey: string | null = null;
+  let bestStarted = "";
+  for (const [key, step] of Object.entries(state)) {
+    if (step.status !== "running" || !step.startedAt) continue;
+    if (!bestKey || step.startedAt > bestStarted) {
+      bestKey = key;
+      bestStarted = step.startedAt;
+    }
+  }
+  return bestKey;
+}
+
+function findStepByPendingElicitation(
+  state: Record<string, CanvasStepState>,
+  elicitationId: string,
+): string | null {
+  for (const [key, step] of Object.entries(state)) {
+    if (step.pendingElicitationId === elicitationId) return key;
+  }
+  return null;
+}
+
+function findStepByPendingApproval(
+  state: Record<string, CanvasStepState>,
+  approvalId: string,
+): string | null {
+  for (const [key, step] of Object.entries(state)) {
+    if (step.pendingApprovalId === approvalId) return key;
+  }
+  return null;
+}
+
 /**
  * Project a stream of M3 chat messages onto a canvas state map keyed by
  * step.key. Pure function — replays messages in sequence order.
  *
- * Pointer messages (ELICITATION_RAISED, APPROVAL_RAISED) attach to the step
- * that most recently STEP_STARTED in the same execution. Their corresponding
- * *_ANSWERED / *_DECIDED clear the pointer and revert status to "running"
- * until STEP_BOUND completes the step.
+ * Pointer messages (ELICITATION_RAISED, APPROVAL_RAISED) attach to the
+ * running step with the latest startedAt (M4 assumes mostly linear DAGs;
+ * parallel fan-out may mis-route if multiple steps are running).
  *
- * RUN_FAILED at the run level marks the currently-running step as "failed"
- * and stores the error message from the payload.
+ * RUN_FAILED marks the most recently running step as failed.
  */
 export function buildCanvasState(
   messages: ChatMessage[],
@@ -40,10 +74,6 @@ export function buildCanvasState(
   for (const step of steps) {
     state[step.key] = { status: "pending" };
   }
-
-  // Track the "currently active" step key per execution so pointer
-  // messages can attach. M4 assumes a single execution context per call.
-  let activeStepKey: string | null = null;
 
   const sorted = [...messages].sort((a, b) =>
     a.sequenceNumber < b.sequenceNumber ? -1 : 1,
@@ -61,15 +91,22 @@ export function buildCanvasState(
       case "STEP_STARTED": {
         const stepKey = String(payload.step_key ?? "");
         if (!stepKey || !state[stepKey]) break;
+        const prior = state[stepKey];
+        // Idempotent replay: do not wipe in-flight pointers on duplicate STEP_STARTED.
+        if (
+          prior.status === "awaiting_elicitation" ||
+          prior.status === "awaiting_approval"
+        ) {
+          break;
+        }
         state[stepKey] = {
-          ...state[stepKey],
+          ...prior,
           status: "running",
           stepExecutionId: String(payload.step_execution_id ?? ""),
           startedAt: m.createdAt,
           pendingElicitationId: undefined,
           pendingApprovalId: undefined,
         };
-        activeStepKey = stepKey;
         break;
       }
       case "STEP_BOUND": {
@@ -83,25 +120,27 @@ export function buildCanvasState(
           pendingElicitationId: undefined,
           pendingApprovalId: undefined,
         };
-        if (activeStepKey === stepKey) {
-          activeStepKey = null;
-        }
         break;
       }
       case "ELICITATION_RAISED": {
-        if (!activeStepKey || !state[activeStepKey]) break;
-        state[activeStepKey] = {
-          ...state[activeStepKey],
+        const targetKey = mostRecentRunningStepKey(state);
+        if (!targetKey || !state[targetKey]) break;
+        state[targetKey] = {
+          ...state[targetKey],
           status: "awaiting_elicitation",
           pendingElicitationId: String(payload.elicitation_id ?? ""),
         };
         break;
       }
       case "ELICITATION_ANSWERED": {
-        if (!activeStepKey || !state[activeStepKey]) break;
-        if (state[activeStepKey].status === "awaiting_elicitation") {
-          state[activeStepKey] = {
-            ...state[activeStepKey],
+        const elicitId = String(payload.elicitation_id ?? "");
+        const targetKey =
+          findStepByPendingElicitation(state, elicitId) ??
+          mostRecentRunningStepKey(state);
+        if (!targetKey || !state[targetKey]) break;
+        if (state[targetKey].status === "awaiting_elicitation") {
+          state[targetKey] = {
+            ...state[targetKey],
             status: "running",
             pendingElicitationId: undefined,
           };
@@ -109,19 +148,24 @@ export function buildCanvasState(
         break;
       }
       case "APPROVAL_RAISED": {
-        if (!activeStepKey || !state[activeStepKey]) break;
-        state[activeStepKey] = {
-          ...state[activeStepKey],
+        const targetKey = mostRecentRunningStepKey(state);
+        if (!targetKey || !state[targetKey]) break;
+        state[targetKey] = {
+          ...state[targetKey],
           status: "awaiting_approval",
           pendingApprovalId: String(payload.approval_request_id ?? ""),
         };
         break;
       }
       case "APPROVAL_DECIDED": {
-        if (!activeStepKey || !state[activeStepKey]) break;
-        if (state[activeStepKey].status === "awaiting_approval") {
-          state[activeStepKey] = {
-            ...state[activeStepKey],
+        const approvalId = String(payload.approval_request_id ?? "");
+        const targetKey =
+          findStepByPendingApproval(state, approvalId) ??
+          mostRecentRunningStepKey(state);
+        if (!targetKey || !state[targetKey]) break;
+        if (state[targetKey].status === "awaiting_approval") {
+          state[targetKey] = {
+            ...state[targetKey],
             status: "running",
             pendingApprovalId: undefined,
           };
@@ -129,17 +173,15 @@ export function buildCanvasState(
         break;
       }
       case "RUN_FAILED": {
-        if (!activeStepKey || !state[activeStepKey]) break;
-        state[activeStepKey] = {
-          ...state[activeStepKey],
+        const targetKey = mostRecentRunningStepKey(state);
+        if (!targetKey || !state[targetKey]) break;
+        state[targetKey] = {
+          ...state[targetKey],
           status: "failed",
           errorMessage: String(payload.error ?? ""),
         };
-        activeStepKey = null;
         break;
       }
-      // RUN_STARTED, RUN_COMPLETED, CONFIGURATION_SAVED, USER_TEXT,
-      // ASSISTANT_TEXT — no step-level effect.
       default:
         break;
     }

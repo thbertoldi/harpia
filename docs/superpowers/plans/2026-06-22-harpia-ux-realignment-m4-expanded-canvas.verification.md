@@ -64,7 +64,16 @@ c8d079d feat(ux-m4): extend ChatMessageKind with STEP_STARTED
 - Schedule dialog stubbed (disabled button + tooltip).
 - `approvalInputArtifactByStep` empty in canvas page v1 — approval preview may lack artifact until M5.
 - `Answer ★ N` sets URL hash; hash-based node selection not fully wired in PlanCanvas.
-- Branching DAG layout post-v1 (linear chain assumed).
+- Branching DAG layout post-v1 (linear chain assumed); parallel fan-out pointer routing uses most-recent running step.
+
+## Review fixes (post-PR #218)
+
+- CanvasElicitationForm submitted text uses `text-talon-gold` (locked palette).
+- PlanCanvas grid uses `var(--color-obsidian)` without hex fallback.
+- STEP_STARTED emission gated on `Attempt == 1` + chat de-dupe by `step_execution_id`.
+- `canvas.topbar.answerPending` i18n includes ★ glyph; RunHistoryDrawer uses `triggeredAt`.
+- PlanCanvasDetailPane wires `onDecided` for optimistic approval header.
+- `buildCanvasState` ignores duplicate STEP_STARTED when step is awaiting interaction.
 
 ## Status
 

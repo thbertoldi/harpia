@@ -84,7 +84,7 @@
 
 <style>
   .harpia-canvas-grid {
-    background-color: var(--color-obsidian, #0b1320);
+    background-color: var(--color-obsidian);
     background-image: radial-gradient(
       rgba(255, 255, 255, 0.04) 1px,
       transparent 1px

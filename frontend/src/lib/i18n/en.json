@@ -75,6 +75,7 @@
   "canvas.topbar.scheduleComingSoon": "Coming in a later milestone",
   "canvas.topbar.settings": "Settings",
   "canvas.topbar.answer": "Answer",
+  "canvas.topbar.answerPending": "Answer ★ {count}",
   "canvas.drawer.close": "Close",
   "canvas.runHistory.title": "Run history",
   "canvas.runHistory.loading": "Loading runs…",

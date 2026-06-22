@@ -19,6 +19,12 @@
 
   let elicitation = $state<ElicitationRequest | null>(null);
   let elicitationLoadError = $state(false);
+  let approvalDecision = $state<"approved" | "rejected" | null>(null);
+
+  $effect(() => {
+    void stepState?.pendingApprovalId;
+    approvalDecision = null;
+  });
 
   $effect(() => {
     elicitation = null;
@@ -60,7 +66,16 @@
       </h2>
       <p class="font-mono text-[10px] text-crown-ash-dark">{step.key}</p>
       <p class="text-[11px] text-crown-ash">
-        {translate(`canvas.status.${stepState.status}`, $locale)}
+        {#if approvalDecision}
+          {translate(
+            approvalDecision === "approved"
+              ? "inbox.decision.approved"
+              : "inbox.decision.rejected",
+            $locale,
+          )}
+        {:else}
+          {translate(`canvas.status.${stepState.status}`, $locale)}
+        {/if}
       </p>
     </header>
 
@@ -74,6 +89,9 @@
         <CanvasApprovalForm
           approvalRequestId={stepState.pendingApprovalId}
           inputArtifactId={approvalInputArtifactId}
+          onDecided={(decision) => {
+            approvalDecision = decision;
+          }}
         />
       </section>
     {:else if stepState.status === "awaiting_elicitation"}

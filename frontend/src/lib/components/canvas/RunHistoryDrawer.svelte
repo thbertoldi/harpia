@@ -84,7 +84,7 @@
               )}
             </span>
             <span class="font-mono text-[10px] text-crown-ash-dark">
-              {exec.updatedAt}
+              {exec.triggeredAt || exec.createdAt || exec.updatedAt}
             </span>
           </button>
         </li>

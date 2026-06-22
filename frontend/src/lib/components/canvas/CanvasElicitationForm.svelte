@@ -173,7 +173,7 @@
       <p class="font-body text-xs text-red-400">{submitError}</p>
     {/if}
     {#if submitted}
-      <p class="font-body text-xs text-green-400">
+      <p class="font-body text-xs text-talon-gold">
         {translate("elicitations.form.submitted", $locale)}
       </p>
     {/if}

@@ -141,4 +141,25 @@ describe("buildCanvasState", () => {
     const state = buildCanvasState(messages, [step("a")]);
     expect(state.a.status).toBe("pending");
   });
+
+  it("duplicate STEP_STARTED does not wipe awaiting_elicitation pointer", () => {
+    const messages = [
+      msg(
+        "m1",
+        "STEP_STARTED",
+        { step_key: "a", step_execution_id: "se-a" },
+        1,
+      ),
+      msg("m2", "ELICITATION_RAISED", { elicitation_id: "el-1" }, 2),
+      msg(
+        "m3",
+        "STEP_STARTED",
+        { step_key: "a", step_execution_id: "se-a" },
+        3,
+      ),
+    ];
+    const state = buildCanvasState(messages, [step("a")]);
+    expect(state.a.status).toBe("awaiting_elicitation");
+    expect(state.a.pendingElicitationId).toBe("el-1");
+  });
 });
