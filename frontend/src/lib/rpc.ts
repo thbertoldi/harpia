@@ -75,7 +75,7 @@ export {
   StepExecutionStatus,
   ElicitationStatus,
   ElicitationTimeoutBehavior,
-  ThreadMessageRole,
+  ThreadMessageRole as ElicitationThreadMessageRole,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
 export type { ThreadMessage } from "$lib/gen/harpia/chat/v1/chat_pb";
 export {

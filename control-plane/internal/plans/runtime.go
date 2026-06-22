@@ -261,7 +261,7 @@ func (r *RuntimeRepository) persistElicitation(ctx context.Context, tenantID, st
 				ExecutionID: &execID,
 				Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
 				Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_ELICITATION_RAISED,
-				Text:        "Question raised on step " + input.PlanStepKey + ".",
+				Text:        "Elicitation raised on step " + input.PlanStepKey + ".",
 				PayloadJSON: chat.BuildElicitationRaisedPayload(created.ID),
 			})
 		}
@@ -383,8 +383,12 @@ func (r *RuntimeRepository) appendRunFinishedChatMessage(ctx context.Context, te
 	var payload string
 	if exec.Status == ExecutionStatusFailed {
 		kind = chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_RUN_FAILED
+		failureReason := executionFailureReason(exec)
 		text = "Run failed."
-		payload = chat.BuildRunFailedPayload("")
+		if failureReason != "" {
+			text = "Run failed: " + failureReason + "."
+		}
+		payload = chat.BuildRunFailedPayload(failureReason)
 	} else {
 		kind = chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_RUN_COMPLETED
 		text = "Run completed."
@@ -398,6 +402,29 @@ func (r *RuntimeRepository) appendRunFinishedChatMessage(ctx context.Context, te
 		Text:        text,
 		PayloadJSON: payload,
 	})
+}
+
+// executionFailureReason derives a short failure summary from failed step executions.
+// PlanExecution has no dedicated failure_reason column; the latest failed step key
+// is the best signal available for RUN_FAILED payload text.
+func executionFailureReason(exec *PlanExecution) string {
+	if exec == nil {
+		return ""
+	}
+	var failedStep *StepExecution
+	for i := range exec.StepExecutions {
+		step := &exec.StepExecutions[i]
+		if step.Status != StepStatusFailed {
+			continue
+		}
+		if failedStep == nil || step.CreatedAt.After(failedStep.CreatedAt) {
+			failedStep = step
+		}
+	}
+	if failedStep == nil {
+		return ""
+	}
+	return "step " + failedStep.PlanStepKey + " failed"
 }
 
 func (r *RuntimeRepository) PrepareRetryFromStep(

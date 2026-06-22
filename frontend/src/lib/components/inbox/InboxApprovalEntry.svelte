@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resolve } from "$app/paths";
   import { locale, translate } from "$lib/i18n";
   import { getTenant } from "$lib/auth";
   import { respondToApprovalRequest } from "$lib/plans/approvals";
@@ -61,6 +62,16 @@
       )}
     </span>
   {:else}
+    <a
+      href={resolve(
+        item.configurationId
+          ? `/plans/configurations/${item.configurationId}#m-approval-${item.id}`
+          : `/plans/executions/${item.planExecutionId}/approvals/${item.id}`,
+      )}
+      class="rounded border border-plumage bg-transparent px-3 py-1.5 text-[11px] font-medium text-crown-ash hover:border-talon-gold hover:text-talon-gold"
+    >
+      {translate("inbox.actions.openThread", $locale)}
+    </a>
     <button
       type="button"
       onclick={() => (expanded = !expanded)}

@@ -3,6 +3,7 @@ package plans
 import (
 	"context"
 	"errors"
+	"strconv"
 	"strings"
 	"time"
 
@@ -46,12 +47,29 @@ func (h *PlanHandler) ListPlanThreadMessages(
 	if limit <= 0 {
 		limit = 100
 	}
-	msgs, err := h.chat.ListMessages(ctx, tenantID, configID, 0, limit)
+	sinceSeq := int64(0)
+	if token := strings.TrimSpace(req.Msg.GetPageToken()); token != "" {
+		parsed, parseErr := strconv.ParseInt(token, 10, 64)
+		if parseErr != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid page_token"))
+		}
+		sinceSeq = parsed
+	}
+	fetchLimit := limit + 1
+	msgs, err := h.chat.ListMessages(ctx, tenantID, configID, sinceSeq, fetchLimit)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
+	var nextPageToken string
+	if len(msgs) > limit {
+		msgs = msgs[:limit]
+		if len(msgs) > 0 {
+			nextPageToken = strconv.FormatInt(msgs[len(msgs)-1].SequenceNumber, 10)
+		}
+	}
 	return connect.NewResponse(&plansv1.ListPlanThreadMessagesResponse{
-		Messages: msgs,
+		Messages:      msgs,
+		NextPageToken: nextPageToken,
 	}), nil
 }
 

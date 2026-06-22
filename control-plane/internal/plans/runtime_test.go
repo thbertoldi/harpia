@@ -10,6 +10,30 @@ import (
 	"github.com/harpia/control-plane/internal/workflow"
 )
 
+func TestExecutionFailureReasonUsesLatestFailedStep(t *testing.T) {
+	now := time.Now().UTC()
+	exec := &PlanExecution{
+		StepExecutions: []StepExecution{
+			{PlanStepKey: "step-1", Status: StepStatusCompleted, CreatedAt: now},
+			{PlanStepKey: "step-2", Status: StepStatusFailed, CreatedAt: now.Add(time.Minute)},
+		},
+	}
+	if got, want := executionFailureReason(exec), "step step-2 failed"; got != want {
+		t.Fatalf("failure reason = %q, want %q", got, want)
+	}
+}
+
+func TestExecutionFailureReasonEmptyWhenNoFailedStep(t *testing.T) {
+	exec := &PlanExecution{
+		StepExecutions: []StepExecution{
+			{PlanStepKey: "step-1", Status: StepStatusCompleted},
+		},
+	}
+	if got := executionFailureReason(exec); got != "" {
+		t.Fatalf("failure reason = %q, want empty", got)
+	}
+}
+
 func TestBuildRetryPlanWorkflowInputRequiresFailedExecution(t *testing.T) {
 	executionID := uuid.MustParse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 	failedStepID := uuid.MustParse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")

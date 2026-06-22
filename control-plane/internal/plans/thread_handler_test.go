@@ -146,3 +146,84 @@ func TestListPlanThreadMessages_FiltersBySinceSequence(t *testing.T) {
 		t.Fatalf("messages count = %d, want %d", got, want)
 	}
 }
+
+func TestListPlanThreadMessages_PaginatesWithPageToken(t *testing.T) {
+	tenantID := uuid.New()
+	configID := uuid.New()
+	store := &fakeChatStore{messages: map[string][]*chatv1.ThreadMessage{
+		configID.String(): {
+			{SequenceNumber: 1, Text: "first"},
+			{SequenceNumber: 2, Text: "second"},
+			{SequenceNumber: 3, Text: "third"},
+		},
+	}}
+	h := &PlanHandler{chat: store}
+
+	ctx := identity.WithRequestContext(context.Background(), identity.RequestContext{
+		UserID:   uuid.New().String(),
+		TenantID: tenantID,
+		Roles:    []string{"Overseer"},
+	})
+
+	page1, err := h.ListPlanThreadMessages(ctx, connect.NewRequest(&plansv1.ListPlanThreadMessagesRequest{
+		TenantId:            tenantID.String(),
+		PlanConfigurationId: configID.String(),
+		PageSize:            2,
+	}))
+	if err != nil {
+		t.Fatalf("page 1: %v", err)
+	}
+	if got, want := len(page1.Msg.Messages), 2; got != want {
+		t.Fatalf("page 1 count = %d, want %d", got, want)
+	}
+	if got, want := page1.Msg.Messages[0].Text, "first"; got != want {
+		t.Fatalf("page 1 first = %q, want %q", got, want)
+	}
+	if got, want := page1.Msg.NextPageToken, "2"; got != want {
+		t.Fatalf("page 1 next token = %q, want %q", got, want)
+	}
+
+	page2, err := h.ListPlanThreadMessages(ctx, connect.NewRequest(&plansv1.ListPlanThreadMessagesRequest{
+		TenantId:            tenantID.String(),
+		PlanConfigurationId: configID.String(),
+		PageSize:            2,
+		PageToken:           page1.Msg.NextPageToken,
+	}))
+	if err != nil {
+		t.Fatalf("page 2: %v", err)
+	}
+	if got, want := len(page2.Msg.Messages), 1; got != want {
+		t.Fatalf("page 2 count = %d, want %d", got, want)
+	}
+	if got, want := page2.Msg.Messages[0].Text, "third"; got != want {
+		t.Fatalf("page 2 first = %q, want %q", got, want)
+	}
+	if page2.Msg.NextPageToken != "" {
+		t.Fatalf("page 2 next token = %q, want empty", page2.Msg.NextPageToken)
+	}
+}
+
+func TestListPlanThreadMessages_RejectsInvalidPageToken(t *testing.T) {
+	tenantID := uuid.New()
+	configID := uuid.New()
+	h := &PlanHandler{chat: &fakeChatStore{}}
+
+	ctx := identity.WithRequestContext(context.Background(), identity.RequestContext{
+		UserID:   uuid.New().String(),
+		TenantID: tenantID,
+		Roles:    []string{"Overseer"},
+	})
+	req := connect.NewRequest(&plansv1.ListPlanThreadMessagesRequest{
+		TenantId:            tenantID.String(),
+		PlanConfigurationId: configID.String(),
+		PageToken:           "not-a-number",
+	})
+
+	_, err := h.ListPlanThreadMessages(ctx, req)
+	if err == nil {
+		t.Fatal("expected error for invalid page_token, got nil")
+	}
+	if got := connect.CodeOf(err); got != connect.CodeInvalidArgument {
+		t.Fatalf("error code = %v, want InvalidArgument", got)
+	}
+}
