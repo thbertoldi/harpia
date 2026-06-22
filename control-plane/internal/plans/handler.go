@@ -19,6 +19,7 @@ import (
 	"github.com/harpia/control-plane/internal/identity"
 	"github.com/harpia/control-plane/internal/planassistant"
 	"github.com/harpia/control-plane/internal/workflow"
+	cron "github.com/robfig/cron/v3"
 )
 
 // AssistantConfigurationStore adapts *Repository to planassistant.ConfigurationStore.
@@ -501,6 +502,54 @@ func (h *PlanHandler) UpdatePlanConfiguration(ctx context.Context, req *connect.
 
 	if err := h.syncSchedule(ctx, updated); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	// Schedule reconciliation: if the cron expression changed, validate it,
+	// emit SCHEDULE_SET, and reconcile RUNNABLE ↔ SCHEDULED. See M5 design
+	// spec §2.7 and §2.11.
+	prevCron := ""
+	prevTz := ""
+	if len(existing.Schedule) > 0 && string(existing.Schedule) != "{}" && string(existing.Schedule) != "null" {
+		var prevSchedule plansv1.PlanSchedule
+		if err := json.Unmarshal(existing.Schedule, &prevSchedule); err == nil {
+			prevCron = prevSchedule.CronExpression
+			prevTz = prevSchedule.Timezone
+		}
+	}
+	newCron := ""
+	newTz := ""
+	if updatedInput.Schedule != nil {
+		newCron = updatedInput.Schedule.CronExpression
+		newTz = updatedInput.Schedule.Timezone
+	}
+	if newCron != prevCron || newTz != prevTz {
+		if newCron != "" {
+			if _, parseErr := cron.ParseStandard(newCron); parseErr != nil {
+				return nil, connect.NewError(connect.CodeInvalidArgument,
+					fmt.Errorf("invalid schedule cron expression: %w", parseErr))
+			}
+		}
+		switch updated.Status {
+		case ConfigurationStatusRunnable:
+			if newCron != "" {
+				updated.Status = ConfigurationStatusScheduled
+				_ = h.repo.UpdateConfigurationStatus(ctx, tenantID, updated.ID, plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_SCHEDULED)
+			}
+		case ConfigurationStatusScheduled:
+			if newCron == "" {
+				updated.Status = ConfigurationStatusRunnable
+				_ = h.repo.UpdateConfigurationStatus(ctx, tenantID, updated.ID, plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE)
+			}
+		}
+		if h.chat != nil {
+			_, _ = h.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
+				ThreadID:    updated.ID.String(),
+				Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
+				Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_SCHEDULE_SET,
+				Text:        "Schedule updated.",
+				PayloadJSON: chat.BuildScheduleSetPayload(newCron, newTz),
+			})
+		}
 	}
 
 	if h.chat != nil {

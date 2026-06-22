@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/harpia/control-plane/internal/database"
+	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
 )
 
 type PlanTemplate struct {
@@ -319,6 +320,26 @@ func (r *Repository) UpdateConfiguration(ctx context.Context, config *PlanConfig
 		return nil, fmt.Errorf("update plan configuration: %w", err)
 	}
 	return &updated, nil
+}
+
+func (r *Repository) UpdateConfigurationStatus(ctx context.Context, tenantID, configID uuid.UUID, status plansv1.PlanConfigurationStatus) error {
+	statusStr, err := configurationStatusToString(status)
+	if err != nil {
+		return err
+	}
+	return database.WithTenant(ctx, r.pool, tenantID, func(q database.Querier) error {
+		tag, execErr := q.Exec(ctx,
+			`UPDATE plan_configurations SET status = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3`,
+			statusStr, configID, tenantID,
+		)
+		if execErr != nil {
+			return fmt.Errorf("update plan configuration status: %w", execErr)
+		}
+		if tag.RowsAffected() == 0 {
+			return fmt.Errorf("plan configuration not found")
+		}
+		return nil
+	})
 }
 
 func (r *Repository) ListConfigurations(ctx context.Context, tenantID uuid.UUID, workspaceID *uuid.UUID, status string, limit, offset int) ([]PlanConfiguration, error) {
