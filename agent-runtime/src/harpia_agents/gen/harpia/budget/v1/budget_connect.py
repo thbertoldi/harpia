@@ -122,6 +122,7 @@ class BudgetPolicyServiceClient(ConnectClient):
             headers=headers,
             timeout_ms=timeout_ms,
         )
+
     async def get_quota(
         self,
         request: harpia_dot_budget_dot_v1_dot_budget__pb2.GetQuotaRequest,
@@ -141,6 +142,7 @@ class BudgetPolicyServiceClient(ConnectClient):
             headers=headers,
             timeout_ms=timeout_ms,
         )
+
     async def reserve_budget(
         self,
         request: harpia_dot_budget_dot_v1_dot_budget__pb2.ReserveBudgetRequest,
@@ -385,3 +387,5 @@ class BudgetPolicyServiceClientSync(ConnectClientSync):
             headers=headers,
             timeout_ms=timeout_ms,
         )
+
+

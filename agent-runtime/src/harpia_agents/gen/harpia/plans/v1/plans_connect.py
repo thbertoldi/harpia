@@ -81,6 +81,15 @@ class PlanService(Protocol):
     def watch_approval_requests(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.WatchApprovalRequestsRequest, ctx: RequestContext) -> AsyncIterator[harpia_dot_plans_dot_v1_dot_plans__pb2.WatchApprovalRequestsResponse]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def list_plan_thread_messages(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.ListPlanThreadMessagesRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.ListPlanThreadMessagesResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    def watch_plan_thread_messages(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.WatchPlanThreadMessagesRequest, ctx: RequestContext) -> AsyncIterator[harpia_dot_plans_dot_v1_dot_plans__pb2.WatchPlanThreadMessagesResponse]:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def append_plan_thread_message(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.AppendPlanThreadMessageRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.AppendPlanThreadMessageResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
 
 class PlanServiceASGIApplication(ConnectASGIApplication[PlanService]):
     def __init__(self, service: PlanService | AsyncGenerator[PlanService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
@@ -296,6 +305,36 @@ class PlanServiceASGIApplication(ConnectASGIApplication[PlanService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.watch_approval_requests,
+                ),
+                "/harpia.plans.v1.PlanService/ListPlanThreadMessages": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListPlanThreadMessages",
+                        service_name="harpia.plans.v1.PlanService",
+                        input=harpia_dot_plans_dot_v1_dot_plans__pb2.ListPlanThreadMessagesRequest,
+                        output=harpia_dot_plans_dot_v1_dot_plans__pb2.ListPlanThreadMessagesResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_plan_thread_messages,
+                ),
+                "/harpia.plans.v1.PlanService/WatchPlanThreadMessages": Endpoint.server_stream(
+                    method=MethodInfo(
+                        name="WatchPlanThreadMessages",
+                        service_name="harpia.plans.v1.PlanService",
+                        input=harpia_dot_plans_dot_v1_dot_plans__pb2.WatchPlanThreadMessagesRequest,
+                        output=harpia_dot_plans_dot_v1_dot_plans__pb2.WatchPlanThreadMessagesResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.watch_plan_thread_messages,
+                ),
+                "/harpia.plans.v1.PlanService/AppendPlanThreadMessage": Endpoint.unary(
+                    method=MethodInfo(
+                        name="AppendPlanThreadMessage",
+                        service_name="harpia.plans.v1.PlanService",
+                        input=harpia_dot_plans_dot_v1_dot_plans__pb2.AppendPlanThreadMessageRequest,
+                        output=harpia_dot_plans_dot_v1_dot_plans__pb2.AppendPlanThreadMessageResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.append_plan_thread_message,
                 ),
             },
             interceptors=interceptors,
@@ -731,6 +770,66 @@ class PlanServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def list_plan_thread_messages(
+        self,
+        request: harpia_dot_plans_dot_v1_dot_plans__pb2.ListPlanThreadMessagesRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_plans_dot_v1_dot_plans__pb2.ListPlanThreadMessagesResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListPlanThreadMessages",
+                service_name="harpia.plans.v1.PlanService",
+                input=harpia_dot_plans_dot_v1_dot_plans__pb2.ListPlanThreadMessagesRequest,
+                output=harpia_dot_plans_dot_v1_dot_plans__pb2.ListPlanThreadMessagesResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def watch_plan_thread_messages(
+        self,
+        request: harpia_dot_plans_dot_v1_dot_plans__pb2.WatchPlanThreadMessagesRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> AsyncIterator[harpia_dot_plans_dot_v1_dot_plans__pb2.WatchPlanThreadMessagesResponse]:
+        return self.execute_server_stream(
+            request=request,
+            method=MethodInfo(
+                name="WatchPlanThreadMessages",
+                service_name="harpia.plans.v1.PlanService",
+                input=harpia_dot_plans_dot_v1_dot_plans__pb2.WatchPlanThreadMessagesRequest,
+                output=harpia_dot_plans_dot_v1_dot_plans__pb2.WatchPlanThreadMessagesResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def append_plan_thread_message(
+        self,
+        request: harpia_dot_plans_dot_v1_dot_plans__pb2.AppendPlanThreadMessageRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_plans_dot_v1_dot_plans__pb2.AppendPlanThreadMessageResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="AppendPlanThreadMessage",
+                service_name="harpia.plans.v1.PlanService",
+                input=harpia_dot_plans_dot_v1_dot_plans__pb2.AppendPlanThreadMessageRequest,
+                output=harpia_dot_plans_dot_v1_dot_plans__pb2.AppendPlanThreadMessageResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 
 
 
@@ -777,6 +876,12 @@ class PlanServiceSync(Protocol):
     def respond_to_approval_request(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToApprovalRequestRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToApprovalRequestResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def watch_approval_requests(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.WatchApprovalRequestsRequest, ctx: RequestContext) -> Iterator[harpia_dot_plans_dot_v1_dot_plans__pb2.WatchApprovalRequestsResponse]:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def list_plan_thread_messages(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.ListPlanThreadMessagesRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.ListPlanThreadMessagesResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def watch_plan_thread_messages(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.WatchPlanThreadMessagesRequest, ctx: RequestContext) -> Iterator[harpia_dot_plans_dot_v1_dot_plans__pb2.WatchPlanThreadMessagesResponse]:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def append_plan_thread_message(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.AppendPlanThreadMessageRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.AppendPlanThreadMessageResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -993,6 +1098,36 @@ class PlanServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.watch_approval_requests,
+                ),
+                "/harpia.plans.v1.PlanService/ListPlanThreadMessages": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListPlanThreadMessages",
+                        service_name="harpia.plans.v1.PlanService",
+                        input=harpia_dot_plans_dot_v1_dot_plans__pb2.ListPlanThreadMessagesRequest,
+                        output=harpia_dot_plans_dot_v1_dot_plans__pb2.ListPlanThreadMessagesResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_plan_thread_messages,
+                ),
+                "/harpia.plans.v1.PlanService/WatchPlanThreadMessages": EndpointSync.server_stream(
+                    method=MethodInfo(
+                        name="WatchPlanThreadMessages",
+                        service_name="harpia.plans.v1.PlanService",
+                        input=harpia_dot_plans_dot_v1_dot_plans__pb2.WatchPlanThreadMessagesRequest,
+                        output=harpia_dot_plans_dot_v1_dot_plans__pb2.WatchPlanThreadMessagesResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.watch_plan_thread_messages,
+                ),
+                "/harpia.plans.v1.PlanService/AppendPlanThreadMessage": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="AppendPlanThreadMessage",
+                        service_name="harpia.plans.v1.PlanService",
+                        input=harpia_dot_plans_dot_v1_dot_plans__pb2.AppendPlanThreadMessageRequest,
+                        output=harpia_dot_plans_dot_v1_dot_plans__pb2.AppendPlanThreadMessageResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.append_plan_thread_message,
                 ),
             },
             interceptors=interceptors,
@@ -1422,6 +1557,66 @@ class PlanServiceClientSync(ConnectClientSync):
                 service_name="harpia.plans.v1.PlanService",
                 input=harpia_dot_plans_dot_v1_dot_plans__pb2.WatchApprovalRequestsRequest,
                 output=harpia_dot_plans_dot_v1_dot_plans__pb2.WatchApprovalRequestsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def list_plan_thread_messages(
+        self,
+        request: harpia_dot_plans_dot_v1_dot_plans__pb2.ListPlanThreadMessagesRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_plans_dot_v1_dot_plans__pb2.ListPlanThreadMessagesResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListPlanThreadMessages",
+                service_name="harpia.plans.v1.PlanService",
+                input=harpia_dot_plans_dot_v1_dot_plans__pb2.ListPlanThreadMessagesRequest,
+                output=harpia_dot_plans_dot_v1_dot_plans__pb2.ListPlanThreadMessagesResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def watch_plan_thread_messages(
+        self,
+        request: harpia_dot_plans_dot_v1_dot_plans__pb2.WatchPlanThreadMessagesRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> Iterator[harpia_dot_plans_dot_v1_dot_plans__pb2.WatchPlanThreadMessagesResponse]:
+        return self.execute_server_stream(
+            request=request,
+            method=MethodInfo(
+                name="WatchPlanThreadMessages",
+                service_name="harpia.plans.v1.PlanService",
+                input=harpia_dot_plans_dot_v1_dot_plans__pb2.WatchPlanThreadMessagesRequest,
+                output=harpia_dot_plans_dot_v1_dot_plans__pb2.WatchPlanThreadMessagesResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def append_plan_thread_message(
+        self,
+        request: harpia_dot_plans_dot_v1_dot_plans__pb2.AppendPlanThreadMessageRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_plans_dot_v1_dot_plans__pb2.AppendPlanThreadMessageResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="AppendPlanThreadMessage",
+                service_name="harpia.plans.v1.PlanService",
+                input=harpia_dot_plans_dot_v1_dot_plans__pb2.AppendPlanThreadMessageRequest,
+                output=harpia_dot_plans_dot_v1_dot_plans__pb2.AppendPlanThreadMessageResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

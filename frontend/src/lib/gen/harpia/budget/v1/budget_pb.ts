@@ -594,3 +594,4 @@ export const BudgetPolicyService: GenService<{
   },
 }> = /*@__PURE__*/
   serviceDesc(file_harpia_budget_v1_budget, 0);
+
