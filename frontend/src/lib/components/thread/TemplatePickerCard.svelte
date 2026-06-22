@@ -18,12 +18,18 @@
       onclick={() => onPick(template.id)}
       class="cursor-pointer rounded-lg border border-plumage bg-obsidian-light px-3 py-3 text-left hover:border-talon-gold disabled:cursor-not-allowed disabled:opacity-50"
     >
-      <p class="text-[13px] font-heading font-semibold text-cream">{template.name}</p>
+      <p class="font-heading text-[13px] font-semibold text-cream">
+        {template.name}
+      </p>
       {#if template.description}
-        <p class="mt-1 text-[11px] font-body text-crown-ash">{template.description}</p>
+        <p class="mt-1 font-body text-[11px] text-crown-ash">
+          {template.description}
+        </p>
       {/if}
-      <p class="mt-2 text-[10px] font-mono text-crown-ash-dark">
-        {translate("new.stepsCount", $locale, { count: template.steps?.length ?? 0 })}
+      <p class="mt-2 font-mono text-[10px] text-crown-ash-dark">
+        {translate("new.stepsCount", $locale, {
+          count: template.steps?.length ?? 0,
+        })}
       </p>
     </button>
   {/each}

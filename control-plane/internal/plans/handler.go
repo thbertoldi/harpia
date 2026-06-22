@@ -13,8 +13,8 @@ import (
 	"github.com/google/uuid"
 	"go.temporal.io/sdk/client"
 
-	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
 	chatv1 "github.com/harpia/control-plane/gen/harpia/chat/v1"
+	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
 	"github.com/harpia/control-plane/internal/chat"
 	"github.com/harpia/control-plane/internal/identity"
 	"github.com/harpia/control-plane/internal/planassistant"

@@ -18,7 +18,8 @@
     isAnswered: boolean;
     isLive: boolean;
   }
-  let { message, configurationId, tenantId, isAnswered, isLive }: Props = $props();
+  let { message, configurationId, tenantId, isAnswered, isLive }: Props =
+    $props();
 
   let editing = $state(false);
   let pending = $state(false);
@@ -69,10 +70,12 @@
 
 <div
   id={`m-${message.id}`}
-  class="rounded-lg border border-plumage bg-obsidian-light px-4 py-3 {isLive ? 'ring-1 ring-talon-gold' : ''}"
+  class="rounded-lg border border-plumage bg-obsidian-light px-4 py-3 {isLive
+    ? 'ring-1 ring-talon-gold'
+    : ''}"
 >
   <div class="flex items-start justify-between gap-2">
-    <p class="text-[13px] text-cream font-body">{message.text}</p>
+    <p class="font-body text-[13px] text-cream">{message.text}</p>
     {#if isAnswered && !isLive}
       <button
         type="button"
@@ -96,7 +99,9 @@
         >
           <span class="font-medium">{opt.label}</span>
           {#if opt.sublabel}
-            <span class="ml-2 text-[10px] text-crown-ash-dark">{opt.sublabel}</span>
+            <span class="ml-2 text-[10px] text-crown-ash-dark"
+              >{opt.sublabel}</span
+            >
           {/if}
         </button>
       {/each}

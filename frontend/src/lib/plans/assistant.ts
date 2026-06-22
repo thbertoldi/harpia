@@ -38,8 +38,9 @@ export async function editBinding(args: {
   newInstallationId: string;
 }): Promise<PlanConfiguration> {
   const previous =
-    args.existingConfiguration.slotBindings.find((b) => b.stepKey === args.stepKey)
-      ?.executorInstallationId ?? "";
+    args.existingConfiguration.slotBindings.find(
+      (b) => b.stepKey === args.stepKey,
+    )?.executorInstallationId ?? "";
   const reboundPayload = JSON.stringify({
     step_key: args.stepKey,
     previous_executor_installation_id: previous,
@@ -69,7 +70,9 @@ export async function editBinding(args: {
     schedule: args.existingConfiguration.schedule,
   });
   if (!response.planConfiguration) {
-    throw new Error("editBinding: UpdatePlanConfiguration returned no configuration");
+    throw new Error(
+      "editBinding: UpdatePlanConfiguration returned no configuration",
+    );
   }
   return response.planConfiguration;
 }

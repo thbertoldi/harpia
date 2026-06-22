@@ -16,7 +16,7 @@
   type Filter = "all" | "draft" | "runnable" | "scheduled" | "archived";
   let filter = $state<Filter>("all");
   let plans = $state<PlanConfiguration[]>(data.configurations);
-  let archiving = $state<Set<string>>(new Set());
+  let archiving = $state<string[]>([]);
   let archiveError = $state<string | null>(null);
 
   const filters: { key: Filter; labelKey: string }[] = [
@@ -29,13 +29,17 @@
 
   function statusOf(p: PlanConfiguration): Filter {
     switch (p.status) {
-      case PlanConfigurationStatus.DRAFT: return "draft";
-      case PlanConfigurationStatus.RUNNABLE: return "runnable";
-      case PlanConfigurationStatus.SCHEDULED: return "scheduled";
+      case PlanConfigurationStatus.DRAFT:
+        return "draft";
+      case PlanConfigurationStatus.RUNNABLE:
+        return "runnable";
+      case PlanConfigurationStatus.SCHEDULED:
+        return "scheduled";
       case PlanConfigurationStatus.ARCHIVED:
       case PlanConfigurationStatus.DISABLED:
         return "archived";
-      default: return "all";
+      default:
+        return "all";
     }
   }
 
@@ -58,14 +62,17 @@
   );
 
   function templateName(p: PlanConfiguration): string {
-    return data.templatesById.get(p.planTemplateId)?.name || p.planTemplateId.slice(0, 8);
+    return (
+      data.templatesById.get(p.planTemplateId)?.name ||
+      p.planTemplateId.slice(0, 8)
+    );
   }
 
   async function archive(p: PlanConfiguration) {
-    if (archiving.has(p.id)) return;
+    if (archiving.includes(p.id)) return;
     const tenant = getTenant();
     if (!tenant?.id) return;
-    archiving = new Set([...archiving, p.id]);
+    archiving = [...archiving, p.id];
     archiveError = null;
     try {
       const res = await planClient.updatePlanConfiguration({
@@ -84,9 +91,7 @@
     } catch (e) {
       archiveError = e instanceof Error ? e.message : "Failed to archive plan";
     } finally {
-      const next = new Set(archiving);
-      next.delete(p.id);
-      archiving = next;
+      archiving = archiving.filter((id) => id !== p.id);
     }
   }
 </script>
@@ -99,7 +104,7 @@
   <HarpyHeading tag="h1" class="text-2xl text-cream">
     {translate("plans.list.title", $locale)}
   </HarpyHeading>
-  <p class="mt-1 text-[13px] font-body text-crown-ash">
+  <p class="mt-1 font-body text-[13px] text-crown-ash">
     {translate("plans.list.subtitle", $locale)}
   </p>
 
@@ -108,7 +113,10 @@
       <button
         type="button"
         onclick={() => (filter = f.key)}
-        class="cursor-pointer rounded-md border px-2.5 py-1 text-[11px] {filter === f.key ? 'border-talon-gold bg-talon-gold/10 text-talon-gold' : 'border-plumage text-crown-ash hover:border-talon-gold'}"
+        class="cursor-pointer rounded-md border px-2.5 py-1 text-[11px] {filter ===
+        f.key
+          ? 'border-talon-gold bg-talon-gold/10 text-talon-gold'
+          : 'border-plumage text-crown-ash hover:border-talon-gold'}"
       >
         {translate(f.labelKey, $locale)}
       </button>
@@ -116,46 +124,58 @@
   </div>
 
   {#if archiveError}
-    <p class="mt-3 rounded border border-red-400/40 bg-red-400/10 px-3 py-2 text-[12px] text-red-300">
+    <p
+      class="mt-3 rounded border border-red-400/40 bg-red-400/10 px-3 py-2 text-[12px] text-red-300"
+    >
       {archiveError}
     </p>
   {/if}
 
   {#if sorted.length === 0}
-    <p class="mt-6 rounded border border-plumage bg-obsidian-light px-4 py-3 text-sm text-crown-ash">
+    <p
+      class="mt-6 rounded border border-plumage bg-obsidian-light px-4 py-3 text-sm text-crown-ash"
+    >
       {translate("plans.list.empty", $locale)}
     </p>
   {:else}
-    <div class="mt-4 divide-y divide-plumage/40 rounded-lg border border-plumage bg-obsidian-light">
+    <div
+      class="mt-4 divide-y divide-plumage/40 rounded-lg border border-plumage bg-obsidian-light"
+    >
       {#each sorted as p (p.id)}
         <div class="flex items-center gap-3 px-4 py-3">
           <a
             href={resolve(`/plans/configurations/${p.id}`)}
-            class="flex-1 min-w-0"
+            class="min-w-0 flex-1"
           >
-            <p class="truncate font-heading text-[13px] font-semibold text-cream hover:text-talon-gold">
+            <p
+              class="truncate font-heading text-[13px] font-semibold text-cream hover:text-talon-gold"
+            >
               {templateName(p)}
             </p>
-            <p class="mt-0.5 truncate font-mono text-[10px] text-crown-ash-dark">
+            <p
+              class="mt-0.5 truncate font-mono text-[10px] text-crown-ash-dark"
+            >
               {p.id}
             </p>
           </a>
-          <span class="rounded-full border border-plumage px-2 py-0.5 text-[10px] font-mono uppercase text-crown-ash">
+          <span
+            class="rounded-full border border-plumage px-2 py-0.5 font-mono text-[10px] text-crown-ash uppercase"
+          >
             {statusLabel(p)}
           </span>
-          <span class="text-[10px] text-crown-ash-dark whitespace-nowrap">
+          <span class="text-[10px] whitespace-nowrap text-crown-ash-dark">
             {formatRelativeTime(p.updatedAt || p.createdAt, $locale)}
           </span>
           {#if statusOf(p) !== "archived"}
             <button
               type="button"
               onclick={() => archive(p)}
-              disabled={archiving.has(p.id)}
+              disabled={archiving.includes(p.id)}
               aria-label={translate("plans.list.archive", $locale)}
               title={translate("plans.list.archive", $locale)}
               class="cursor-pointer rounded p-1 text-crown-ash hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {#if archiving.has(p.id)}
+              {#if archiving.includes(p.id)}
                 <Loader2 class="size-3.5 animate-spin" />
               {:else}
                 <Trash2 class="size-3.5" />

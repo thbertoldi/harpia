@@ -24,7 +24,9 @@ export const load: PageLoad = async () => {
     // Load the templates referenced by these configurations so the row can
     // display the template name. A small set in practice (templates are
     // few) — one GET per unique template id.
-    const uniqueTemplateIds = new Set(configurations.map((c) => c.planTemplateId));
+    const uniqueTemplateIds = new Set(
+      configurations.map((c) => c.planTemplateId),
+    );
     await Promise.all(
       Array.from(uniqueTemplateIds).map(async (id) => {
         try {

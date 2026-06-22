@@ -60,5 +60,10 @@ export function computeRunCost(
       pricePerRunBrl: price,
     });
   }
-  return { totalPerRunBrl: total, currency: "BRL", unboundStepCount: unbound, breakdown };
+  return {
+    totalPerRunBrl: total,
+    currency: "BRL",
+    unboundStepCount: unbound,
+    breakdown,
+  };
 }

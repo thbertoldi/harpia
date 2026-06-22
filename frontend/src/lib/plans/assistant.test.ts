@@ -9,7 +9,12 @@ vi.mock("$lib/chat/client", () => ({ appendThreadMessage }));
 vi.mock("$lib/rpc", () => ({ planClient: { updatePlanConfiguration } }));
 
 import { selectChip, editBinding } from "./assistant";
-import { PlanConfigurationStatus, type PlanConfiguration, type PlanTemplate } from "$lib/gen/harpia/plans/v1/plans_pb";
+import {
+  PlanConfigurationStatus,
+  type PlanConfiguration,
+  type PlanTemplate,
+  type SlotBinding,
+} from "$lib/gen/harpia/plans/v1/plans_pb";
 
 beforeEach(() => {
   appendThreadMessage.mockReset();
@@ -27,7 +32,12 @@ describe("selectChip", () => {
       value: "inst-junior",
     });
     expect(appendThreadMessage).toHaveBeenCalledWith(
-      "t", "c", "OVERSEER", "USER_SELECTION", "", expect.stringContaining("junior"),
+      "t",
+      "c",
+      "OVERSEER",
+      "USER_SELECTION",
+      "",
+      expect.stringContaining("junior"),
     );
   });
 });
@@ -35,8 +45,13 @@ describe("selectChip", () => {
 describe("editBinding", () => {
   it("writes STEP_REBOUND then UpdatePlanConfiguration", async () => {
     appendThreadMessage.mockResolvedValueOnce({});
-    updatePlanConfiguration.mockResolvedValueOnce({ planConfiguration: { id: "c" } });
-    const template = { id: "tpl", steps: [{ key: "a" }, { key: "b" }] } as PlanTemplate;
+    updatePlanConfiguration.mockResolvedValueOnce({
+      planConfiguration: { id: "c" },
+    });
+    const template = {
+      id: "tpl",
+      steps: [{ key: "a" }, { key: "b" }],
+    } as PlanTemplate;
     const config = {
       id: "c",
       status: PlanConfigurationStatus.RUNNABLE,
@@ -58,11 +73,18 @@ describe("editBinding", () => {
       newInstallationId: "inst-new",
     });
     expect(appendThreadMessage).toHaveBeenCalledWith(
-      "t", "c", "SYSTEM", "STEP_REBOUND", "",
+      "t",
+      "c",
+      "SYSTEM",
+      "STEP_REBOUND",
+      "",
       expect.stringContaining("inst-old"),
     );
     expect(updatePlanConfiguration).toHaveBeenCalledTimes(1);
     const call = updatePlanConfiguration.mock.calls[0][0];
-    expect(call.slotBindings.find((b: any) => b.stepKey === "a").executorInstallationId).toBe("inst-new");
+    expect(
+      call.slotBindings.find((b: SlotBinding) => b.stepKey === "a")
+        ?.executorInstallationId,
+    ).toBe("inst-new");
   });
 });

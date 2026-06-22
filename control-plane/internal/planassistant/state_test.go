@@ -76,8 +76,8 @@ func TestDeriveState_PoliciesAfterAllOverseers(t *testing.T) {
 
 func TestDeriveState_ConfirmAfterPolicies(t *testing.T) {
 	cfg := &plansv1.PlanConfiguration{
-		PlanTemplateId: "tpl-1",
-		SlotBindings:   []*plansv1.SlotBinding{{StepKey: "a", ExecutorInstallationId: "inst-a"}},
+		PlanTemplateId:   "tpl-1",
+		SlotBindings:     []*plansv1.SlotBinding{{StepKey: "a", ExecutorInstallationId: "inst-a"}},
 		OverseerBindings: []*plansv1.OverseerBinding{{StepKey: "a", OverseerUserId: "u"}},
 		BehaviorPolicies: &plansv1.PlanBehaviorPolicies{
 			ElicitationTimeoutBehavior: plansv1.ElicitationTimeoutBehavior_ELICITATION_TIMEOUT_BEHAVIOR_PAUSE_UNTIL_ANSWERED,

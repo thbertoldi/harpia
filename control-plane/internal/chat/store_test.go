@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	chatv1 "github.com/harpia/control-plane/gen/harpia/chat/v1"
 	"github.com/google/uuid"
+	chatv1 "github.com/harpia/control-plane/gen/harpia/chat/v1"
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/harpia/control-plane/internal/database"

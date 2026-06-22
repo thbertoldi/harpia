@@ -4,7 +4,10 @@
   import { locale, translate } from "$lib/i18n";
   import { formatRelativeTime } from "$lib/i18n/format";
   import { planClient } from "$lib/rpc";
-  import { PlanConfigurationStatus, type PlanConfiguration } from "$lib/gen/harpia/plans/v1/plans_pb";
+  import {
+    PlanConfigurationStatus,
+    type PlanConfiguration,
+  } from "$lib/gen/harpia/plans/v1/plans_pb";
 
   const tenantId = $derived(getTenant()?.id ?? "");
   let plans = $state<PlanConfiguration[]>([]);
@@ -55,21 +58,30 @@
 
   function statusLabelKey(status: PlanConfigurationStatus): string {
     switch (status) {
-      case PlanConfigurationStatus.RUNNABLE: return "sidebar.yourPlans.status.runnable";
-      case PlanConfigurationStatus.SCHEDULED: return "sidebar.yourPlans.status.scheduled";
-      default: return "sidebar.yourPlans.status.draft";
+      case PlanConfigurationStatus.RUNNABLE:
+        return "sidebar.yourPlans.status.runnable";
+      case PlanConfigurationStatus.SCHEDULED:
+        return "sidebar.yourPlans.status.scheduled";
+      default:
+        return "sidebar.yourPlans.status.draft";
     }
   }
 </script>
 
 <div class="mt-4">
-  <p class="px-3 font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase">
+  <p
+    class="px-3 font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
+  >
     {translate("sidebar.yourPlans.heading", $locale)}
   </p>
   {#if loadError}
-    <p class="px-3 mt-1 text-[11px] text-crown-ash-dark">{translate("sidebar.yourPlans.loadError", $locale)}</p>
+    <p class="mt-1 px-3 text-[11px] text-crown-ash-dark">
+      {translate("sidebar.yourPlans.loadError", $locale)}
+    </p>
   {:else if plans.length === 0}
-    <p class="px-3 mt-1 text-[11px] text-crown-ash-dark">{translate("sidebar.yourPlans.empty", $locale)}</p>
+    <p class="mt-1 px-3 text-[11px] text-crown-ash-dark">
+      {translate("sidebar.yourPlans.empty", $locale)}
+    </p>
   {:else}
     <div class="mt-1 space-y-0.5">
       {#each plans as plan (plan.id)}
@@ -78,7 +90,7 @@
           class="flex items-center gap-2 rounded-md px-3 py-1.5 text-[12px] text-crown-ash hover:bg-obsidian-light hover:text-cream"
         >
           <span class="flex-1 truncate">{plan.id.slice(0, 8)}</span>
-          <span class="text-[9px] uppercase text-crown-ash-dark">
+          <span class="text-[9px] text-crown-ash-dark uppercase">
             {translate(statusLabelKey(plan.status), $locale)}
           </span>
           <span class="text-[9px] text-crown-ash-dark">

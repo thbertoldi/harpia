@@ -10,8 +10,8 @@ import (
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 
-	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
 	chatv1 "github.com/harpia/control-plane/gen/harpia/chat/v1"
+	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
 	"github.com/harpia/control-plane/internal/chat"
 	"github.com/harpia/control-plane/internal/identity"
 )

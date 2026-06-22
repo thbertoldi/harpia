@@ -8,11 +8,17 @@ export const ssr = false;
 export const load: PageLoad = async () => {
   const templates: PlanTemplate[] = [];
   try {
-    for await (const page of planClient.listPlanTemplates({ pageSize: 100, pageToken: "" })) {
+    for await (const page of planClient.listPlanTemplates({
+      pageSize: 100,
+      pageToken: "",
+    })) {
       templates.push(...page.planTemplates);
     }
   } catch (err) {
-    console.warn("[/discover] listPlanTemplates failed, showing empty gallery", err);
+    console.warn(
+      "[/discover] listPlanTemplates failed, showing empty gallery",
+      err,
+    );
   }
   return { templates };
 };

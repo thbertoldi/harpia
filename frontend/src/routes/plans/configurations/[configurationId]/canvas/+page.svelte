@@ -25,15 +25,23 @@
   // Server is the source of truth for binding/schedule mutations; the
   // load-time snapshot goes stale during an in-progress walk. Refetch
   // when the chat stream emits a kind that mutates configuration.
-  let liveConfiguration = $state<PlanConfiguration | undefined>(data.configuration);
+  let liveConfiguration = $state<PlanConfiguration | undefined>(
+    data.configuration,
+  );
 
   const tenantId = $derived(getTenant()?.id ?? "");
 
-  const pricing: ExecutorPriceLookup = (id) => data.executorCatalog?.get(id) ?? null;
+  const pricing: ExecutorPriceLookup = (id) =>
+    data.executorCatalog?.get(id) ?? null;
   const cost = $derived(
     data.template && liveConfiguration
       ? computeRunCost(data.template, liveConfiguration, pricing)
-      : { totalPerRunBrl: 0, currency: "BRL" as const, unboundStepCount: 0, breakdown: [] },
+      : {
+          totalPerRunBrl: 0,
+          currency: "BRL" as const,
+          unboundStepCount: 0,
+          breakdown: [],
+        },
   );
 
   const runMessages = $derived(
@@ -41,7 +49,11 @@
   );
 
   const canvasState = $derived(
-    buildCanvasState(runMessages, data.template?.steps ?? [], liveConfiguration?.slotBindings),
+    buildCanvasState(
+      runMessages,
+      data.template?.steps ?? [],
+      liveConfiguration?.slotBindings,
+    ),
   );
 
   const approvalInputArtifactByStep = $derived<Record<string, string>>({});

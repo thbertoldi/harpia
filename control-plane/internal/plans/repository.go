@@ -11,8 +11,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/harpia/control-plane/internal/database"
 	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
+	"github.com/harpia/control-plane/internal/database"
 )
 
 type PlanTemplate struct {
@@ -96,14 +96,14 @@ type PlanApprovalRequest struct {
 	PlanExecutionID     uuid.UUID
 	PlanConfigurationID uuid.UUID
 	StepExecutionID     uuid.UUID
-	PlanStepKey     string
-	InputArtifactID string
-	Status          string
-	DecisionReason  string
-	RequestedAt     time.Time
-	DecidedAt       *time.Time
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	PlanStepKey         string
+	InputArtifactID     string
+	Status              string
+	DecisionReason      string
+	RequestedAt         time.Time
+	DecidedAt           *time.Time
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
 
 type Repository struct {

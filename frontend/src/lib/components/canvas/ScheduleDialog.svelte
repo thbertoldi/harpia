@@ -2,7 +2,10 @@
   import { X } from "lucide-svelte";
   import { planClient } from "$lib/rpc";
   import { locale, translate } from "$lib/i18n";
-  import type { PlanConfiguration } from "$lib/gen/harpia/plans/v1/plans_pb";
+  import type {
+    PlanConfiguration,
+    PlanSchedule,
+  } from "$lib/gen/harpia/plans/v1/plans_pb";
 
   interface Props {
     open: boolean;
@@ -45,9 +48,13 @@
         slotBindings: configuration.slotBindings,
         overseerBindings: configuration.overseerBindings,
         behaviorPolicies: configuration.behaviorPolicies,
-        schedule: { cronExpression: cron, timezone: configuration.schedule?.timezone || "UTC" } as any,
+        schedule: {
+          cronExpression: cron,
+          timezone: configuration.schedule?.timezone || "UTC",
+        } satisfies PlanSchedule,
       });
-      if (response.planConfiguration && onSaved) onSaved(response.planConfiguration);
+      if (response.planConfiguration && onSaved)
+        onSaved(response.planConfiguration);
       onClose();
     } catch (e) {
       error = e instanceof Error ? e.message : "Failed to save schedule";
@@ -58,13 +65,22 @@
 </script>
 
 {#if open}
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-obsidian/80 p-4">
-    <div class="w-full max-w-md rounded-lg border border-plumage bg-obsidian-light p-4">
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-obsidian/80 p-4"
+  >
+    <div
+      class="w-full max-w-md rounded-lg border border-plumage bg-obsidian-light p-4"
+    >
       <div class="mb-3 flex items-center justify-between">
         <h2 class="font-heading text-[14px] font-semibold text-cream">
           {translate("schedule.title", $locale)}
         </h2>
-        <button type="button" onclick={onClose} aria-label={translate("schedule.close", $locale)} class="cursor-pointer text-crown-ash hover:text-cream">
+        <button
+          type="button"
+          onclick={onClose}
+          aria-label={translate("schedule.close", $locale)}
+          class="cursor-pointer text-crown-ash hover:text-cream"
+        >
           <X class="size-4" />
         </button>
       </div>
@@ -75,7 +91,10 @@
             <button
               type="button"
               onclick={() => (cadence = c as Cadence)}
-              class="cursor-pointer rounded-md border px-2 py-1 text-[11px] {cadence === c ? 'border-talon-gold bg-talon-gold/10 text-talon-gold' : 'border-plumage text-crown-ash hover:border-talon-gold'}"
+              class="cursor-pointer rounded-md border px-2 py-1 text-[11px] {cadence ===
+              c
+                ? 'border-talon-gold bg-talon-gold/10 text-talon-gold'
+                : 'border-plumage text-crown-ash hover:border-talon-gold'}"
             >
               {translate(`schedule.cadence.${c}`, $locale)}
             </button>
@@ -85,13 +104,20 @@
         {#if cadence === "daily" || cadence === "weekly" || cadence === "monthly"}
           <label class="block text-[11px] text-crown-ash">
             {translate("schedule.time", $locale)}
-            <input type="time" bind:value={time} class="ml-2 rounded border border-plumage bg-obsidian px-2 py-1 text-[12px] text-cream" />
+            <input
+              type="time"
+              bind:value={time}
+              class="ml-2 rounded border border-plumage bg-obsidian px-2 py-1 text-[12px] text-cream"
+            />
           </label>
         {/if}
         {#if cadence === "weekly"}
           <label class="block text-[11px] text-crown-ash">
             {translate("schedule.dayOfWeek", $locale)}
-            <select bind:value={dayOfWeek} class="ml-2 rounded border border-plumage bg-obsidian px-2 py-1 text-[12px] text-cream">
+            <select
+              bind:value={dayOfWeek}
+              class="ml-2 rounded border border-plumage bg-obsidian px-2 py-1 text-[12px] text-cream"
+            >
               <option value={0}>{translate("schedule.dow.0", $locale)}</option>
               <option value={1}>{translate("schedule.dow.1", $locale)}</option>
               <option value={2}>{translate("schedule.dow.2", $locale)}</option>
@@ -105,13 +131,24 @@
         {#if cadence === "monthly"}
           <label class="block text-[11px] text-crown-ash">
             {translate("schedule.dayOfMonth", $locale)}
-            <input type="number" min="1" max="28" bind:value={dayOfMonth} class="ml-2 w-16 rounded border border-plumage bg-obsidian px-2 py-1 text-[12px] text-cream" />
+            <input
+              type="number"
+              min="1"
+              max="28"
+              bind:value={dayOfMonth}
+              class="ml-2 w-16 rounded border border-plumage bg-obsidian px-2 py-1 text-[12px] text-cream"
+            />
           </label>
         {/if}
         {#if cadence === "custom"}
           <label class="block text-[11px] text-crown-ash">
             {translate("schedule.customCron", $locale)}
-            <input type="text" bind:value={customCron} placeholder="0 9 * * *" class="mt-1 w-full rounded border border-plumage bg-obsidian px-2 py-1 font-mono text-[12px] text-cream" />
+            <input
+              type="text"
+              bind:value={customCron}
+              placeholder="0 9 * * *"
+              class="mt-1 w-full rounded border border-plumage bg-obsidian px-2 py-1 font-mono text-[12px] text-cream"
+            />
           </label>
         {/if}
 
@@ -121,10 +158,19 @@
       </div>
 
       <div class="mt-4 flex justify-end gap-2">
-        <button type="button" onclick={onClose} class="cursor-pointer rounded-md border border-plumage px-3 py-1.5 text-[12px] text-crown-ash hover:border-talon-gold hover:text-talon-gold">
+        <button
+          type="button"
+          onclick={onClose}
+          class="cursor-pointer rounded-md border border-plumage px-3 py-1.5 text-[12px] text-crown-ash hover:border-talon-gold hover:text-talon-gold"
+        >
           {translate("schedule.cancel", $locale)}
         </button>
-        <button type="button" disabled={saving} onclick={save} class="cursor-pointer rounded-md border border-talon-gold bg-talon-gold px-3 py-1.5 text-[12px] font-semibold text-obsidian hover:opacity-90 disabled:opacity-50">
+        <button
+          type="button"
+          disabled={saving}
+          onclick={save}
+          class="cursor-pointer rounded-md border border-talon-gold bg-talon-gold px-3 py-1.5 text-[12px] font-semibold text-obsidian hover:opacity-90 disabled:opacity-50"
+        >
           {translate("schedule.save", $locale)}
         </button>
       </div>

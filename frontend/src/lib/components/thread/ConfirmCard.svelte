@@ -39,9 +39,11 @@
 
 <div
   id={`m-${message.id}`}
-  class="rounded-lg border border-plumage bg-obsidian-light px-4 py-3 {isLive ? 'ring-1 ring-talon-gold' : ''}"
+  class="rounded-lg border border-plumage bg-obsidian-light px-4 py-3 {isLive
+    ? 'ring-1 ring-talon-gold'
+    : ''}"
 >
-  <p class="text-[13px] font-body text-cream">{message.text}</p>
+  <p class="font-body text-[13px] text-cream">{message.text}</p>
   {#if isLive && !submitted}
     <div class="mt-3 flex items-center gap-2">
       <button

@@ -8,14 +8,12 @@
   let { data } = $props();
 
   const groups = $derived.by(() => {
-    const byVertical = new Map<string, typeof data.templates>();
+    const byVertical: Record<string, typeof data.templates> = {};
     for (const t of data.templates) {
       const key = t.vertical || "general";
-      const list = byVertical.get(key) ?? [];
-      list.push(t);
-      byVertical.set(key, list);
+      (byVertical[key] ??= []).push(t);
     }
-    return Array.from(byVertical.entries()).sort(([a], [b]) => a.localeCompare(b));
+    return Object.entries(byVertical).sort(([a], [b]) => a.localeCompare(b));
   });
 
   function pick(templateId: string) {
@@ -31,19 +29,23 @@
   <HarpyHeading tag="h1" class="text-2xl text-cream">
     {translate("discover.heading", $locale)}
   </HarpyHeading>
-  <p class="mt-1 text-[13px] font-body text-crown-ash">
+  <p class="mt-1 font-body text-[13px] text-crown-ash">
     {translate("discover.subheading", $locale)}
   </p>
 
   {#if data.templates.length === 0}
-    <p class="mt-6 rounded border border-plumage bg-obsidian-light px-4 py-3 text-sm text-crown-ash">
+    <p
+      class="mt-6 rounded border border-plumage bg-obsidian-light px-4 py-3 text-sm text-crown-ash"
+    >
       {translate("discover.empty", $locale)}
     </p>
   {:else}
     <div class="mt-6 space-y-6">
       {#each groups as [vertical, templates] (vertical)}
         <section>
-          <p class="mb-2 font-mono text-[10px] uppercase tracking-widest text-crown-ash-dark">
+          <p
+            class="mb-2 font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
+          >
             {vertical}
           </p>
           <TemplatePickerCard {templates} onPick={pick} />

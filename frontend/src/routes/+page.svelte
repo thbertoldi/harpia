@@ -172,7 +172,6 @@
             {/each}
           </div>
         </div>
-
       </div>
     {:else}
       <!-- Chat state -->

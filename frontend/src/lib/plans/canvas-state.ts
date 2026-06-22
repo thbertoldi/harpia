@@ -84,7 +84,9 @@ export function buildCanvasState(
   }
   const state: Record<string, CanvasStepState> = {};
   for (const step of steps) {
-    state[step.key] = { status: boundByStep.has(step.key) ? "bound" : "unbound" };
+    state[step.key] = {
+      status: boundByStep.has(step.key) ? "bound" : "unbound",
+    };
   }
 
   const sorted = [...messages].sort((a, b) =>

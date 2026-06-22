@@ -65,12 +65,12 @@ func (c *Controller) SeedThread(ctx context.Context, tenantID, configID uuid.UUI
 
 // NextTurn is called after a USER_SELECTION has been appended (by the
 // AppendPlanThreadMessage handler). It:
-//   1. Loads the latest USER_SELECTION and the ASSISTANT_PROMPT it answers.
-//   2. Parses the answered prompt's state from its payload_json.
-//   3. Calls Configs.UpdateFromSelection(state, value) — server-authoritative
-//      mutation of binding / overseer / policies / status (see Task 7).
-//   4. Re-loads the configuration, derives the new state, emits the next
-//      ASSISTANT_PROMPT (or ASSISTANT_TEXT for SAVED).
+//  1. Loads the latest USER_SELECTION and the ASSISTANT_PROMPT it answers.
+//  2. Parses the answered prompt's state from its payload_json.
+//  3. Calls Configs.UpdateFromSelection(state, value) — server-authoritative
+//     mutation of binding / overseer / policies / status (see Task 7).
+//  4. Re-loads the configuration, derives the new state, emits the next
+//     ASSISTANT_PROMPT (or ASSISTANT_TEXT for SAVED).
 //
 // Best-effort & idempotent: if no recent USER_SELECTION is found, NextTurn
 // just emits the prompt for the current derived state.

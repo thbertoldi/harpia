@@ -20,7 +20,9 @@
     const q = composerText.trim().toLowerCase();
     if (q.length < 2) return null;
     const hit = data.templates.find(
-      (t) => t.name.toLowerCase().includes(q) || (t.description ?? "").toLowerCase().includes(q),
+      (t) =>
+        t.name.toLowerCase().includes(q) ||
+        (t.description ?? "").toLowerCase().includes(q),
     );
     return hit ?? null;
   });
@@ -56,13 +58,15 @@
   });
 </script>
 
-<svelte:head><title>{translate("nav.newPlan", $locale)} · Harpia</title></svelte:head>
+<svelte:head
+  ><title>{translate("nav.newPlan", $locale)} · Harpia</title></svelte:head
+>
 
 <div class="mx-auto max-w-3xl px-4 py-6">
   <HarpyHeading tag="h1" class="text-2xl text-cream">
     {translate("new.greeting", $locale)}
   </HarpyHeading>
-  <p class="mt-1 text-[13px] font-body text-crown-ash">
+  <p class="mt-1 font-body text-[13px] text-crown-ash">
     {translate("new.subgreeting", $locale)}
   </p>
 
@@ -71,7 +75,8 @@
       type="text"
       bind:value={composerText}
       onkeydown={(e) => {
-        if (e.key === "Enter" && matchedTemplate) void pickTemplate(matchedTemplate.id);
+        if (e.key === "Enter" && matchedTemplate)
+          void pickTemplate(matchedTemplate.id);
       }}
       placeholder={translate("new.composerPlaceholder", $locale)}
       class="w-full rounded-md border border-plumage bg-obsidian-light px-3 py-2 text-[13px] text-cream"
@@ -84,10 +89,16 @@
   </div>
 
   <div class="mt-6">
-    <p class="mb-2 font-mono text-[10px] uppercase tracking-widest text-crown-ash-dark">
+    <p
+      class="mb-2 font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
+    >
       {translate("new.galleryHeading", $locale)}
     </p>
-    <TemplatePickerCard templates={data.templates} onPick={pickTemplate} disabled={creating} />
+    <TemplatePickerCard
+      templates={data.templates}
+      onPick={pickTemplate}
+      disabled={creating}
+    />
   </div>
 
   {#if createError}

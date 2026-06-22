@@ -3,12 +3,13 @@ import { computeRunCost, type ExecutorPriceLookup } from "./cost";
 import type {
   PlanConfiguration,
   PlanTemplate,
+  PlanStep,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
 
 function tpl(...stepKeys: string[]): PlanTemplate {
   return {
     id: "tpl",
-    steps: stepKeys.map((k) => ({ key: k, title: k }) as any),
+    steps: stepKeys.map((k) => ({ key: k, title: k }) as PlanStep),
   } as PlanTemplate;
 }
 
@@ -23,8 +24,10 @@ function cfg(...bindings: Array<[string, string]>): PlanConfiguration {
 }
 
 const pricing: ExecutorPriceLookup = (id) => {
-  if (id === "inst-a") return { displayName: "Junior Writer", pricePerRunBrl: 0.05 };
-  if (id === "inst-b") return { displayName: "Senior Reviewer", pricePerRunBrl: 0.2 };
+  if (id === "inst-a")
+    return { displayName: "Junior Writer", pricePerRunBrl: 0.05 };
+  if (id === "inst-b")
+    return { displayName: "Senior Reviewer", pricePerRunBrl: 0.2 };
   return null;
 };
 
@@ -38,7 +41,11 @@ describe("computeRunCost", () => {
   });
 
   it("sums prices when fully bound", () => {
-    const cost = computeRunCost(tpl("a", "b"), cfg(["a", "inst-a"], ["b", "inst-b"]), pricing);
+    const cost = computeRunCost(
+      tpl("a", "b"),
+      cfg(["a", "inst-a"], ["b", "inst-b"]),
+      pricing,
+    );
     expect(cost.totalPerRunBrl).toBeCloseTo(0.25, 5);
     expect(cost.unboundStepCount).toBe(0);
     expect(cost.breakdown[0].executorName).toBe("Junior Writer");

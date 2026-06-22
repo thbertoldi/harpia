@@ -8,7 +8,10 @@ export const ssr = false;
 export const load: PageLoad = async ({ url }) => {
   const templates: PlanTemplate[] = [];
   try {
-    for await (const page of planClient.listPlanTemplates({ pageSize: 50, pageToken: "" })) {
+    for await (const page of planClient.listPlanTemplates({
+      pageSize: 50,
+      pageToken: "",
+    })) {
       templates.push(...page.planTemplates);
     }
   } catch (err) {

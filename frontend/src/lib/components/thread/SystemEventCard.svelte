@@ -1,5 +1,14 @@
 <script lang="ts">
-  import { Activity, Check, AlertTriangle, Play, Save, Repeat, Calendar, Sparkles } from "lucide-svelte";
+  import {
+    Activity,
+    Check,
+    AlertTriangle,
+    Play,
+    Save,
+    Repeat,
+    Calendar,
+    Sparkles,
+  } from "lucide-svelte";
   import type { ChatMessage } from "$lib/chat/types";
   import { locale } from "$lib/i18n";
   import { formatRelativeTime } from "$lib/i18n/format";

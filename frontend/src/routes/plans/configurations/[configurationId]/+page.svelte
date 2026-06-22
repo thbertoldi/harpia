@@ -15,7 +15,10 @@
   import PlanThreadTopBar from "$lib/components/PlanThreadTopBar.svelte";
   import ScheduleDialog from "$lib/components/canvas/ScheduleDialog.svelte";
   import { computeRunCost, type ExecutorPriceLookup } from "$lib/plans/cost";
-  import { PlanConfigurationStatus, type PlanConfiguration } from "$lib/gen/harpia/plans/v1/plans_pb";
+  import {
+    PlanConfigurationStatus,
+    type PlanConfiguration,
+  } from "$lib/gen/harpia/plans/v1/plans_pb";
   import { planClient } from "$lib/rpc";
   import { Expand } from "lucide-svelte";
 
@@ -27,15 +30,23 @@
   // Server is the source of truth for configuration mutations performed by
   // the assistant. Start with the load-time snapshot and refetch when an
   // incoming chat message indicates a mutation happened.
-  let liveConfiguration = $state<PlanConfiguration | undefined>(data.configuration);
+  let liveConfiguration = $state<PlanConfiguration | undefined>(
+    data.configuration,
+  );
 
   const tenantId = $derived(getTenant()?.id ?? "");
 
-  const pricing: ExecutorPriceLookup = (id) => data.executorCatalog?.get(id) ?? null;
+  const pricing: ExecutorPriceLookup = (id) =>
+    data.executorCatalog?.get(id) ?? null;
   const cost = $derived(
     data.template && liveConfiguration
       ? computeRunCost(data.template, liveConfiguration, pricing)
-      : { totalPerRunBrl: 0, currency: "BRL" as const, unboundStepCount: 0, breakdown: [] },
+      : {
+          totalPerRunBrl: 0,
+          currency: "BRL" as const,
+          unboundStepCount: 0,
+          breakdown: [],
+        },
   );
   const statusLabel = $derived(
     liveConfiguration?.status === PlanConfigurationStatus.RUNNABLE
@@ -238,12 +249,19 @@
             const answered = after.some((m) => {
               if (m.kind !== "USER_SELECTION") return false;
               try {
-                return JSON.parse(m.payloadJson)?.in_response_to_message_id === section.message.id;
-              } catch { return false; }
+                return (
+                  JSON.parse(m.payloadJson)?.in_response_to_message_id ===
+                  section.message.id
+                );
+              } catch {
+                return false;
+              }
             });
             return !answered;
           })()}
-          {@const isAnsweredPrompt = section.message.kind === "ASSISTANT_PROMPT" && !isLastAssistantPrompt}
+          {@const isAnsweredPrompt =
+            section.message.kind === "ASSISTANT_PROMPT" &&
+            !isLastAssistantPrompt}
           <ThreadMessage
             message={section.message}
             configurationId={data.configurationId}
