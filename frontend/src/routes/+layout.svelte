@@ -36,6 +36,7 @@
     type PersonaMode,
   } from "$lib/personas/storage";
   import { resolveNavSectionsM1 } from "$lib/nav/sections-m1";
+  import YourPlansList from "$lib/components/sidebar/YourPlansList.svelte";
 
   let { data, children } = $props();
 
@@ -165,6 +166,10 @@
             </a>
           {/each}
         </div>
+
+        {#if personaMode === "operator"}
+          <YourPlansList />
+        {/if}
 
         <div class="mt-8 border-t border-plumage pt-6">
           <p
