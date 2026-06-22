@@ -11,14 +11,24 @@
   import CanvasTopBar from "$lib/components/canvas/CanvasTopBar.svelte";
   import RunHistoryDrawer from "$lib/components/canvas/RunHistoryDrawer.svelte";
   import SettingsDrawer from "$lib/components/canvas/SettingsDrawer.svelte";
+  import ScheduleDialog from "$lib/components/canvas/ScheduleDialog.svelte";
+  import { computeRunCost, type ExecutorPriceLookup } from "$lib/plans/cost";
 
   let { data } = $props();
 
   let messages = $state<ChatMessage[]>([]);
   let runHistoryOpen = $state(false);
   let settingsOpen = $state(false);
+  let scheduleOpen = $state(false);
 
   const tenantId = $derived(getTenant()?.id ?? "");
+
+  const pricing: ExecutorPriceLookup = (id) => data.executorCatalog?.get(id) ?? null;
+  const cost = $derived(
+    data.template && data.configuration
+      ? computeRunCost(data.template, data.configuration, pricing)
+      : { totalPerRunBrl: 0, currency: "BRL" as const, unboundStepCount: 0, breakdown: [] },
+  );
 
   const runMessages = $derived(
     data.runId ? messages.filter((m) => m.executionId === data.runId) : [],
@@ -98,7 +108,9 @@
     planName={data.template?.name}
     onOpenRunHistory={() => (runHistoryOpen = true)}
     onOpenSettings={() => (settingsOpen = true)}
+    onOpenSchedule={() => (scheduleOpen = true)}
     onAnswerNext={answerNext}
+    {cost}
   />
 
   <div class="flex-1 overflow-hidden">
@@ -131,4 +143,12 @@
     configurationId={data.configurationId}
     {tenantId}
   />
+
+  {#if data.configuration}
+    <ScheduleDialog
+      open={scheduleOpen}
+      configuration={data.configuration}
+      onClose={() => (scheduleOpen = false)}
+    />
+  {/if}
 </div>
