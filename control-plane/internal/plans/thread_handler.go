@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 
 	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
+	chatv1 "github.com/harpia/control-plane/gen/harpia/chat/v1"
 	"github.com/harpia/control-plane/internal/chat"
 	"github.com/harpia/control-plane/internal/identity"
 )
@@ -115,6 +116,12 @@ func (h *PlanHandler) AppendPlanThreadMessage(
 	msg, err := h.chat.AppendMessage(ctx, tenantID, input)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	if req.Msg.GetKind() == chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_USER_SELECTION && h.assistant != nil {
+		parsedConfigID, parseErr := uuid.Parse(configID)
+		if parseErr == nil {
+			_ = h.assistant.NextTurn(ctx, tenantID, parsedConfigID)
+		}
 	}
 	return connect.NewResponse(&plansv1.AppendPlanThreadMessageResponse{
 		Message: msg,

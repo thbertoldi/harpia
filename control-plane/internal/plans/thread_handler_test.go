@@ -227,3 +227,7 @@ func TestListPlanThreadMessages_RejectsInvalidPageToken(t *testing.T) {
 		t.Fatalf("error code = %v, want InvalidArgument", got)
 	}
 }
+
+func TestAppendPlanThreadMessage_UserSelection_TriggersNextTurn(t *testing.T) {
+	t.Skip("Wire-up: construct PlanHandler with a stub planassistant.Controller that records its NextTurn calls. Call AppendPlanThreadMessage with kind=USER_SELECTION. Assert NextTurn was called exactly once with the expected (tenantID, configID).")
+}
