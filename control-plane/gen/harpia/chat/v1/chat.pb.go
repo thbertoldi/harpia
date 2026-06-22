@@ -77,19 +77,24 @@ func (ThreadMessageRole) EnumDescriptor() ([]byte, []int) {
 type ThreadMessageKind int32
 
 const (
-	ThreadMessageKind_THREAD_MESSAGE_KIND_UNSPECIFIED          ThreadMessageKind = 0
-	ThreadMessageKind_THREAD_MESSAGE_KIND_USER_TEXT            ThreadMessageKind = 1  // OVERSEER composer message
-	ThreadMessageKind_THREAD_MESSAGE_KIND_ASSISTANT_TEXT       ThreadMessageKind = 2  // reserved for M5
-	ThreadMessageKind_THREAD_MESSAGE_KIND_CONFIGURATION_SAVED  ThreadMessageKind = 3  // PlanConfiguration created or updated
-	ThreadMessageKind_THREAD_MESSAGE_KIND_RUN_STARTED          ThreadMessageKind = 4  // PlanExecution started
-	ThreadMessageKind_THREAD_MESSAGE_KIND_RUN_COMPLETED        ThreadMessageKind = 5  // PlanExecution finished successfully
-	ThreadMessageKind_THREAD_MESSAGE_KIND_RUN_FAILED           ThreadMessageKind = 6  // PlanExecution failed
-	ThreadMessageKind_THREAD_MESSAGE_KIND_STEP_BOUND           ThreadMessageKind = 7  // StepExecution completed (output artifact produced)
-	ThreadMessageKind_THREAD_MESSAGE_KIND_ELICITATION_RAISED   ThreadMessageKind = 8  // payload_json: { "elicitation_id": "..." }
-	ThreadMessageKind_THREAD_MESSAGE_KIND_ELICITATION_ANSWERED ThreadMessageKind = 9  // payload_json: { "elicitation_id": "...", "outcome": "answered|timed_out|cancelled" }
-	ThreadMessageKind_THREAD_MESSAGE_KIND_APPROVAL_RAISED      ThreadMessageKind = 10 // payload_json: { "approval_request_id": "..." }
-	ThreadMessageKind_THREAD_MESSAGE_KIND_APPROVAL_DECIDED     ThreadMessageKind = 11 // payload_json: { "approval_request_id": "...", "approved": true|false }
-	ThreadMessageKind_THREAD_MESSAGE_KIND_STEP_STARTED         ThreadMessageKind = 12 // payload_json: { "step_key": "...", "step_execution_id": "..." }
+	ThreadMessageKind_THREAD_MESSAGE_KIND_UNSPECIFIED           ThreadMessageKind = 0
+	ThreadMessageKind_THREAD_MESSAGE_KIND_USER_TEXT             ThreadMessageKind = 1  // OVERSEER composer message
+	ThreadMessageKind_THREAD_MESSAGE_KIND_ASSISTANT_TEXT        ThreadMessageKind = 2  // reserved for M5
+	ThreadMessageKind_THREAD_MESSAGE_KIND_CONFIGURATION_SAVED   ThreadMessageKind = 3  // PlanConfiguration created or updated
+	ThreadMessageKind_THREAD_MESSAGE_KIND_RUN_STARTED           ThreadMessageKind = 4  // PlanExecution started
+	ThreadMessageKind_THREAD_MESSAGE_KIND_RUN_COMPLETED         ThreadMessageKind = 5  // PlanExecution finished successfully
+	ThreadMessageKind_THREAD_MESSAGE_KIND_RUN_FAILED            ThreadMessageKind = 6  // PlanExecution failed
+	ThreadMessageKind_THREAD_MESSAGE_KIND_STEP_BOUND            ThreadMessageKind = 7  // StepExecution completed (output artifact produced)
+	ThreadMessageKind_THREAD_MESSAGE_KIND_ELICITATION_RAISED    ThreadMessageKind = 8  // payload_json: { "elicitation_id": "..." }
+	ThreadMessageKind_THREAD_MESSAGE_KIND_ELICITATION_ANSWERED  ThreadMessageKind = 9  // payload_json: { "elicitation_id": "...", "outcome": "answered|timed_out|cancelled" }
+	ThreadMessageKind_THREAD_MESSAGE_KIND_APPROVAL_RAISED       ThreadMessageKind = 10 // payload_json: { "approval_request_id": "..." }
+	ThreadMessageKind_THREAD_MESSAGE_KIND_APPROVAL_DECIDED      ThreadMessageKind = 11 // payload_json: { "approval_request_id": "...", "approved": true|false }
+	ThreadMessageKind_THREAD_MESSAGE_KIND_STEP_STARTED          ThreadMessageKind = 12 // payload_json: { "step_key": "...", "step_execution_id": "..." }
+	ThreadMessageKind_THREAD_MESSAGE_KIND_CONFIGURATION_STARTED ThreadMessageKind = 13 // payload_json: { "template_id": "..." }
+	ThreadMessageKind_THREAD_MESSAGE_KIND_ASSISTANT_PROMPT      ThreadMessageKind = 14 // payload_json: { "state": "...", "step_key": "...", "options": [...] }
+	ThreadMessageKind_THREAD_MESSAGE_KIND_USER_SELECTION        ThreadMessageKind = 15 // payload_json: { "in_response_to_message_id": "...", "option_id": "...", "value": "..." }
+	ThreadMessageKind_THREAD_MESSAGE_KIND_STEP_REBOUND          ThreadMessageKind = 16 // payload_json: { "step_key": "...", "previous_executor_installation_id": "...", "new_executor_installation_id": "..." }
+	ThreadMessageKind_THREAD_MESSAGE_KIND_SCHEDULE_SET          ThreadMessageKind = 17 // payload_json: { "schedule_cron": "...", "timezone": "..." }
 )
 
 // Enum value maps for ThreadMessageKind.
@@ -108,21 +113,31 @@ var (
 		10: "THREAD_MESSAGE_KIND_APPROVAL_RAISED",
 		11: "THREAD_MESSAGE_KIND_APPROVAL_DECIDED",
 		12: "THREAD_MESSAGE_KIND_STEP_STARTED",
+		13: "THREAD_MESSAGE_KIND_CONFIGURATION_STARTED",
+		14: "THREAD_MESSAGE_KIND_ASSISTANT_PROMPT",
+		15: "THREAD_MESSAGE_KIND_USER_SELECTION",
+		16: "THREAD_MESSAGE_KIND_STEP_REBOUND",
+		17: "THREAD_MESSAGE_KIND_SCHEDULE_SET",
 	}
 	ThreadMessageKind_value = map[string]int32{
-		"THREAD_MESSAGE_KIND_UNSPECIFIED":          0,
-		"THREAD_MESSAGE_KIND_USER_TEXT":            1,
-		"THREAD_MESSAGE_KIND_ASSISTANT_TEXT":       2,
-		"THREAD_MESSAGE_KIND_CONFIGURATION_SAVED":  3,
-		"THREAD_MESSAGE_KIND_RUN_STARTED":          4,
-		"THREAD_MESSAGE_KIND_RUN_COMPLETED":        5,
-		"THREAD_MESSAGE_KIND_RUN_FAILED":           6,
-		"THREAD_MESSAGE_KIND_STEP_BOUND":           7,
-		"THREAD_MESSAGE_KIND_ELICITATION_RAISED":   8,
-		"THREAD_MESSAGE_KIND_ELICITATION_ANSWERED": 9,
-		"THREAD_MESSAGE_KIND_APPROVAL_RAISED":      10,
-		"THREAD_MESSAGE_KIND_APPROVAL_DECIDED":     11,
-		"THREAD_MESSAGE_KIND_STEP_STARTED":         12,
+		"THREAD_MESSAGE_KIND_UNSPECIFIED":           0,
+		"THREAD_MESSAGE_KIND_USER_TEXT":             1,
+		"THREAD_MESSAGE_KIND_ASSISTANT_TEXT":        2,
+		"THREAD_MESSAGE_KIND_CONFIGURATION_SAVED":   3,
+		"THREAD_MESSAGE_KIND_RUN_STARTED":           4,
+		"THREAD_MESSAGE_KIND_RUN_COMPLETED":         5,
+		"THREAD_MESSAGE_KIND_RUN_FAILED":            6,
+		"THREAD_MESSAGE_KIND_STEP_BOUND":            7,
+		"THREAD_MESSAGE_KIND_ELICITATION_RAISED":    8,
+		"THREAD_MESSAGE_KIND_ELICITATION_ANSWERED":  9,
+		"THREAD_MESSAGE_KIND_APPROVAL_RAISED":       10,
+		"THREAD_MESSAGE_KIND_APPROVAL_DECIDED":      11,
+		"THREAD_MESSAGE_KIND_STEP_STARTED":          12,
+		"THREAD_MESSAGE_KIND_CONFIGURATION_STARTED": 13,
+		"THREAD_MESSAGE_KIND_ASSISTANT_PROMPT":      14,
+		"THREAD_MESSAGE_KIND_USER_SELECTION":        15,
+		"THREAD_MESSAGE_KIND_STEP_REBOUND":          16,
+		"THREAD_MESSAGE_KIND_SCHEDULE_SET":          17,
 	}
 )
 
@@ -305,7 +320,7 @@ const file_harpia_chat_v1_chat_proto_rawDesc = "" +
 	"\x1fTHREAD_MESSAGE_ROLE_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cTHREAD_MESSAGE_ROLE_OVERSEER\x10\x01\x12\x1d\n" +
 	"\x19THREAD_MESSAGE_ROLE_AGENT\x10\x02\x12\x1e\n" +
-	"\x1aTHREAD_MESSAGE_ROLE_SYSTEM\x10\x03*\x97\x04\n" +
+	"\x1aTHREAD_MESSAGE_ROLE_SYSTEM\x10\x03*\xe4\x05\n" +
 	"\x11ThreadMessageKind\x12#\n" +
 	"\x1fTHREAD_MESSAGE_KIND_UNSPECIFIED\x10\x00\x12!\n" +
 	"\x1dTHREAD_MESSAGE_KIND_USER_TEXT\x10\x01\x12&\n" +
@@ -320,7 +335,12 @@ const file_harpia_chat_v1_chat_proto_rawDesc = "" +
 	"#THREAD_MESSAGE_KIND_APPROVAL_RAISED\x10\n" +
 	"\x12(\n" +
 	"$THREAD_MESSAGE_KIND_APPROVAL_DECIDED\x10\v\x12$\n" +
-	" THREAD_MESSAGE_KIND_STEP_STARTED\x10\fB\xb4\x01\n" +
+	" THREAD_MESSAGE_KIND_STEP_STARTED\x10\f\x12-\n" +
+	")THREAD_MESSAGE_KIND_CONFIGURATION_STARTED\x10\r\x12(\n" +
+	"$THREAD_MESSAGE_KIND_ASSISTANT_PROMPT\x10\x0e\x12&\n" +
+	"\"THREAD_MESSAGE_KIND_USER_SELECTION\x10\x0f\x12$\n" +
+	" THREAD_MESSAGE_KIND_STEP_REBOUND\x10\x10\x12$\n" +
+	" THREAD_MESSAGE_KIND_SCHEDULE_SET\x10\x11B\xb4\x01\n" +
 	"\x12com.harpia.chat.v1B\tChatProtoP\x01Z9github.com/harpia/control-plane/gen/harpia/chat/v1;chatv1\xa2\x02\x03HCX\xaa\x02\x0eHarpia.Chat.V1\xca\x02\x0eHarpia\\Chat\\V1\xe2\x02\x1aHarpia\\Chat\\V1\\GPBMetadata\xea\x02\x10Harpia::Chat::V1b\x06proto3"
 
 var (

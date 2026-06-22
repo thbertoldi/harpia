@@ -46,4 +46,9 @@ enum ThreadMessageKind {
   THREAD_MESSAGE_KIND_APPROVAL_RAISED = 10;      // payload_json: { "approval_request_id": "..." }
   THREAD_MESSAGE_KIND_APPROVAL_DECIDED = 11;     // payload_json: { "approval_request_id": "...", "approved": true|false }
   THREAD_MESSAGE_KIND_STEP_STARTED = 12;            // payload_json: { "step_key": "...", "step_execution_id": "..." }
+  THREAD_MESSAGE_KIND_CONFIGURATION_STARTED = 13;   // payload_json: { "template_id": "..." }
+  THREAD_MESSAGE_KIND_ASSISTANT_PROMPT      = 14;   // payload_json: { "state": "...", "step_key": "...", "options": [...] }
+  THREAD_MESSAGE_KIND_USER_SELECTION        = 15;   // payload_json: { "in_response_to_message_id": "...", "option_id": "...", "value": "..." }
+  THREAD_MESSAGE_KIND_STEP_REBOUND          = 16;   // payload_json: { "step_key": "...", "previous_executor_installation_id": "...", "new_executor_installation_id": "..." }
+  THREAD_MESSAGE_KIND_SCHEDULE_SET          = 17;   // payload_json: { "schedule_cron": "...", "timezone": "..." }
 }
