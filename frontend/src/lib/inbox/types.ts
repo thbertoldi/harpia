@@ -23,6 +23,7 @@ export interface InboxElicitationItem extends InboxItemBase {
   kind: "elicitation";
   planExecutionId: string;
   stepExecutionId: string;
+  configurationId: string;
   raw: ElicitationRequest;
 }
 
@@ -31,6 +32,7 @@ export interface InboxApprovalItem extends InboxItemBase {
   planExecutionId: string;
   stepExecutionId: string;
   inputArtifactId: string;
+  configurationId: string;
   raw: ApprovalRequest;
 }
 

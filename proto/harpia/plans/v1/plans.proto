@@ -372,6 +372,7 @@ message ElicitationRequest {
   string responded_by_user_id = 15;
   // Ordered conversation: the agent prompt followed by overseer responses.
   repeated ThreadMessage thread = 16;
+  string plan_configuration_id = 17;
 }
 
 enum ElicitationStatus {
@@ -473,6 +474,7 @@ message ApprovalRequest {
   string decision_reason = 8;
   string requested_at = 9;
   string decided_at = 10;
+  string plan_configuration_id = 11;
 }
 
 enum ApprovalRequestStatus {

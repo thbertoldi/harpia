@@ -146,6 +146,7 @@ function toInboxElicitation(req: ElicitationRequest): InboxElicitationItem {
     summary: req.prompt,
     planExecutionId: req.planExecutionId,
     stepExecutionId: req.stepExecutionId,
+    configurationId: req.planConfigurationId,
     raw: req,
   };
 }
@@ -163,6 +164,7 @@ function toInboxApproval(req: ApprovalRequest): InboxApprovalItem {
     planExecutionId: req.planExecutionId,
     stepExecutionId: req.stepExecutionId,
     inputArtifactId: req.inputArtifactId,
+    configurationId: req.planConfigurationId,
     raw: req,
   };
 }

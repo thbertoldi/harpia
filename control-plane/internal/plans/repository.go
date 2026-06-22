@@ -90,10 +90,11 @@ type StepExecution struct {
 }
 
 type PlanApprovalRequest struct {
-	ID              string
-	TenantID        uuid.UUID
-	PlanExecutionID uuid.UUID
-	StepExecutionID uuid.UUID
+	ID                  string
+	TenantID            uuid.UUID
+	PlanExecutionID     uuid.UUID
+	PlanConfigurationID uuid.UUID
+	StepExecutionID     uuid.UUID
 	PlanStepKey     string
 	InputArtifactID string
 	Status          string
@@ -726,6 +727,13 @@ const planApprovalRequestColumns = `id, tenant_id, plan_execution_id, step_execu
 	COALESCE(input_artifact_id, ''), status, COALESCE(decision_reason, ''),
 	requested_at, decided_at, created_at, updated_at`
 
+const planApprovalRequestJoinedColumns = `par.id, par.tenant_id, par.plan_execution_id, par.step_execution_id, par.plan_step_key,
+	COALESCE(par.input_artifact_id, ''), par.status, COALESCE(par.decision_reason, ''),
+	par.requested_at, par.decided_at, par.created_at, par.updated_at, pe.plan_configuration_id`
+
+const planApprovalRequestFromJoin = ` FROM plan_approval_requests par
+	JOIN plan_executions pe ON pe.id = par.plan_execution_id AND pe.tenant_id = par.tenant_id`
+
 func scanPlanApprovalRequest(row pgx.Row, dest *PlanApprovalRequest) error {
 	return row.Scan(
 		&dest.ID, &dest.TenantID, &dest.PlanExecutionID, &dest.StepExecutionID,
@@ -734,16 +742,24 @@ func scanPlanApprovalRequest(row pgx.Row, dest *PlanApprovalRequest) error {
 	)
 }
 
+func scanPlanApprovalRequestJoined(row pgx.Row, dest *PlanApprovalRequest) error {
+	return row.Scan(
+		&dest.ID, &dest.TenantID, &dest.PlanExecutionID, &dest.StepExecutionID,
+		&dest.PlanStepKey, &dest.InputArtifactID, &dest.Status, &dest.DecisionReason,
+		&dest.RequestedAt, &dest.DecidedAt, &dest.CreatedAt, &dest.UpdatedAt,
+		&dest.PlanConfigurationID,
+	)
+}
+
 func (r *Repository) GetPlanApprovalRequest(ctx context.Context, tenantID uuid.UUID, approvalID string) (*PlanApprovalRequest, error) {
 	var request PlanApprovalRequest
 	err := database.WithTenant(ctx, r.pool, tenantID, func(q database.Querier) error {
 		row := q.QueryRow(ctx,
-			`SELECT `+planApprovalRequestColumns+`
-			 FROM plan_approval_requests
-			 WHERE id = $1 AND tenant_id = $2`,
+			`SELECT `+planApprovalRequestJoinedColumns+planApprovalRequestFromJoin+`
+			 WHERE par.id = $1 AND par.tenant_id = $2`,
 			approvalID, tenantID,
 		)
-		return scanPlanApprovalRequest(row, &request)
+		return scanPlanApprovalRequestJoined(row, &request)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("get plan approval request: %w", err)
@@ -758,29 +774,28 @@ func (r *Repository) ListPlanApprovalRequests(ctx context.Context, tenantID uuid
 	}
 	requests := make([]*PlanApprovalRequest, 0)
 	err := database.WithTenant(ctx, r.pool, tenantID, func(q database.Querier) error {
-		conditions := []string{"tenant_id = $1"}
+		conditions := []string{"par.tenant_id = $1"}
 		args := []any{tenantID}
 		if filters.StepExecutionID != nil {
 			args = append(args, *filters.StepExecutionID)
-			conditions = append(conditions, fmt.Sprintf("step_execution_id = $%d::uuid", len(args)))
+			conditions = append(conditions, fmt.Sprintf("par.step_execution_id = $%d::uuid", len(args)))
 		}
 		if filters.PlanExecutionID != nil {
 			args = append(args, *filters.PlanExecutionID)
-			conditions = append(conditions, fmt.Sprintf("plan_execution_id = $%d::uuid", len(args)))
+			conditions = append(conditions, fmt.Sprintf("par.plan_execution_id = $%d::uuid", len(args)))
 		}
 		if strings.TrimSpace(filters.Status) != "" {
 			args = append(args, filters.Status)
-			conditions = append(conditions, fmt.Sprintf("status = $%d", len(args)))
+			conditions = append(conditions, fmt.Sprintf("par.status = $%d", len(args)))
 		}
 		args = append(args, limit)
 		limitPlaceholder := len(args)
 		args = append(args, filters.Offset)
 		offsetPlaceholder := len(args)
 
-		query := `SELECT ` + planApprovalRequestColumns + `
-			 FROM plan_approval_requests
+		query := `SELECT ` + planApprovalRequestJoinedColumns + planApprovalRequestFromJoin + `
 			 WHERE ` + strings.Join(conditions, " AND ") + `
-			 ORDER BY requested_at DESC
+			 ORDER BY par.requested_at DESC
 			 LIMIT $` + fmt.Sprint(limitPlaceholder) + ` OFFSET $` + fmt.Sprint(offsetPlaceholder)
 
 		rows, err := q.Query(ctx, query, args...)
@@ -790,7 +805,7 @@ func (r *Repository) ListPlanApprovalRequests(ctx context.Context, tenantID uuid
 		defer rows.Close()
 		for rows.Next() {
 			var request PlanApprovalRequest
-			if err := scanPlanApprovalRequest(rows, &request); err != nil {
+			if err := scanPlanApprovalRequestJoined(rows, &request); err != nil {
 				return err
 			}
 			row := request

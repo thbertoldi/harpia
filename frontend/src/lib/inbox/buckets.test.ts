@@ -12,6 +12,7 @@ function elicit(id: string, createdAt: string): InboxItem {
     summary: "Q?",
     planExecutionId: "pe",
     stepExecutionId: "se",
+    configurationId: "",
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     raw: {} as any,
   };

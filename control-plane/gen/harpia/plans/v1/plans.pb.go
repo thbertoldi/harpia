@@ -2988,9 +2988,10 @@ type ElicitationRequest struct {
 	RespondedAt       string                     `protobuf:"bytes,14,opt,name=responded_at,json=respondedAt,proto3" json:"responded_at,omitempty"`
 	RespondedByUserId string                     `protobuf:"bytes,15,opt,name=responded_by_user_id,json=respondedByUserId,proto3" json:"responded_by_user_id,omitempty"`
 	// Ordered conversation: the agent prompt followed by overseer responses.
-	Thread        []*ThreadMessage `protobuf:"bytes,16,rep,name=thread,proto3" json:"thread,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Thread              []*ThreadMessage `protobuf:"bytes,16,rep,name=thread,proto3" json:"thread,omitempty"`
+	PlanConfigurationId string           `protobuf:"bytes,17,opt,name=plan_configuration_id,json=planConfigurationId,proto3" json:"plan_configuration_id,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *ElicitationRequest) Reset() {
@@ -3133,6 +3134,13 @@ func (x *ElicitationRequest) GetThread() []*ThreadMessage {
 		return x.Thread
 	}
 	return nil
+}
+
+func (x *ElicitationRequest) GetPlanConfigurationId() string {
+	if x != nil {
+		return x.PlanConfigurationId
+	}
+	return ""
 }
 
 type ThreadMessage struct {
@@ -3759,13 +3767,14 @@ type ApprovalRequest struct {
 	PlanExecutionId string                 `protobuf:"bytes,4,opt,name=plan_execution_id,json=planExecutionId,proto3" json:"plan_execution_id,omitempty"`
 	PlanStepKey     string                 `protobuf:"bytes,5,opt,name=plan_step_key,json=planStepKey,proto3" json:"plan_step_key,omitempty"`
 	// Artifact preview source (typically LinkedInPostDraft from adapt-for-linkedin).
-	InputArtifactId string                `protobuf:"bytes,6,opt,name=input_artifact_id,json=inputArtifactId,proto3" json:"input_artifact_id,omitempty"`
-	Status          ApprovalRequestStatus `protobuf:"varint,7,opt,name=status,proto3,enum=harpia.plans.v1.ApprovalRequestStatus" json:"status,omitempty"`
-	DecisionReason  string                `protobuf:"bytes,8,opt,name=decision_reason,json=decisionReason,proto3" json:"decision_reason,omitempty"`
-	RequestedAt     string                `protobuf:"bytes,9,opt,name=requested_at,json=requestedAt,proto3" json:"requested_at,omitempty"`
-	DecidedAt       string                `protobuf:"bytes,10,opt,name=decided_at,json=decidedAt,proto3" json:"decided_at,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	InputArtifactId     string                `protobuf:"bytes,6,opt,name=input_artifact_id,json=inputArtifactId,proto3" json:"input_artifact_id,omitempty"`
+	Status              ApprovalRequestStatus `protobuf:"varint,7,opt,name=status,proto3,enum=harpia.plans.v1.ApprovalRequestStatus" json:"status,omitempty"`
+	DecisionReason      string                `protobuf:"bytes,8,opt,name=decision_reason,json=decisionReason,proto3" json:"decision_reason,omitempty"`
+	RequestedAt         string                `protobuf:"bytes,9,opt,name=requested_at,json=requestedAt,proto3" json:"requested_at,omitempty"`
+	DecidedAt           string                `protobuf:"bytes,10,opt,name=decided_at,json=decidedAt,proto3" json:"decided_at,omitempty"`
+	PlanConfigurationId string                `protobuf:"bytes,11,opt,name=plan_configuration_id,json=planConfigurationId,proto3" json:"plan_configuration_id,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *ApprovalRequest) Reset() {
@@ -3864,6 +3873,13 @@ func (x *ApprovalRequest) GetRequestedAt() string {
 func (x *ApprovalRequest) GetDecidedAt() string {
 	if x != nil {
 		return x.DecidedAt
+	}
+	return ""
+}
+
+func (x *ApprovalRequest) GetPlanConfigurationId() string {
+	if x != nil {
+		return x.PlanConfigurationId
 	}
 	return ""
 }
@@ -4877,7 +4893,7 @@ const file_harpia_plans_v1_plans_proto_rawDesc = "" +
 	"page_token\x18\x04 \x01(\tR\tpageToken\"\x8d\x01\n" +
 	"\x1aListStepExecutionsResponse\x12G\n" +
 	"\x0fstep_executions\x18\x01 \x03(\v2\x1e.harpia.plans.v1.StepExecutionR\x0estepExecutions\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\xb2\x05\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\xe6\x05\n" +
 	"\x12ElicitationRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12*\n" +
@@ -4898,7 +4914,8 @@ const file_harpia_plans_v1_plans_proto_rawDesc = "" +
 	"expires_at\x18\r \x01(\tR\texpiresAt\x12!\n" +
 	"\fresponded_at\x18\x0e \x01(\tR\vrespondedAt\x12/\n" +
 	"\x14responded_by_user_id\x18\x0f \x01(\tR\x11respondedByUserId\x126\n" +
-	"\x06thread\x18\x10 \x03(\v2\x1e.harpia.plans.v1.ThreadMessageR\x06thread\"\xc3\x01\n" +
+	"\x06thread\x18\x10 \x03(\v2\x1e.harpia.plans.v1.ThreadMessageR\x06thread\x122\n" +
+	"\x15plan_configuration_id\x18\x11 \x01(\tR\x13planConfigurationId\"\xc3\x01\n" +
 	"\rThreadMessage\x126\n" +
 	"\x04role\x18\x01 \x01(\x0e2\".harpia.plans.v1.ThreadMessageRoleR\x04role\x12\x12\n" +
 	"\x04text\x18\x02 \x01(\tR\x04text\x12!\n" +
@@ -4946,7 +4963,7 @@ const file_harpia_plans_v1_plans_proto_rawDesc = "" +
 	"\x0faddressed_to_me\x18\x03 \x01(\bR\raddressedToMeB\x14\n" +
 	"\x12_step_execution_id\"d\n" +
 	"\x19WatchElicitationsResponse\x12G\n" +
-	"\felicitations\x18\x01 \x03(\v2#.harpia.plans.v1.ElicitationRequestR\felicitations\"\x91\x03\n" +
+	"\felicitations\x18\x01 \x03(\v2#.harpia.plans.v1.ElicitationRequestR\felicitations\"\xc5\x03\n" +
 	"\x0fApprovalRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12*\n" +
@@ -4959,7 +4976,8 @@ const file_harpia_plans_v1_plans_proto_rawDesc = "" +
 	"\frequested_at\x18\t \x01(\tR\vrequestedAt\x12\x1d\n" +
 	"\n" +
 	"decided_at\x18\n" +
-	" \x01(\tR\tdecidedAt\"\xd4\x02\n" +
+	" \x01(\tR\tdecidedAt\x122\n" +
+	"\x15plan_configuration_id\x18\v \x01(\tR\x13planConfigurationId\"\xd4\x02\n" +
 	"\x1bListApprovalRequestsRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12/\n" +
 	"\x11step_execution_id\x18\x02 \x01(\tH\x00R\x0fstepExecutionId\x88\x01\x01\x12/\n" +

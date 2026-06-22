@@ -20,6 +20,7 @@ type Elicitation struct {
 	ID                  uuid.UUID
 	TenantID            uuid.UUID
 	PlanExecutionID     uuid.UUID
+	PlanConfigurationID uuid.UUID
 	StepExecutionID     uuid.UUID
 	PlanStepKey         string
 	ElicitationThreadID string
@@ -49,10 +50,20 @@ type ElicitationFilter struct {
 	Offset          int
 }
 
-const elicitationColumns = `id, tenant_id, plan_execution_id, step_execution_id, plan_step_key,
+const elicitationColumns = `e.id, e.tenant_id, e.plan_execution_id, e.step_execution_id, e.plan_step_key,
+	e.elicitation_thread_id, e.status, e.prompt, e.schema_json, e.response_json,
+	COALESCE(e.response_text, ''), COALESCE(e.timeout_behavior, ''),
+	e.overseer_user_id, e.responded_by, e.created_at, e.expires_at, e.responded_at, e.updated_at`
+
+const elicitationJoinedColumns = elicitationColumns + `, pe.plan_configuration_id`
+
+const elicitationReturningColumns = `id, tenant_id, plan_execution_id, step_execution_id, plan_step_key,
 	elicitation_thread_id, status, prompt, schema_json, response_json,
 	COALESCE(response_text, ''), COALESCE(timeout_behavior, ''),
 	overseer_user_id, responded_by, created_at, expires_at, responded_at, updated_at`
+
+const elicitationFromJoin = ` FROM plan_elicitations e
+	JOIN plan_executions pe ON pe.id = e.plan_execution_id AND pe.tenant_id = e.tenant_id`
 
 // UpsertElicitation inserts a pending elicitation for the step/thread, or
 // returns the existing row when one already exists (idempotent for workflow
@@ -77,13 +88,13 @@ func (r *Repository) UpsertElicitation(ctx context.Context, elicitation *Elicita
 			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 			ON CONFLICT (tenant_id, step_execution_id, elicitation_thread_id) DO UPDATE
 			SET updated_at = now()
-			RETURNING `+elicitationColumns,
+			RETURNING `+elicitationReturningColumns,
 			elicitation.TenantID, elicitation.PlanExecutionID, elicitation.StepExecutionID,
 			elicitation.PlanStepKey, elicitation.ElicitationThreadID, elicitation.Status,
 			elicitation.Prompt, elicitation.SchemaJSON, elicitation.TimeoutBehavior,
 			elicitation.OverseerUserID, elicitation.ExpiresAt,
 		)
-		return scanElicitation(row, &created)
+		return scanElicitationBase(row, &created)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("upsert elicitation: %w", err)
@@ -95,12 +106,11 @@ func (r *Repository) GetElicitation(ctx context.Context, tenantID, elicitationID
 	var elicitation Elicitation
 	err := database.WithTenant(ctx, r.pool, tenantID, func(q database.Querier) error {
 		row := q.QueryRow(ctx,
-			`SELECT `+elicitationColumns+`
-			 FROM plan_elicitations
-			 WHERE id = $1 AND tenant_id = $2`,
+			`SELECT `+elicitationJoinedColumns+elicitationFromJoin+`
+			 WHERE e.id = $1 AND e.tenant_id = $2`,
 			elicitationID, tenantID,
 		)
-		return scanElicitation(row, &elicitation)
+		return scanElicitationJoined(row, &elicitation)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("get elicitation: %w", err)
@@ -115,33 +125,32 @@ func (r *Repository) ListElicitations(ctx context.Context, filter ElicitationFil
 	}
 	elicitations := make([]Elicitation, 0)
 	err := database.WithTenant(ctx, r.pool, filter.TenantID, func(q database.Querier) error {
-		conditions := []string{"tenant_id = $1"}
+		conditions := []string{"e.tenant_id = $1"}
 		args := []any{filter.TenantID}
 		if filter.StepExecutionID != nil {
 			args = append(args, *filter.StepExecutionID)
-			conditions = append(conditions, fmt.Sprintf("step_execution_id = $%d", len(args)))
+			conditions = append(conditions, fmt.Sprintf("e.step_execution_id = $%d", len(args)))
 		}
 		if filter.PlanExecutionID != nil {
 			args = append(args, *filter.PlanExecutionID)
-			conditions = append(conditions, fmt.Sprintf("plan_execution_id = $%d", len(args)))
+			conditions = append(conditions, fmt.Sprintf("e.plan_execution_id = $%d", len(args)))
 		}
 		if strings.TrimSpace(filter.Status) != "" {
 			args = append(args, filter.Status)
-			conditions = append(conditions, fmt.Sprintf("status = $%d", len(args)))
+			conditions = append(conditions, fmt.Sprintf("e.status = $%d", len(args)))
 		}
 		if filter.OverseerUserID != nil {
 			args = append(args, *filter.OverseerUserID)
-			conditions = append(conditions, fmt.Sprintf("overseer_user_id = $%d", len(args)))
+			conditions = append(conditions, fmt.Sprintf("e.overseer_user_id = $%d", len(args)))
 		}
 		args = append(args, limit)
 		limitPlaceholder := len(args)
 		args = append(args, filter.Offset)
 		offsetPlaceholder := len(args)
 
-		query := `SELECT ` + elicitationColumns + `
-			 FROM plan_elicitations
+		query := `SELECT ` + elicitationJoinedColumns + elicitationFromJoin + `
 			 WHERE ` + strings.Join(conditions, " AND ") + `
-			 ORDER BY created_at DESC
+			 ORDER BY e.created_at DESC
 			 LIMIT $` + fmt.Sprint(limitPlaceholder) + ` OFFSET $` + fmt.Sprint(offsetPlaceholder)
 
 		rows, err := q.Query(ctx, query, args...)
@@ -151,7 +160,7 @@ func (r *Repository) ListElicitations(ctx context.Context, filter ElicitationFil
 		defer rows.Close()
 		for rows.Next() {
 			var elicitation Elicitation
-			if err := scanElicitation(rows, &elicitation); err != nil {
+			if err := scanElicitationJoined(rows, &elicitation); err != nil {
 				return err
 			}
 			elicitations = append(elicitations, elicitation)
@@ -189,11 +198,11 @@ func (r *Repository) MarkElicitationAnswered(
 			     responded_at = now(),
 			     updated_at = now()
 			 WHERE id = $5 AND tenant_id = $6 AND status = $7
-			 RETURNING `+elicitationColumns,
+			 RETURNING `+elicitationReturningColumns,
 			ElicitationStatusAnswered, responsePayload, responseText, respondedBy,
 			elicitationID, tenantID, ElicitationStatusPending,
 		)
-		return scanElicitation(row, &updated)
+		return scanElicitationBase(row, &updated)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("mark elicitation answered: %w", err)
@@ -222,7 +231,7 @@ func (r *Repository) MarkElicitationTimedOutByStep(ctx context.Context, tenantID
 	return nil
 }
 
-func scanElicitation(row pgx.Row, elicitation *Elicitation) error {
+func scanElicitationBase(row pgx.Row, elicitation *Elicitation) error {
 	return row.Scan(
 		&elicitation.ID, &elicitation.TenantID, &elicitation.PlanExecutionID,
 		&elicitation.StepExecutionID, &elicitation.PlanStepKey, &elicitation.ElicitationThreadID,
@@ -230,6 +239,17 @@ func scanElicitation(row pgx.Row, elicitation *Elicitation) error {
 		&elicitation.ResponseText, &elicitation.TimeoutBehavior, &elicitation.OverseerUserID,
 		&elicitation.RespondedBy, &elicitation.CreatedAt, &elicitation.ExpiresAt,
 		&elicitation.RespondedAt, &elicitation.UpdatedAt,
+	)
+}
+
+func scanElicitationJoined(row pgx.Row, elicitation *Elicitation) error {
+	return row.Scan(
+		&elicitation.ID, &elicitation.TenantID, &elicitation.PlanExecutionID,
+		&elicitation.StepExecutionID, &elicitation.PlanStepKey, &elicitation.ElicitationThreadID,
+		&elicitation.Status, &elicitation.Prompt, &elicitation.SchemaJSON, &elicitation.ResponseJSON,
+		&elicitation.ResponseText, &elicitation.TimeoutBehavior, &elicitation.OverseerUserID,
+		&elicitation.RespondedBy, &elicitation.CreatedAt, &elicitation.ExpiresAt,
+		&elicitation.RespondedAt, &elicitation.UpdatedAt, &elicitation.PlanConfigurationID,
 	)
 }
 
@@ -261,6 +281,9 @@ func elicitationToProto(e *Elicitation) *plansv1.ElicitationRequest {
 	}
 	if e.RespondedAt != nil {
 		out.RespondedAt = e.RespondedAt.Format(time.RFC3339)
+	}
+	if e.PlanConfigurationID != uuid.Nil {
+		out.PlanConfigurationId = e.PlanConfigurationID.String()
 	}
 	out.Thread = elicitationThread(e)
 	return out
