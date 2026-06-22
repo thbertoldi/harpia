@@ -77,9 +77,7 @@ export {
   ElicitationTimeoutBehavior,
   ThreadMessageRole,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
-export type {
-  ThreadMessage,
-} from "$lib/gen/harpia/chat/v1/chat_pb";
+export type { ThreadMessage } from "$lib/gen/harpia/chat/v1/chat_pb";
 export {
   ThreadMessageRole as ProtoThreadMessageRole,
   ThreadMessageKind as ProtoThreadMessageKind,

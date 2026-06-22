@@ -20,8 +20,8 @@ describe("appendThreadMessage", () => {
         id: "msg-1",
         tenantId: "tenant-1",
         threadId: "config-1",
-        role: 1,  // OVERSEER
-        kind: 1,  // USER_TEXT
+        role: 1, // OVERSEER
+        kind: 1, // USER_TEXT
         text: "remember to update news source",
         payloadJson: "{}",
         sequenceNumber: 42n,
@@ -66,8 +66,8 @@ describe("loadThreadMessages", () => {
           id: "msg-1",
           tenantId: "tenant-1",
           threadId: "config-1",
-          role: 3,  // SYSTEM
-          kind: 3,  // CONFIGURATION_SAVED
+          role: 3, // SYSTEM
+          kind: 3, // CONFIGURATION_SAVED
           text: "Configuration saved.",
           payloadJson: "{}",
           sequenceNumber: 1n,

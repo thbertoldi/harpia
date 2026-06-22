@@ -17,10 +17,12 @@
   const orderedSteps = $derived(orderPlanStepsLinear(steps, edges));
 </script>
 
-<div class="flex flex-wrap items-center gap-1.5 rounded-md border border-plumage bg-obsidian-light px-3 py-2">
+<div
+  class="flex flex-wrap items-center gap-1.5 rounded-md border border-plumage bg-obsidian-light px-3 py-2"
+>
   {#each orderedSteps as step, index (step.key)}
     <span
-      class="font-heading text-[11px] font-semibold text-cream rounded border border-plumage/60 bg-obsidian px-2 py-1"
+      class="rounded border border-plumage/60 bg-obsidian px-2 py-1 font-heading text-[11px] font-semibold text-cream"
     >
       {step.title}
     </span>
