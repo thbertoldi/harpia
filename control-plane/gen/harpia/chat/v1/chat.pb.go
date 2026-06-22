@@ -89,6 +89,7 @@ const (
 	ThreadMessageKind_THREAD_MESSAGE_KIND_ELICITATION_ANSWERED ThreadMessageKind = 9  // payload_json: { "elicitation_id": "...", "outcome": "answered|timed_out|cancelled" }
 	ThreadMessageKind_THREAD_MESSAGE_KIND_APPROVAL_RAISED      ThreadMessageKind = 10 // payload_json: { "approval_request_id": "..." }
 	ThreadMessageKind_THREAD_MESSAGE_KIND_APPROVAL_DECIDED     ThreadMessageKind = 11 // payload_json: { "approval_request_id": "...", "approved": true|false }
+	ThreadMessageKind_THREAD_MESSAGE_KIND_STEP_STARTED         ThreadMessageKind = 12 // payload_json: { "step_key": "...", "step_execution_id": "..." }
 )
 
 // Enum value maps for ThreadMessageKind.
@@ -106,6 +107,7 @@ var (
 		9:  "THREAD_MESSAGE_KIND_ELICITATION_ANSWERED",
 		10: "THREAD_MESSAGE_KIND_APPROVAL_RAISED",
 		11: "THREAD_MESSAGE_KIND_APPROVAL_DECIDED",
+		12: "THREAD_MESSAGE_KIND_STEP_STARTED",
 	}
 	ThreadMessageKind_value = map[string]int32{
 		"THREAD_MESSAGE_KIND_UNSPECIFIED":          0,
@@ -120,6 +122,7 @@ var (
 		"THREAD_MESSAGE_KIND_ELICITATION_ANSWERED": 9,
 		"THREAD_MESSAGE_KIND_APPROVAL_RAISED":      10,
 		"THREAD_MESSAGE_KIND_APPROVAL_DECIDED":     11,
+		"THREAD_MESSAGE_KIND_STEP_STARTED":         12,
 	}
 )
 
@@ -302,7 +305,7 @@ const file_harpia_chat_v1_chat_proto_rawDesc = "" +
 	"\x1fTHREAD_MESSAGE_ROLE_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cTHREAD_MESSAGE_ROLE_OVERSEER\x10\x01\x12\x1d\n" +
 	"\x19THREAD_MESSAGE_ROLE_AGENT\x10\x02\x12\x1e\n" +
-	"\x1aTHREAD_MESSAGE_ROLE_SYSTEM\x10\x03*\xf1\x03\n" +
+	"\x1aTHREAD_MESSAGE_ROLE_SYSTEM\x10\x03*\x97\x04\n" +
 	"\x11ThreadMessageKind\x12#\n" +
 	"\x1fTHREAD_MESSAGE_KIND_UNSPECIFIED\x10\x00\x12!\n" +
 	"\x1dTHREAD_MESSAGE_KIND_USER_TEXT\x10\x01\x12&\n" +
@@ -316,7 +319,8 @@ const file_harpia_chat_v1_chat_proto_rawDesc = "" +
 	"(THREAD_MESSAGE_KIND_ELICITATION_ANSWERED\x10\t\x12'\n" +
 	"#THREAD_MESSAGE_KIND_APPROVAL_RAISED\x10\n" +
 	"\x12(\n" +
-	"$THREAD_MESSAGE_KIND_APPROVAL_DECIDED\x10\vB\xb4\x01\n" +
+	"$THREAD_MESSAGE_KIND_APPROVAL_DECIDED\x10\v\x12$\n" +
+	" THREAD_MESSAGE_KIND_STEP_STARTED\x10\fB\xb4\x01\n" +
 	"\x12com.harpia.chat.v1B\tChatProtoP\x01Z9github.com/harpia/control-plane/gen/harpia/chat/v1;chatv1\xa2\x02\x03HCX\xaa\x02\x0eHarpia.Chat.V1\xca\x02\x0eHarpia\\Chat\\V1\xe2\x02\x1aHarpia\\Chat\\V1\\GPBMetadata\xea\x02\x10Harpia::Chat::V1b\x06proto3"
 
 var (
