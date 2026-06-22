@@ -5,15 +5,18 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+
 	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
 )
 
 // ApprovalRequest is the domain view of a publish approval gate.
 type ApprovalRequest struct {
-	ID              string
-	TenantID        string
-	PlanExecutionID string
-	StepExecutionID string
+	ID                  string
+	TenantID            string
+	PlanExecutionID     string
+	PlanConfigurationID string
+	StepExecutionID     string
 	PlanStepKey     string
 	InputArtifactID string
 	Status          string
@@ -75,6 +78,9 @@ func approvalRequestToProto(approval *ApprovalRequest) *plansv1.ApprovalRequest 
 	if approval.DecidedAt != nil {
 		out.DecidedAt = approval.DecidedAt.UTC().Format(time.RFC3339)
 	}
+	if approval.PlanConfigurationID != "" {
+		out.PlanConfigurationId = approval.PlanConfigurationID
+	}
 	return out
 }
 
@@ -82,11 +88,16 @@ func planApprovalRequestToDomain(row *PlanApprovalRequest) *ApprovalRequest {
 	if row == nil {
 		return nil
 	}
+	configID := ""
+	if row.PlanConfigurationID != uuid.Nil {
+		configID = row.PlanConfigurationID.String()
+	}
 	return &ApprovalRequest{
-		ID:              row.ID,
-		TenantID:        row.TenantID.String(),
-		PlanExecutionID: row.PlanExecutionID.String(),
-		StepExecutionID: row.StepExecutionID.String(),
+		ID:                  row.ID,
+		TenantID:            row.TenantID.String(),
+		PlanExecutionID:     row.PlanExecutionID.String(),
+		PlanConfigurationID: configID,
+		StepExecutionID:     row.StepExecutionID.String(),
 		PlanStepKey:     row.PlanStepKey,
 		InputArtifactID: row.InputArtifactID,
 		Status:          row.Status,

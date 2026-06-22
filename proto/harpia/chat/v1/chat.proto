@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package harpia.chat.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/harpia/control-plane/gen/harpia/chat/v1;chatv1";
+
+// ThreadMessage is a single durable record in a chat thread.
+//
+// In M3 a thread is identified by a PlanConfiguration ID (thread_id =
+// plan_configuration_id). The schema is generic; future milestones may
+// reuse this type for non-Plan chat surfaces (see UX-M3 design spec §2.2).
+message ThreadMessage {
+  string id = 1;                                // UUID
+  string tenant_id = 2;                          // UUID
+  string thread_id = 3;                          // generic; = plan_configuration_id in M3
+  string execution_id = 4;                       // optional; UUID of the PlanExecution this event belongs to
+  ThreadMessageRole role = 5;
+  ThreadMessageKind kind = 6;
+  string text = 7;                               // user/assistant text or human-readable summary
+  string payload_json = 8;                       // per-kind structured payload (see Kind-specific schemas)
+  string author_user_id = 9;                     // optional; NULL for SYSTEM role
+  int64 sequence_number = 10;                    // per-thread monotonic; used for WatchPlanThreadMessages resume
+  google.protobuf.Timestamp created_at = 11;
+}
+
+enum ThreadMessageRole {
+  THREAD_MESSAGE_ROLE_UNSPECIFIED = 0;
+  THREAD_MESSAGE_ROLE_OVERSEER = 1;     // composer-typed messages from the user
+  THREAD_MESSAGE_ROLE_AGENT = 2;         // reserved for M5 assistant; not emitted in M3
+  THREAD_MESSAGE_ROLE_SYSTEM = 3;        // system events written by the platform (author_user_id is empty)
+}
+
+enum ThreadMessageKind {
+  THREAD_MESSAGE_KIND_UNSPECIFIED = 0;
+  THREAD_MESSAGE_KIND_USER_TEXT = 1;             // OVERSEER composer message
+  THREAD_MESSAGE_KIND_ASSISTANT_TEXT = 2;        // reserved for M5
+  THREAD_MESSAGE_KIND_CONFIGURATION_SAVED = 3;   // PlanConfiguration created or updated
+  THREAD_MESSAGE_KIND_RUN_STARTED = 4;           // PlanExecution started
+  THREAD_MESSAGE_KIND_RUN_COMPLETED = 5;         // PlanExecution finished successfully
+  THREAD_MESSAGE_KIND_RUN_FAILED = 6;            // PlanExecution failed
+  THREAD_MESSAGE_KIND_STEP_BOUND = 7;            // StepExecution completed (output artifact produced)
+  THREAD_MESSAGE_KIND_ELICITATION_RAISED = 8;    // payload_json: { "elicitation_id": "..." }
+  THREAD_MESSAGE_KIND_ELICITATION_ANSWERED = 9;  // payload_json: { "elicitation_id": "...", "outcome": "answered|timed_out|cancelled" }
+  THREAD_MESSAGE_KIND_APPROVAL_RAISED = 10;      // payload_json: { "approval_request_id": "..." }
+  THREAD_MESSAGE_KIND_APPROVAL_DECIDED = 11;     // payload_json: { "approval_request_id": "...", "approved": true|false }
+}

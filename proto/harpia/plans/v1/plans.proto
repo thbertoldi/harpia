@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package harpia.plans.v1;
 
+import "harpia/chat/v1/chat.proto";
+
 // PlanService manages plan templates, tenant configurations, and executions.
 // Template plans use the plan-centric model defined in ADR-012.
 service PlanService {
@@ -37,6 +39,12 @@ service PlanService {
   rpc GetApprovalRequest(GetApprovalRequestRequest) returns (GetApprovalRequestResponse);
   rpc RespondToApprovalRequest(RespondToApprovalRequestRequest) returns (RespondToApprovalRequestResponse);
   rpc WatchApprovalRequests(WatchApprovalRequestsRequest) returns (stream WatchApprovalRequestsResponse);
+
+  // Plan thread (per-PlanConfiguration chat thread).
+  // See docs/superpowers/specs/2026-06-21-harpia-ux-m3-plan-thread-design.md.
+  rpc ListPlanThreadMessages(ListPlanThreadMessagesRequest) returns (ListPlanThreadMessagesResponse);
+  rpc WatchPlanThreadMessages(WatchPlanThreadMessagesRequest) returns (stream WatchPlanThreadMessagesResponse);
+  rpc AppendPlanThreadMessage(AppendPlanThreadMessageRequest) returns (AppendPlanThreadMessageResponse);
 }
 
 message PlanTemplate {
@@ -364,6 +372,7 @@ message ElicitationRequest {
   string responded_by_user_id = 15;
   // Ordered conversation: the agent prompt followed by overseer responses.
   repeated ThreadMessage thread = 16;
+  string plan_configuration_id = 17;
 }
 
 enum ElicitationStatus {
@@ -465,6 +474,7 @@ message ApprovalRequest {
   string decision_reason = 8;
   string requested_at = 9;
   string decided_at = 10;
+  string plan_configuration_id = 11;
 }
 
 enum ApprovalRequestStatus {
@@ -517,4 +527,42 @@ message WatchApprovalRequestsRequest {
 
 message WatchApprovalRequestsResponse {
   repeated ApprovalRequest approval_requests = 1;
+}
+
+// --- Plan thread (M3) ---
+
+message ListPlanThreadMessagesRequest {
+  string tenant_id = 1;
+  string plan_configuration_id = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListPlanThreadMessagesResponse {
+  repeated harpia.chat.v1.ThreadMessage messages = 1;
+  string next_page_token = 2;
+}
+
+message WatchPlanThreadMessagesRequest {
+  string tenant_id = 1;
+  string plan_configuration_id = 2;
+  int64 since_sequence_number = 3;  // resume from this sequence; 0 = from the start of unobserved
+}
+
+message WatchPlanThreadMessagesResponse {
+  repeated harpia.chat.v1.ThreadMessage messages = 1;
+}
+
+message AppendPlanThreadMessageRequest {
+  string tenant_id = 1;
+  string plan_configuration_id = 2;
+  harpia.chat.v1.ThreadMessageRole role = 3;
+  harpia.chat.v1.ThreadMessageKind kind = 4;
+  string text = 5;
+  string payload_json = 6;
+  string execution_id = 7;   // optional
+}
+
+message AppendPlanThreadMessageResponse {
+  harpia.chat.v1.ThreadMessage message = 1;
 }

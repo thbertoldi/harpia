@@ -62,16 +62,23 @@ export type {
   PlanTemplate,
   StepExecution,
   ElicitationRequest,
-  ThreadMessage,
   ListElicitationsResponse,
   GetElicitationResponse,
   RespondToElicitationResponse,
   WatchElicitationsResponse,
+  ListPlanThreadMessagesResponse,
+  WatchPlanThreadMessagesResponse,
+  AppendPlanThreadMessageResponse,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
 export {
   PlanExecutionStatus,
   StepExecutionStatus,
   ElicitationStatus,
   ElicitationTimeoutBehavior,
-  ThreadMessageRole,
+  ThreadMessageRole as ElicitationThreadMessageRole,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
+export type { ThreadMessage } from "$lib/gen/harpia/chat/v1/chat_pb";
+export {
+  ThreadMessageRole as ProtoThreadMessageRole,
+  ThreadMessageKind as ProtoThreadMessageKind,
+} from "$lib/gen/harpia/chat/v1/chat_pb";

@@ -27,6 +27,7 @@ import (
 	"github.com/harpia/control-plane/internal/agents"
 	"github.com/harpia/control-plane/internal/artifacts"
 	"github.com/harpia/control-plane/internal/budget"
+	"github.com/harpia/control-plane/internal/chat"
 	"github.com/harpia/control-plane/internal/cache"
 	"github.com/harpia/control-plane/internal/config"
 	"github.com/harpia/control-plane/internal/database"
@@ -79,6 +80,7 @@ func runWorker(ctx context.Context, cfg *config.Config) {
 
 	planRepo := plans.NewRepository(pool)
 	executorRepo := executors.NewRepository(pool)
+	chatStore := chat.NewPostgresStore(pool)
 	artifactRepo := artifacts.NewRepository(pool)
 
 	tenantObjectStore := storage.NewTenantObjectStore(cfg.GarageBucket)
@@ -99,7 +101,7 @@ func runWorker(ctx context.Context, cfg *config.Config) {
 	})
 
 	planActivities := &workflow.PlanActivities{
-		Runtime:      plans.NewRuntimeRepository(planRepo, executorRepo),
+		Runtime:      plans.NewRuntimeRepository(planRepo, executorRepo, chatStore),
 		Integrations: executorRuntime.Integrations,
 	}
 
@@ -193,6 +195,7 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	planRepo := plans.NewRepository(pool)
 	agentRepo := agents.NewRepository(pool)
 	executorRepo := executors.NewRepository(pool)
+	chatStore := chat.NewPostgresStore(pool)
 
 	cacheResources := setupAPICache(ctx, cfg.ValkeyURL, logger)
 	if cacheResources.client != nil {
@@ -216,9 +219,9 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	scheduleManager := plans.NewScheduleManager(temporalClient, logger)
 	var planHandler *plans.PlanHandler
 	if temporalClient != nil {
-		planHandler, err = plans.NewPlanHandler(planRepo, executorRepo, scheduleManager, temporalClient)
+		planHandler, err = plans.NewPlanHandler(planRepo, executorRepo, scheduleManager, chatStore, temporalClient)
 	} else {
-		planHandler, err = plans.NewPlanHandler(planRepo, executorRepo, scheduleManager)
+		planHandler, err = plans.NewPlanHandler(planRepo, executorRepo, scheduleManager, chatStore)
 	}
 	if err != nil {
 		fatal("create plan handler failed", "error", err)

@@ -11,7 +11,9 @@
 
 <a
   href={resolve(
-    `/plans/executions/${item.planExecutionId}/elicitations/${item.id}`,
+    item.configurationId
+      ? `/plans/configurations/${item.configurationId}#m-elicitation-${item.id}`
+      : `/plans/executions/${item.planExecutionId}/elicitations/${item.id}`,
   )}
   class="rounded border border-talon-gold bg-talon-gold px-3 py-1.5 text-[11px] font-semibold text-obsidian hover:opacity-90"
 >
