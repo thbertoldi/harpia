@@ -70,7 +70,7 @@ func (i *InternalServiceInterceptor) WrapUnary(next connect.UnaryFunc) connect.U
 		ctx = WithRequestContext(ctx, RequestContext{
 			TenantID:    tenantID,
 			TenantAlias: tenantRef,
-			UserID:      "internal-service",
+			UserID:      stableUserUUIDFromSubject("internal-service"),
 			Roles:       nil,
 		})
 		ctx = WithInternalServiceCaller(ctx)
