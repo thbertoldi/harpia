@@ -100,14 +100,14 @@
           </span>
         {/if}
         <a
-          href={resolve(`/plans/${page.params.templateId}/configure/policies`)}
+          href={resolve(`/new?template=${page.params.templateId}`)}
           class="inline-flex items-center gap-2 rounded-md border border-talon-gold/60 bg-talon-gold/10 px-3 py-1.5 font-body text-xs text-talon-gold transition-colors hover:bg-talon-gold/20"
         >
           <Settings2 class="size-3.5" />
           {translate("plans.detail.configurePolicies", $locale)}
         </a>
         <a
-          href={resolve(`/plans/${page.params.templateId}/configure/summary`)}
+          href={resolve(`/new?template=${page.params.templateId}`)}
           class="inline-flex items-center gap-1.5 rounded-md border border-plumage px-3 py-1.5 font-body text-xs text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
         >
           <Receipt class="size-3.5" />
@@ -141,9 +141,7 @@
             </p>
           </div>
           <a
-            href={resolve(
-              `/plans/${page.params.templateId}/configure/overseer`,
-            )}
+            href={resolve(`/new?template=${page.params.templateId}`)}
             class="inline-flex items-center gap-2 rounded-md border border-talon-gold/40 bg-talon-gold/10 px-3 py-1.5 font-body text-xs text-talon-gold transition-colors hover:border-talon-gold"
           >
             <UserCheck class="size-3.5" />

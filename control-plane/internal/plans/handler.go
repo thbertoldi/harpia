@@ -6,21 +6,255 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	"go.temporal.io/sdk/client"
 
-	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
 	chatv1 "github.com/harpia/control-plane/gen/harpia/chat/v1"
+	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
 	"github.com/harpia/control-plane/internal/chat"
 	"github.com/harpia/control-plane/internal/identity"
+	"github.com/harpia/control-plane/internal/planassistant"
 	"github.com/harpia/control-plane/internal/workflow"
+	cron "github.com/robfig/cron/v3"
 )
+
+// AssistantConfigurationStore adapts *Repository to planassistant.ConfigurationStore.
+type AssistantConfigurationStore struct {
+	Repo      *Repository
+	Executors ExecutorLookup
+}
+
+func (a *AssistantConfigurationStore) GetConfiguration(ctx context.Context, tenantID, configID uuid.UUID) (*plansv1.PlanConfiguration, error) {
+	cfg, err := a.Repo.GetConfiguration(ctx, tenantID, configID)
+	if err != nil {
+		return nil, err
+	}
+	return configurationToProto(cfg), nil
+}
+
+// UpdateFromSelection applies the user's selection to the persisted
+// PlanConfiguration. Server-authoritative; mirrors spec §2.6.
+func (a *AssistantConfigurationStore) UpdateFromSelection(ctx context.Context, tenantID, configID uuid.UUID, state planassistant.AssistantState, value string) (*plansv1.PlanConfiguration, error) {
+	domain, err := a.Repo.GetConfiguration(ctx, tenantID, configID)
+	if err != nil {
+		return nil, err
+	}
+	cfg := configurationToProto(domain)
+	switch state.Kind {
+	case planassistant.StateBindingStep:
+		cfg.SlotBindings = upsertSlotBinding(ctx, a.Executors, tenantID, cfg.SlotBindings, state.StepKey, value)
+	case planassistant.StateSetOverseer:
+		userID := value
+		if value == "self" {
+			if uid, ok := currentUserIDFromCtx(ctx); ok {
+				userID = uid
+			}
+		}
+		cfg.OverseerBindings = upsertOverseerBinding(cfg.OverseerBindings, state.StepKey, userID)
+	case planassistant.StateSetPolicies:
+		cfg.BehaviorPolicies = parsePolicyValue(value)
+	case planassistant.StateConfirm:
+		if value == "save" {
+			next := plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE
+			if cfg.Schedule != nil && cfg.Schedule.CronExpression != "" {
+				next = plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_SCHEDULED
+			}
+			cfg.Status = next
+		}
+	}
+	updatedDomain, err := configurationFromProto(cfg, domain)
+	if err != nil {
+		return nil, err
+	}
+	updated, err := a.Repo.UpdateConfiguration(ctx, updatedDomain)
+	if err != nil {
+		return nil, err
+	}
+	return configurationToProto(updated), nil
+}
+
+func upsertSlotBinding(ctx context.Context, lookup ExecutorLookup, tenantID uuid.UUID, existing []*plansv1.SlotBinding, stepKey, installationID string) []*plansv1.SlotBinding {
+	binding := &plansv1.SlotBinding{StepKey: stepKey, ExecutorInstallationId: installationID}
+	if lookup != nil && installationID != "" {
+		if parsedID, err := uuid.Parse(installationID); err == nil {
+			if inst, err := lookup.GetInstallationByID(ctx, tenantID, parsedID); err == nil {
+				if sku, err := lookup.GetSKUByID(ctx, inst.ExecutorSKUID); err == nil {
+					binding.ExecutorSkuId = sku.ID.String()
+					if kind, kindErr := dbExecutorKindToProto(inst.Kind); kindErr == nil {
+						binding.ExecutorKind = kind
+					}
+				}
+			}
+		}
+	}
+	for _, b := range existing {
+		if b.StepKey == stepKey {
+			b.ExecutorInstallationId = binding.ExecutorInstallationId
+			b.ExecutorSkuId = binding.ExecutorSkuId
+			b.ExecutorKind = binding.ExecutorKind
+			return existing
+		}
+	}
+	return append(existing, binding)
+}
+
+func upsertOverseerBinding(existing []*plansv1.OverseerBinding, stepKey, userID string) []*plansv1.OverseerBinding {
+	for _, b := range existing {
+		if b.StepKey == stepKey {
+			b.OverseerUserId = userID
+			return existing
+		}
+	}
+	return append(existing, &plansv1.OverseerBinding{StepKey: stepKey, OverseerUserId: userID})
+}
+
+func parsePolicyValue(v string) *plansv1.PlanBehaviorPolicies {
+	timeout := plansv1.ElicitationTimeoutBehavior_ELICITATION_TIMEOUT_BEHAVIOR_PAUSE_UNTIL_ANSWERED
+	approval := plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_REQUIRE_APPROVAL
+	hours := int32(24)
+	switch v {
+	case "PAUSE_UNTIL_ANSWERED+AUTO_PUBLISH":
+		approval = plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_AUTO_PUBLISH
+	case "FAIL_STEP+REQUIRE_APPROVAL":
+		timeout = plansv1.ElicitationTimeoutBehavior_ELICITATION_TIMEOUT_BEHAVIOR_FAIL_STEP
+	}
+	return &plansv1.PlanBehaviorPolicies{
+		ElicitationTimeoutBehavior: timeout,
+		ElicitationTimeoutHours:    hours,
+		PublishApprovalMode:        approval,
+	}
+}
+
+func currentUserIDFromCtx(ctx context.Context) (string, bool) {
+	rc, err := identity.RequireRequestContext(ctx)
+	if err != nil {
+		return "", false
+	}
+	if rc.UserID == "" {
+		return "", false
+	}
+	return rc.UserID, true
+}
+
+func configurationFromProto(proto *plansv1.PlanConfiguration, existing *PlanConfiguration) (*PlanConfiguration, error) {
+	if existing == nil {
+		return nil, errors.New("existing configuration is required")
+	}
+	statusStr, err := configurationStatusToString(proto.GetStatus())
+	if err != nil {
+		return nil, err
+	}
+	seedJSON, err := json.Marshal(proto.GetSeedArtifacts())
+	if err != nil {
+		return nil, err
+	}
+	slotJSON, err := json.Marshal(proto.GetSlotBindings())
+	if err != nil {
+		return nil, err
+	}
+	overseerJSON, err := json.Marshal(proto.GetOverseerBindings())
+	if err != nil {
+		return nil, err
+	}
+	policiesJSON, err := json.Marshal(proto.GetBehaviorPolicies())
+	if err != nil {
+		return nil, err
+	}
+	scheduleJSON, err := json.Marshal(proto.GetSchedule())
+	if err != nil {
+		return nil, err
+	}
+	return &PlanConfiguration{
+		ID:                  existing.ID,
+		TenantID:            existing.TenantID,
+		WorkspaceID:         existing.WorkspaceID,
+		PlanTemplateID:      existing.PlanTemplateID,
+		PlanTemplateVersion: existing.PlanTemplateVersion,
+		Status:              statusStr,
+		SeedArtifacts:       seedJSON,
+		SlotBindings:        slotJSON,
+		OverseerBindings:    overseerJSON,
+		BehaviorPolicies:    policiesJSON,
+		Schedule:            scheduleJSON,
+		CreatedAt:           existing.CreatedAt,
+		UpdatedAt:           existing.UpdatedAt,
+	}, nil
+}
+
+func dbExecutorKindToProto(kind string) (plansv1.ExecutorKind, error) {
+	switch kind {
+	case "integration":
+		return plansv1.ExecutorKind_EXECUTOR_KIND_INTEGRATION, nil
+	case "agent":
+		return plansv1.ExecutorKind_EXECUTOR_KIND_AGENT, nil
+	default:
+		return plansv1.ExecutorKind_EXECUTOR_KIND_UNSPECIFIED, fmt.Errorf("unsupported executor kind %q", kind)
+	}
+}
+
+func tierFromSKUKey(key string) string {
+	for _, tier := range []string{"junior", "senior", "specialist"} {
+		if strings.Contains(key, tier) {
+			return tier
+		}
+	}
+	return ""
+}
+
+// AssistantTemplates adapts *Repository to planassistant.TemplateStore.
+type AssistantTemplates struct{ Repo *Repository }
+
+func (a *AssistantTemplates) GetTemplateByID(ctx context.Context, id uuid.UUID) (*plansv1.PlanTemplate, error) {
+	tpl, err := a.Repo.GetTemplateByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return templateToProto(tpl), nil
+}
+
+// AssistantCatalog adapts ExecutorLookup to planassistant.ExecutorCatalog.
+type AssistantCatalog struct{ Executors ExecutorLookup }
+
+func (a *AssistantCatalog) CandidatesForStep(ctx context.Context, tenantID uuid.UUID, template *plansv1.PlanTemplate, stepKey string) ([]planassistant.ExecutorOption, error) {
+	var out []planassistant.ExecutorOption
+	for _, step := range template.GetSteps() {
+		if step.GetKey() != stepKey {
+			continue
+		}
+		installations, err := a.Executors.ListCompatibleInstallationsForStep(ctx, tenantID, step)
+		if err != nil {
+			return nil, err
+		}
+		for _, inst := range installations {
+			sku, err := a.Executors.GetSKUByID(ctx, inst.ExecutorSKUID)
+			if err != nil {
+				continue
+			}
+			var price *float64
+			if sku.PriceCents > 0 {
+				p := float64(sku.PriceCents) / 100.0
+				price = &p
+			}
+			out = append(out, planassistant.ExecutorOption{
+				StepKey:        stepKey,
+				InstallationID: inst.ID.String(),
+				DisplayName:    inst.DisplayName,
+				SkuKey:         sku.Key,
+				Tier:           tierFromSKUKey(sku.Key),
+				PriceBrl:       price,
+			})
+		}
+	}
+	return out, nil
+}
 
 type PlanHandler struct {
 	chat             chat.Store
+	assistant        *planassistant.Controller
 	repo             *Repository
 	executors        ExecutorLookup
 	validator        *BindingValidator
@@ -41,7 +275,7 @@ type PlanExecutionRetryer interface {
 	PrepareRetryFromStep(ctx context.Context, tenantID uuid.UUID, planExecutionID uuid.UUID, failedStepExecutionID uuid.UUID) (*PlanExecution, workflow.PlanWorkflowInput, error)
 }
 
-func NewPlanHandler(repo *Repository, executors ExecutorLookup, schedule *ScheduleManager, chatStore chat.Store, starters ...PlanWorkflowStarter) (*PlanHandler, error) {
+func NewPlanHandler(repo *Repository, executors ExecutorLookup, schedule *ScheduleManager, chatStore chat.Store, assistant *planassistant.Controller, starters ...PlanWorkflowStarter) (*PlanHandler, error) {
 	if repo == nil {
 		return nil, errors.New("plans: repository is required")
 	}
@@ -54,6 +288,7 @@ func NewPlanHandler(repo *Repository, executors ExecutorLookup, schedule *Schedu
 	}
 	handler := &PlanHandler{
 		chat:            chatStore,
+		assistant:       assistant,
 		repo:            repo,
 		executors:       executors,
 		validator:       NewBindingValidator(executors),
@@ -179,17 +414,10 @@ func (h *PlanHandler) CreatePlanConfiguration(ctx context.Context, req *connect.
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	// M3: append CONFIGURATION_SAVED message to the plan thread so the
-	// thread is non-empty on first render. Best-effort — log and continue
-	// if the chat store is unavailable. See UX-M3 design spec §2.5.
-	if h.chat != nil {
-		_, _ = h.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
-			ThreadID:    created.ID.String(),
-			Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
-			Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_CONFIGURATION_SAVED,
-			Text:        "Configuration saved.",
-			PayloadJSON: chat.BuildConfigurationSavedPayload(),
-		})
+	if h.assistant != nil {
+		if err := h.assistant.SeedThread(ctx, tenantID, created.ID); err != nil {
+			_ = err
+		}
 	}
 
 	return connect.NewResponse(&plansv1.CreatePlanConfigurationResponse{
@@ -274,6 +502,54 @@ func (h *PlanHandler) UpdatePlanConfiguration(ctx context.Context, req *connect.
 
 	if err := h.syncSchedule(ctx, updated); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	// Schedule reconciliation: if the cron expression changed, validate it,
+	// emit SCHEDULE_SET, and reconcile RUNNABLE ↔ SCHEDULED. See M5 design
+	// spec §2.7 and §2.11.
+	prevCron := ""
+	prevTz := ""
+	if len(existing.Schedule) > 0 && string(existing.Schedule) != "{}" && string(existing.Schedule) != "null" {
+		var prevSchedule plansv1.PlanSchedule
+		if err := json.Unmarshal(existing.Schedule, &prevSchedule); err == nil {
+			prevCron = prevSchedule.CronExpression
+			prevTz = prevSchedule.Timezone
+		}
+	}
+	newCron := ""
+	newTz := ""
+	if updatedInput.Schedule != nil {
+		newCron = updatedInput.Schedule.CronExpression
+		newTz = updatedInput.Schedule.Timezone
+	}
+	if newCron != prevCron || newTz != prevTz {
+		if newCron != "" {
+			if _, parseErr := cron.ParseStandard(newCron); parseErr != nil {
+				return nil, connect.NewError(connect.CodeInvalidArgument,
+					fmt.Errorf("invalid schedule cron expression: %w", parseErr))
+			}
+		}
+		switch updated.Status {
+		case ConfigurationStatusRunnable:
+			if newCron != "" {
+				updated.Status = ConfigurationStatusScheduled
+				_ = h.repo.UpdateConfigurationStatus(ctx, tenantID, updated.ID, plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_SCHEDULED)
+			}
+		case ConfigurationStatusScheduled:
+			if newCron == "" {
+				updated.Status = ConfigurationStatusRunnable
+				_ = h.repo.UpdateConfigurationStatus(ctx, tenantID, updated.ID, plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE)
+			}
+		}
+		if h.chat != nil {
+			_, _ = h.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
+				ThreadID:    updated.ID.String(),
+				Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
+				Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_SCHEDULE_SET,
+				Text:        "Schedule updated.",
+				PayloadJSON: chat.BuildScheduleSetPayload(newCron, newTz),
+			})
+		}
 	}
 
 	if h.chat != nil {

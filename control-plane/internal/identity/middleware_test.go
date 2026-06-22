@@ -49,6 +49,7 @@ func TestRequestContextInterceptorRejectsTenantMismatch(t *testing.T) {
 func TestRequestContextInterceptorPopulatesContext(t *testing.T) {
 	tenantID := uuid.New()
 	interceptor := NewRequestContextInterceptor(AuthOptions{DevTenantID: tenantID, AllowDevAuth: true})
+	wantUserID := stableUserUUIDFromSubject(DevUserSubject)
 	next := connect.UnaryFunc(func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 		rc, ok := RequestContextFrom(ctx)
 		if !ok {
@@ -57,8 +58,11 @@ func TestRequestContextInterceptorPopulatesContext(t *testing.T) {
 		if rc.TenantID != tenantID {
 			t.Fatalf("tenant ID = %s, want %s", rc.TenantID, tenantID)
 		}
-		if rc.UserID != "dev-user" {
-			t.Fatalf("user ID = %q, want dev-user", rc.UserID)
+		if rc.UserID != wantUserID {
+			t.Fatalf("user ID = %q, want %q", rc.UserID, wantUserID)
+		}
+		if _, err := uuid.Parse(rc.UserID); err != nil {
+			t.Fatalf("user ID is not a parseable UUID: %v", err)
 		}
 		return connect.NewResponse(&tasksv1.GetTaskResponse{}), nil
 	})
@@ -170,13 +174,14 @@ func TestRequestContextInterceptorAuthorizesTenantFromMembership(t *testing.T) {
 			},
 		},
 	})
+	wantUserID := stableUserUUIDFromSubject("user-1")
 	next := connect.UnaryFunc(func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 		rc, ok := RequestContextFrom(ctx)
 		if !ok {
 			return nil, errors.New("missing request context")
 		}
-		if rc.UserID != "user-1" {
-			t.Fatalf("user ID = %q, want user-1", rc.UserID)
+		if rc.UserID != wantUserID {
+			t.Fatalf("user ID = %q, want %q (derived from subject 'user-1')", rc.UserID, wantUserID)
 		}
 		return connect.NewResponse(&tasksv1.GetTaskResponse{}), nil
 	})
@@ -186,6 +191,38 @@ func TestRequestContextInterceptorAuthorizesTenantFromMembership(t *testing.T) {
 	_, err := interceptor.WrapUnary(next)(context.Background(), req)
 	if err != nil {
 		t.Fatalf("expected success, got %v", err)
+	}
+}
+
+func TestStableUserUUIDFromSubject_PassesThroughUUIDs(t *testing.T) {
+	in := "11111111-2222-3333-4444-555555555555"
+	got := stableUserUUIDFromSubject(in)
+	if got != in {
+		t.Fatalf("UUID subject should pass through: got %q want %q", got, in)
+	}
+}
+
+func TestStableUserUUIDFromSubject_HashesNonUUIDDeterministically(t *testing.T) {
+	a := stableUserUUIDFromSubject(DevUserSubject)
+	b := stableUserUUIDFromSubject(DevUserSubject)
+	if a != b {
+		t.Fatalf("dev subject should hash deterministically: %q vs %q", a, b)
+	}
+	if _, err := uuid.Parse(a); err != nil {
+		t.Fatalf("derived value must parse as UUID: %v", err)
+	}
+	other := stableUserUUIDFromSubject("internal-service")
+	if other == a {
+		t.Fatalf("distinct subjects must hash to distinct UUIDs (collision on %q)", a)
+	}
+}
+
+func TestStableUserUUIDFromSubject_EmptyInput(t *testing.T) {
+	if got := stableUserUUIDFromSubject(""); got != "" {
+		t.Fatalf("empty subject should yield empty string, got %q", got)
+	}
+	if got := stableUserUUIDFromSubject("   "); got != "" {
+		t.Fatalf("whitespace-only subject should yield empty string, got %q", got)
 	}
 }
 

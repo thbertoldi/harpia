@@ -5,6 +5,7 @@
   import InboxBadge from "$lib/components/InboxBadge.svelte";
   import BrandLockup from "$lib/components/BrandLockup.svelte";
   import { logout, getTenant } from "$lib/auth";
+  import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { resolve } from "$app/paths";
   import {
@@ -36,6 +37,7 @@
     type PersonaMode,
   } from "$lib/personas/storage";
   import { resolveNavSectionsM1 } from "$lib/nav/sections-m1";
+  import YourPlansList from "$lib/components/sidebar/YourPlansList.svelte";
 
   let { data, children } = $props();
 
@@ -80,6 +82,20 @@
     personaMode = next;
     if (typeof localStorage !== "undefined") {
       writePersonaMode(localStorage, next);
+    }
+    // Each persona owns a distinct surface — without an explicit
+    // navigation, the user is left staring at the previous persona's
+    // page (toggling to admin while on /inbox keeps the inbox visible
+    // even though no admin section corresponds to it). Resolve the new
+    // persona's nav sections directly (not via the `sections` derived,
+    // which hasn't recomputed yet at this point) and goto the first one.
+    const nextSections = resolveNavSectionsM1(next, data?.user?.role, (key) =>
+      translate(key, $locale),
+    );
+    const target = nextSections[0]?.href;
+    if (target) {
+      navOpen = false;
+      void goto(resolve(target));
     }
   }
 
@@ -134,7 +150,14 @@
     >
       <nav class="h-full w-64 border-r border-plumage bg-obsidian px-4 py-6">
         <div class="mb-8 flex items-center justify-between">
-          <BrandLockup size="sm" />
+          <a
+            href={resolve("/")}
+            onclick={() => (navOpen = false)}
+            aria-label={translate("nav.home", $locale)}
+            class="inline-flex"
+          >
+            <BrandLockup size="sm" />
+          </a>
           <button
             onclick={() => (navOpen = false)}
             class="cursor-pointer rounded-md p-1 text-crown-ash transition-colors hover:text-cream"
@@ -165,6 +188,10 @@
             </a>
           {/each}
         </div>
+
+        {#if personaMode === "operator"}
+          <YourPlansList />
+        {/if}
 
         <div class="mt-8 border-t border-plumage pt-6">
           <p
@@ -203,7 +230,13 @@
             >
               <Menu class="size-5" />
             </button>
-            <BrandLockup size="sm" />
+            <a
+              href={resolve("/")}
+              aria-label={translate("nav.home", $locale)}
+              class="inline-flex"
+            >
+              <BrandLockup size="sm" />
+            </a>
           </div>
 
           <div class="flex items-center gap-4">

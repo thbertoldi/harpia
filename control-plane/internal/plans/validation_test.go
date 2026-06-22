@@ -48,6 +48,10 @@ func (m *mockExecutorLookup) ListEntitlements(_ context.Context, tenantID uuid.U
 	}}, nil
 }
 
+func (m *mockExecutorLookup) ListCompatibleInstallationsForStep(_ context.Context, _ uuid.UUID, _ *plansv1.PlanStep) ([]executors.ExecutorInstallation, error) {
+	return nil, nil
+}
+
 func testTemplate() *PlanTemplate {
 	return &PlanTemplate{
 		Steps: []PlanStep{

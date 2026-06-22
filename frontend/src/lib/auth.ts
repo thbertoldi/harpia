@@ -1,4 +1,3 @@
-import { dev } from "$app/environment";
 import { env } from "$env/dynamic/public";
 
 const ZITADEL_CONFIG = {
@@ -12,8 +11,14 @@ export function isZitadelConfigured(): boolean {
   return ZITADEL_CONFIG.clientId.length > 0;
 }
 
+// PUBLIC_DEV_LOGIN_ENABLED is gated by vite.config.ts: the `vite build`
+// guard throws if it's "true" in a production build, so the env var alone
+// is sufficient. We deliberately do NOT also `&&` against `dev` from
+// $app/environment — under our SvelteKit + esm-env setup that import
+// hydrates as `undefined` on the client, which masked the env-based truth
+// and made the dev-login UI flash visible (SSR) then disappear (CSR).
 export function isDevLoginEnabled(): boolean {
-  return dev && env.PUBLIC_DEV_LOGIN_ENABLED === "true";
+  return env.PUBLIC_DEV_LOGIN_ENABLED === "true";
 }
 
 export interface User {
@@ -33,7 +38,7 @@ export interface Tenant {
 export const DEV_TENANT: Tenant = {
   id: "dev",
   name: "Dev Workspace",
-  themeKey: "default",
+  themeKey: "aiuna",
 };
 
 export interface Session {

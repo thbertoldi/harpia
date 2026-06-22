@@ -2,6 +2,7 @@ package chat
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -102,5 +103,52 @@ func TestBuildRunFailedPayloadCarriesErrorMessage(t *testing.T) {
 	}
 	if decoded["error"] != "step write-draft failed: timeout" {
 		t.Fatalf("expected error message preserved, got %s", decoded["error"])
+	}
+}
+
+func TestBuildConfigurationStartedPayload(t *testing.T) {
+	got := BuildConfigurationStartedPayload("tpl-123")
+	want := `{"template_id":"tpl-123"}`
+	if got != want {
+		t.Fatalf("got %s, want %s", got, want)
+	}
+}
+
+func TestBuildAssistantPromptPayload(t *testing.T) {
+	price := 0.12
+	options := []AssistantOption{
+		{ID: "opt-1", Label: "Junior", Sublabel: "R$ 0.02/run", Value: "inst-1", PriceBrl: &price},
+		{ID: "opt-2", Label: "Senior", Sublabel: "", Value: "inst-2", PriceBrl: nil},
+	}
+	got := BuildAssistantPromptPayload("BINDING_STEP", "step-a", options)
+	if !strings.Contains(got, `"state":"BINDING_STEP"`) ||
+		!strings.Contains(got, `"step_key":"step-a"`) ||
+		!strings.Contains(got, `"options":`) ||
+		!strings.Contains(got, `"id":"opt-1"`) {
+		t.Fatalf("unexpected payload: %s", got)
+	}
+}
+
+func TestBuildUserSelectionPayload(t *testing.T) {
+	got := BuildUserSelectionPayload("msg-1", "opt-2", "inst-2")
+	want := `{"in_response_to_message_id":"msg-1","option_id":"opt-2","value":"inst-2"}`
+	if got != want {
+		t.Fatalf("got %s, want %s", got, want)
+	}
+}
+
+func TestBuildStepReboundPayload(t *testing.T) {
+	got := BuildStepReboundPayload("step-a", "inst-old", "inst-new")
+	want := `{"step_key":"step-a","previous_executor_installation_id":"inst-old","new_executor_installation_id":"inst-new"}`
+	if got != want {
+		t.Fatalf("got %s, want %s", got, want)
+	}
+}
+
+func TestBuildScheduleSetPayload(t *testing.T) {
+	got := BuildScheduleSetPayload("0 9 * * *", "America/Sao_Paulo")
+	want := `{"schedule_cron":"0 9 * * *","timezone":"America/Sao_Paulo"}`
+	if got != want {
+		t.Fatalf("got %s, want %s", got, want)
 	}
 }

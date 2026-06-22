@@ -17,12 +17,12 @@ type ApprovalRequest struct {
 	PlanExecutionID     string
 	PlanConfigurationID string
 	StepExecutionID     string
-	PlanStepKey     string
-	InputArtifactID string
-	Status          string
-	DecisionReason  string
-	RequestedAt     time.Time
-	DecidedAt       *time.Time
+	PlanStepKey         string
+	InputArtifactID     string
+	Status              string
+	DecisionReason      string
+	RequestedAt         time.Time
+	DecidedAt           *time.Time
 }
 
 // ApprovalFilters scopes list/watch queries.
@@ -98,12 +98,12 @@ func planApprovalRequestToDomain(row *PlanApprovalRequest) *ApprovalRequest {
 		PlanExecutionID:     row.PlanExecutionID.String(),
 		PlanConfigurationID: configID,
 		StepExecutionID:     row.StepExecutionID.String(),
-		PlanStepKey:     row.PlanStepKey,
-		InputArtifactID: row.InputArtifactID,
-		Status:          row.Status,
-		DecisionReason:  row.DecisionReason,
-		RequestedAt:     row.RequestedAt,
-		DecidedAt:       row.DecidedAt,
+		PlanStepKey:         row.PlanStepKey,
+		InputArtifactID:     row.InputArtifactID,
+		Status:              row.Status,
+		DecisionReason:      row.DecisionReason,
+		RequestedAt:         row.RequestedAt,
+		DecidedAt:           row.DecidedAt,
 	}
 }
 

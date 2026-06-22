@@ -13,6 +13,29 @@ import (
 
 const DevTenantAlias = "dev"
 
+// DevUserSubject is the canonical string subject for dev-token sessions.
+// stableUserUUIDFromSubject derives a deterministic UUID from it; callers
+// that need a UUID-shaped identity (uuid.Parse on rc.UserID) work for both
+// dev and Zitadel sessions without bespoke handling.
+const DevUserSubject = "dev-user"
+
+// stableUserUUIDFromSubject returns the user-id string downstream RPCs see.
+// If subject already parses as a UUID, it's returned verbatim — that's the
+// fast path for Zitadel sessions whose `sub` claim is the user's UUID.
+// Otherwise it's hashed into a v5 UUID under uuid.Nil so the result is
+// stable across processes and tenants. This unblocks every handler that
+// does `uuid.Parse(rc.UserID)` regardless of IdP subject shape.
+func stableUserUUIDFromSubject(subject string) string {
+	trimmed := strings.TrimSpace(subject)
+	if trimmed == "" {
+		return ""
+	}
+	if parsed, err := uuid.Parse(trimmed); err == nil {
+		return parsed.String()
+	}
+	return uuid.NewSHA1(uuid.Nil, []byte(trimmed)).String()
+}
+
 type AuthOptions struct {
 	DevTenantID   uuid.UUID
 	AllowDevAuth  bool
@@ -126,7 +149,7 @@ func (i *RequestContextInterceptor) resolve(ctx context.Context, header http.Hea
 	return RequestContext{
 		TenantID:    selected.TenantID,
 		TenantAlias: selected.Slug,
-		UserID:      user.Subject,
+		UserID:      stableUserUUIDFromSubject(user.Subject),
 		Roles:       roles,
 		Tenants:     memberships,
 	}, nil
@@ -156,7 +179,7 @@ func (i *RequestContextInterceptor) resolveDevContext(tenantRef string) (Request
 	return RequestContext{
 		TenantID:    selected.TenantID,
 		TenantAlias: selected.Slug,
-		UserID:      "dev-user",
+		UserID:      stableUserUUIDFromSubject(DevUserSubject),
 		Roles:       []string{selected.Role},
 		Tenants:     []TenantMembership{membership},
 	}, nil

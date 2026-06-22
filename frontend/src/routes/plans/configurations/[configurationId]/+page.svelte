@@ -12,14 +12,49 @@
   import ExecutionSection from "$lib/components/thread/ExecutionSection.svelte";
   import ThreadComposer from "$lib/components/thread/ThreadComposer.svelte";
   import HintBanner from "$lib/components/thread/HintBanner.svelte";
+  import PlanThreadTopBar from "$lib/components/PlanThreadTopBar.svelte";
+  import ScheduleDialog from "$lib/components/canvas/ScheduleDialog.svelte";
+  import { computeRunCost, type ExecutorPriceLookup } from "$lib/plans/cost";
+  import {
+    PlanConfigurationStatus,
+    type PlanConfiguration,
+  } from "$lib/gen/harpia/plans/v1/plans_pb";
+  import { planClient } from "$lib/rpc";
   import { Expand } from "lucide-svelte";
 
   let { data } = $props();
 
   let messages = $state<ChatMessage[]>([]);
   let loadError = $state(false);
+  let scheduleOpen = $state(false);
+  // Server is the source of truth for configuration mutations performed by
+  // the assistant. Start with the load-time snapshot and refetch when an
+  // incoming chat message indicates a mutation happened.
+  let liveConfiguration = $state<PlanConfiguration | undefined>(
+    data.configuration,
+  );
 
   const tenantId = $derived(getTenant()?.id ?? "");
+
+  const pricing: ExecutorPriceLookup = (id) =>
+    data.executorCatalog?.get(id) ?? null;
+  const cost = $derived(
+    data.template && liveConfiguration
+      ? computeRunCost(data.template, liveConfiguration, pricing)
+      : {
+          totalPerRunBrl: 0,
+          currency: "BRL" as const,
+          unboundStepCount: 0,
+          breakdown: [],
+        },
+  );
+  const statusLabel = $derived(
+    liveConfiguration?.status === PlanConfigurationStatus.RUNNABLE
+      ? translate("plans.configure.status.runnable", $locale)
+      : liveConfiguration?.status === PlanConfigurationStatus.SCHEDULED
+        ? translate("plans.configure.status.scheduled", $locale)
+        : translate("plans.configure.status.draft", $locale),
+  );
 
   // Initial load via list-RPC, then live updates via watch-RPC with AbortController.
   $effect(() => {
@@ -52,6 +87,52 @@
     })();
     return () => {
       controller.abort();
+    };
+  });
+
+  // Refetch the configuration when an incoming message indicates the
+  // assistant (or schedule dialog) mutated it server-side. Debounced so
+  // a batch of kinds arriving together collapses to one round-trip.
+  const MUTATING_KINDS = new Set([
+    "USER_SELECTION",
+    "STEP_REBOUND",
+    "SCHEDULE_SET",
+    "CONFIGURATION_SAVED",
+  ]);
+  let refetchSeq = $state(0n);
+  $effect(() => {
+    // Find the highest-sequence mutating message in the stream and bump
+    // refetchSeq to it. Scanning (not just looking at messages[last]) is
+    // important because NextTurn appends an ASSISTANT_PROMPT right after
+    // the USER_SELECTION it answers, so the LATEST kind is non-mutating
+    // even though the previous one mutated the configuration.
+    let maxSeq = refetchSeq;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i];
+      if (m.sequenceNumber <= maxSeq) break; // older than already-seen
+      if (MUTATING_KINDS.has(m.kind) && m.sequenceNumber > maxSeq) {
+        maxSeq = m.sequenceNumber;
+      }
+    }
+    if (maxSeq !== refetchSeq) refetchSeq = maxSeq;
+  });
+  $effect(() => {
+    if (!tenantId || !data.configurationId || refetchSeq === 0n) return;
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const res = await planClient.getPlanConfiguration(
+          { tenantId, planConfigurationId: data.configurationId },
+          { signal: controller.signal },
+        );
+        if (res.planConfiguration) liveConfiguration = res.planConfiguration;
+      } catch {
+        // best-effort; pill stays stale until the next refetch
+      }
+    }, 200);
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
     };
   });
 
@@ -119,6 +200,15 @@
 </svelte:head>
 
 <div class="mx-auto flex max-w-3xl flex-col gap-3 px-4 py-6">
+  {#if data.template && liveConfiguration}
+    <PlanThreadTopBar
+      planName={data.template.name}
+      {statusLabel}
+      {cost}
+      onOpenSchedule={() => (scheduleOpen = true)}
+    />
+  {/if}
+
   {#if data.template?.steps && data.template.steps.length > 0}
     <div class="flex items-center justify-between gap-2">
       <PlanDagMiniMap steps={data.template.steps} edges={data.template.edges} />
@@ -151,7 +241,34 @@
     <div class="flex flex-col gap-2">
       {#each sections as section (section.kind === "execution" ? section.group.executionId : section.message.id)}
         {#if section.kind === "plan-scope"}
-          <ThreadMessage message={section.message} />
+          {@const isLastAssistantPrompt = (() => {
+            if (section.message.kind !== "ASSISTANT_PROMPT") return false;
+            const idx = messages.findIndex((m) => m.id === section.message.id);
+            if (idx < 0) return false;
+            const after = messages.slice(idx + 1);
+            const answered = after.some((m) => {
+              if (m.kind !== "USER_SELECTION") return false;
+              try {
+                return (
+                  JSON.parse(m.payloadJson)?.in_response_to_message_id ===
+                  section.message.id
+                );
+              } catch {
+                return false;
+              }
+            });
+            return !answered;
+          })()}
+          {@const isAnsweredPrompt =
+            section.message.kind === "ASSISTANT_PROMPT" &&
+            !isLastAssistantPrompt}
+          <ThreadMessage
+            message={section.message}
+            configurationId={data.configurationId}
+            {tenantId}
+            isLive={isLastAssistantPrompt}
+            isAnswered={isAnsweredPrompt}
+          />
         {:else}
           <ExecutionSection
             group={section.group}
@@ -165,6 +282,14 @@
 
   <ThreadComposer {tenantId} configurationId={data.configurationId} />
 </div>
+
+{#if liveConfiguration}
+  <ScheduleDialog
+    open={scheduleOpen}
+    configuration={liveConfiguration}
+    onClose={() => (scheduleOpen = false)}
+  />
+{/if}
 
 <style>
   :global(.harpia-pulse-anchor) {

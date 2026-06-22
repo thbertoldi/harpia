@@ -24,7 +24,7 @@ describe("selectDefaultTenant", () => {
     expect(DEV_TENANT).toEqual({
       id: "dev",
       name: "Dev Workspace",
-      themeKey: "default",
+      themeKey: "aiuna",
     });
   });
 });

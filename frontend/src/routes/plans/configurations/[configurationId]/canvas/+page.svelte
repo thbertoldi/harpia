@@ -11,21 +11,49 @@
   import CanvasTopBar from "$lib/components/canvas/CanvasTopBar.svelte";
   import RunHistoryDrawer from "$lib/components/canvas/RunHistoryDrawer.svelte";
   import SettingsDrawer from "$lib/components/canvas/SettingsDrawer.svelte";
+  import ScheduleDialog from "$lib/components/canvas/ScheduleDialog.svelte";
+  import { computeRunCost, type ExecutorPriceLookup } from "$lib/plans/cost";
+  import { planClient } from "$lib/rpc";
+  import type { PlanConfiguration } from "$lib/gen/harpia/plans/v1/plans_pb";
 
   let { data } = $props();
 
   let messages = $state<ChatMessage[]>([]);
   let runHistoryOpen = $state(false);
   let settingsOpen = $state(false);
+  let scheduleOpen = $state(false);
+  // Server is the source of truth for binding/schedule mutations; the
+  // load-time snapshot goes stale during an in-progress walk. Refetch
+  // when the chat stream emits a kind that mutates configuration.
+  let liveConfiguration = $state<PlanConfiguration | undefined>(
+    data.configuration,
+  );
 
   const tenantId = $derived(getTenant()?.id ?? "");
+
+  const pricing: ExecutorPriceLookup = (id) =>
+    data.executorCatalog?.get(id) ?? null;
+  const cost = $derived(
+    data.template && liveConfiguration
+      ? computeRunCost(data.template, liveConfiguration, pricing)
+      : {
+          totalPerRunBrl: 0,
+          currency: "BRL" as const,
+          unboundStepCount: 0,
+          breakdown: [],
+        },
+  );
 
   const runMessages = $derived(
     data.runId ? messages.filter((m) => m.executionId === data.runId) : [],
   );
 
   const canvasState = $derived(
-    buildCanvasState(runMessages, data.template?.steps ?? []),
+    buildCanvasState(
+      runMessages,
+      data.template?.steps ?? [],
+      liveConfiguration?.slotBindings,
+    ),
   );
 
   const approvalInputArtifactByStep = $derived<Record<string, string>>({});
@@ -81,6 +109,47 @@
     };
   });
 
+  // Refetch the configuration when a mutating message kind arrives.
+  const MUTATING_KINDS = new Set([
+    "USER_SELECTION",
+    "STEP_REBOUND",
+    "SCHEDULE_SET",
+    "CONFIGURATION_SAVED",
+  ]);
+  let refetchSeq = $state(0n);
+  $effect(() => {
+    // Scan for the highest-seq mutating message; the LATEST kind right
+    // after a USER_SELECTION is the next ASSISTANT_PROMPT (non-mutating).
+    let maxSeq = refetchSeq;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i];
+      if (m.sequenceNumber <= maxSeq) break;
+      if (MUTATING_KINDS.has(m.kind) && m.sequenceNumber > maxSeq) {
+        maxSeq = m.sequenceNumber;
+      }
+    }
+    if (maxSeq !== refetchSeq) refetchSeq = maxSeq;
+  });
+  $effect(() => {
+    if (!tenantId || !data.configurationId || refetchSeq === 0n) return;
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const res = await planClient.getPlanConfiguration(
+          { tenantId, planConfigurationId: data.configurationId },
+          { signal: controller.signal },
+        );
+        if (res.planConfiguration) liveConfiguration = res.planConfiguration;
+      } catch {
+        // best-effort
+      }
+    }, 200);
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  });
+
   const runStartedAt = $derived(
     runMessages.find((m) => m.kind === "RUN_STARTED")?.createdAt,
   );
@@ -98,7 +167,9 @@
     planName={data.template?.name}
     onOpenRunHistory={() => (runHistoryOpen = true)}
     onOpenSettings={() => (settingsOpen = true)}
+    onOpenSchedule={() => (scheduleOpen = true)}
     onAnswerNext={answerNext}
+    {cost}
   />
 
   <div class="flex-1 overflow-hidden">
@@ -131,4 +202,12 @@
     configurationId={data.configurationId}
     {tenantId}
   />
+
+  {#if liveConfiguration}
+    <ScheduleDialog
+      open={scheduleOpen}
+      configuration={liveConfiguration}
+      onClose={() => (scheduleOpen = false)}
+    />
+  {/if}
 </div>
