@@ -90,7 +90,12 @@ func TestDeriveState_ConfirmAfterPolicies(t *testing.T) {
 	}
 }
 
-func TestDeriveState_SavedWhenStatusRunnable(t *testing.T) {
+func TestDeriveState_ConfirmEvenWhenStatusRunnable(t *testing.T) {
+	// Per spec §2.2: derivation is orthogonal to status. A RUNNABLE
+	// configuration with everything bound + policies set still derives
+	// to CONFIRM — the assistant re-emits CONFIRM after edits.
+	// StateSaved is NEVER returned by DeriveState; it's emitted only by
+	// the controller as a one-shot ack right after the user clicks Save.
 	cfg := &plansv1.PlanConfiguration{
 		PlanTemplateId:   "tpl-1",
 		Status:           plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
@@ -101,10 +106,8 @@ func TestDeriveState_SavedWhenStatusRunnable(t *testing.T) {
 			PublishApprovalMode:        plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_AUTO_PUBLISH,
 		},
 	}
-	// One SAVED-signalling SCHEDULE_SET or no further prompt — but easier:
-	// once status is RUNNABLE+SCHEDULED-eligible, treat as SAVED regardless of msgs.
 	got := planassistant.DeriveState(mkTemplate("a"), cfg, []*chatv1.ThreadMessage{})
-	if got.Kind != planassistant.StateSaved {
-		t.Fatalf("got %+v, want SAVED", got)
+	if got.Kind != planassistant.StateConfirm {
+		t.Fatalf("got %+v, want CONFIRM (status is orthogonal to state)", got)
 	}
 }

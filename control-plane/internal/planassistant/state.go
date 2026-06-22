@@ -16,7 +16,11 @@ const (
 	StateSetOverseer      StateKind = "SET_OVERSEER"
 	StateSetPolicies      StateKind = "SET_POLICIES"
 	StateConfirm          StateKind = "CONFIRM"
-	StateSaved            StateKind = "SAVED"
+	// StateSaved is the post-save acknowledgment. NEVER returned by
+	// DeriveState — emitted only by Controller.handleSavedAck immediately
+	// after the user clicks Save on a CONFIRM prompt. Per spec §2.2 the
+	// assistant state is orthogonal to PlanConfiguration.status.
+	StateSaved StateKind = "SAVED"
 )
 
 // AssistantState is the derived state for a single PlanConfiguration.
@@ -30,16 +34,15 @@ type AssistantState struct {
 // that returns the assistant's next state. Messages are accepted for
 // future use (e.g., detecting in-progress rewind) but are unused in v1
 // derivation — the configuration alone is authoritative.
+//
+// Per spec §2.2: status (DRAFT/RUNNABLE/SCHEDULED) is ORTHOGONAL to the
+// returned state. After an edit on a RUNNABLE configuration, derivation
+// re-lands at CONFIRM so the user re-confirms. SAVED is never returned
+// here — see Controller.NextTurn for the one-shot ack.
 func DeriveState(template *plansv1.PlanTemplate, config *plansv1.PlanConfiguration, messages []*chatv1.ThreadMessage) AssistantState {
 	_ = messages
 	if config == nil || config.GetPlanTemplateId() == "" {
 		return AssistantState{Kind: StateAwaitingTemplate}
-	}
-	// SAVED is sticky once status crosses RUNNABLE/SCHEDULED.
-	switch config.GetStatus() {
-	case plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
-		plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_SCHEDULED:
-		return AssistantState{Kind: StateSaved}
 	}
 
 	steps := template.GetSteps()
