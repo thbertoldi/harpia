@@ -8,6 +8,8 @@
   } from "lucide-svelte";
   import { resolve } from "$app/paths";
   import { locale, translate } from "$lib/i18n";
+  import PlanCostPill from "$lib/components/PlanCostPill.svelte";
+  import type { RunCost } from "$lib/plans/cost";
 
   interface Props {
     configurationId: string;
@@ -15,8 +17,10 @@
     pendingAnswerCount: number;
     onOpenRunHistory: () => void;
     onOpenSettings: () => void;
+    onOpenSchedule: () => void;
     onAnswerNext: () => void;
     planName?: string;
+    cost?: RunCost;
   }
   let {
     configurationId,
@@ -24,8 +28,10 @@
     pendingAnswerCount,
     onOpenRunHistory,
     onOpenSettings,
+    onOpenSchedule,
     onAnswerNext,
     planName,
+    cost,
   }: Props = $props();
 </script>
 
@@ -53,6 +59,10 @@
     {/if}
   </div>
 
+  {#if cost}
+    <PlanCostPill {cost} />
+  {/if}
+
   <button
     type="button"
     onclick={onOpenRunHistory}
@@ -64,9 +74,8 @@
 
   <button
     type="button"
-    disabled
-    title={translate("canvas.topbar.scheduleComingSoon", $locale)}
-    class="flex cursor-not-allowed items-center gap-1 rounded border border-plumage/40 bg-transparent px-2 py-1 text-[11px] text-crown-ash-dark"
+    onclick={onOpenSchedule}
+    class="flex items-center gap-1 rounded border border-plumage bg-transparent px-2 py-1 text-[11px] text-crown-ash hover:border-talon-gold hover:text-talon-gold"
   >
     <Calendar class="size-3.5" />
     {translate("canvas.topbar.schedule", $locale)}
