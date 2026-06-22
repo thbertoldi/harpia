@@ -119,7 +119,7 @@ Expected: branch created, working tree clean except untracked `.svelte-kit/`.
   - `THREAD_MESSAGE_KIND_STEP_REBOUND          = 16`
   - `THREAD_MESSAGE_KIND_SCHEDULE_SET          = 17`
 
-- [ ] **Step 1: Append the five enum values**
+- [x] **Step 1: Append the five enum values**
 
 In `proto/harpia/chat/v1/chat.proto`, locate the `enum ThreadMessageKind { ... }` block. After the existing `THREAD_MESSAGE_KIND_STEP_STARTED = 12;` line and BEFORE the closing brace, ADD:
 
@@ -131,7 +131,7 @@ In `proto/harpia/chat/v1/chat.proto`, locate the `enum ThreadMessageKind { ... }
   THREAD_MESSAGE_KIND_SCHEDULE_SET          = 17;   // payload_json: { "schedule_cron": "...", "timezone": "..." }
 ```
 
-- [ ] **Step 2: Regenerate**
+- [x] **Step 2: Regenerate**
 
 ```bash
 cd /home/thbertoldi/harpia/proto && buf generate && buf lint
@@ -139,7 +139,7 @@ cd /home/thbertoldi/harpia/proto && buf generate && buf lint
 
 Expected: no errors. Generated files at `control-plane/gen/harpia/chat/v1/chat.pb.go`, `frontend/src/lib/gen/harpia/chat/v1/chat_pb.ts`, `agent-runtime/src/harpia_agents/gen/harpia/chat/v1/chat_pb2.py` carry the new enum values.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 cd /home/thbertoldi/harpia
@@ -165,7 +165,7 @@ git commit -m "feat(ux-m5): add 5 chat-message kinds for the configuration assis
   - `BuildScheduleSetPayload(scheduleCron, timezone string) string`
   - `AssistantOption` struct: `{ ID, Label, Sublabel, Value string; PriceBrl *float64 }`
 
-- [ ] **Step 1: Write failing tests for the five builders**
+- [x] **Step 1: Write failing tests for the five builders**
 
 The existing `control-plane/internal/chat/messages_test.go` is `package chat` (internal test). Builders are called unqualified — do NOT prefix with `chat.`. Append:
 
@@ -220,7 +220,7 @@ func TestBuildScheduleSetPayload(t *testing.T) {
 
 Add `"strings"` to the imports if not already present. Do NOT add `chat` to imports — the file is `package chat`.
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 cd /home/thbertoldi/harpia/control-plane && go test ./internal/chat/... -run 'TestBuild(ConfigurationStarted|AssistantPrompt|UserSelection|StepRebound|ScheduleSet)Payload' -v
@@ -228,7 +228,7 @@ cd /home/thbertoldi/harpia/control-plane && go test ./internal/chat/... -run 'Te
 
 Expected: FAIL with `undefined: chat.BuildConfigurationStartedPayload` etc.
 
-- [ ] **Step 3: Implement the five builders**
+- [x] **Step 3: Implement the five builders**
 
 Append to `control-plane/internal/chat/messages.go`:
 
@@ -242,10 +242,41 @@ type AssistantOption struct {
 	PriceBrl *float64 `json:"price_brl,omitempty"`
 }
 
+// Payload structs are typed so JSON output is stable in declaration order.
+// Do NOT swap to map[string]string — Go's encoding/json sorts map keys
+// alphabetically, which breaks the byte-exact tests in messages_test.go.
+
+type configurationStartedPayload struct {
+	TemplateID string `json:"template_id"`
+}
+
+type assistantPromptPayload struct {
+	State   string            `json:"state"`
+	StepKey string            `json:"step_key"`
+	Options []AssistantOption `json:"options"`
+}
+
+type userSelectionPayload struct {
+	InResponseToMessageID string `json:"in_response_to_message_id"`
+	OptionID              string `json:"option_id"`
+	Value                 string `json:"value"`
+}
+
+type stepReboundPayload struct {
+	StepKey                        string `json:"step_key"`
+	PreviousExecutorInstallationID string `json:"previous_executor_installation_id"`
+	NewExecutorInstallationID      string `json:"new_executor_installation_id"`
+}
+
+type scheduleSetPayload struct {
+	ScheduleCron string `json:"schedule_cron"`
+	Timezone     string `json:"timezone"`
+}
+
 // BuildConfigurationStartedPayload returns the JSON payload for a
 // CONFIGURATION_STARTED message — written once on PlanConfiguration insert.
 func BuildConfigurationStartedPayload(templateID string) string {
-	return mustEncodeJSON(map[string]string{"template_id": templateID})
+	return mustEncodeJSON(configurationStartedPayload{TemplateID: templateID})
 }
 
 // BuildAssistantPromptPayload returns the JSON payload for an
@@ -254,40 +285,33 @@ func BuildAssistantPromptPayload(state, stepKey string, options []AssistantOptio
 	if options == nil {
 		options = []AssistantOption{}
 	}
-	return mustEncodeJSON(map[string]any{
-		"state":    state,
-		"step_key": stepKey,
-		"options":  options,
-	})
+	return mustEncodeJSON(assistantPromptPayload{State: state, StepKey: stepKey, Options: options})
 }
 
 // BuildUserSelectionPayload returns the JSON payload for a USER_SELECTION
 // message — Ana's chip click in response to an ASSISTANT_PROMPT.
 func BuildUserSelectionPayload(inResponseToMessageID, optionID, value string) string {
-	return mustEncodeJSON(map[string]string{
-		"in_response_to_message_id": inResponseToMessageID,
-		"option_id":                 optionID,
-		"value":                     value,
+	return mustEncodeJSON(userSelectionPayload{
+		InResponseToMessageID: inResponseToMessageID,
+		OptionID:              optionID,
+		Value:                 value,
 	})
 }
 
 // BuildStepReboundPayload returns the JSON payload for a STEP_REBOUND
 // system message — Ana edited a previously-bound executor.
 func BuildStepReboundPayload(stepKey, previousInstallationID, newInstallationID string) string {
-	return mustEncodeJSON(map[string]string{
-		"step_key":                          stepKey,
-		"previous_executor_installation_id": previousInstallationID,
-		"new_executor_installation_id":      newInstallationID,
+	return mustEncodeJSON(stepReboundPayload{
+		StepKey:                        stepKey,
+		PreviousExecutorInstallationID: previousInstallationID,
+		NewExecutorInstallationID:      newInstallationID,
 	})
 }
 
 // BuildScheduleSetPayload returns the JSON payload for a SCHEDULE_SET
 // system message — the schedule dialog persisted a cron expression.
 func BuildScheduleSetPayload(scheduleCron, timezone string) string {
-	return mustEncodeJSON(map[string]string{
-		"schedule_cron": scheduleCron,
-		"timezone":      timezone,
-	})
+	return mustEncodeJSON(scheduleSetPayload{ScheduleCron: scheduleCron, Timezone: timezone})
 }
 ```
 
@@ -328,7 +352,7 @@ git commit -m "feat(ux-m5): add 5 chat payload builders for the configuration as
   - `func DeriveState(template *plansv1.PlanTemplate, config *plansv1.PlanConfiguration, messages []*chatv1.ThreadMessage) AssistantState`
   - Constants for each `StateKind`.
 
-- [ ] **Step 1: Write the failing test file**
+- [x] **Step 1: Write the failing test file**
 
 Create `control-plane/internal/planassistant/state_test.go`:
 
@@ -425,7 +449,12 @@ func TestDeriveState_ConfirmAfterPolicies(t *testing.T) {
 	}
 }
 
-func TestDeriveState_SavedWhenStatusRunnable(t *testing.T) {
+func TestDeriveState_ConfirmEvenWhenStatusRunnable(t *testing.T) {
+	// Per spec §2.2: derivation is orthogonal to status. A RUNNABLE
+	// configuration with everything bound + policies set still derives
+	// to CONFIRM — the assistant re-emits CONFIRM after edits.
+	// StateSaved is NEVER returned by DeriveState; it's emitted only by
+	// the controller as a one-shot ack right after the user clicks Save.
 	cfg := &plansv1.PlanConfiguration{
 		PlanTemplateId:   "tpl-1",
 		Status:           plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
@@ -436,16 +465,14 @@ func TestDeriveState_SavedWhenStatusRunnable(t *testing.T) {
 			PublishApprovalMode:        plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_AUTO_PUBLISH,
 		},
 	}
-	// One SAVED-signalling SCHEDULE_SET or no further prompt — but easier:
-	// once status is RUNNABLE+SCHEDULED-eligible, treat as SAVED regardless of msgs.
 	got := planassistant.DeriveState(mkTemplate("a"), cfg, []*chatv1.ThreadMessage{})
-	if got.Kind != planassistant.StateSaved {
-		t.Fatalf("got %+v, want SAVED", got)
+	if got.Kind != planassistant.StateConfirm {
+		t.Fatalf("got %+v, want CONFIRM (status is orthogonal to state)", got)
 	}
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 cd /home/thbertoldi/harpia/control-plane && go test ./internal/planassistant/... -v
@@ -453,7 +480,7 @@ cd /home/thbertoldi/harpia/control-plane && go test ./internal/planassistant/...
 
 Expected: FAIL — package does not exist yet.
 
-- [ ] **Step 3: Implement `state.go`**
+- [x] **Step 3: Implement `state.go`**
 
 Create `control-plane/internal/planassistant/state.go`:
 
@@ -476,7 +503,11 @@ const (
 	StateSetOverseer      StateKind = "SET_OVERSEER"
 	StateSetPolicies      StateKind = "SET_POLICIES"
 	StateConfirm          StateKind = "CONFIRM"
-	StateSaved            StateKind = "SAVED"
+	// StateSaved is the post-save acknowledgment. NEVER returned by
+	// DeriveState — emitted only by Controller.handleSavedAck immediately
+	// after the user clicks Save on a CONFIRM prompt. Per spec §2.2 the
+	// assistant state is orthogonal to PlanConfiguration.status.
+	StateSaved StateKind = "SAVED"
 )
 
 // AssistantState is the derived state for a single PlanConfiguration.
@@ -490,16 +521,15 @@ type AssistantState struct {
 // that returns the assistant's next state. Messages are accepted for
 // future use (e.g., detecting in-progress rewind) but are unused in v1
 // derivation — the configuration alone is authoritative.
+//
+// Per spec §2.2: status (DRAFT/RUNNABLE/SCHEDULED) is ORTHOGONAL to the
+// returned state. After an edit on a RUNNABLE configuration, derivation
+// re-lands at CONFIRM so the user re-confirms. SAVED is never returned
+// here — see Controller.NextTurn for the one-shot ack.
 func DeriveState(template *plansv1.PlanTemplate, config *plansv1.PlanConfiguration, messages []*chatv1.ThreadMessage) AssistantState {
 	_ = messages
 	if config == nil || config.GetPlanTemplateId() == "" {
 		return AssistantState{Kind: StateAwaitingTemplate}
-	}
-	// SAVED is sticky once status crosses RUNNABLE/SCHEDULED.
-	switch config.GetStatus() {
-	case plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
-		plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_SCHEDULED:
-		return AssistantState{Kind: StateSaved}
 	}
 
 	steps := template.GetSteps()
@@ -548,7 +578,7 @@ func policiesSet(p *plansv1.PlanBehaviorPolicies) bool {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 cd /home/thbertoldi/harpia/control-plane && go test ./internal/planassistant/... -v
@@ -556,7 +586,7 @@ cd /home/thbertoldi/harpia/control-plane && go test ./internal/planassistant/...
 
 Expected: PASS for all seven derivation tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd /home/thbertoldi/harpia
@@ -1010,7 +1040,8 @@ func (c *Controller) NextTurn(ctx context.Context, tenantID, configID uuid.UUID)
 	if err != nil {
 		return fmt.Errorf("planassistant: load configuration: %w", err)
 	}
-	if state, value, ok := c.findSelectionAndState(ctx, tenantID, cfg); ok {
+	state, value, hasSel := c.findSelectionAndState(ctx, tenantID, cfg)
+	if hasSel {
 		mutated, err := c.Configs.UpdateFromSelection(ctx, tenantID, configID, state, value)
 		if err != nil {
 			return fmt.Errorf("planassistant: apply selection: %w", err)
@@ -1019,7 +1050,34 @@ func (c *Controller) NextTurn(ctx context.Context, tenantID, configID uuid.UUID)
 			cfg = mutated
 		}
 	}
+	// One-shot SAVED ack: when the user just answered the CONFIRM prompt
+	// with Save AND the status flipped to RUNNABLE/SCHEDULED, emit the
+	// post-save acknowledgment instead of re-emitting CONFIRM. Per spec
+	// §2.2 DeriveState would still return CONFIRM here — the controller is
+	// the only thing that turns SAVED into a visible message.
+	if hasSel && state.Kind == StateConfirm && value == "save" {
+		switch cfg.GetStatus() {
+		case plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
+			plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_SCHEDULED:
+			return c.emitSavedAck(ctx, tenantID, cfg)
+		}
+	}
 	return c.emitCurrentPrompt(ctx, tenantID, cfg)
+}
+
+// emitSavedAck writes the one-shot ASSISTANT_TEXT after a successful Save.
+func (c *Controller) emitSavedAck(ctx context.Context, tenantID uuid.UUID, cfg *plansv1.PlanConfiguration) error {
+	text, payload := BuildPrompt(AssistantState{Kind: StateSaved}, PromptInput{Config: cfg})
+	if _, err := c.Chat.AppendMessage(ctx, tenantID, chat.AppendInput{
+		ThreadID:    cfg.GetId(),
+		Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_AGENT,
+		Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_ASSISTANT_TEXT,
+		Text:        text,
+		PayloadJSON: payload,
+	}); err != nil {
+		return fmt.Errorf("planassistant: emit saved ack: %w", err)
+	}
+	return nil
 }
 
 // findSelectionAndState walks the recent chat history backwards to locate
