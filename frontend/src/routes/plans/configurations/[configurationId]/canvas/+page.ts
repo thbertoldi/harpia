@@ -28,7 +28,7 @@ export const load: PageLoad = async ({ params, url }) => {
       configuration: config.planConfiguration,
       template: template.planTemplate,
     };
-  } catch (e) {
+  } catch {
     throw error(404, "Plan configuration not found");
   }
 };

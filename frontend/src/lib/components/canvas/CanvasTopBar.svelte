@@ -27,17 +27,13 @@
     onAnswerNext,
     planName,
   }: Props = $props();
-
-  const backHref = $derived(
-    resolve(`/plans/configurations/${configurationId}`),
-  );
 </script>
 
 <header
   class="flex items-center gap-3 border-b border-plumage bg-obsidian px-4 py-2"
 >
   <a
-    href={backHref}
+    href={resolve(`/plans/configurations/${configurationId}`)}
     class="flex items-center gap-1 rounded border border-plumage bg-transparent px-2 py-1 text-[11px] text-crown-ash hover:border-talon-gold hover:text-talon-gold"
   >
     <ArrowLeft class="size-3.5" />

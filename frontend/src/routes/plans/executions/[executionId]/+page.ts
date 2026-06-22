@@ -23,12 +23,7 @@ export const load: PageLoad = async ({ params }) => {
       `/plans/configurations/${configId}/canvas?run=${executionId}`,
     );
   } catch (e) {
-    if (
-      e &&
-      typeof e === "object" &&
-      "status" in e &&
-      "location" in e
-    ) {
+    if (e && typeof e === "object" && "status" in e && "location" in e) {
       throw e;
     }
     throw error(404, "Plan execution not found");

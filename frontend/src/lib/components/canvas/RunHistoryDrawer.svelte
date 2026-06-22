@@ -13,8 +13,7 @@
     configurationId: string;
     currentRunId?: string;
   }
-  let { open, onClose, tenantId, configurationId, currentRunId }: Props =
-    $props();
+  let { open, onClose, configurationId, currentRunId }: Props = $props();
 
   let executions = $state<PlanExecution[]>([]);
   let loading = $state(false);

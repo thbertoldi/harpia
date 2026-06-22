@@ -25,11 +25,7 @@ function msg(
 }
 
 function step(key: string): PlanStep {
-  return {
-    // Minimal proto shape; full PlanStep has more fields but buildCanvasState only reads key.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    key,
-  } as any;
+  return { key } as PlanStep;
 }
 
 describe("buildCanvasState", () => {
@@ -42,7 +38,12 @@ describe("buildCanvasState", () => {
 
   it("returns 'running' for a step with STEP_STARTED and no STEP_BOUND", () => {
     const messages = [
-      msg("m1", "STEP_STARTED", { step_key: "a", step_execution_id: "se-a" }, 1),
+      msg(
+        "m1",
+        "STEP_STARTED",
+        { step_key: "a", step_execution_id: "se-a" },
+        1,
+      ),
     ];
     const state = buildCanvasState(messages, [step("a"), step("b")]);
     expect(state.a.status).toBe("running");
@@ -53,8 +54,18 @@ describe("buildCanvasState", () => {
 
   it("returns 'done' for a step with STEP_BOUND, carrying outputArtifactId", () => {
     const messages = [
-      msg("m1", "STEP_STARTED", { step_key: "a", step_execution_id: "se-a" }, 1),
-      msg("m2", "STEP_BOUND", { step_key: "a", output_artifact_id: "art-x" }, 2),
+      msg(
+        "m1",
+        "STEP_STARTED",
+        { step_key: "a", step_execution_id: "se-a" },
+        1,
+      ),
+      msg(
+        "m2",
+        "STEP_BOUND",
+        { step_key: "a", output_artifact_id: "art-x" },
+        2,
+      ),
     ];
     const state = buildCanvasState(messages, [step("a")]);
     expect(state.a.status).toBe("done");
@@ -64,7 +75,12 @@ describe("buildCanvasState", () => {
 
   it("returns 'awaiting_elicitation' when ELICITATION_RAISED is the latest event for a step", () => {
     const messages = [
-      msg("m1", "STEP_STARTED", { step_key: "a", step_execution_id: "se-a" }, 1),
+      msg(
+        "m1",
+        "STEP_STARTED",
+        { step_key: "a", step_execution_id: "se-a" },
+        1,
+      ),
       msg("m2", "ELICITATION_RAISED", { elicitation_id: "el-1" }, 2),
     ];
     const state = buildCanvasState(messages, [step("a")]);
@@ -74,7 +90,12 @@ describe("buildCanvasState", () => {
 
   it("clears the elicitation pointer when ELICITATION_ANSWERED arrives", () => {
     const messages = [
-      msg("m1", "STEP_STARTED", { step_key: "a", step_execution_id: "se-a" }, 1),
+      msg(
+        "m1",
+        "STEP_STARTED",
+        { step_key: "a", step_execution_id: "se-a" },
+        1,
+      ),
       msg("m2", "ELICITATION_RAISED", { elicitation_id: "el-1" }, 2),
       msg("m3", "ELICITATION_ANSWERED", { elicitation_id: "el-1" }, 3),
     ];
@@ -85,7 +106,12 @@ describe("buildCanvasState", () => {
 
   it("returns 'awaiting_approval' when APPROVAL_RAISED is pending for a step", () => {
     const messages = [
-      msg("m1", "STEP_STARTED", { step_key: "publish", step_execution_id: "se-p" }, 1),
+      msg(
+        "m1",
+        "STEP_STARTED",
+        { step_key: "publish", step_execution_id: "se-p" },
+        1,
+      ),
       msg("m2", "APPROVAL_RAISED", { approval_request_id: "ap-1" }, 2),
     ];
     const state = buildCanvasState(messages, [step("publish")]);
@@ -95,7 +121,12 @@ describe("buildCanvasState", () => {
 
   it("returns 'failed' when RUN_FAILED is the run-level event and the step was running", () => {
     const messages = [
-      msg("m1", "STEP_STARTED", { step_key: "a", step_execution_id: "se-a" }, 1),
+      msg(
+        "m1",
+        "STEP_STARTED",
+        { step_key: "a", step_execution_id: "se-a" },
+        1,
+      ),
       msg("m2", "RUN_FAILED", { error: "step a failed: timeout" }, 2),
     ];
     const state = buildCanvasState(messages, [step("a")]);

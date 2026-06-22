@@ -44,7 +44,9 @@
     );
     if (firstPending) {
       goto(
-        `${resolve(`/plans/configurations/${data.configurationId}/canvas`)}?run=${data.runId}#node-${firstPending[0]}`,
+        resolve(
+          `/plans/configurations/${data.configurationId}/canvas?run=${data.runId}#node-${firstPending[0]}`,
+        ),
       );
     }
   }
