@@ -44,6 +44,16 @@ func BuildStepBoundPayload(stepKey, outputArtifactID string) string {
 	})
 }
 
+// BuildStepStartedPayload returns the JSON payload for a STEP_STARTED message.
+// Mirrors STEP_BOUND but without an output artifact (which doesn't exist yet
+// at start-of-step time).
+func BuildStepStartedPayload(stepKey, stepExecutionID string) string {
+	return mustEncodeJSON(map[string]string{
+		"step_key":          stepKey,
+		"step_execution_id": stepExecutionID,
+	})
+}
+
 // BuildElicitationRaisedPayload returns the JSON payload for an
 // ELICITATION_RAISED pointer message.
 func BuildElicitationRaisedPayload(elicitationID uuid.UUID) string {

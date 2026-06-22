@@ -78,6 +78,21 @@ func TestBuildStepBoundPayload(t *testing.T) {
 	}
 }
 
+func TestBuildStepStartedPayload(t *testing.T) {
+	got := BuildStepStartedPayload("write-draft", "step-exec-uuid")
+
+	var decoded map[string]string
+	if err := json.Unmarshal([]byte(got), &decoded); err != nil {
+		t.Fatalf("payload is not valid JSON: %v", err)
+	}
+	if decoded["step_key"] != "write-draft" {
+		t.Fatalf("expected step_key=write-draft, got %s", decoded["step_key"])
+	}
+	if decoded["step_execution_id"] != "step-exec-uuid" {
+		t.Fatalf("expected step_execution_id=step-exec-uuid, got %s", decoded["step_execution_id"])
+	}
+}
+
 func TestBuildRunFailedPayloadCarriesErrorMessage(t *testing.T) {
 	got := BuildRunFailedPayload("step write-draft failed: timeout")
 

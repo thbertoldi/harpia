@@ -145,6 +145,21 @@ func (r *RuntimeRepository) CreateStepExecution(ctx context.Context, input workf
 		return workflow.StepExecutionRecord{}, err
 	}
 
+	if r.chat != nil {
+		execID := executionID
+		configID, lookupErr := r.plans.GetPlanConfigurationIDForExecution(ctx, tenantID, executionID)
+		if lookupErr == nil {
+			_, _ = r.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
+				ThreadID:    configID.String(),
+				ExecutionID: &execID,
+				Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
+				Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_STEP_STARTED,
+				Text:        "Step " + input.PlanStepKey + " started.",
+				PayloadJSON: chat.BuildStepStartedPayload(input.PlanStepKey, step.ID.String()),
+			})
+		}
+	}
+
 	return workflow.StepExecutionRecord{
 		ID:              step.ID.String(),
 		PlanStepKey:     step.PlanStepKey,
