@@ -11,7 +11,7 @@ Plan: `docs/superpowers/plans/2026-06-22-harpia-ux-realignment-m5-chat-config.md
 | `control-plane: go test ./...` | ✅ all passing | Includes planassistant, plans, executors |
 | `frontend: npx vitest run` | ✅ 254 passing | cost (4), assistant (2), hardcoded-copy (2), existing suite |
 | `frontend: npx vitest run src/lib/i18n/hardcoded-copy.test.ts` | ✅ PASS | Task 22 lockstep en + pt-BR |
-| `control-plane API health (:8080)` | ⚠️ unreachable | `curl` returned 000 — stack not fully up in this session |
+| `control-plane API health (:19080)` | ⚠️ unreachable | `curl` returned 000 — stack not fully up in this session (vite proxies `/harpia` → `:19080`) |
 | `frontend dev (:5173)` | ⚠️ partial | HTTP 302 (server responding); auth session required for golden path |
 | `tilt up` | ⚠️ blocked | Port 10350 already in use by another Tilt instance; did not attach to running stack |
 
@@ -70,6 +70,17 @@ cd77cd8 chore(ux-m5): delete wizard routes + 302 to /new; retarget template CTA
 - **IMPORTANT:** wire schedule side-effect integration tests when handler test harness exists; validate cron *before* `UpdateConfiguration` persists invalid expressions (plan inserts validation post-persist).
 - **NOTE:** `configurationFromProto` preserves identity/timestamps from existing row — correct for partial proto mutations.
 
+## Post-merge verification (2026-06-20)
+
+**Verdict: BLOCKED** — live dev-login probe found SSR load failures on `/new`, plan thread, and canvas.
+
+| Surface | Issue | Fix applied |
+|---|---|---|
+| `/new` | Universal `load` called `requireTenantId()` (localStorage-only) and listed templates during SSR without auth headers | `ssr = false`; removed `requireTenantId`; tolerate `listPlanTemplates` failure |
+| Plan thread / canvas | `loadExecutorCatalog()` RPC failure inside broad `try/catch` converted catalog 401 into full-page 404/500 | Catalog load isolated with `loadExecutorCatalogSafe()`; `isHttpError` guard; `ssr = false` |
+
+Re-drive golden path after fix commit with `tilt up` + `npm run dev` + dev-login (Lena Leader).
+
 ## Status
 
-**Automated portion: ✅ complete.** Manual browser golden path: **BLOCKED** — re-verify with full Tilt stack + dev login before merge.
+**Automated portion: ✅ complete.** Manual browser golden path: **re-verify after SSR fix** — prior run blocked on load failures under dev-login.
