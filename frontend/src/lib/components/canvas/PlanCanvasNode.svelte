@@ -6,6 +6,8 @@
     MessageSquare,
     ShieldQuestion,
     Clock,
+    CircleDot,
+    CircleDashed,
   } from "lucide-svelte";
   import type { PlanStep } from "$lib/gen/harpia/plans/v1/plans_pb";
   import type { CanvasStepState } from "$lib/plans/canvas-state";
@@ -30,7 +32,11 @@
             ? MessageSquare
             : state.status === "awaiting_approval"
               ? ShieldQuestion
-              : Clock,
+              : state.status === "bound"
+                ? CircleDot
+                : state.status === "unbound"
+                  ? CircleDashed
+                  : Clock,
   );
 
   const statusLabelKey = $derived(`canvas.status.${state.status}`);
@@ -44,7 +50,9 @@
         ? "border-red-500/60"
         : state.status === "running"
           ? "border-talon-gold"
-          : "border-plumage",
+          : state.status === "bound"
+            ? "border-talon-gold/40"
+            : "border-plumage",
   );
 </script>
 
@@ -55,7 +63,7 @@
 >
   <div class="flex items-center gap-1.5">
     <StatusIcon
-      class={`size-3.5 ${state.status === "running" ? "animate-spin text-talon-gold" : "text-crown-ash"}`}
+      class={`size-3.5 ${state.status === "running" ? "animate-spin text-talon-gold" : state.status === "bound" || state.status === "done" ? "text-talon-gold" : "text-crown-ash"}`}
     />
     <span class="font-heading text-[12px] font-semibold text-cream">
       {step.title}

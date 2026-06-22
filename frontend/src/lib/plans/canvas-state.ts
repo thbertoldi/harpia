@@ -1,7 +1,9 @@
 import type { ChatMessage } from "$lib/chat/types";
-import type { PlanStep } from "$lib/gen/harpia/plans/v1/plans_pb";
+import type { PlanStep, SlotBinding } from "$lib/gen/harpia/plans/v1/plans_pb";
 
 export type CanvasStepStatus =
+  | "unbound"
+  | "bound"
   | "pending"
   | "running"
   | "awaiting_elicitation"
@@ -69,10 +71,20 @@ function findStepByPendingApproval(
 export function buildCanvasState(
   messages: ChatMessage[],
   steps: PlanStep[],
+  slotBindings: SlotBinding[] = [],
 ): Record<string, CanvasStepState> {
+  // Seed config-time status from slot bindings. Once an execution event
+  // (STEP_STARTED / STEP_BOUND / RUN_FAILED / ELICITATION_RAISED /
+  // APPROVAL_RAISED) fires for a step, the projection below overrides
+  // "bound" / "unbound" with the runtime status. Without a run, the
+  // canvas shows the static binding state per spec §5.3.
+  const boundByStep = new Set<string>();
+  for (const sb of slotBindings) {
+    if (sb.executorInstallationId) boundByStep.add(sb.stepKey);
+  }
   const state: Record<string, CanvasStepState> = {};
   for (const step of steps) {
-    state[step.key] = { status: "pending" };
+    state[step.key] = { status: boundByStep.has(step.key) ? "bound" : "unbound" };
   }
 
   const sorted = [...messages].sort((a, b) =>

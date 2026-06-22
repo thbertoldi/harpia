@@ -55,6 +55,8 @@
   "thread.event.run_completed": "Run completed.",
   "thread.event.run_failed": "Run failed.",
   "thread.event.step_bound": "Step completed.",
+  "canvas.status.unbound": "Unbound",
+  "canvas.status.bound": "Bound",
   "canvas.status.pending": "Pending",
   "canvas.status.running": "Running",
   "canvas.status.awaiting_elicitation": "Awaiting elicitation",

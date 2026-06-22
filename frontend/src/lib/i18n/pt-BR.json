@@ -55,6 +55,8 @@
   "thread.event.run_completed": "Execução concluída.",
   "thread.event.run_failed": "Execução falhou.",
   "thread.event.step_bound": "Etapa concluída.",
+  "canvas.status.unbound": "Sem executor",
+  "canvas.status.bound": "Pronto",
   "canvas.status.pending": "Pendente",
   "canvas.status.running": "Em execução",
   "canvas.status.awaiting_elicitation": "Aguardando elicitação",

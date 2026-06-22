@@ -16,7 +16,8 @@ async function loadExecutorCatalog(tenantId: string): Promise<Map<string, Execut
   const skuPrices = new Map<string, number | null>();
   for await (const page of executorClient.listExecutorSKUs({ pageSize: 100, pageToken: "" })) {
     for (const sku of page.executorSkus) {
-      skuPrices.set(sku.id, sku.priceCents ? Number(sku.priceCents) / 100 : null);
+      const cents = sku.listPrice?.priceCents;
+      skuPrices.set(sku.id, cents ? Number(cents) / 100 : null);
     }
   }
   for await (const page of executorClient.listExecutorInstallations({ tenantId, pageSize: 100, pageToken: "" })) {
