@@ -13,6 +13,7 @@ export type ChatMessageKind =
   | "RUN_STARTED"
   | "RUN_COMPLETED"
   | "RUN_FAILED"
+  | "STEP_STARTED"
   | "STEP_BOUND"
   | "ELICITATION_RAISED"
   | "ELICITATION_ANSWERED"
@@ -46,6 +47,7 @@ const KIND_FROM_PROTO: Record<number, ChatMessageKind> = {
   [ProtoThreadMessageKind.RUN_STARTED]: "RUN_STARTED",
   [ProtoThreadMessageKind.RUN_COMPLETED]: "RUN_COMPLETED",
   [ProtoThreadMessageKind.RUN_FAILED]: "RUN_FAILED",
+  [ProtoThreadMessageKind.STEP_STARTED]: "STEP_STARTED",
   [ProtoThreadMessageKind.STEP_BOUND]: "STEP_BOUND",
   [ProtoThreadMessageKind.ELICITATION_RAISED]: "ELICITATION_RAISED",
   [ProtoThreadMessageKind.ELICITATION_ANSWERED]: "ELICITATION_ANSWERED",
@@ -66,6 +68,7 @@ const KIND_TO_PROTO: Record<ChatMessageKind, ProtoThreadMessageKind> = {
   RUN_STARTED: ProtoThreadMessageKind.RUN_STARTED,
   RUN_COMPLETED: ProtoThreadMessageKind.RUN_COMPLETED,
   RUN_FAILED: ProtoThreadMessageKind.RUN_FAILED,
+  STEP_STARTED: ProtoThreadMessageKind.STEP_STARTED,
   STEP_BOUND: ProtoThreadMessageKind.STEP_BOUND,
   ELICITATION_RAISED: ProtoThreadMessageKind.ELICITATION_RAISED,
   ELICITATION_ANSWERED: ProtoThreadMessageKind.ELICITATION_ANSWERED,
