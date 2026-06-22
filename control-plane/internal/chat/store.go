@@ -12,6 +12,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	chatv1 "github.com/harpia/control-plane/gen/harpia/chat/v1"
+	"github.com/harpia/control-plane/internal/database"
 )
 
 // Store is the generic chat-message persistence interface. M3 wires a
@@ -78,28 +79,30 @@ func (s *postgresStore) AppendMessage(ctx context.Context, tenantID uuid.UUID, i
 		var id uuid.UUID
 		var createdAt time.Time
 		var seq int64
-		err := s.pool.QueryRow(ctx, `
-			WITH next AS (
-				SELECT COALESCE(MAX(sequence_number), 0) + 1 AS seq
-				FROM chat_messages
-				WHERE thread_id = $1
-			)
-			INSERT INTO chat_messages (
-				tenant_id, thread_id, execution_id, role, kind, text, payload_json,
-				author_user_id, sequence_number
-			)
-			SELECT $2, $1, $3, $4, $5, $6, $7::jsonb, $8, next.seq FROM next
-			RETURNING id, sequence_number, created_at
-		`,
-			input.ThreadID,
-			tenantID,
-			execArg,
-			input.Role.String(),
-			input.Kind.String(),
-			input.Text,
-			payload,
-			authorArg,
-		).Scan(&id, &seq, &createdAt)
+		err := database.WithTenant(ctx, s.pool, tenantID, func(q database.Querier) error {
+			return q.QueryRow(ctx, `
+				WITH next AS (
+					SELECT COALESCE(MAX(sequence_number), 0) + 1 AS seq
+					FROM chat_messages
+					WHERE thread_id = $1
+				)
+				INSERT INTO chat_messages (
+					tenant_id, thread_id, execution_id, role, kind, text, payload_json,
+					author_user_id, sequence_number
+				)
+				SELECT $2, $1, $3, $4, $5, $6, $7::jsonb, $8, next.seq FROM next
+				RETURNING id, sequence_number, created_at
+			`,
+				input.ThreadID,
+				tenantID,
+				execArg,
+				input.Role.String(),
+				input.Kind.String(),
+				input.Text,
+				payload,
+				authorArg,
+			).Scan(&id, &seq, &createdAt)
+		})
 		if err != nil {
 			// Detect unique-violation on (thread_id, sequence_number) and retry.
 			if isUniqueViolation(err) && attempt == 0 {
@@ -140,49 +143,53 @@ func (s *postgresStore) ListMessages(ctx context.Context, tenantID uuid.UUID, th
 		query += " LIMIT $4"
 		args = append(args, limit)
 	}
-	rows, err := s.pool.Query(ctx, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("chat: ListMessages: %w", err)
-	}
-	defer rows.Close()
 
 	out := make([]*chatv1.ThreadMessage, 0)
-	for rows.Next() {
-		var (
-			id, tenant uuid.UUID
-			threadID   string
-			execID     uuid.NullUUID
-			role, kind string
-			text       string
-			payload    string
-			authorID   uuid.NullUUID
-			seq        int64
-			createdAt  time.Time
-		)
-		if err := rows.Scan(&id, &tenant, &threadID, &execID, &role, &kind, &text, &payload, &authorID, &seq, &createdAt); err != nil {
-			return nil, fmt.Errorf("chat: ListMessages: scan: %w", err)
+	err := database.WithTenant(ctx, s.pool, tenantID, func(q database.Querier) error {
+		rows, err := q.Query(ctx, query, args...)
+		if err != nil {
+			return err
 		}
-		msg := &chatv1.ThreadMessage{
-			Id:             id.String(),
-			TenantId:       tenant.String(),
-			ThreadId:       threadID,
-			Role:           chatv1.ThreadMessageRole(chatv1.ThreadMessageRole_value[role]),
-			Kind:           chatv1.ThreadMessageKind(chatv1.ThreadMessageKind_value[kind]),
-			Text:           text,
-			PayloadJson:    payload,
-			SequenceNumber: seq,
-			CreatedAt:      timestamppb.New(createdAt),
+		defer rows.Close()
+
+		for rows.Next() {
+			var (
+				id, tenant uuid.UUID
+				threadID   string
+				execID     uuid.NullUUID
+				role, kind string
+				text       string
+				payload    string
+				authorID   uuid.NullUUID
+				seq        int64
+				createdAt  time.Time
+			)
+			if err := rows.Scan(&id, &tenant, &threadID, &execID, &role, &kind, &text, &payload, &authorID, &seq, &createdAt); err != nil {
+				return fmt.Errorf("scan: %w", err)
+			}
+			msg := &chatv1.ThreadMessage{
+				Id:             id.String(),
+				TenantId:       tenant.String(),
+				ThreadId:       threadID,
+				Role:           chatv1.ThreadMessageRole(chatv1.ThreadMessageRole_value[role]),
+				Kind:           chatv1.ThreadMessageKind(chatv1.ThreadMessageKind_value[kind]),
+				Text:           text,
+				PayloadJson:    payload,
+				SequenceNumber: seq,
+				CreatedAt:      timestamppb.New(createdAt),
+			}
+			if execID.Valid {
+				msg.ExecutionId = execID.UUID.String()
+			}
+			if authorID.Valid {
+				msg.AuthorUserId = authorID.UUID.String()
+			}
+			out = append(out, msg)
 		}
-		if execID.Valid {
-			msg.ExecutionId = execID.UUID.String()
-		}
-		if authorID.Valid {
-			msg.AuthorUserId = authorID.UUID.String()
-		}
-		out = append(out, msg)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("chat: ListMessages: rows: %w", err)
+		return rows.Err()
+	})
+	if err != nil {
+		return nil, fmt.Errorf("chat: ListMessages: %w", err)
 	}
 	return out, nil
 }

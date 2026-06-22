@@ -18,7 +18,8 @@
   id={`m-${message.id}`}
   class="flex items-center gap-3 rounded-md border border-talon-gold/40 bg-talon-gold/10 px-3 py-2 text-[12px]"
 >
-  <svelte:component this={icon} class="size-4 text-talon-gold" />
+  {@const Icon = icon}
+  <Icon class="size-4 text-talon-gold" />
   <span class="flex-1 text-cream">{message.text}</span>
   <span class="text-[10px] text-crown-ash-dark">
     {formatRelativeTime(message.createdAt, $locale)}

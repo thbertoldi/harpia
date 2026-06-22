@@ -113,11 +113,7 @@
 </script>
 
 <svelte:head>
-  <title>
-    {data.configuration?.workspaceId
-      ? "Plan thread"
-      : translate("thread.title", $locale)} · Harpia
-  </title>
+  <title>{translate("thread.title", $locale)} · Harpia</title>
 </svelte:head>
 
 <div class="mx-auto flex max-w-3xl flex-col gap-3 px-4 py-6">
