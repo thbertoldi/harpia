@@ -519,6 +519,21 @@ func (r *Repository) GetExecution(ctx context.Context, tenantID, executionID uui
 	return &execution, nil
 }
 
+// GetPlanConfigurationIDForExecution returns the plan_configuration_id for a given plan_execution_id.
+func (r *Repository) GetPlanConfigurationIDForExecution(ctx context.Context, tenantID, executionID uuid.UUID) (uuid.UUID, error) {
+	var configID uuid.UUID
+	err := database.WithTenant(ctx, r.pool, tenantID, func(q database.Querier) error {
+		return q.QueryRow(ctx, `
+			SELECT plan_configuration_id FROM plan_executions
+			WHERE tenant_id = $1 AND id = $2
+		`, tenantID, executionID).Scan(&configID)
+	})
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("plans: GetPlanConfigurationIDForExecution: %w", err)
+	}
+	return configID, nil
+}
+
 func (r *Repository) ListExecutions(ctx context.Context, tenantID uuid.UUID, configID *uuid.UUID, limit, offset int) ([]PlanExecution, error) {
 	executions := make([]PlanExecution, 0)
 	err := database.WithTenant(ctx, r.pool, tenantID, func(q database.Querier) error {

@@ -9,20 +9,24 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	chatv1 "github.com/harpia/control-plane/gen/harpia/chat/v1"
 	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
 
+	"github.com/harpia/control-plane/internal/chat"
 	"github.com/harpia/control-plane/internal/workflow"
 )
 
 type RuntimeRepository struct {
 	plans     *Repository
 	executors ExecutorLookup
+	chat      chat.Store
 }
 
-func NewRuntimeRepository(planRepo *Repository, executors ExecutorLookup) *RuntimeRepository {
+func NewRuntimeRepository(planRepo *Repository, executors ExecutorLookup, chatStore chat.Store) *RuntimeRepository {
 	return &RuntimeRepository{
 		plans:     planRepo,
 		executors: executors,
+		chat:      chatStore,
 	}
 }
 
@@ -99,7 +103,24 @@ func (r *RuntimeRepository) LoadPlanExecution(ctx context.Context, tenantID, exe
 }
 
 func (r *RuntimeRepository) StartPlanExecution(ctx context.Context, tenantID, executionID uuid.UUID) error {
-	return r.plans.UpdateExecutionStatus(ctx, tenantID, executionID, ExecutionStatusRunning, nil)
+	if err := r.plans.UpdateExecutionStatus(ctx, tenantID, executionID, ExecutionStatusRunning, nil); err != nil {
+		return err
+	}
+	if r.chat != nil {
+		execID := executionID
+		configID, lookupErr := r.plans.GetPlanConfigurationIDForExecution(ctx, tenantID, executionID)
+		if lookupErr == nil {
+			_, _ = r.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
+				ThreadID:    configID.String(),
+				ExecutionID: &execID,
+				Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
+				Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_RUN_STARTED,
+				Text:        "Run started.",
+				PayloadJSON: chat.BuildRunStartedPayload(),
+			})
+		}
+	}
+	return nil
 }
 
 func (r *RuntimeRepository) CreateStepExecution(ctx context.Context, input workflow.CreateStepExecutionInput) (workflow.StepExecutionRecord, error) {
@@ -145,7 +166,27 @@ func (r *RuntimeRepository) CompleteStepExecution(ctx context.Context, input wor
 	if err != nil {
 		return err
 	}
-	return r.plans.UpdateStepExecutionStatus(ctx, tenantID, stepID, StepStatusCompleted, input.OutputArtifactID, "", "")
+	if err := r.plans.UpdateStepExecutionStatus(ctx, tenantID, stepID, StepStatusCompleted, input.OutputArtifactID, "", ""); err != nil {
+		return err
+	}
+	if r.chat != nil {
+		planExecutionID, parseErr := uuid.Parse(strings.TrimSpace(input.PlanExecutionID))
+		if parseErr == nil {
+			execID := planExecutionID
+			configID, lookupErr := r.plans.GetPlanConfigurationIDForExecution(ctx, tenantID, planExecutionID)
+			if lookupErr == nil {
+				_, _ = r.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
+					ThreadID:    configID.String(),
+					ExecutionID: &execID,
+					Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
+					Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_STEP_BOUND,
+					Text:        "Step " + input.PlanStepKey + " completed.",
+					PayloadJSON: chat.BuildStepBoundPayload(input.PlanStepKey, input.OutputArtifactID),
+				})
+			}
+		}
+	}
+	return nil
 }
 
 func (r *RuntimeRepository) FailStepExecution(ctx context.Context, input workflow.StepStatusUpdateInput) error {
@@ -195,7 +236,7 @@ func (r *RuntimeRepository) persistElicitation(ctx context.Context, tenantID, st
 
 	overseer := r.resolveOverseer(ctx, tenantID, executionID, input.PlanStepKey)
 
-	_, err = r.plans.UpsertElicitation(ctx, &Elicitation{
+	created, err := r.plans.UpsertElicitation(ctx, &Elicitation{
 		TenantID:            tenantID,
 		PlanExecutionID:     executionID,
 		StepExecutionID:     stepID,
@@ -208,7 +249,24 @@ func (r *RuntimeRepository) persistElicitation(ctx context.Context, tenantID, st
 		OverseerUserID:      overseer,
 		ExpiresAt:           expiresAt,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	if r.chat != nil {
+		execID := executionID
+		configID, lookupErr := r.plans.GetPlanConfigurationIDForExecution(ctx, tenantID, executionID)
+		if lookupErr == nil {
+			_, _ = r.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
+				ThreadID:    configID.String(),
+				ExecutionID: &execID,
+				Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
+				Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_ELICITATION_RAISED,
+				Text:        "Question raised on step " + input.PlanStepKey + ".",
+				PayloadJSON: chat.BuildElicitationRaisedPayload(created.ID),
+			})
+		}
+	}
+	return nil
 }
 
 // resolveOverseer looks up the overseer bound to the step from the execution
@@ -280,12 +338,52 @@ func (r *RuntimeRepository) ResolveApprovalRequest(ctx context.Context, input wo
 
 func (r *RuntimeRepository) CompletePlanExecution(ctx context.Context, tenantID, executionID uuid.UUID) error {
 	now := time.Now().UTC()
-	return r.plans.UpdateExecutionStatus(ctx, tenantID, executionID, ExecutionStatusCompleted, &now)
+	if err := r.plans.UpdateExecutionStatus(ctx, tenantID, executionID, ExecutionStatusCompleted, &now); err != nil {
+		return err
+	}
+	r.appendRunFinishedChatMessage(ctx, tenantID, executionID)
+	return nil
 }
 
 func (r *RuntimeRepository) FailPlanExecution(ctx context.Context, tenantID, executionID uuid.UUID) error {
 	now := time.Now().UTC()
-	return r.plans.UpdateExecutionStatus(ctx, tenantID, executionID, ExecutionStatusFailed, &now)
+	if err := r.plans.UpdateExecutionStatus(ctx, tenantID, executionID, ExecutionStatusFailed, &now); err != nil {
+		return err
+	}
+	r.appendRunFinishedChatMessage(ctx, tenantID, executionID)
+	return nil
+}
+
+func (r *RuntimeRepository) appendRunFinishedChatMessage(ctx context.Context, tenantID, executionID uuid.UUID) {
+	if r.chat == nil {
+		return
+	}
+	execID := executionID
+	exec, lookupErr := r.plans.GetExecution(ctx, tenantID, executionID)
+	if lookupErr != nil {
+		return
+	}
+	configID := exec.PlanConfigurationID
+	var kind chatv1.ThreadMessageKind
+	var text string
+	var payload string
+	if exec.Status == ExecutionStatusFailed {
+		kind = chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_RUN_FAILED
+		text = "Run failed."
+		payload = chat.BuildRunFailedPayload("")
+	} else {
+		kind = chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_RUN_COMPLETED
+		text = "Run completed."
+		payload = chat.BuildRunCompletedPayload()
+	}
+	_, _ = r.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
+		ThreadID:    configID.String(),
+		ExecutionID: &execID,
+		Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
+		Kind:        kind,
+		Text:        text,
+		PayloadJSON: payload,
+	})
 }
 
 func (r *RuntimeRepository) PrepareRetryFromStep(
