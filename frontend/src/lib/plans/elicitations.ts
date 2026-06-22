@@ -26,6 +26,7 @@ export type ElicitationResponseInput = {
 export type WatchElicitationsOptions = {
   stepExecutionId?: string;
   addressedToMe?: boolean;
+  signal?: AbortSignal;
 };
 
 export function isTerminalStatus(status: ElicitationStatus): boolean {
@@ -132,11 +133,14 @@ export async function* watchElicitations(
   tenantId: string,
   options: WatchElicitationsOptions = {},
 ): AsyncIterable<ElicitationRequest[]> {
-  for await (const event of planClient.watchElicitations({
-    tenantId,
-    addressedToMe: options.addressedToMe ?? false,
-    stepExecutionId: options.stepExecutionId,
-  })) {
+  for await (const event of planClient.watchElicitations(
+    {
+      tenantId,
+      addressedToMe: options.addressedToMe ?? false,
+      stepExecutionId: options.stepExecutionId,
+    },
+    { signal: options.signal },
+  )) {
     yield event.elicitations;
   }
 }

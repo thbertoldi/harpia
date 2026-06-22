@@ -53,8 +53,8 @@ async function* yieldOnce<T>(value: T): AsyncIterable<T> {
 
 function singleEmitSources(over: Partial<InboxSources> = {}): InboxSources {
   return {
-    watchElicitations: () => yieldOnce([makeElicit({})]),
-    watchApprovalRequests: () => yieldOnce([makeApproval({})]),
+    watchElicitations: (_tenantId, _signal) => yieldOnce([makeElicit({})]),
+    watchApprovalRequests: (_tenantId, _signal) => yieldOnce([makeApproval({})]),
     loadFeedback: async () => [makeFeedback({})],
     ...over,
   };
@@ -89,7 +89,7 @@ describe("watchInbox", () => {
     // watchInbox yields an initial empty list before any source emits (it's a
     // loading-state marker for the page); loop until e2 actually arrives.
     const sources = singleEmitSources({
-      watchElicitations: () =>
+      watchElicitations: (_tenantId, _signal) =>
         yieldOnce([
           makeElicit({
             id: "e2",
@@ -97,7 +97,7 @@ describe("watchInbox", () => {
             planStepKey: "Write Draft",
           }),
         ]),
-      watchApprovalRequests: () => yieldOnce([]),
+      watchApprovalRequests: (_tenantId, _signal) => yieldOnce([]),
       loadFeedback: async () => [],
     });
     const iter = watchInbox("tenant-1", sources)[Symbol.asyncIterator]();
@@ -121,8 +121,8 @@ describe("watchInbox", () => {
       yield [makeElicit({ id: "e-first" }), makeElicit({ id: "e-second" })];
     }
     const sources: InboxSources = {
-      watchElicitations: () => twoBatches(),
-      watchApprovalRequests: () => yieldOnce([]),
+      watchElicitations: (_tenantId, _signal) => twoBatches(),
+      watchApprovalRequests: (_tenantId, _signal) => yieldOnce([]),
       loadFeedback: async () => [],
     };
     const iter = watchInbox("tenant-1", sources)[Symbol.asyncIterator]();

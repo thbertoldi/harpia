@@ -17,19 +17,22 @@
   $effect(() => {
     const tenant = getTenant();
     if (!tenant?.id) return;
-    let active = true;
+    const controller = new AbortController();
     (async () => {
       try {
-        for await (const batch of watchInbox(tenant.id)) {
-          if (!active) return;
+        for await (const batch of watchInbox(tenant.id, undefined, {
+          signal: controller.signal,
+        })) {
+          if (controller.signal.aborted) return;
           items = batch;
         }
-      } catch {
-        if (active) loadError = true;
+      } catch (err) {
+        if (controller.signal.aborted) return; // expected on unmount
+        loadError = true;
       }
     })();
     return () => {
-      active = false;
+      controller.abort();
     };
   });
 

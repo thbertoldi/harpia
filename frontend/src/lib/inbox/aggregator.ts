@@ -20,21 +20,33 @@ import type {
 } from "./types";
 
 export interface InboxSources {
-  watchElicitations: (tenantId: string) => AsyncIterable<ElicitationRequest[]>;
-  watchApprovalRequests: (tenantId: string) => AsyncIterable<ApprovalRequest[]>;
+  watchElicitations: (
+    tenantId: string,
+    signal?: AbortSignal,
+  ) => AsyncIterable<ElicitationRequest[]>;
+  watchApprovalRequests: (
+    tenantId: string,
+    signal?: AbortSignal,
+  ) => AsyncIterable<ApprovalRequest[]>;
   loadFeedback: (tenantId: string) => Promise<FeedbackRequest[]>;
 }
 
 export const DEFAULT_INBOX_SOURCES: InboxSources = {
-  watchElicitations: (tenantId) =>
-    watchElicitations(tenantId, { addressedToMe: true }),
-  watchApprovalRequests: (tenantId) => watchApprovalRequests(tenantId),
+  watchElicitations: (tenantId, signal) =>
+    watchElicitations(tenantId, { addressedToMe: true, signal }),
+  watchApprovalRequests: (tenantId, signal) =>
+    watchApprovalRequests(tenantId, { signal }),
   loadFeedback: loadPendingFeedback,
 };
+
+export interface WatchInboxOptions {
+  signal?: AbortSignal;
+}
 
 export async function* watchInbox(
   tenantId: string,
   sources: InboxSources = DEFAULT_INBOX_SOURCES,
+  options: WatchInboxOptions = {},
 ): AsyncIterable<InboxItem[]> {
   // resolveNext is initialised to a noop so its type is `() => void` (no
   // `| null` union). TypeScript narrows `let x: T | null = null` to `null` at
@@ -75,10 +87,10 @@ export async function* watchInbox(
     }
   };
 
-  void consume(sources.watchElicitations(tenantId), (b) => {
+  void consume(sources.watchElicitations(tenantId, options.signal), (b) => {
     elicitations = b;
   });
-  void consume(sources.watchApprovalRequests(tenantId), (b) => {
+  void consume(sources.watchApprovalRequests(tenantId, options.signal), (b) => {
     approvals = b;
   });
   void sources

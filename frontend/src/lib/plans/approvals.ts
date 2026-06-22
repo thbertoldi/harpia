@@ -10,6 +10,7 @@ export type { ApprovalRequest };
 export type WatchApprovalRequestsOptions = {
   stepExecutionId?: string;
   planExecutionId?: string;
+  signal?: AbortSignal;
 };
 
 export function isTerminalApprovalStatus(
@@ -93,11 +94,14 @@ export async function* watchApprovalRequests(
   tenantId: string,
   options: WatchApprovalRequestsOptions = {},
 ): AsyncIterable<ApprovalRequest[]> {
-  for await (const event of planClient.watchApprovalRequests({
-    tenantId,
-    stepExecutionId: options.stepExecutionId,
-    planExecutionId: options.planExecutionId,
-  })) {
+  for await (const event of planClient.watchApprovalRequests(
+    {
+      tenantId,
+      stepExecutionId: options.stepExecutionId,
+      planExecutionId: options.planExecutionId,
+    },
+    { signal: options.signal },
+  )) {
     yield event.approvalRequests;
   }
 }
