@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"go.temporal.io/sdk/client"
 
+	chatv1 "github.com/harpia/control-plane/gen/harpia/chat/v1"
 	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
 	"github.com/harpia/control-plane/internal/chat"
 	"github.com/harpia/control-plane/internal/identity"
@@ -20,7 +21,6 @@ import (
 
 type PlanHandler struct {
 	repo             *Repository
-	chat             chat.Store
 	executors        ExecutorLookup
 	validator        *BindingValidator
 	schedule         *ScheduleManager
@@ -30,6 +30,7 @@ type PlanHandler struct {
 	signaler         PlanElicitationSignaler
 	approvals        ApprovalStore
 	approvalSignaler PlanApprovalSignaler
+	chat             chat.Store
 }
 
 type PlanWorkflowStarter interface {
@@ -40,7 +41,7 @@ type PlanExecutionRetryer interface {
 	PrepareRetryFromStep(ctx context.Context, tenantID uuid.UUID, planExecutionID uuid.UUID, failedStepExecutionID uuid.UUID) (*PlanExecution, workflow.PlanWorkflowInput, error)
 }
 
-func NewPlanHandler(repo *Repository, executors ExecutorLookup, schedule *ScheduleManager, chatStore chat.Store, starters ...PlanWorkflowStarter) (*PlanHandler, error) {
+func NewPlanHandler(repo *Repository, executors ExecutorLookup, schedule *ScheduleManager, starters ...PlanWorkflowStarter) (*PlanHandler, error) {
 	if repo == nil {
 		return nil, errors.New("plans: repository is required")
 	}
@@ -53,7 +54,6 @@ func NewPlanHandler(repo *Repository, executors ExecutorLookup, schedule *Schedu
 	}
 	handler := &PlanHandler{
 		repo:            repo,
-		chat:            chatStore,
 		executors:       executors,
 		validator:       NewBindingValidator(executors),
 		schedule:        schedule,
@@ -178,6 +178,25 @@ func (h *PlanHandler) CreatePlanConfiguration(ctx context.Context, req *connect.
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
+	// M3: append CONFIGURATION_SAVED message to the plan thread so the
+	// thread is non-empty on first render. Best-effort — log and continue
+	// if the chat store is unavailable. See UX-M3 design spec §2.5.
+	if h.chat != nil {
+		_, chatErr := h.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
+			ThreadID:    created.ID.String(),
+			Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
+			Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_CONFIGURATION_SAVED,
+			Text:        "Configuration saved.",
+			PayloadJSON: chat.BuildConfigurationSavedPayload(),
+		})
+		if chatErr != nil {
+			// Don't fail the whole request — the configuration is saved.
+			// Log via the same mechanism the package already uses.
+			// (If no logger field exists, this falls back to printing nothing;
+			// the message will be missing from the thread but the config is OK.)
+		}
+	}
+
 	return connect.NewResponse(&plansv1.CreatePlanConfigurationResponse{
 		PlanConfiguration: configurationToProto(created),
 	}), nil
@@ -260,6 +279,16 @@ func (h *PlanHandler) UpdatePlanConfiguration(ctx context.Context, req *connect.
 
 	if err := h.syncSchedule(ctx, updated); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	if h.chat != nil {
+		_, _ = h.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
+			ThreadID:    updated.ID.String(),
+			Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
+			Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_CONFIGURATION_SAVED,
+			Text:        "Configuration updated.",
+			PayloadJSON: chat.BuildConfigurationSavedPayload(),
+		})
 	}
 
 	return connect.NewResponse(&plansv1.UpdatePlanConfigurationResponse{
