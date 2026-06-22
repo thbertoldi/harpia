@@ -12,9 +12,10 @@
   import { applyColorScheme, initTheme, resolveColorScheme } from "$lib/themes";
   import { initLocale, locale, translate } from "$lib/i18n";
 
+  import { Sun, Moon, Crown, Eye, Wrench } from "lucide-svelte";
+
   const zitadelReady = isZitadelConfigured();
   const devLoginEnabled = isDevLoginEnabled();
-  import { Sun, Moon, Crown, Eye, Wrench } from "lucide-svelte";
 
   let email = $state("");
   let dark = $state(true);
