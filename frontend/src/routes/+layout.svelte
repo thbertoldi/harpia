@@ -82,6 +82,20 @@
     if (typeof localStorage !== "undefined") {
       writePersonaMode(localStorage, next);
     }
+    // Each persona owns a distinct surface — without an explicit
+    // navigation, the user is left staring at the previous persona's
+    // page (toggling to admin while on /inbox keeps the inbox visible
+    // even though no admin section corresponds to it). Resolve the new
+    // persona's nav sections directly (not via the `sections` derived,
+    // which hasn't recomputed yet at this point) and goto the first one.
+    const nextSections = resolveNavSectionsM1(next, data?.user?.role, (key) =>
+      translate(key, $locale),
+    );
+    const target = nextSections[0]?.href;
+    if (target) {
+      navOpen = false;
+      void goto(resolve(target));
+    }
   }
 
   function isActive(path: string) {

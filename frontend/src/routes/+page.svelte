@@ -173,13 +173,6 @@
           </div>
         </div>
 
-        <a
-          href={resolve("/tasks")}
-          class="mt-6 inline-flex items-center gap-2 font-body text-sm text-crown-ash transition-colors hover:text-talon-gold"
-        >
-          <LayoutDashboard class="size-4" />
-          {translate("home.viewDashboard", $locale)}
-        </a>
       </div>
     {:else}
       <!-- Chat state -->
