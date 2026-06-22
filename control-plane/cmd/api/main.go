@@ -38,6 +38,7 @@ import (
 	"github.com/harpia/control-plane/internal/llm_config"
 	cryptoenv "github.com/harpia/control-plane/internal/llm_config/crypto"
 	"github.com/harpia/control-plane/internal/plans"
+	"github.com/harpia/control-plane/internal/planassistant"
 	"github.com/harpia/control-plane/internal/server"
 	"github.com/harpia/control-plane/internal/storage"
 	"github.com/harpia/control-plane/internal/tasks"
@@ -217,11 +218,17 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	}
 
 	scheduleManager := plans.NewScheduleManager(temporalClient, logger)
+	assistantController := &planassistant.Controller{
+		Chat:      chatStore,
+		Catalog:   &plans.AssistantCatalog{Executors: executorRepo},
+		Configs:   &plans.AssistantConfigurationStore{Repo: planRepo, Executors: executorRepo},
+		Templates: &plans.AssistantTemplates{Repo: planRepo},
+	}
 	var planHandler *plans.PlanHandler
 	if temporalClient != nil {
-		planHandler, err = plans.NewPlanHandler(planRepo, executorRepo, scheduleManager, chatStore, nil, temporalClient)
+		planHandler, err = plans.NewPlanHandler(planRepo, executorRepo, scheduleManager, chatStore, assistantController, temporalClient)
 	} else {
-		planHandler, err = plans.NewPlanHandler(planRepo, executorRepo, scheduleManager, chatStore, nil)
+		planHandler, err = plans.NewPlanHandler(planRepo, executorRepo, scheduleManager, chatStore, assistantController)
 	}
 	if err != nil {
 		fatal("create plan handler failed", "error", err)

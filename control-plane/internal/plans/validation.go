@@ -23,6 +23,7 @@ type ExecutorLookup interface {
 	GetInstallationByID(ctx context.Context, tenantID, id uuid.UUID) (*executorpkg.ExecutorInstallation, error)
 	GetSKUByID(ctx context.Context, id uuid.UUID) (*executorpkg.ExecutorSKU, error)
 	ListEntitlements(ctx context.Context, tenantID uuid.UUID, skuID *uuid.UUID, limit, offset int) ([]executorpkg.ExecutorEntitlement, error)
+	ListCompatibleInstallationsForStep(ctx context.Context, tenantID uuid.UUID, step *plansv1.PlanStep) ([]executorpkg.ExecutorInstallation, error)
 }
 
 type BindingValidationError struct {
