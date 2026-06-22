@@ -45,4 +45,5 @@ enum ThreadMessageKind {
   THREAD_MESSAGE_KIND_ELICITATION_ANSWERED = 9;  // payload_json: { "elicitation_id": "...", "outcome": "answered|timed_out|cancelled" }
   THREAD_MESSAGE_KIND_APPROVAL_RAISED = 10;      // payload_json: { "approval_request_id": "..." }
   THREAD_MESSAGE_KIND_APPROVAL_DECIDED = 11;     // payload_json: { "approval_request_id": "...", "approved": true|false }
+  THREAD_MESSAGE_KIND_STEP_STARTED = 12;            // payload_json: { "step_key": "...", "step_execution_id": "..." }
 }

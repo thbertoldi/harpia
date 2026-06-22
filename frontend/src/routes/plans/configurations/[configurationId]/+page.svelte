@@ -1,5 +1,6 @@
 <script lang="ts">
   import { browser } from "$app/environment";
+  import { resolve } from "$app/paths";
   import { getTenant } from "$lib/auth";
   import { locale, translate } from "$lib/i18n";
   import { loadThreadMessages } from "$lib/chat/client";
@@ -11,6 +12,7 @@
   import ExecutionSection from "$lib/components/thread/ExecutionSection.svelte";
   import ThreadComposer from "$lib/components/thread/ThreadComposer.svelte";
   import HintBanner from "$lib/components/thread/HintBanner.svelte";
+  import { Expand } from "lucide-svelte";
 
   let { data } = $props();
 
@@ -118,7 +120,17 @@
 
 <div class="mx-auto flex max-w-3xl flex-col gap-3 px-4 py-6">
   {#if data.template?.steps && data.template.steps.length > 0}
-    <PlanDagMiniMap steps={data.template.steps} edges={data.template.edges} />
+    <div class="flex items-center justify-between gap-2">
+      <PlanDagMiniMap steps={data.template.steps} edges={data.template.edges} />
+      <a
+        href={resolve(`/plans/configurations/${data.configurationId}/canvas`)}
+        class="flex items-center gap-1 rounded border border-plumage bg-transparent px-2 py-1 text-[10px] text-crown-ash hover:border-talon-gold hover:text-talon-gold"
+        aria-label={translate("canvas.expandLink", $locale)}
+      >
+        <Expand class="size-3" />
+        {translate("canvas.expandLink", $locale)}
+      </a>
+    </div>
   {/if}
 
   <HintBanner threadId={data.configurationId} />

@@ -145,6 +145,24 @@ func (r *RuntimeRepository) CreateStepExecution(ctx context.Context, input workf
 		return workflow.StepExecutionRecord{}, err
 	}
 
+	if r.chat != nil && step.Attempt == 1 {
+		execID := executionID
+		configID, lookupErr := r.plans.GetPlanConfigurationIDForExecution(ctx, tenantID, executionID)
+		if lookupErr == nil {
+			threadID := configID.String()
+			if !r.stepStartedChatMessageExists(ctx, tenantID, threadID, step.ID.String()) {
+				_, _ = r.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
+					ThreadID:    threadID,
+					ExecutionID: &execID,
+					Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
+					Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_STEP_STARTED,
+					Text:        "Step " + input.PlanStepKey + " started.",
+					PayloadJSON: chat.BuildStepStartedPayload(input.PlanStepKey, step.ID.String()),
+				})
+			}
+		}
+	}
+
 	return workflow.StepExecutionRecord{
 		ID:              step.ID.String(),
 		PlanStepKey:     step.PlanStepKey,
@@ -402,6 +420,35 @@ func (r *RuntimeRepository) appendRunFinishedChatMessage(ctx context.Context, te
 		Text:        text,
 		PayloadJSON: payload,
 	})
+}
+
+// stepStartedChatMessageExists reports whether STEP_STARTED was already appended
+// for the given step execution (Temporal activity retries must not duplicate).
+func (r *RuntimeRepository) stepStartedChatMessageExists(
+	ctx context.Context,
+	tenantID uuid.UUID,
+	threadID, stepExecutionID string,
+) bool {
+	if r == nil || r.chat == nil {
+		return false
+	}
+	msgs, err := r.chat.ListMessages(ctx, tenantID, threadID, 0, 0)
+	if err != nil {
+		return false
+	}
+	for _, msg := range msgs {
+		if msg.GetKind() != chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_STEP_STARTED {
+			continue
+		}
+		var payload map[string]string
+		if err := json.Unmarshal([]byte(msg.GetPayloadJson()), &payload); err != nil {
+			continue
+		}
+		if payload["step_execution_id"] == stepExecutionID {
+			return true
+		}
+	}
+	return false
 }
 
 // executionFailureReason derives a short failure summary from failed step executions.
