@@ -17,6 +17,7 @@ import (
 )
 
 type RuntimeRepository struct {
+	chat      chat.Store
 	plans     *Repository
 	executors ExecutorLookup
 	chat      chat.Store
@@ -24,6 +25,7 @@ type RuntimeRepository struct {
 
 func NewRuntimeRepository(planRepo *Repository, executors ExecutorLookup, chatStore chat.Store) *RuntimeRepository {
 	return &RuntimeRepository{
+		chat:      chatStore,
 		plans:     planRepo,
 		executors: executors,
 		chat:      chatStore,
@@ -324,6 +326,20 @@ func (r *RuntimeRepository) CreateApprovalRequest(ctx context.Context, input wor
 		Status:          ApprovalRequestStatusPending,
 	}); err != nil {
 		return err
+	}
+	if r.chat != nil {
+		execID := executionID
+		configID, lookupErr := r.plans.GetPlanConfigurationIDForExecution(ctx, tenantID, executionID)
+		if lookupErr == nil {
+			_, _ = r.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
+				ThreadID:    configID.String(),
+				ExecutionID: &execID,
+				Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
+				Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_APPROVAL_RAISED,
+				Text:        "Approval required on step " + input.PlanStepKey + ".",
+				PayloadJSON: chat.BuildApprovalRaisedPayload(input.ApprovalRequestID),
+			})
+		}
 	}
 	return r.plans.UpdateStepExecutionStatus(ctx, tenantID, stepID, StepStatusAwaitingApproval, "", "", input.ApprovalRequestID)
 }

@@ -10,7 +10,9 @@ import (
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 
+	chatv1 "github.com/harpia/control-plane/gen/harpia/chat/v1"
 	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
+	"github.com/harpia/control-plane/internal/chat"
 	"github.com/harpia/control-plane/internal/identity"
 	"github.com/harpia/control-plane/internal/workflow"
 )
@@ -143,6 +145,26 @@ func (h *PlanHandler) RespondToApprovalRequest(
 	if err := h.approvalSignaler.SignalPlanApprovalDecision(ctx, workflowID, "", signal); err != nil {
 		return nil, connect.NewError(connect.CodeUnavailable, err)
 	}
+
+	if h.chat != nil {
+		execID := updated.PlanExecutionID
+		configID, lookupErr := h.repo.GetPlanConfigurationIDForExecution(ctx, tenantID, updated.PlanExecutionID)
+		if lookupErr == nil {
+			text := "Approval rejected."
+			if req.Msg.GetApproved() {
+				text = "Approval granted."
+			}
+			_, _ = h.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
+				ThreadID:    configID.String(),
+				ExecutionID: &execID,
+				Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
+				Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_APPROVAL_DECIDED,
+				Text:        text,
+				PayloadJSON: chat.BuildApprovalDecidedPayload(updated.ID, req.Msg.GetApproved()),
+			})
+		}
+	}
+
 	return connect.NewResponse(&plansv1.RespondToApprovalRequestResponse{
 		ApprovalRequest: approvalRequestToProto(planApprovalRequestToDomain(updated)),
 	}), nil

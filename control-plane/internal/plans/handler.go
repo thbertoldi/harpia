@@ -13,11 +13,13 @@ import (
 	"go.temporal.io/sdk/client"
 
 	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
+	"github.com/harpia/control-plane/internal/chat"
 	"github.com/harpia/control-plane/internal/identity"
 	"github.com/harpia/control-plane/internal/workflow"
 )
 
 type PlanHandler struct {
+	chat             chat.Store
 	repo             *Repository
 	executors        ExecutorLookup
 	validator        *BindingValidator
@@ -38,7 +40,7 @@ type PlanExecutionRetryer interface {
 	PrepareRetryFromStep(ctx context.Context, tenantID uuid.UUID, planExecutionID uuid.UUID, failedStepExecutionID uuid.UUID) (*PlanExecution, workflow.PlanWorkflowInput, error)
 }
 
-func NewPlanHandler(repo *Repository, executors ExecutorLookup, schedule *ScheduleManager, starters ...PlanWorkflowStarter) (*PlanHandler, error) {
+func NewPlanHandler(repo *Repository, executors ExecutorLookup, schedule *ScheduleManager, chatStore chat.Store, starters ...PlanWorkflowStarter) (*PlanHandler, error) {
 	if repo == nil {
 		return nil, errors.New("plans: repository is required")
 	}
@@ -50,11 +52,12 @@ func NewPlanHandler(repo *Repository, executors ExecutorLookup, schedule *Schedu
 		starter = starters[0]
 	}
 	handler := &PlanHandler{
+		chat:            chatStore,
 		repo:            repo,
 		executors:       executors,
 		validator:       NewBindingValidator(executors),
 		schedule:        schedule,
-		runtime:         NewRuntimeRepository(repo, executors, nil),
+		runtime:         NewRuntimeRepository(repo, executors, chatStore),
 		workflowStarter: starter,
 		elicitations:    repo,
 		approvals:       repo,
