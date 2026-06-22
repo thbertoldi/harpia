@@ -8,7 +8,9 @@
   }
   let { threadId }: Props = $props();
 
-  const storageKey = $derived(`harpia.thread.${threadId}.composerHintDismissed`);
+  const storageKey = $derived(
+    `harpia.thread.${threadId}.composerHintDismissed`,
+  );
 
   let visible = $state(false);
 

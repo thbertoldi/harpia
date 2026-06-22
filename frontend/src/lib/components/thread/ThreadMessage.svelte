@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { ChatMessage } from "$lib/chat/types";
-  import { locale, translate } from "$lib/i18n";
+  import { locale } from "$lib/i18n";
   import { formatRelativeTime } from "$lib/i18n/format";
   import SystemEventCard from "./SystemEventCard.svelte";
   import ElicitationRefCard from "./ElicitationRefCard.svelte";
@@ -15,9 +15,9 @@
 {#if message.kind === "USER_TEXT"}
   <div
     id={`m-${message.id}`}
-    class="self-end max-w-[85%] rounded-lg border border-plumage bg-obsidian-light px-3 py-2"
+    class="max-w-[85%] self-end rounded-lg border border-plumage bg-obsidian-light px-3 py-2"
   >
-    <p class="text-[13px] text-cream whitespace-pre-wrap">{message.text}</p>
+    <p class="text-[13px] whitespace-pre-wrap text-cream">{message.text}</p>
     <p class="mt-1 text-right text-[10px] text-crown-ash-dark">
       {formatRelativeTime(message.createdAt, $locale)}
     </p>

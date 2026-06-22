@@ -20,7 +20,6 @@ type RuntimeRepository struct {
 	chat      chat.Store
 	plans     *Repository
 	executors ExecutorLookup
-	chat      chat.Store
 }
 
 func NewRuntimeRepository(planRepo *Repository, executors ExecutorLookup, chatStore chat.Store) *RuntimeRepository {
@@ -28,7 +27,6 @@ func NewRuntimeRepository(planRepo *Repository, executors ExecutorLookup, chatSt
 		chat:      chatStore,
 		plans:     planRepo,
 		executors: executors,
-		chat:      chatStore,
 	}
 }
 

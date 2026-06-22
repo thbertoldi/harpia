@@ -1,10 +1,8 @@
 <script lang="ts">
-  import { onMount } from "svelte";
   import { browser } from "$app/environment";
-  import { page } from "$app/state";
   import { getTenant } from "$lib/auth";
   import { locale, translate } from "$lib/i18n";
-  import { appendThreadMessage, loadThreadMessages } from "$lib/chat/client";
+  import { loadThreadMessages } from "$lib/chat/client";
   import { watchThreadMessages } from "$lib/chat/watch";
   import type { ChatMessage } from "$lib/chat/types";
   import { buildThreadSections } from "$lib/plans/thread";
@@ -45,7 +43,7 @@
           if (controller.signal.aborted) return;
           messages = [...messages, ...batch];
         }
-      } catch (err) {
+      } catch {
         if (controller.signal.aborted) return;
         loadError = true;
       }
@@ -143,7 +141,7 @@
     </p>
   {:else}
     <div class="flex flex-col gap-2">
-      {#each sections as section, index (section.kind === "execution" ? section.group.executionId : section.message.id)}
+      {#each sections as section (section.kind === "execution" ? section.group.executionId : section.message.id)}
         {#if section.kind === "plan-scope"}
           <ThreadMessage message={section.message} />
         {:else}

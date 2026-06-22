@@ -30,14 +30,19 @@
       value = "";
       onSent?.();
     } catch (e) {
-      error = e instanceof Error ? e.message : translate("thread.composer.error", $locale);
+      error =
+        e instanceof Error
+          ? e.message
+          : translate("thread.composer.error", $locale);
     } finally {
       sending = false;
     }
   }
 </script>
 
-<div class="flex flex-col gap-2 border-t border-plumage bg-obsidian-light px-3 py-3">
+<div
+  class="flex flex-col gap-2 border-t border-plumage bg-obsidian-light px-3 py-3"
+>
   <div class="flex items-end gap-2">
     <textarea
       bind:value

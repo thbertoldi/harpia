@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { MessageSquare, CheckCircle2, XCircle } from "lucide-svelte";
+  import { MessageSquare, CheckCircle2 } from "lucide-svelte";
   import type { ChatMessage } from "$lib/chat/types";
-  import { locale, translate } from "$lib/i18n";
+  import { locale } from "$lib/i18n";
   import { formatRelativeTime } from "$lib/i18n/format";
 
   interface Props {
@@ -11,9 +11,7 @@
 
   const isAnswered = $derived(message.kind === "ELICITATION_ANSWERED");
 
-  const icon = $derived(
-    isAnswered ? CheckCircle2 : MessageSquare,
-  );
+  const icon = $derived(isAnswered ? CheckCircle2 : MessageSquare);
 </script>
 
 <div

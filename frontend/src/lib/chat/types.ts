@@ -1,3 +1,4 @@
+import { timestampDate } from "@bufbuild/protobuf/wkt";
 import {
   ThreadMessageKind as ProtoThreadMessageKind,
   ThreadMessageRole as ProtoThreadMessageRole,
@@ -22,14 +23,14 @@ export interface ChatMessage {
   id: string;
   tenantId: string;
   threadId: string;
-  executionId: string;            // empty string when plan-scope
+  executionId: string; // empty string when plan-scope
   role: ChatMessageRole;
   kind: ChatMessageKind;
   text: string;
-  payloadJson: string;            // JSON-encoded per-kind payload; parse at use site
-  authorUserId: string;           // empty for SYSTEM
+  payloadJson: string; // JSON-encoded per-kind payload; parse at use site
+  authorUserId: string; // empty for SYSTEM
   sequenceNumber: bigint;
-  createdAt: string;              // ISO-8601 (from proto Timestamp)
+  createdAt: string; // ISO-8601 (from proto Timestamp)
 }
 
 const ROLE_FROM_PROTO: Record<number, ChatMessageRole> = {
@@ -84,7 +85,7 @@ export function chatMessageFromProto(p: ProtoThreadMessage): ChatMessage {
     payloadJson: p.payloadJson,
     authorUserId: p.authorUserId,
     sequenceNumber: p.sequenceNumber,
-    createdAt: p.createdAt ? p.createdAt.toDate().toISOString() : "",
+    createdAt: p.createdAt ? timestampDate(p.createdAt).toISOString() : "",
   };
 }
 

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Activity, Check, AlertTriangle, Play, Save } from "lucide-svelte";
   import type { ChatMessage } from "$lib/chat/types";
-  import { locale, translate } from "$lib/i18n";
+  import { locale } from "$lib/i18n";
   import { formatRelativeTime } from "$lib/i18n/format";
 
   interface Props {
@@ -20,8 +20,6 @@
             ? Activity
             : Save,
   );
-
-  const labelKey = $derived(`thread.event.${message.kind.toLowerCase()}`);
 </script>
 
 <div

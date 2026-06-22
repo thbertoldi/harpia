@@ -26,7 +26,7 @@
           if (controller.signal.aborted) return;
           items = batch;
         }
-      } catch (err) {
+      } catch {
         if (controller.signal.aborted) return; // expected on unmount
         loadError = true;
       }

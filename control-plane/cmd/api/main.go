@@ -29,7 +29,6 @@ import (
 	"github.com/harpia/control-plane/internal/budget"
 	"github.com/harpia/control-plane/internal/chat"
 	"github.com/harpia/control-plane/internal/cache"
-	"github.com/harpia/control-plane/internal/chat"
 	"github.com/harpia/control-plane/internal/config"
 	"github.com/harpia/control-plane/internal/database"
 	"github.com/harpia/control-plane/internal/executors"
@@ -101,7 +100,6 @@ func runWorker(ctx context.Context, cfg *config.Config) {
 		PayloadStore: garageStore,
 	})
 
-	chatStore := chat.NewPostgresStore(pool)
 	planActivities := &workflow.PlanActivities{
 		Runtime:      plans.NewRuntimeRepository(planRepo, executorRepo, chatStore),
 		Integrations: executorRuntime.Integrations,
