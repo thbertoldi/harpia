@@ -16,11 +16,13 @@ import (
 	chatv1 "github.com/harpia/control-plane/gen/harpia/chat/v1"
 	"github.com/harpia/control-plane/internal/chat"
 	"github.com/harpia/control-plane/internal/identity"
+	"github.com/harpia/control-plane/internal/planassistant"
 	"github.com/harpia/control-plane/internal/workflow"
 )
 
 type PlanHandler struct {
 	chat             chat.Store
+	assistant        *planassistant.Controller
 	repo             *Repository
 	executors        ExecutorLookup
 	validator        *BindingValidator
@@ -41,7 +43,7 @@ type PlanExecutionRetryer interface {
 	PrepareRetryFromStep(ctx context.Context, tenantID uuid.UUID, planExecutionID uuid.UUID, failedStepExecutionID uuid.UUID) (*PlanExecution, workflow.PlanWorkflowInput, error)
 }
 
-func NewPlanHandler(repo *Repository, executors ExecutorLookup, schedule *ScheduleManager, chatStore chat.Store, starters ...PlanWorkflowStarter) (*PlanHandler, error) {
+func NewPlanHandler(repo *Repository, executors ExecutorLookup, schedule *ScheduleManager, chatStore chat.Store, assistant *planassistant.Controller, starters ...PlanWorkflowStarter) (*PlanHandler, error) {
 	if repo == nil {
 		return nil, errors.New("plans: repository is required")
 	}
@@ -54,6 +56,7 @@ func NewPlanHandler(repo *Repository, executors ExecutorLookup, schedule *Schedu
 	}
 	handler := &PlanHandler{
 		chat:            chatStore,
+		assistant:       assistant,
 		repo:            repo,
 		executors:       executors,
 		validator:       NewBindingValidator(executors),
@@ -179,17 +182,10 @@ func (h *PlanHandler) CreatePlanConfiguration(ctx context.Context, req *connect.
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	// M3: append CONFIGURATION_SAVED message to the plan thread so the
-	// thread is non-empty on first render. Best-effort — log and continue
-	// if the chat store is unavailable. See UX-M3 design spec §2.5.
-	if h.chat != nil {
-		_, _ = h.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
-			ThreadID:    created.ID.String(),
-			Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
-			Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_CONFIGURATION_SAVED,
-			Text:        "Configuration saved.",
-			PayloadJSON: chat.BuildConfigurationSavedPayload(),
-		})
+	if h.assistant != nil {
+		if err := h.assistant.SeedThread(ctx, tenantID, created.ID); err != nil {
+			_ = err
+		}
 	}
 
 	return connect.NewResponse(&plansv1.CreatePlanConfigurationResponse{

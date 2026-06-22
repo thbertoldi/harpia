@@ -219,9 +219,9 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	scheduleManager := plans.NewScheduleManager(temporalClient, logger)
 	var planHandler *plans.PlanHandler
 	if temporalClient != nil {
-		planHandler, err = plans.NewPlanHandler(planRepo, executorRepo, scheduleManager, chatStore, temporalClient)
+		planHandler, err = plans.NewPlanHandler(planRepo, executorRepo, scheduleManager, chatStore, nil, temporalClient)
 	} else {
-		planHandler, err = plans.NewPlanHandler(planRepo, executorRepo, scheduleManager, chatStore)
+		planHandler, err = plans.NewPlanHandler(planRepo, executorRepo, scheduleManager, chatStore, nil)
 	}
 	if err != nil {
 		fatal("create plan handler failed", "error", err)
