@@ -12,14 +12,33 @@
   import ExecutionSection from "$lib/components/thread/ExecutionSection.svelte";
   import ThreadComposer from "$lib/components/thread/ThreadComposer.svelte";
   import HintBanner from "$lib/components/thread/HintBanner.svelte";
+  import PlanThreadTopBar from "$lib/components/PlanThreadTopBar.svelte";
+  import ScheduleDialog from "$lib/components/canvas/ScheduleDialog.svelte";
+  import { computeRunCost, type ExecutorPriceLookup } from "$lib/plans/cost";
+  import { PlanConfigurationStatus } from "$lib/gen/harpia/plans/v1/plans_pb";
   import { Expand } from "lucide-svelte";
 
   let { data } = $props();
 
   let messages = $state<ChatMessage[]>([]);
   let loadError = $state(false);
+  let scheduleOpen = $state(false);
 
   const tenantId = $derived(getTenant()?.id ?? "");
+
+  const pricing: ExecutorPriceLookup = (id) => data.executorCatalog?.get(id) ?? null;
+  const cost = $derived(
+    data.template && data.configuration
+      ? computeRunCost(data.template, data.configuration, pricing)
+      : { totalPerRunBrl: 0, currency: "BRL" as const, unboundStepCount: 0, breakdown: [] },
+  );
+  const statusLabel = $derived(
+    data.configuration?.status === PlanConfigurationStatus.RUNNABLE
+      ? translate("plans.configure.status.runnable", $locale)
+      : data.configuration?.status === PlanConfigurationStatus.SCHEDULED
+        ? translate("plans.configure.status.scheduled", $locale)
+        : translate("plans.configure.status.draft", $locale),
+  );
 
   // Initial load via list-RPC, then live updates via watch-RPC with AbortController.
   $effect(() => {
@@ -119,6 +138,15 @@
 </svelte:head>
 
 <div class="mx-auto flex max-w-3xl flex-col gap-3 px-4 py-6">
+  {#if data.template && data.configuration}
+    <PlanThreadTopBar
+      planName={data.template.name}
+      {statusLabel}
+      {cost}
+      onOpenSchedule={() => (scheduleOpen = true)}
+    />
+  {/if}
+
   {#if data.template?.steps && data.template.steps.length > 0}
     <div class="flex items-center justify-between gap-2">
       <PlanDagMiniMap steps={data.template.steps} edges={data.template.edges} />
@@ -151,7 +179,27 @@
     <div class="flex flex-col gap-2">
       {#each sections as section (section.kind === "execution" ? section.group.executionId : section.message.id)}
         {#if section.kind === "plan-scope"}
-          <ThreadMessage message={section.message} />
+          {@const isLastAssistantPrompt = (() => {
+            if (section.message.kind !== "ASSISTANT_PROMPT") return false;
+            const idx = messages.findIndex((m) => m.id === section.message.id);
+            if (idx < 0) return false;
+            const after = messages.slice(idx + 1);
+            const answered = after.some((m) => {
+              if (m.kind !== "USER_SELECTION") return false;
+              try {
+                return JSON.parse(m.payloadJson)?.in_response_to_message_id === section.message.id;
+              } catch { return false; }
+            });
+            return !answered;
+          })()}
+          {@const isAnsweredPrompt = section.message.kind === "ASSISTANT_PROMPT" && !isLastAssistantPrompt}
+          <ThreadMessage
+            message={section.message}
+            configurationId={data.configurationId}
+            {tenantId}
+            isLive={isLastAssistantPrompt}
+            isAnswered={isAnsweredPrompt}
+          />
         {:else}
           <ExecutionSection
             group={section.group}
@@ -165,6 +213,14 @@
 
   <ThreadComposer {tenantId} configurationId={data.configurationId} />
 </div>
+
+{#if data.configuration}
+  <ScheduleDialog
+    open={scheduleOpen}
+    configuration={data.configuration}
+    onClose={() => (scheduleOpen = false)}
+  />
+{/if}
 
 <style>
   :global(.harpia-pulse-anchor) {
