@@ -97,3 +97,84 @@ func mustEncodeJSON(v any) string {
 	}
 	return string(b)
 }
+
+// AssistantOption is one chip in an ASSISTANT_PROMPT payload.
+type AssistantOption struct {
+	ID       string   `json:"id"`
+	Label    string   `json:"label"`
+	Sublabel string   `json:"sublabel,omitempty"`
+	Value    string   `json:"value"`
+	PriceBrl *float64 `json:"price_brl,omitempty"`
+}
+
+// Payload structs are typed so JSON output is stable in declaration order.
+// Do NOT swap to map[string]string — Go's encoding/json sorts map keys
+// alphabetically, which breaks the byte-exact tests in messages_test.go.
+
+type configurationStartedPayload struct {
+	TemplateID string `json:"template_id"`
+}
+
+type assistantPromptPayload struct {
+	State   string            `json:"state"`
+	StepKey string            `json:"step_key"`
+	Options []AssistantOption `json:"options"`
+}
+
+type userSelectionPayload struct {
+	InResponseToMessageID string `json:"in_response_to_message_id"`
+	OptionID              string `json:"option_id"`
+	Value                 string `json:"value"`
+}
+
+type stepReboundPayload struct {
+	StepKey                        string `json:"step_key"`
+	PreviousExecutorInstallationID string `json:"previous_executor_installation_id"`
+	NewExecutorInstallationID      string `json:"new_executor_installation_id"`
+}
+
+type scheduleSetPayload struct {
+	ScheduleCron string `json:"schedule_cron"`
+	Timezone     string `json:"timezone"`
+}
+
+// BuildConfigurationStartedPayload returns the JSON payload for a
+// CONFIGURATION_STARTED message — written once on PlanConfiguration insert.
+func BuildConfigurationStartedPayload(templateID string) string {
+	return mustEncodeJSON(configurationStartedPayload{TemplateID: templateID})
+}
+
+// BuildAssistantPromptPayload returns the JSON payload for an
+// ASSISTANT_PROMPT message — the assistant's turn with quick-reply chips.
+func BuildAssistantPromptPayload(state, stepKey string, options []AssistantOption) string {
+	if options == nil {
+		options = []AssistantOption{}
+	}
+	return mustEncodeJSON(assistantPromptPayload{State: state, StepKey: stepKey, Options: options})
+}
+
+// BuildUserSelectionPayload returns the JSON payload for a USER_SELECTION
+// message — Ana's chip click in response to an ASSISTANT_PROMPT.
+func BuildUserSelectionPayload(inResponseToMessageID, optionID, value string) string {
+	return mustEncodeJSON(userSelectionPayload{
+		InResponseToMessageID: inResponseToMessageID,
+		OptionID:              optionID,
+		Value:                 value,
+	})
+}
+
+// BuildStepReboundPayload returns the JSON payload for a STEP_REBOUND
+// system message — Ana edited a previously-bound executor.
+func BuildStepReboundPayload(stepKey, previousInstallationID, newInstallationID string) string {
+	return mustEncodeJSON(stepReboundPayload{
+		StepKey:                        stepKey,
+		PreviousExecutorInstallationID: previousInstallationID,
+		NewExecutorInstallationID:      newInstallationID,
+	})
+}
+
+// BuildScheduleSetPayload returns the JSON payload for a SCHEDULE_SET
+// system message — the schedule dialog persisted a cron expression.
+func BuildScheduleSetPayload(scheduleCron, timezone string) string {
+	return mustEncodeJSON(scheduleSetPayload{ScheduleCron: scheduleCron, Timezone: timezone})
+}
