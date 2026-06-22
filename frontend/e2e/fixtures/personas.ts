@@ -9,7 +9,7 @@ type Persona = {
   role: PersonaRole;
 };
 
-const devTenant = { id: "dev", name: "Dev Workspace", themeKey: "default" };
+const devTenant = { id: "dev", name: "Dev Workspace", themeKey: "aiuna" };
 
 const personas: Record<PersonaRole, Persona> = {
   Leader: {
@@ -70,7 +70,7 @@ export async function loginAsPersona(
   await page.addInitScript((storedSession) => {
     localStorage.setItem("harpia_session", JSON.stringify(storedSession));
     localStorage.setItem("aiuna-color-scheme", "dark");
-    localStorage.setItem("aiuna-theme", "default");
+    localStorage.setItem("aiuna-theme", "aiuna");
   }, session);
 }
 

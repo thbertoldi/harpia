@@ -38,7 +38,7 @@ export interface Tenant {
 export const DEV_TENANT: Tenant = {
   id: "dev",
   name: "Dev Workspace",
-  themeKey: "default",
+  themeKey: "aiuna",
 };
 
 export interface Session {

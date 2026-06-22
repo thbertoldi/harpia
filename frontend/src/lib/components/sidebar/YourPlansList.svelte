@@ -88,7 +88,7 @@
       {/each}
     </div>
     <a
-      href={resolve(`/discover`)}
+      href={resolve(`/plans/configurations`)}
       class="mt-1 block px-3 py-1 text-[10px] text-crown-ash-dark hover:text-talon-gold"
     >
       {translate("sidebar.yourPlans.seeAll", $locale)}
