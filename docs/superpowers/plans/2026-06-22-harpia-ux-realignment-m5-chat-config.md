@@ -167,11 +167,11 @@ git commit -m "feat(ux-m5): add 5 chat-message kinds for the configuration assis
 
 - [ ] **Step 1: Write failing tests for the five builders**
 
-Append to `control-plane/internal/chat/messages_test.go`:
+The existing `control-plane/internal/chat/messages_test.go` is `package chat` (internal test). Builders are called unqualified — do NOT prefix with `chat.`. Append:
 
 ```go
 func TestBuildConfigurationStartedPayload(t *testing.T) {
-	got := chat.BuildConfigurationStartedPayload("tpl-123")
+	got := BuildConfigurationStartedPayload("tpl-123")
 	want := `{"template_id":"tpl-123"}`
 	if got != want {
 		t.Fatalf("got %s, want %s", got, want)
@@ -180,11 +180,11 @@ func TestBuildConfigurationStartedPayload(t *testing.T) {
 
 func TestBuildAssistantPromptPayload(t *testing.T) {
 	price := 0.12
-	options := []chat.AssistantOption{
+	options := []AssistantOption{
 		{ID: "opt-1", Label: "Junior", Sublabel: "R$ 0.02/run", Value: "inst-1", PriceBrl: &price},
 		{ID: "opt-2", Label: "Senior", Sublabel: "", Value: "inst-2", PriceBrl: nil},
 	}
-	got := chat.BuildAssistantPromptPayload("BINDING_STEP", "step-a", options)
+	got := BuildAssistantPromptPayload("BINDING_STEP", "step-a", options)
 	if !strings.Contains(got, `"state":"BINDING_STEP"`) ||
 		!strings.Contains(got, `"step_key":"step-a"`) ||
 		!strings.Contains(got, `"options":`) ||
@@ -194,7 +194,7 @@ func TestBuildAssistantPromptPayload(t *testing.T) {
 }
 
 func TestBuildUserSelectionPayload(t *testing.T) {
-	got := chat.BuildUserSelectionPayload("msg-1", "opt-2", "inst-2")
+	got := BuildUserSelectionPayload("msg-1", "opt-2", "inst-2")
 	want := `{"in_response_to_message_id":"msg-1","option_id":"opt-2","value":"inst-2"}`
 	if got != want {
 		t.Fatalf("got %s, want %s", got, want)
@@ -202,7 +202,7 @@ func TestBuildUserSelectionPayload(t *testing.T) {
 }
 
 func TestBuildStepReboundPayload(t *testing.T) {
-	got := chat.BuildStepReboundPayload("step-a", "inst-old", "inst-new")
+	got := BuildStepReboundPayload("step-a", "inst-old", "inst-new")
 	want := `{"step_key":"step-a","previous_executor_installation_id":"inst-old","new_executor_installation_id":"inst-new"}`
 	if got != want {
 		t.Fatalf("got %s, want %s", got, want)
@@ -210,7 +210,7 @@ func TestBuildStepReboundPayload(t *testing.T) {
 }
 
 func TestBuildScheduleSetPayload(t *testing.T) {
-	got := chat.BuildScheduleSetPayload("0 9 * * *", "America/Sao_Paulo")
+	got := BuildScheduleSetPayload("0 9 * * *", "America/Sao_Paulo")
 	want := `{"schedule_cron":"0 9 * * *","timezone":"America/Sao_Paulo"}`
 	if got != want {
 		t.Fatalf("got %s, want %s", got, want)
@@ -218,7 +218,7 @@ func TestBuildScheduleSetPayload(t *testing.T) {
 }
 ```
 
-Add `"strings"` to the imports if not already present.
+Add `"strings"` to the imports if not already present. Do NOT add `chat` to imports — the file is `package chat`.
 
 - [ ] **Step 2: Run tests to verify they fail**
 
