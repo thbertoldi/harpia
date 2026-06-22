@@ -10,6 +10,11 @@ export type ChatMessageKind =
   | "USER_TEXT"
   | "ASSISTANT_TEXT"
   | "CONFIGURATION_SAVED"
+  | "CONFIGURATION_STARTED"
+  | "ASSISTANT_PROMPT"
+  | "USER_SELECTION"
+  | "STEP_REBOUND"
+  | "SCHEDULE_SET"
   | "RUN_STARTED"
   | "RUN_COMPLETED"
   | "RUN_FAILED"
@@ -44,6 +49,11 @@ const KIND_FROM_PROTO: Record<number, ChatMessageKind> = {
   [ProtoThreadMessageKind.USER_TEXT]: "USER_TEXT",
   [ProtoThreadMessageKind.ASSISTANT_TEXT]: "ASSISTANT_TEXT",
   [ProtoThreadMessageKind.CONFIGURATION_SAVED]: "CONFIGURATION_SAVED",
+  [ProtoThreadMessageKind.CONFIGURATION_STARTED]: "CONFIGURATION_STARTED",
+  [ProtoThreadMessageKind.ASSISTANT_PROMPT]: "ASSISTANT_PROMPT",
+  [ProtoThreadMessageKind.USER_SELECTION]: "USER_SELECTION",
+  [ProtoThreadMessageKind.STEP_REBOUND]: "STEP_REBOUND",
+  [ProtoThreadMessageKind.SCHEDULE_SET]: "SCHEDULE_SET",
   [ProtoThreadMessageKind.RUN_STARTED]: "RUN_STARTED",
   [ProtoThreadMessageKind.RUN_COMPLETED]: "RUN_COMPLETED",
   [ProtoThreadMessageKind.RUN_FAILED]: "RUN_FAILED",
@@ -65,6 +75,11 @@ const KIND_TO_PROTO: Record<ChatMessageKind, ProtoThreadMessageKind> = {
   USER_TEXT: ProtoThreadMessageKind.USER_TEXT,
   ASSISTANT_TEXT: ProtoThreadMessageKind.ASSISTANT_TEXT,
   CONFIGURATION_SAVED: ProtoThreadMessageKind.CONFIGURATION_SAVED,
+  CONFIGURATION_STARTED: ProtoThreadMessageKind.CONFIGURATION_STARTED,
+  ASSISTANT_PROMPT: ProtoThreadMessageKind.ASSISTANT_PROMPT,
+  USER_SELECTION: ProtoThreadMessageKind.USER_SELECTION,
+  STEP_REBOUND: ProtoThreadMessageKind.STEP_REBOUND,
+  SCHEDULE_SET: ProtoThreadMessageKind.SCHEDULE_SET,
   RUN_STARTED: ProtoThreadMessageKind.RUN_STARTED,
   RUN_COMPLETED: ProtoThreadMessageKind.RUN_COMPLETED,
   RUN_FAILED: ProtoThreadMessageKind.RUN_FAILED,
