@@ -22,6 +22,11 @@
 
   let editing = $state(false);
   let pending = $state(false);
+  // `submitted` flips true on the first successful chip click and stays
+  // true. Chips are hidden as soon as it flips, so a rapid second click
+  // before the next ASSISTANT_PROMPT arrives via the 2 s watch poll
+  // cannot fire a duplicate USER_SELECTION. Reset on edit-pencil reopen.
+  let submitted = $state(false);
 
   const payload = $derived.by(() => {
     try {
@@ -35,10 +40,10 @@
     }
   });
 
-  const showChips = $derived(isLive || editing);
+  const showChips = $derived((isLive || editing) && !submitted);
 
   async function onSelect(option: Option) {
-    if (pending) return;
+    if (pending || submitted) return;
     pending = true;
     try {
       await selectChip({
@@ -47,11 +52,18 @@
         promptMessageId: message.id,
         optionId: option.id,
         value: option.value,
+        label: option.label,
       });
+      submitted = true;
     } finally {
       pending = false;
       editing = false;
     }
+  }
+
+  function toggleEditing() {
+    editing = !editing;
+    if (editing) submitted = false;
   }
 </script>
 
@@ -65,7 +77,7 @@
       <button
         type="button"
         class="cursor-pointer rounded p-1 text-crown-ash hover:text-talon-gold"
-        onclick={() => (editing = !editing)}
+        onclick={toggleEditing}
         aria-label={translate("assistant.edit", $locale)}
       >
         <Pencil class="size-3.5" />
@@ -78,7 +90,7 @@
       {#each payload.options as opt (opt.id)}
         <button
           type="button"
-          disabled={pending}
+          disabled={pending || submitted}
           onclick={() => onSelect(opt)}
           class="cursor-pointer rounded-md border border-plumage bg-obsidian px-3 py-1.5 text-left text-[12px] text-cream hover:border-talon-gold hover:text-talon-gold disabled:cursor-not-allowed disabled:opacity-50"
         >

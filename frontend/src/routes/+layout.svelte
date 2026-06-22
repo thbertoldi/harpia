@@ -135,7 +135,14 @@
     >
       <nav class="h-full w-64 border-r border-plumage bg-obsidian px-4 py-6">
         <div class="mb-8 flex items-center justify-between">
-          <BrandLockup size="sm" />
+          <a
+            href={resolve("/")}
+            onclick={() => (navOpen = false)}
+            aria-label={translate("nav.home", $locale)}
+            class="inline-flex"
+          >
+            <BrandLockup size="sm" />
+          </a>
           <button
             onclick={() => (navOpen = false)}
             class="cursor-pointer rounded-md p-1 text-crown-ash transition-colors hover:text-cream"
@@ -208,7 +215,13 @@
             >
               <Menu class="size-5" />
             </button>
-            <BrandLockup size="sm" />
+            <a
+              href={resolve("/")}
+              aria-label={translate("nav.home", $locale)}
+              class="inline-flex"
+            >
+              <BrandLockup size="sm" />
+            </a>
           </div>
 
           <div class="flex items-center gap-4">

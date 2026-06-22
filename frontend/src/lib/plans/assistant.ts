@@ -11,6 +11,8 @@ export async function selectChip(args: {
   promptMessageId: string;
   optionId: string;
   value: string;
+  /** Human-readable chip label, surfaced in the right-aligned bubble. */
+  label?: string;
 }): Promise<void> {
   const payload = JSON.stringify({
     in_response_to_message_id: args.promptMessageId,
@@ -22,7 +24,7 @@ export async function selectChip(args: {
     args.configurationId,
     "OVERSEER",
     "USER_SELECTION",
-    "",
+    args.label ?? "",
     payload,
   );
 }
