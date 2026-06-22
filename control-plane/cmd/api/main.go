@@ -28,6 +28,7 @@ import (
 	"github.com/harpia/control-plane/internal/artifacts"
 	"github.com/harpia/control-plane/internal/budget"
 	"github.com/harpia/control-plane/internal/cache"
+	"github.com/harpia/control-plane/internal/chat"
 	"github.com/harpia/control-plane/internal/config"
 	"github.com/harpia/control-plane/internal/database"
 	"github.com/harpia/control-plane/internal/executors"
@@ -214,11 +215,12 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	}
 
 	scheduleManager := plans.NewScheduleManager(temporalClient, logger)
+	chatStore := chat.NewPostgresStore(pool)
 	var planHandler *plans.PlanHandler
 	if temporalClient != nil {
-		planHandler, err = plans.NewPlanHandler(planRepo, executorRepo, scheduleManager, temporalClient)
+		planHandler, err = plans.NewPlanHandler(planRepo, executorRepo, scheduleManager, chatStore, temporalClient)
 	} else {
-		planHandler, err = plans.NewPlanHandler(planRepo, executorRepo, scheduleManager)
+		planHandler, err = plans.NewPlanHandler(planRepo, executorRepo, scheduleManager, chatStore)
 	}
 	if err != nil {
 		fatal("create plan handler failed", "error", err)
