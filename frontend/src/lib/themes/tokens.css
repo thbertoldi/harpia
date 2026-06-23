@@ -24,6 +24,10 @@
   --token-font-heading: "Manrope", system-ui, sans-serif;
   --token-font-body: "DM Sans", system-ui, sans-serif;
   --token-font-wordmark: "Bodoni Moda", serif;
+  /* M6 surface layering — 5-layer system per spec §2.5 */
+  --token-surface-deep: #0a0b0e;
+  --token-surface-hover: #20222c;
+  --token-surface-pop: #2a2d3a;
 }
 
 @theme {
@@ -33,6 +37,9 @@
   --color-primary-foreground: var(--token-on-primary);
   --color-surface: var(--token-surface);
   --color-surface-elevated: var(--token-surface-elevated);
+  --color-surface-deep: var(--token-surface-deep);
+  --color-surface-hover: var(--token-surface-hover);
+  --color-surface-pop: var(--token-surface-pop);
   --color-text: var(--token-text);
   --color-text-muted: var(--token-text-muted);
   --color-text-muted-dark: var(--token-text-muted-dark);

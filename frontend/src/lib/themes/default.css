@@ -19,6 +19,12 @@
   --token-font-wordmark: "Bodoni Moda", serif;
 }
 
+:root[data-theme="default"] {
+  --token-surface-deep: #0a0b0e;
+  --token-surface-hover: #20222c;
+  --token-surface-pop: #2a2d3a;
+}
+
 [data-theme="default"]:not(.dark) {
   --token-surface: #f5f2eb;
   --token-surface-elevated: #ebe6dc;

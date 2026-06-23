@@ -19,6 +19,12 @@
   --token-font-wordmark: "Jost", system-ui, sans-serif;
 }
 
+:root[data-theme="aiuna"] {
+  --token-surface-deep: #08090d;
+  --token-surface-hover: #1d1f29;
+  --token-surface-pop: #272a36;
+}
+
 [data-theme="aiuna"]:not(.dark) {
   --token-surface: #f4f5f7;
   --token-surface-elevated: #ffffff;
