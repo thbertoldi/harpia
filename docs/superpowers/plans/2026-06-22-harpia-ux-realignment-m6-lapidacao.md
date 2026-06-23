@@ -2489,4 +2489,3 @@ git log --oneline origin/trunk..HEAD
 Confirm every commit is conventional-format, no `Co-Authored-By` trailers, every commit has `(ux-m6)` scope.
 
 - [ ] **Step 4:** Open a PR (or hand to Thiago to open): title `feat(ux-m6): lapidação — finishing pass + IA cleanup residue`. PR body summarizes the seven workstreams and links to the spec + verification log.
-
