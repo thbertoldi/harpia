@@ -420,7 +420,7 @@ export function saveCelebration(node: HTMLElement): TransitionConfig {
 cd frontend && npx vitest run src/lib/motion/transitions.test.ts
 ```
 
-Expected: PASS (8 tests).
+Expected: PASS (7 tests).
 
 - [ ] **Step 5: Commit**
 
