@@ -208,10 +208,12 @@
 
 <style>
   .harpia-canvas-vignette {
+    /* Subtle vignette per spec §2.3: centre lighter than the corners.
+       Both stops are themed tokens so it works in light and dark. */
     background-image: radial-gradient(
       circle at center,
-      var(--token-surface-deep) 0%,
-      #080a0d 100%
+      var(--token-surface) 0%,
+      var(--token-surface-deep) 100%
     );
   }
   .harpia-empty-node {
