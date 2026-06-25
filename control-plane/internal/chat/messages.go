@@ -178,3 +178,60 @@ func BuildStepReboundPayload(stepKey, previousInstallationID, newInstallationID 
 func BuildScheduleSetPayload(scheduleCron, timezone string) string {
 	return mustEncodeJSON(scheduleSetPayload{ScheduleCron: scheduleCron, Timezone: timezone})
 }
+
+// AssistantMatrixRow is one task row in a BINDING_MATRIX ASSISTANT_PROMPT
+// payload (M6 spec §2.1). The matrix card renders every row at once with an
+// executor picker and an overseer cell defaulted per row.
+type AssistantMatrixRow struct {
+	StepKey              string            `json:"step_key"`
+	StepTitle            string            `json:"step_title"`
+	Contracts            MatrixContracts   `json:"contracts"`
+	Options              []AssistantOption `json:"options"`
+	CurrentExecutorID    string            `json:"current_executor_id"`
+	CurrentOverseerID    string            `json:"current_overseer_id"`
+	CurrentOverseerLabel string            `json:"current_overseer_label"`
+}
+
+// MatrixContracts carries a step's input/output artifact-type contract,
+// rendered as a chip on the matrix row.
+type MatrixContracts struct {
+	Input  string `json:"input"`
+	Output string `json:"output"`
+}
+
+// AssistantAction is one primary action on the landing card (M6 spec §2.2).
+type AssistantAction struct {
+	ID    string `json:"id"`
+	Label string `json:"label"`
+}
+
+type assistantMatrixPayload struct {
+	State       string               `json:"state"`
+	PoliciesSet bool                 `json:"policies_set"`
+	Rows        []AssistantMatrixRow `json:"rows"`
+}
+
+type assistantLandingPayload struct {
+	State   string            `json:"state"`
+	Actions []AssistantAction `json:"actions"`
+}
+
+// BuildAssistantMatrixPayload returns the JSON payload for a BINDING_MATRIX
+// ASSISTANT_PROMPT — the single card that surfaces every step row, the
+// overseer-per-row default, and the policy state. Reuses the ASSISTANT_PROMPT
+// kind; the state field distinguishes it from a chip prompt.
+func BuildAssistantMatrixPayload(rows []AssistantMatrixRow, policiesSet bool) string {
+	if rows == nil {
+		rows = []AssistantMatrixRow{}
+	}
+	return mustEncodeJSON(assistantMatrixPayload{State: "BINDING_MATRIX", PoliciesSet: policiesSet, Rows: rows})
+}
+
+// BuildAssistantLandingPayload returns the JSON payload for the landing-state
+// ASSISTANT_PROMPT — the post-save card with Run now / Schedule / Walk away.
+func BuildAssistantLandingPayload(actions []AssistantAction) string {
+	if actions == nil {
+		actions = []AssistantAction{}
+	}
+	return mustEncodeJSON(assistantLandingPayload{State: "landing", Actions: actions})
+}

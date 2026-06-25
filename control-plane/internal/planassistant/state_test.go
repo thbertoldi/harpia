@@ -16,6 +16,13 @@ func mkTemplate(stepKeys ...string) *plansv1.PlanTemplate {
 	return tpl
 }
 
+func validPolicies() *plansv1.PlanBehaviorPolicies {
+	return &plansv1.PlanBehaviorPolicies{
+		ElicitationTimeoutBehavior: plansv1.ElicitationTimeoutBehavior_ELICITATION_TIMEOUT_BEHAVIOR_PAUSE_UNTIL_ANSWERED,
+		PublishApprovalMode:        plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_AUTO_PUBLISH,
+	}
+}
+
 func TestDeriveState_AwaitingTemplate_WhenTemplateIdEmpty(t *testing.T) {
 	got := planassistant.DeriveState(mkTemplate("a"), &plansv1.PlanConfiguration{}, nil)
 	if got.Kind != planassistant.StateAwaitingTemplate {
@@ -23,91 +30,69 @@ func TestDeriveState_AwaitingTemplate_WhenTemplateIdEmpty(t *testing.T) {
 	}
 }
 
-func TestDeriveState_BindingFirstStep_WhenNoSlotBindings(t *testing.T) {
-	cfg := &plansv1.PlanConfiguration{PlanTemplateId: "tpl-1"}
+func TestDeriveState_BindingMatrix_WhenStepUnbound(t *testing.T) {
+	cfg := &plansv1.PlanConfiguration{
+		PlanTemplateId: "tpl-1",
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+		SlotBindings:   []*plansv1.SlotBinding{{StepKey: "a", ExecutorInstallationId: "inst-a"}},
+		// step "b" unbound
+		BehaviorPolicies: validPolicies(),
+	}
 	got := planassistant.DeriveState(mkTemplate("a", "b"), cfg, nil)
-	if got.Kind != planassistant.StateBindingStep || got.StepKey != "a" {
-		t.Fatalf("got %+v, want BINDING_STEP(a)", got)
+	if got.Kind != planassistant.StateBindingMatrix {
+		t.Fatalf("got %+v, want BINDING_MATRIX", got)
+	}
+	if got.StepKey != "" {
+		t.Fatalf("StepKey must be empty for BINDING_MATRIX, got %q", got.StepKey)
 	}
 }
 
-func TestDeriveState_BindingNextUnboundStep(t *testing.T) {
+func TestDeriveState_BindingMatrix_WhenPoliciesUnset(t *testing.T) {
 	cfg := &plansv1.PlanConfiguration{
 		PlanTemplateId: "tpl-1",
-		SlotBindings: []*plansv1.SlotBinding{
-			{StepKey: "a", ExecutorInstallationId: "inst-a"},
-		},
-	}
-	got := planassistant.DeriveState(mkTemplate("a", "b"), cfg, nil)
-	if got.Kind != planassistant.StateBindingStep || got.StepKey != "b" {
-		t.Fatalf("got %+v, want BINDING_STEP(b)", got)
-	}
-}
-
-func TestDeriveState_OverseerAfterAllBindings(t *testing.T) {
-	cfg := &plansv1.PlanConfiguration{
-		PlanTemplateId: "tpl-1",
-		SlotBindings: []*plansv1.SlotBinding{
-			{StepKey: "a", ExecutorInstallationId: "inst-a"},
-			{StepKey: "b", ExecutorInstallationId: "inst-b"},
-		},
-	}
-	got := planassistant.DeriveState(mkTemplate("a", "b"), cfg, nil)
-	if got.Kind != planassistant.StateSetOverseer || got.StepKey != "a" {
-		t.Fatalf("got %+v, want SET_OVERSEER(a)", got)
-	}
-}
-
-func TestDeriveState_PoliciesAfterAllOverseers(t *testing.T) {
-	cfg := &plansv1.PlanConfiguration{
-		PlanTemplateId: "tpl-1",
-		SlotBindings: []*plansv1.SlotBinding{
-			{StepKey: "a", ExecutorInstallationId: "inst-a"},
-		},
-		OverseerBindings: []*plansv1.OverseerBinding{
-			{StepKey: "a", OverseerUserId: "user-1"},
-		},
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+		SlotBindings:   []*plansv1.SlotBinding{{StepKey: "a", ExecutorInstallationId: "inst-a"}},
+		// policies unset
 	}
 	got := planassistant.DeriveState(mkTemplate("a"), cfg, nil)
-	if got.Kind != planassistant.StateSetPolicies {
-		t.Fatalf("got %+v, want SET_POLICIES", got)
+	if got.Kind != planassistant.StateBindingMatrix {
+		t.Fatalf("got %+v, want BINDING_MATRIX (policies unset)", got)
 	}
 }
 
-func TestDeriveState_ConfirmAfterPolicies(t *testing.T) {
+func TestDeriveState_BindingMatrix_WhenStatusStillDraft(t *testing.T) {
 	cfg := &plansv1.PlanConfiguration{
 		PlanTemplateId:   "tpl-1",
+		Status:           plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
 		SlotBindings:     []*plansv1.SlotBinding{{StepKey: "a", ExecutorInstallationId: "inst-a"}},
-		OverseerBindings: []*plansv1.OverseerBinding{{StepKey: "a", OverseerUserId: "u"}},
-		BehaviorPolicies: &plansv1.PlanBehaviorPolicies{
-			ElicitationTimeoutBehavior: plansv1.ElicitationTimeoutBehavior_ELICITATION_TIMEOUT_BEHAVIOR_PAUSE_UNTIL_ANSWERED,
-			PublishApprovalMode:        plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_AUTO_PUBLISH,
-		},
+		BehaviorPolicies: validPolicies(),
 	}
 	got := planassistant.DeriveState(mkTemplate("a"), cfg, nil)
-	if got.Kind != planassistant.StateConfirm {
-		t.Fatalf("got %+v, want CONFIRM", got)
+	if got.Kind != planassistant.StateBindingMatrix {
+		t.Fatalf("got %+v, want BINDING_MATRIX (still DRAFT)", got)
 	}
 }
 
-func TestDeriveState_ConfirmEvenWhenStatusRunnable(t *testing.T) {
-	// Per spec §2.2: derivation is orthogonal to status. A RUNNABLE
-	// configuration with everything bound + policies set still derives
-	// to CONFIRM — the assistant re-emits CONFIRM after edits.
-	// StateSaved is NEVER returned by DeriveState; it's emitted only by
-	// the controller as a one-shot ack right after the user clicks Save.
+func TestDeriveState_Saved_WhenStatusRunnable(t *testing.T) {
 	cfg := &plansv1.PlanConfiguration{
-		PlanTemplateId:   "tpl-1",
-		Status:           plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
-		SlotBindings:     []*plansv1.SlotBinding{{StepKey: "a", ExecutorInstallationId: "inst-a"}},
-		OverseerBindings: []*plansv1.OverseerBinding{{StepKey: "a", OverseerUserId: "u"}},
-		BehaviorPolicies: &plansv1.PlanBehaviorPolicies{
-			ElicitationTimeoutBehavior: plansv1.ElicitationTimeoutBehavior_ELICITATION_TIMEOUT_BEHAVIOR_PAUSE_UNTIL_ANSWERED,
-			PublishApprovalMode:        plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_AUTO_PUBLISH,
-		},
+		PlanTemplateId: "tpl-1",
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
+		SlotBindings:   []*plansv1.SlotBinding{{StepKey: "a", ExecutorInstallationId: "inst-a"}},
 	}
 	got := planassistant.DeriveState(mkTemplate("a"), cfg, []*chatv1.ThreadMessage{})
-	if got.Kind != planassistant.StateConfirm {
-		t.Fatalf("got %+v, want CONFIRM (status is orthogonal to state)", got)
+	if got.Kind != planassistant.StateSaved {
+		t.Fatalf("got %+v, want SAVED (status leaves DRAFT)", got)
+	}
+}
+
+func TestDeriveState_Saved_WhenStatusScheduled(t *testing.T) {
+	cfg := &plansv1.PlanConfiguration{
+		PlanTemplateId: "tpl-1",
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_SCHEDULED,
+		SlotBindings:   []*plansv1.SlotBinding{{StepKey: "a", ExecutorInstallationId: "inst-a"}},
+	}
+	got := planassistant.DeriveState(mkTemplate("a"), cfg, nil)
+	if got.Kind != planassistant.StateSaved {
+		t.Fatalf("got %+v, want SAVED (status leaves DRAFT)", got)
 	}
 }
