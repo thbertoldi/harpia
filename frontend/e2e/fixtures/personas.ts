@@ -15,7 +15,7 @@ const personas: Record<PersonaRole, Persona> = {
   Leader: {
     sub: "dev-leader",
     email: "leader@harpia.local",
-    name: "Lena Leader",
+    name: "Ana",
     role: "Leader",
   },
   Overseer: {
@@ -27,7 +27,7 @@ const personas: Record<PersonaRole, Persona> = {
   Engineer: {
     sub: "dev-engineer",
     email: "engineer@harpia.local",
-    name: "Eli Engineer",
+    name: "Platform Engineer",
     role: "Engineer",
   },
 };
@@ -78,7 +78,7 @@ export async function loginAsLeader(
   page: Page,
   baseURL?: string,
 ): Promise<void> {
-  await loginAsPersona(page, "Leader", baseURL);
+  await loginAsAna(page, baseURL);
 }
 
 export async function loginAsOverseer(
@@ -89,6 +89,17 @@ export async function loginAsOverseer(
 }
 
 export async function loginAsEngineer(
+  page: Page,
+  baseURL?: string,
+): Promise<void> {
+  await loginAsPlatformEngineer(page, baseURL);
+}
+
+export async function loginAsAna(page: Page, baseURL?: string): Promise<void> {
+  await loginAsPersona(page, "Leader", baseURL);
+}
+
+export async function loginAsPlatformEngineer(
   page: Page,
   baseURL?: string,
 ): Promise<void> {
