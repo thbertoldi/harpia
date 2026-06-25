@@ -169,7 +169,7 @@
           : nodeState.status === "bound" || nodeState.status === "done"
             ? "text-primary"
             : nodeState.status === "failed"
-              ? "text-[#d9534f]"
+              ? "text-danger"
               : "text-text-muted"
       }`}
     />
@@ -223,7 +223,7 @@
 
   /* failed: 1px red border */
   .harpia-node.is-failed {
-    border-color: #d9534f;
+    border-color: var(--token-danger);
   }
 
   /* selection ring sits outside the state treatment */
