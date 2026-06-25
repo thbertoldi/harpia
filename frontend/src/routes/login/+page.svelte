@@ -12,7 +12,7 @@
   import { applyColorScheme, initTheme, resolveColorScheme } from "$lib/themes";
   import { initLocale, locale, translate } from "$lib/i18n";
 
-  import { Sun, Moon, Crown, Eye, Wrench } from "lucide-svelte";
+  import { Sun, Moon, User, Wrench } from "lucide-svelte";
 
   const zitadelReady = isZitadelConfigured();
   const devLoginEnabled = isDevLoginEnabled();
@@ -41,7 +41,8 @@
     await login(email ? { login_hint: email } : undefined);
   }
 
-  function handleDevLogin(role: "Leader" | "Overseer" | "Engineer") {
+  /** Ana maps to the Leader dev session (operator seat); Engineer keeps admin permissions. */
+  function handleDevLogin(role: "Leader" | "Engineer") {
     if (!devLogin(role)) return;
     goto(resolve("/"));
   }
@@ -49,15 +50,9 @@
   const personas = $derived([
     {
       role: "Leader" as const,
-      labelKey: "login.persona.leader.label",
-      subtitleKey: "login.persona.leader.subtitle",
-      icon: Crown,
-    },
-    {
-      role: "Overseer" as const,
-      labelKey: "login.persona.overseer.label",
-      subtitleKey: "login.persona.overseer.subtitle",
-      icon: Eye,
+      labelKey: "login.persona.ana.label",
+      subtitleKey: "login.persona.ana.subtitle",
+      icon: User,
     },
     {
       role: "Engineer" as const,
