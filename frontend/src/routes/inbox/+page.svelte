@@ -59,9 +59,9 @@
 
 <div class="mx-auto max-w-5xl px-6 py-6">
   <header class="mb-6 flex items-baseline justify-between">
-    <h1 class="font-heading text-2xl text-cream">
+    <h1 class="font-heading text-2xl text-text">
       {translate("inbox.title", $locale)}
-      <span class="ml-2 text-xs font-normal text-crown-ash">
+      <span class="ml-2 text-xs font-normal text-text-muted">
         {translate("inbox.pendingCount", $locale).replace(
           "{count}",
           String(counts.all),
@@ -77,16 +77,16 @@
         onclick={() => (filter = chip.key)}
         class={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] transition ${
           filter === chip.key
-            ? "border-talon-gold bg-talon-gold/10 text-talon-gold"
-            : "border-plumage text-crown-ash hover:border-talon-gold hover:text-talon-gold"
+            ? "border-primary bg-primary/10 text-primary"
+            : "border-border text-text-muted hover:bg-surface-hover hover:text-text"
         }`}
       >
         {translate(chip.label, $locale)}
         <span
           class={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
             filter === chip.key
-              ? "bg-talon-gold text-obsidian"
-              : "bg-plumage text-cream"
+              ? "bg-primary text-primary-foreground"
+              : "bg-surface-hover text-text"
           }`}
         >
           {chip.count}
@@ -97,13 +97,13 @@
 
   {#if loadError}
     <p
-      class="rounded border border-plumage bg-obsidian-light px-4 py-3 text-sm text-crown-ash"
+      class="rounded border border-border bg-surface-elevated px-4 py-3 text-sm text-text-muted"
     >
       {translate("inbox.error", $locale)}
     </p>
   {:else if visible.length === 0}
     <p
-      class="rounded border border-plumage bg-obsidian-light px-4 py-3 text-sm text-crown-ash"
+      class="rounded border border-border bg-surface-elevated px-4 py-3 text-sm text-text-muted"
     >
       {translate("inbox.empty", $locale)}
     </p>
