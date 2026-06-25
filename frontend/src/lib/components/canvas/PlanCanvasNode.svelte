@@ -9,7 +9,6 @@
     CircleDashed,
     Bot,
   } from "lucide-svelte";
-  import { onDestroy } from "svelte";
   import type { PlanStep } from "$lib/gen/harpia/plans/v1/plans_pb";
   import type { CanvasStepState } from "$lib/plans/canvas-state";
   import { locale, translate } from "$lib/i18n";
@@ -89,10 +88,6 @@
     }
   });
 
-  onDestroy(() => {
-    pulseLoop = false;
-  });
-
   // --- hover intent timers ------------------------------------------------
   let showTimer: ReturnType<typeof setTimeout> | null = null;
   let hideTimer: ReturnType<typeof setTimeout> | null = null;
@@ -141,7 +136,15 @@
     onSelect();
   }
 
-  onDestroy(clearTimers);
+  // Teardown on unmount (Svelte 5 idiom — onDestroy must not be used here:
+  // it failed with a null lifecycle context and crashed every node, blanking
+  // the canvas). A dep-free $effect runs its cleanup exactly on destroy.
+  $effect(() => {
+    return () => {
+      pulseLoop = false;
+      clearTimers();
+    };
+  });
 </script>
 
 <button
