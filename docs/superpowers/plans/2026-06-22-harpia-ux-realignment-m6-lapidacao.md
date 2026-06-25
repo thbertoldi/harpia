@@ -2,6 +2,68 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> ## ⚠ READ FIRST — Execution status & corrections (updated 2026-06-25)
+>
+> This plan was authored from a pre-M5-merge snapshot. Some file paths and code
+> blocks below are **idealized and have drifted from the real tree**. Treat every
+> task's code block as *intent*, not gospel: **before writing, open the real file
+> and verify the actual signatures, interfaces, and imports.** Adapt to reality,
+> honor the spec, and record any deviation in your commit message under a
+> `Plan deviation:` line.
+>
+> **Done already (do not redo):**
+> - **Phase 0** (branch) ✓ — work on `feat/ux-realignment-m6-lapidacao`.
+> - **Phase 1** (foundation, Tasks 1-8) ✓ — `lib/motion/`, `Skeleton.svelte`,
+>   5-layer surface tokens, focus-ring CSS, tone-system doc all committed.
+> - **Phase 2** (backend, Tasks 9-12) ✓ — `planassistant` collapsed to
+>   `BINDING_MATRIX` + `landing`; `chat.BuildAssistantMatrixPayload` /
+>   `BuildAssistantLandingPayload` exist; `UpdatePlanConfiguration` fires
+>   `NextTurn` on DRAFT→non-DRAFT promotion. **The protocol is locked** — build
+>   the frontend against the real payload shapes below.
+>
+> **Real backend payload shapes (authoritative — from committed code):**
+> - Matrix `ASSISTANT_PROMPT` `payload_json`:
+>   `{ "state": "BINDING_MATRIX", "policies_set": bool, "rows": [ { "step_key", "step_title", "contracts": { "input", "output" }, "options": [ { "id", "label", "sublabel", "value", "price_brl" } ], "current_executor_id", "current_overseer_id", "current_overseer_label" } ] }`
+> - Landing `ASSISTANT_PROMPT` `payload_json`:
+>   `{ "state": "landing", "actions": [ { "id": "run-now", "label" }, { "id": "schedule", "label" }, { "id": "walk-away", "label" } ] }`
+>
+> **Known frontend path/shape corrections (verify, then follow these — NOT the task bodies):**
+> - The chat-message **dispatcher is `lib/components/thread/ThreadMessage.svelte`**
+>   (not AssistantPromptCard). It currently routes `payload.state === "CONFIRM"`
+>   → `ConfirmCard`. Task 16 = edit *ThreadMessage.svelte*: route
+>   `"BINDING_MATRIX"` → `BindingMatrixCard`, `"landing"` → `LandingCard`, and
+>   delete the CONFIRM→ConfirmCard branch.
+> - The canvas **edge component is `lib/components/canvas/PlanCanvasEdge.svelte`**
+>   and nodes are `PlanCanvasNode.svelte` (not `EdgePath.svelte`). Task 20 edits
+>   `PlanCanvasEdge.svelte`; node-state styling in `PlanCanvasNode.svelte`.
+> - **There is no `SidebarItem.svelte` / `Sidebar.svelte`.** Sidebar nav renders
+>   in **`routes/+layout.svelte`** using `lib/nav/sections.ts` (`resolveNavSections`).
+>   `+layout.svelte` already special-cases `section.href === "/inbox"` (line ~185) —
+>   that is the count-badge hook. Tasks 21-22 edit `+layout.svelte` (+ `lib/nav/sections.ts`
+>   if a count field is needed); there is no per-item component to add a prop to.
+> - **Phase 7 deletion trap:** `lib/i18n/hardcoded-copy.test.ts` lists deleted
+>   routes (`integrations`, `agents`, `audit`, `tasks/ongoing`) in its
+>   `HIGH_RISK_FILES` array and `readFileSync`s them. Deleting those routes makes
+>   the test throw. Any task that deletes a route in HIGH_RISK_FILES MUST remove
+>   it from that array in the same commit.
+> - `lib/plans/cost.ts` already exists (M5) — Task 13 adds `lib/plans/matrix.ts`
+>   alongside it; reuse `cost.ts` where the matrix needs per-run totals.
+>
+> ## Parallel execution discipline (MANDATORY when >1 agent is active)
+>
+> The only thing that corrupted earlier batches was **branch switching in a shared
+> working tree**. These rules make concurrent work safe:
+> 1. **Stay on `feat/ux-realignment-m6-lapidacao`. NEVER run `git checkout <other-branch>`
+>    / `git switch`.** Switching moves HEAD for every agent sharing the tree.
+> 2. **Commit only your own explicit paths** — `git add <path1> <path2>`. NEVER
+>    `git add -A` / `git add .` (it would scoop up another agent's in-progress files).
+> 3. **Work only on your assigned file set.** Assignments are disjoint by design; if
+>    you find you need a file outside your set, STOP and report — do not edit it.
+> 4. **Scoped error check:** `npm run check` reports the whole tree. Only *your*
+>    files must be error-free; ignore pre-existing errors and errors in files owned
+>    by a parallel agent.
+> 5. **Push after each commit** so integration stays current: `git push origin feat/ux-realignment-m6-lapidacao` (pull --rebase first if push is rejected).
+
 **Goal:** Finish the M1-M5 scaffolding into a product that *feels real*. Replace the per-step chip walk with a binding matrix card; rebuild the conversation ending as a three-action Landing card; make the inline DAG and expanded canvas live + properly anchored + hover-previewable; introduce a small motion library and apply it consistently across every Ana-facing surface; extend surface tokens from 2 to 5 layers and enforce gold-accent discipline; add live count badges to sidebar nav; brand Zitadel auth surfaces; complete the original IA cleanup residue (delete legacy admin duplicates, delete transitional redirects, collapse dev-login personas).
 
 **Architecture:** Backend change is small: collapse four `planassistant` states into one `BINDING_MATRIX` state, delete the `CONFIRM` gate (matrix card's Save promotes status directly), wire `UpdatePlanConfiguration` to call `NextTurn` on status promotion so the LandingCard emits. Frontend change is broad: new `lib/motion/` library (Svelte transitions + spring stores), new `Skeleton`, new `BindingMatrixCard` / `LandingCard` / `NodeHoverCard`, extended `PlanCanvas` (live state + edge anchors + vignette), extended `Sidebar` (count badges from existing streams), mechanical sweep adopting new tokens + motion across all card/list components. No proto changes, no migrations, no new RPCs.
