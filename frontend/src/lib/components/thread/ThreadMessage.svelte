@@ -6,7 +6,8 @@
   import ElicitationRefCard from "./ElicitationRefCard.svelte";
   import ApprovalRefCard from "./ApprovalRefCard.svelte";
   import AssistantPromptCard from "./AssistantPromptCard.svelte";
-  import ConfirmCard from "./ConfirmCard.svelte";
+  import BindingMatrixCard from "./BindingMatrixCard.svelte";
+  import LandingCard from "./LandingCard.svelte";
 
   interface Props {
     message: ChatMessage;
@@ -23,12 +24,13 @@
     isAnswered = false,
   }: Props = $props();
 
-  const isConfirm = $derived.by(() => {
-    if (message.kind !== "ASSISTANT_PROMPT") return false;
+  const promptState = $derived.by<string | null>(() => {
+    if (message.kind !== "ASSISTANT_PROMPT") return null;
     try {
-      return JSON.parse(message.payloadJson)?.state === "CONFIRM";
+      const s = JSON.parse(message.payloadJson)?.state;
+      return typeof s === "string" ? s : null;
     } catch {
-      return false;
+      return null;
     }
   });
 </script>
@@ -50,8 +52,10 @@
   >
     → {message.text || JSON.parse(message.payloadJson || "{}").value || "—"}
   </div>
-{:else if message.kind === "ASSISTANT_PROMPT" && isConfirm}
-  <ConfirmCard {message} {configurationId} {tenantId} {isLive} />
+{:else if message.kind === "ASSISTANT_PROMPT" && promptState === "BINDING_MATRIX"}
+  <BindingMatrixCard {message} {configurationId} {tenantId} />
+{:else if message.kind === "ASSISTANT_PROMPT" && promptState === "landing"}
+  <LandingCard {message} {configurationId} {tenantId} />
 {:else if message.kind === "ASSISTANT_PROMPT"}
   <AssistantPromptCard
     {message}
