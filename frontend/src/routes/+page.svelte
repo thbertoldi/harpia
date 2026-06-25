@@ -72,7 +72,7 @@
       ];
 
       // Redirect to the task dashboard
-      goto(resolve(`/tasks?id=${encodeURIComponent(res.task.id)}`));
+      goto(resolve("/inbox"));
     } catch (e) {
       error = toUserMessage(e);
       chatMessages = [
@@ -92,9 +92,9 @@
 
   function viewDashboard() {
     if (taskId) {
-      goto(resolve(`/tasks?id=${encodeURIComponent(taskId)}`));
+      goto(resolve("/inbox"));
     } else {
-      goto(resolve("/tasks"));
+      goto(resolve("/inbox"));
     }
   }
 

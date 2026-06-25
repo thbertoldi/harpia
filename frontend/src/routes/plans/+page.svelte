@@ -256,7 +256,7 @@
                 {translate("plans.lockedHint", $locale)}
               </p>
               <a
-                href={resolve("/integrations")}
+                href={resolve("/admin/integrations")}
                 class="shrink-0 rounded-md border border-plumage px-3 py-1.5 font-body text-xs text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
               >
                 {translate("plans.goIntegrations", $locale)}
