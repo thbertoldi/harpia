@@ -1,9 +1,7 @@
 import {
-  Activity,
   BookOpen,
   Bot,
   Inbox,
-  LayoutDashboard,
   Plug,
   ScrollText,
   Settings,
@@ -16,18 +14,6 @@ import type { NavSectionDef, ResolvedNavSection } from "./types";
  * editing +layout.svelte — reduces merge conflicts on the app shell.
  */
 export const navSectionDefs: NavSectionDef[] = [
-  {
-    i18nKey: "nav.tasks",
-    href: "/",
-    icon: LayoutDashboard,
-    visibleTo: "all",
-  },
-  {
-    i18nKey: "nav.ongoing",
-    href: "/tasks/ongoing",
-    icon: Activity,
-    visibleTo: "all",
-  },
   {
     i18nKey: "nav.needsYou",
     href: "/inbox",
@@ -42,25 +28,25 @@ export const navSectionDefs: NavSectionDef[] = [
   },
   {
     i18nKey: "nav.integrations",
-    href: "/integrations",
+    href: "/admin/integrations",
     icon: Plug,
     requiredPermission: "manageIntegrations",
   },
   {
     i18nKey: "nav.audit",
-    href: "/audit",
+    href: "/admin/audit",
     icon: ScrollText,
     requiredPermission: "viewAudit",
   },
   {
     i18nKey: "nav.agents",
-    href: "/agents",
+    href: "/admin/agents",
     icon: Bot,
     requiredPermission: "manageAgents",
   },
   {
     i18nKey: "nav.settings",
-    href: "/settings",
+    href: "/admin/settings",
     icon: Settings,
     requiredPermission: "manageTenantSettings",
   },
