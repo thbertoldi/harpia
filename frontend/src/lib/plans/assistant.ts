@@ -1,8 +1,10 @@
+import { create } from "@bufbuild/protobuf";
 import { appendThreadMessage } from "$lib/chat/client";
 import { planClient } from "$lib/rpc";
-import type {
-  PlanConfiguration,
-  PlanTemplate,
+import {
+  SlotBindingSchema,
+  type PlanConfiguration,
+  type PlanTemplate,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
 
 export async function selectChip(args: {
@@ -54,11 +56,26 @@ export async function editBinding(args: {
     "",
     reboundPayload,
   );
-  const nextSlotBindings = args.existingConfiguration.slotBindings.map((b) =>
-    b.stepKey === args.stepKey
-      ? { ...b, executorInstallationId: args.newInstallationId }
-      : b,
-  );
+  // Upsert: a step bound for the first time has no existing entry, so .map
+  // alone would silently drop the pick (the bug where a selected executor
+  // never reached the canvas). Append when absent; the server resolves the
+  // SKU + kind from the installation id on validation, so installation id is
+  // the only field the client must supply.
+  const existing = args.existingConfiguration.slotBindings;
+  const alreadyBound = existing.some((b) => b.stepKey === args.stepKey);
+  const nextSlotBindings = alreadyBound
+    ? existing.map((b) =>
+        b.stepKey === args.stepKey
+          ? { ...b, executorInstallationId: args.newInstallationId }
+          : b,
+      )
+    : [
+        ...existing,
+        create(SlotBindingSchema, {
+          stepKey: args.stepKey,
+          executorInstallationId: args.newInstallationId,
+        }),
+      ];
   const response = await planClient.updatePlanConfiguration({
     tenantId: args.tenantId,
     planConfigurationId: args.configurationId,
