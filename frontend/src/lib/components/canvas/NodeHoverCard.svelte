@@ -40,7 +40,9 @@
   );
 
   const executorDisplay = $derived(
-    executorName || node.defaultExecutorSkuKey || translate("common.emDash", $locale),
+    executorName ||
+      node.defaultExecutorSkuKey ||
+      translate("common.emDash", $locale),
   );
 
   const priceDisplay = $derived(
@@ -52,17 +54,16 @@
       : null,
   );
 
-  const stateLabel = $derived(translate(`canvas.status.${state.status}`, $locale));
+  const stateLabel = $derived(
+    translate(`canvas.status.${state.status}`, $locale),
+  );
 
   // Anchor ~6px above the node, horizontally centred. Card width is fixed so we
   // can centre on the node midpoint; position:fixed keeps it in viewport space.
   const CARD_WIDTH = 240;
   const GAP = 6;
   const left = $derived(
-    Math.max(
-      8,
-      anchorRect.left + anchorRect.width / 2 - CARD_WIDTH / 2,
-    ),
+    Math.max(8, anchorRect.left + anchorRect.width / 2 - CARD_WIDTH / 2),
   );
   const top = $derived(anchorRect.top - GAP);
 </script>

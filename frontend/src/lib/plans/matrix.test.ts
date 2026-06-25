@@ -97,9 +97,7 @@ describe("parseMatrixPayload", () => {
 
   it("throws when rows is not an array", () => {
     expect(() =>
-      parseMatrixPayload(
-        JSON.stringify({ state: "BINDING_MATRIX", rows: {} }),
-      ),
+      parseMatrixPayload(JSON.stringify({ state: "BINDING_MATRIX", rows: {} })),
     ).toThrow(/rows is not an array/);
   });
 });
@@ -110,7 +108,10 @@ describe("computeRunCostBRL", () => {
       row({ current_executor_id: "rss" }), // price 0
       row({ current_executor_id: "writer" }), // price 0.42
     ];
-    expect(computeRunCostBRL(rows)).toEqual({ totalBrl: 0.42, unboundCount: 0 });
+    expect(computeRunCostBRL(rows)).toEqual({
+      totalBrl: 0.42,
+      unboundCount: 0,
+    });
   });
 
   it("counts unbound rows and adds 0 for them", () => {
@@ -119,7 +120,10 @@ describe("computeRunCostBRL", () => {
       row({ current_executor_id: "" }), // unbound
       row({ current_executor_id: "" }), // unbound
     ];
-    expect(computeRunCostBRL(rows)).toEqual({ totalBrl: 0.42, unboundCount: 2 });
+    expect(computeRunCostBRL(rows)).toEqual({
+      totalBrl: 0.42,
+      unboundCount: 2,
+    });
   });
 
   it("treats a binding to an unknown option as unbound", () => {

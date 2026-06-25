@@ -35,9 +35,11 @@
     message,
     configurationId,
     tenantId,
+    // Reserved for parent price overrides; cost currently derived from matrix rows.
     executorCatalog,
     currentUserDisplayName,
   }: Props = $props();
+  void executorCatalog;
 
   // The matrix payload is the visible source of truth for rows, options,
   // contracts and current bindings. We seed it once from the (immutable)
@@ -250,8 +252,14 @@
                 !configuration ||
                 !template}
               onchange={(e) =>
-                onPickExecutor(row, (e.currentTarget as HTMLSelectElement).value)}
-              aria-label={translate("assistant.bindingMatrix.pickExecutor", $locale)}
+                onPickExecutor(
+                  row,
+                  (e.currentTarget as HTMLSelectElement).value,
+                )}
+              aria-label={translate(
+                "assistant.bindingMatrix.pickExecutor",
+                $locale,
+              )}
               class="w-full cursor-pointer appearance-none rounded-md border border-plumage bg-surface-hover py-2 pr-7 pl-3 text-[12px] text-cream hover:border-talon-gold focus:border-talon-gold focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="" disabled>
@@ -278,14 +286,18 @@
           </div>
 
           <!-- Overseer cell -->
-          <div class="group flex items-center gap-1.5 text-[11px] text-crown-ash">
+          <div
+            class="group flex items-center gap-1.5 text-[11px] text-crown-ash"
+          >
             <div
               class="flex size-[18px] items-center justify-center rounded-full border border-plumage bg-surface-pop text-[10px] font-semibold text-talon-gold"
             >
               {overseerInitial(row.current_overseer_label)}
             </div>
             <span class="truncate"
-              >{row.current_overseer_label || currentUserDisplayName || ""}</span
+              >{row.current_overseer_label ||
+                currentUserDisplayName ||
+                ""}</span
             >
             <button
               type="button"
@@ -336,7 +348,8 @@
         class="flex items-center justify-between gap-3 bg-surface-deep px-5 py-3.5"
       >
         <div class="flex items-center gap-2 text-[13px] text-crown-ash">
-          <span>{translate("assistant.bindingMatrix.costPerRun", $locale)}</span>
+          <span>{translate("assistant.bindingMatrix.costPerRun", $locale)}</span
+          >
           <span class="font-heading text-[14px] font-semibold text-talon-gold">
             R$ {cost.totalBrl.toFixed(2)}
           </span>
@@ -364,7 +377,7 @@
               in:chipFlash
               disabled={!complete || saving || !configuration}
               onclick={() => onSave(true)}
-              class="cursor-pointer rounded-md bg-primary px-3.5 py-2 text-[12px] font-semibold text-on-primary shadow-[0_1px_0_rgba(255,255,255,0.15)_inset] hover:opacity-90 disabled:cursor-not-allowed disabled:bg-surface-pop disabled:text-crown-ash-dark disabled:opacity-100 disabled:shadow-none"
+              class="text-on-primary cursor-pointer rounded-md bg-primary px-3.5 py-2 text-[12px] font-semibold shadow-[0_1px_0_rgba(255,255,255,0.15)_inset] hover:opacity-90 disabled:cursor-not-allowed disabled:bg-surface-pop disabled:text-crown-ash-dark disabled:opacity-100 disabled:shadow-none"
             >
               {translate("assistant.bindingMatrix.savePrimary", $locale)}
             </button>

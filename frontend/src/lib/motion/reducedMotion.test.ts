@@ -14,12 +14,16 @@ describe("prefersReducedMotion", () => {
   });
 
   it("returns true when prefers-reduced-motion: reduce matches", () => {
-    globalThis.matchMedia = vi.fn().mockReturnValue({ matches: true }) as unknown as typeof matchMedia;
+    globalThis.matchMedia = vi
+      .fn()
+      .mockReturnValue({ matches: true }) as unknown as typeof matchMedia;
     expect(prefersReducedMotion()).toBe(true);
   });
 
   it("returns false when reduce does not match", () => {
-    globalThis.matchMedia = vi.fn().mockReturnValue({ matches: false }) as unknown as typeof matchMedia;
+    globalThis.matchMedia = vi
+      .fn()
+      .mockReturnValue({ matches: false }) as unknown as typeof matchMedia;
     expect(prefersReducedMotion()).toBe(false);
   });
 });

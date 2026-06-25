@@ -25,14 +25,8 @@
     /** Fired when the node should hide its hover card. */
     onHoverHide?: () => void;
   }
-  let {
-    step,
-    nodeState,
-    selected,
-    onSelect,
-    onHoverShow,
-    onHoverHide,
-  }: Props = $props();
+  let { step, nodeState, selected, onSelect, onHoverShow, onHoverHide }: Props =
+    $props();
 
   let buttonEl = $state<HTMLButtonElement | null>(null);
 
@@ -78,7 +72,8 @@
   }
 
   $effect(() => {
-    const shouldPulse = nodeState.status === "running" && !prefersReducedMotion();
+    const shouldPulse =
+      nodeState.status === "running" && !prefersReducedMotion();
     if (shouldPulse && !pulseLoop) {
       pulseLoop = true;
       void runPulse();
@@ -217,7 +212,8 @@
   /* waiting: 3px outer gold halo */
   .harpia-node.is-waiting {
     border-color: var(--token-primary);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--token-primary) 55%, transparent);
+    box-shadow: 0 0 0 3px
+      color-mix(in srgb, var(--token-primary) 55%, transparent);
   }
 
   /* done: gold border, full opacity (check glyph supplied by icon) */

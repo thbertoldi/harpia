@@ -135,7 +135,7 @@
   >
     {#if loading}
       <div class="flex items-center gap-6">
-        {#each Array(3) as _, i (i)}
+        {#each [0, 1, 2] as i (i)}
           <Skeleton shape="rect" width="11rem" height="4.5rem" />
         {/each}
       </div>
