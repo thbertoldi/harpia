@@ -26,16 +26,16 @@
 </svelte:head>
 
 <div class="mx-auto max-w-5xl px-4 py-6">
-  <HarpyHeading tag="h1" class="text-2xl text-cream">
+  <HarpyHeading tag="h1" class="text-2xl text-text">
     {translate("discover.heading", $locale)}
   </HarpyHeading>
-  <p class="mt-1 font-body text-[13px] text-crown-ash">
+  <p class="mt-1 font-body text-[13px] text-text-muted">
     {translate("discover.subheading", $locale)}
   </p>
 
   {#if data.templates.length === 0}
     <p
-      class="mt-6 rounded border border-plumage bg-obsidian-light px-4 py-3 text-sm text-crown-ash"
+      class="mt-6 rounded border border-border bg-surface-elevated px-4 py-3 text-sm text-text-muted"
     >
       {translate("discover.empty", $locale)}
     </p>
@@ -44,7 +44,7 @@
       {#each groups as [vertical, templates] (vertical)}
         <section>
           <p
-            class="mb-2 font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
+            class="mb-2 font-mono text-[10px] tracking-widest text-text-muted-dark uppercase"
           >
             {vertical}
           </p>

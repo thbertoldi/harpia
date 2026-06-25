@@ -3,7 +3,6 @@
     AlertTriangle,
     CheckCircle2,
     Link2,
-    Loader2,
     Plug,
     ShieldAlert,
   } from "lucide-svelte";
@@ -11,6 +10,7 @@
   import { resolve } from "$app/paths";
   import { canManageIntegrations, getTenant } from "$lib/auth";
   import { toUserMessage } from "$lib/connect-errors";
+  import Skeleton from "$lib/components/Skeleton.svelte";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
   import { ConnectionStatus } from "$lib/gen/harpia/executors/v1/executors_pb";
   import {
@@ -23,6 +23,7 @@
     type DemoIntegrationFormValues,
   } from "$lib/integrations/executor-installations";
   import { locale, translate } from "$lib/i18n";
+  import { chipFlash, hoverCardLift } from "$lib/motion/transitions";
 
   const user = $derived(page.data.user);
   const integrationAccess = $derived(canManageIntegrations(user));
@@ -137,9 +138,9 @@
       case ConnectionStatus.ERROR:
         return "border-red-500/30 bg-red-500/10 text-red-300";
       case ConnectionStatus.CONNECTING:
-        return "border-talon-gold/30 bg-talon-gold/10 text-talon-gold";
+        return "border-primary/30 bg-primary/10 text-primary";
       default:
-        return "border-plumage bg-obsidian text-crown-ash";
+        return "border-border bg-surface text-text-muted";
     }
   }
 </script>
@@ -147,66 +148,68 @@
 <div class="mx-auto max-w-5xl px-4 py-6 lg:px-6">
   {#if !integrationAccess}
     <div
-      class="flex flex-col items-center justify-center rounded-lg border border-plumage bg-obsidian-light/40 px-6 py-16 text-center"
+      class="flex flex-col items-center justify-center rounded-lg border border-border bg-surface-elevated px-6 py-16 text-center"
     >
-      <ShieldAlert class="mb-4 size-12 text-talon-gold" />
-      <HarpyHeading tag="h1" class="mb-2 text-2xl text-cream">
+      <ShieldAlert class="mb-4 size-12 text-text-muted" />
+      <HarpyHeading tag="h1" class="mb-2 text-2xl text-text">
         {translate("integrations.accessDenied", $locale)}
       </HarpyHeading>
-      <p class="max-w-md font-body text-sm text-crown-ash">
+      <p class="max-w-md font-body text-sm text-text-muted">
         {translate("integrations.accessDeniedDescription", $locale)}
-        <span class="text-cream">{user?.role ?? "Leader"}</span>.
+        <span class="text-text">{user?.role ?? "Leader"}</span>.
       </p>
       <a
         href={resolve("/")}
-        class="mt-6 rounded-md border border-plumage px-4 py-2 font-body text-sm text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
+        class="mt-6 rounded-md border border-border px-4 py-2 font-body text-sm text-text-muted transition-colors hover:bg-surface-hover hover:text-text"
       >
         {translate("integrations.returnTasks", $locale)}
       </a>
     </div>
   {:else}
     <div class="mb-6">
-      <HarpyHeading tag="h1" class="text-2xl text-cream">
+      <HarpyHeading tag="h1" class="text-2xl text-text">
         {translate("integrations.heading", $locale)}
       </HarpyHeading>
-      <p class="mt-1 max-w-2xl font-body text-sm text-crown-ash">
+      <p class="mt-1 max-w-2xl font-body text-sm text-text-muted">
         {translate("integrations.subheading", $locale)}
       </p>
     </div>
 
     {#if actionError}
       <div
-        class="mb-4 flex items-start gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3"
+        class="mb-4 flex items-start gap-2 rounded-md border border-danger/30 bg-danger/10 px-4 py-3"
       >
-        <AlertTriangle class="mt-0.5 size-4 shrink-0 text-red-400" />
-        <p class="font-body text-sm text-red-300">{actionError}</p>
+        <AlertTriangle class="mt-0.5 size-4 shrink-0 text-danger" />
+        <p class="font-body text-sm text-danger">{actionError}</p>
       </div>
     {/if}
 
     {#if loading}
-      <div
-        class="flex items-center gap-2 rounded-lg border border-plumage bg-obsidian-light/60 px-4 py-5"
-      >
-        <Loader2 class="size-4 animate-spin text-talon-gold" />
-        <p class="font-body text-sm text-crown-ash">
-          {translate("integrations.loading", $locale)}
-        </p>
+      <div class="grid gap-4 md:grid-cols-2">
+        {#each [0, 1, 2, 3] as i (i)}
+          <div class="rounded-lg border border-border bg-surface-elevated p-5">
+            <Skeleton width="50%" height="1.25rem" />
+            <div class="mt-4">
+              <Skeleton width="100%" height="0.75rem" count={4} />
+            </div>
+          </div>
+        {/each}
       </div>
     {:else if !tenantId}
       <div
-        class="flex items-start gap-2 rounded-md border border-talon-gold/30 bg-talon-gold/10 px-4 py-3"
+        class="flex items-start gap-2 rounded-md border border-border bg-surface-elevated px-4 py-3"
       >
-        <AlertTriangle class="mt-0.5 size-4 shrink-0 text-talon-gold" />
-        <p class="font-body text-sm text-cream">
+        <AlertTriangle class="mt-0.5 size-4 shrink-0 text-text-muted" />
+        <p class="font-body text-sm text-text">
           {translate("integrations.noTenant", $locale)}
         </p>
       </div>
     {:else if loadError}
       <div
-        class="flex items-start gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3"
+        class="flex items-start gap-2 rounded-md border border-danger/30 bg-danger/10 px-4 py-3"
       >
-        <AlertTriangle class="mt-0.5 size-4 shrink-0 text-red-400" />
-        <p class="font-body text-sm text-red-300">
+        <AlertTriangle class="mt-0.5 size-4 shrink-0 text-danger" />
+        <p class="font-body text-sm text-danger">
           {translate("integrations.loadError", $locale, { error: loadError })}
         </p>
       </div>
@@ -215,22 +218,23 @@
         {#each cards as card (card.sku.id)}
           {@const form = formFor(card)}
           <article
-            class="flex flex-col rounded-lg border border-plumage bg-obsidian-light/60 p-5"
+            use:hoverCardLift
+            class="flex flex-col rounded-lg border border-border bg-surface-elevated p-5"
             data-testid={`integration-card-${card.sku.key}`}
           >
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
                 <div class="mb-2 flex items-center gap-2">
                   {#if card.kind === "rss"}
-                    <Plug class="size-4 text-talon-gold" />
+                    <Plug class="size-4 text-text-muted" />
                   {:else}
-                    <Link2 class="size-4 text-talon-gold" />
+                    <Link2 class="size-4 text-text-muted" />
                   {/if}
-                  <HarpyHeading tag="h2" class="text-lg text-cream">
+                  <HarpyHeading tag="h2" class="text-lg text-text">
                     {card.sku.displayName}
                   </HarpyHeading>
                 </div>
-                <p class="font-body text-sm text-crown-ash">
+                <p class="font-body text-sm text-text-muted">
                   {translate(`integrations.${card.kind}.description`, $locale)}
                 </p>
               </div>
@@ -246,15 +250,15 @@
               </span>
             </div>
 
-            <dl class="mt-4 grid gap-2 font-body text-xs text-crown-ash">
+            <dl class="mt-4 grid gap-2 font-body text-xs text-text-muted">
               <div class="flex items-center justify-between gap-3">
                 <dt>{translate("integrations.sku", $locale)}</dt>
-                <dd class="font-mono text-crown-ash-dark">{card.sku.key}</dd>
+                <dd class="font-mono text-text-muted-dark">{card.sku.key}</dd>
               </div>
               {#if card.installation}
                 <div class="flex items-center justify-between gap-3">
                   <dt>{translate("integrations.installationId", $locale)}</dt>
-                  <dd class="truncate font-mono text-crown-ash-dark">
+                  <dd class="truncate font-mono text-text-muted-dark">
                     {card.installation.id}
                   </dd>
                 </div>
@@ -263,10 +267,10 @@
 
             {#if !card.entitlement}
               <div
-                class="mt-4 flex items-start gap-2 rounded-md border border-talon-gold/30 bg-talon-gold/10 px-3 py-2"
+                class="mt-4 flex items-start gap-2 rounded-md border border-border bg-surface-hover px-3 py-2"
               >
-                <AlertTriangle class="mt-0.5 size-4 shrink-0 text-talon-gold" />
-                <p class="font-body text-sm text-cream">
+                <AlertTriangle class="mt-0.5 size-4 shrink-0 text-text-muted" />
+                <p class="font-body text-sm text-text">
                   {translate("integrations.notEntitled", $locale)}
                 </p>
               </div>
@@ -275,7 +279,7 @@
                 <div>
                   <label
                     for={`display-name-${card.sku.key}`}
-                    class="mb-1 block font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
+                    class="mb-1 block font-mono text-[10px] tracking-widest text-text-muted-dark uppercase"
                   >
                     {translate("integrations.displayName", $locale)}
                   </label>
@@ -284,7 +288,7 @@
                     value={form.displayName}
                     oninput={(event) =>
                       updateForm(card, { displayName: inputValue(event) })}
-                    class="w-full rounded-md border border-plumage bg-obsidian px-3 py-2 font-body text-sm text-cream outline-none focus:border-talon-gold"
+                    class="w-full rounded-md border border-border bg-surface px-3 py-2 font-body text-sm text-text outline-none focus:border-primary"
                   />
                 </div>
 
@@ -292,7 +296,7 @@
                   <div>
                     <label
                       for={`feeds-${card.sku.key}`}
-                      class="mb-1 block font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
+                      class="mb-1 block font-mono text-[10px] tracking-widest text-text-muted-dark uppercase"
                     >
                       {translate("integrations.rss.feedUrls", $locale)}
                     </label>
@@ -306,9 +310,9 @@
                       )}
                       oninput={(event) =>
                         updateForm(card, { feedsText: textareaValue(event) })}
-                      class="w-full rounded-md border border-plumage bg-obsidian px-3 py-2 font-mono text-xs text-cream outline-none focus:border-talon-gold"
+                      class="w-full rounded-md border border-border bg-surface px-3 py-2 font-mono text-xs text-text outline-none focus:border-primary"
                     ></textarea>
-                    <p class="mt-1 font-body text-xs text-crown-ash-dark">
+                    <p class="mt-1 font-body text-xs text-text-muted-dark">
                       {translate("integrations.rss.feedUrlsHelp", $locale)}
                     </p>
                   </div>
@@ -316,7 +320,7 @@
                   <div>
                     <label
                       for={`credential-${card.sku.key}`}
-                      class="mb-1 block font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
+                      class="mb-1 block font-mono text-[10px] tracking-widest text-text-muted-dark uppercase"
                     >
                       {translate("integrations.linkedin.credentialId", $locale)}
                     </label>
@@ -331,9 +335,9 @@
                         updateForm(card, {
                           oauthCredentialId: inputValue(event),
                         })}
-                      class="w-full rounded-md border border-plumage bg-obsidian px-3 py-2 font-mono text-xs text-cream outline-none focus:border-talon-gold"
+                      class="w-full rounded-md border border-border bg-surface px-3 py-2 font-mono text-xs text-text outline-none focus:border-primary"
                     />
-                    <p class="mt-1 font-body text-xs text-crown-ash-dark">
+                    <p class="mt-1 font-body text-xs text-text-muted-dark">
                       {translate(
                         "integrations.linkedin.credentialIdHelp",
                         $locale,
@@ -343,14 +347,14 @@
                 {/if}
 
                 <label
-                  class="flex items-center gap-2 font-body text-sm text-cream"
+                  class="flex items-center gap-2 font-body text-sm text-text"
                 >
                   <input
                     type="checkbox"
                     checked={form.enabled}
                     onchange={(event) =>
                       updateForm(card, { enabled: checkedValue(event) })}
-                    class="size-4 rounded border-plumage bg-obsidian text-talon-gold focus:ring-talon-gold"
+                    class="size-4 rounded border-border bg-surface text-primary focus:ring-primary"
                   />
                   {translate("integrations.enabled", $locale)}
                 </label>
@@ -361,10 +365,11 @@
                     onclick={() => handleSave(card)}
                     disabled={savingKey === card.sku.key}
                     data-testid={`save-integration-${card.sku.key}`}
-                    class="inline-flex cursor-pointer items-center gap-2 rounded-md bg-talon-gold px-4 py-2 font-body text-sm font-medium text-obsidian transition-all hover:bg-talon-gold-bright disabled:cursor-not-allowed disabled:opacity-50"
+                    in:chipFlash
+                    class="inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-4 py-2 font-body text-sm font-medium text-primary-foreground transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {#if savingKey === card.sku.key}
-                      <Loader2 class="size-4 animate-spin" />
+                      <Skeleton shape="circle" width="1rem" height="1rem" />
                       {translate("integrations.saving", $locale)}
                     {:else}
                       <CheckCircle2 class="size-4" />
@@ -386,10 +391,10 @@
           </article>
         {:else}
           <div
-            class="rounded-lg border border-dashed border-plumage px-6 py-12 text-center md:col-span-2"
+            class="rounded-lg border border-dashed border-border px-6 py-12 text-center md:col-span-2"
           >
-            <Plug class="mx-auto mb-3 size-10 text-talon-gold" />
-            <p class="font-body text-sm text-crown-ash">
+            <Plug class="mx-auto mb-3 size-10 text-text-muted" />
+            <p class="font-body text-sm text-text-muted">
               {translate("integrations.noDemoSkus", $locale)}
             </p>
           </div>

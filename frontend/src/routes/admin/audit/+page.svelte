@@ -6,9 +6,9 @@
     FileJson,
     FileSpreadsheet,
     Filter,
-    Loader2,
     ScrollText,
   } from "lucide-svelte";
+  import Skeleton from "$lib/components/Skeleton.svelte";
   import {
     AGENT_TYPES,
     FEEDBACK_DECISIONS,
@@ -21,6 +21,7 @@
     type AuditEventFilters,
   } from "$lib/audit/audit-store";
   import { locale, translate } from "$lib/i18n";
+  import { chipFlash, hoverCardLift } from "$lib/motion/transitions";
 
   const PAGE_SIZE = 10;
 
@@ -161,12 +162,12 @@
     >
       <div>
         <div class="mb-2 flex items-center gap-2">
-          <ScrollText class="size-6 text-talon-gold" />
-          <h1 class="font-heading text-3xl font-bold text-cream">
+          <ScrollText class="size-6 text-text-muted" />
+          <h1 class="font-heading text-3xl font-bold text-text">
             {translate("audit.heading", $locale)}
           </h1>
         </div>
-        <p class="font-body text-crown-ash">
+        <p class="font-body text-text-muted">
           {translate("audit.subheading", $locale)}
         </p>
       </div>
@@ -175,7 +176,7 @@
         <button
           onclick={exportCsv}
           disabled={exporting}
-          class="inline-flex cursor-pointer items-center gap-2 rounded-md border border-plumage px-3 py-2 font-body text-xs text-crown-ash transition-colors hover:border-talon-gold hover:text-cream disabled:opacity-50"
+          class="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border px-3 py-2 font-body text-xs text-text-muted transition-colors hover:bg-surface-hover hover:text-text disabled:opacity-50"
         >
           <FileSpreadsheet class="size-3.5" />
           {translate("audit.exportCsv", $locale)}
@@ -183,7 +184,7 @@
         <button
           onclick={exportJson}
           disabled={exporting}
-          class="inline-flex cursor-pointer items-center gap-2 rounded-md border border-plumage px-3 py-2 font-body text-xs text-crown-ash transition-colors hover:border-talon-gold hover:text-cream disabled:opacity-50"
+          class="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border px-3 py-2 font-body text-xs text-text-muted transition-colors hover:bg-surface-hover hover:text-text disabled:opacity-50"
         >
           <FileJson class="size-3.5" />
           {translate("audit.exportJson", $locale)}
@@ -192,11 +193,11 @@
     </div>
 
     <section
-      class="mb-6 rounded-lg border border-plumage bg-obsidian-light p-4"
+      class="mb-6 rounded-lg border border-border bg-surface-elevated p-4"
     >
       <div class="mb-4 flex items-center gap-2">
-        <Filter class="size-4 text-talon-gold" />
-        <h2 class="font-body text-sm font-medium text-cream">
+        <Filter class="size-4 text-text-muted" />
+        <h2 class="font-body text-sm font-medium text-text">
           {translate("audit.filters", $locale)}
         </h2>
       </div>
@@ -204,7 +205,7 @@
       <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <label class="block">
           <span
-            class="mb-1 block font-mono text-[10px] tracking-wider text-crown-ash-dark uppercase"
+            class="mb-1 block font-mono text-[10px] tracking-wider text-text-muted-dark uppercase"
             >{translate("audit.field.taskId", $locale)}</span
           >
           <input
@@ -212,26 +213,26 @@
             bind:value={taskId}
             data-testid="audit-filter-task-id"
             placeholder="task-a1b2…"
-            class="w-full rounded-md border border-plumage bg-obsidian px-3 py-2 font-mono text-xs text-cream placeholder:text-crown-ash-dark focus:border-talon-gold focus:outline-none"
+            class="w-full rounded-md border border-border bg-surface px-3 py-2 font-mono text-xs text-text placeholder:text-text-muted-dark focus:border-primary focus:outline-none"
           />
         </label>
 
         <label class="block">
           <span
-            class="mb-1 block font-mono text-[10px] tracking-wider text-crown-ash-dark uppercase"
+            class="mb-1 block font-mono text-[10px] tracking-wider text-text-muted-dark uppercase"
             >{translate("audit.field.user", $locale)}</span
           >
           <input
             type="text"
             bind:value={userId}
             placeholder="dev-overseer"
-            class="w-full rounded-md border border-plumage bg-obsidian px-3 py-2 font-mono text-xs text-cream placeholder:text-crown-ash-dark focus:border-talon-gold focus:outline-none"
+            class="w-full rounded-md border border-border bg-surface px-3 py-2 font-mono text-xs text-text placeholder:text-text-muted-dark focus:border-primary focus:outline-none"
           />
         </label>
 
         <label class="block">
           <span
-            class="mb-1 block font-mono text-[10px] tracking-wider text-crown-ash-dark uppercase"
+            class="mb-1 block font-mono text-[10px] tracking-wider text-text-muted-dark uppercase"
             >{translate("audit.field.agentType", $locale)}</span
           >
           <select
@@ -247,7 +248,7 @@
 
         <label class="block">
           <span
-            class="mb-1 block font-mono text-[10px] tracking-wider text-crown-ash-dark uppercase"
+            class="mb-1 block font-mono text-[10px] tracking-wider text-text-muted-dark uppercase"
             >{translate("audit.field.decision", $locale)}</span
           >
           <select
@@ -263,7 +264,7 @@
 
         <label class="block">
           <span
-            class="mb-1 block font-mono text-[10px] tracking-wider text-crown-ash-dark uppercase"
+            class="mb-1 block font-mono text-[10px] tracking-wider text-text-muted-dark uppercase"
             >{translate("common.from", $locale)}</span
           >
           <input
@@ -275,7 +276,7 @@
 
         <label class="block">
           <span
-            class="mb-1 block font-mono text-[10px] tracking-wider text-crown-ash-dark uppercase"
+            class="mb-1 block font-mono text-[10px] tracking-wider text-text-muted-dark uppercase"
             >{translate("common.to", $locale)}</span
           >
           <input
@@ -290,13 +291,14 @@
         <button
           onclick={applyFilters}
           data-testid="audit-apply-filters"
-          class="cursor-pointer rounded-md bg-talon-gold/10 px-4 py-2 font-body text-xs font-medium text-talon-gold transition-colors hover:bg-talon-gold/20"
+          in:chipFlash
+          class="cursor-pointer rounded-md bg-primary/10 px-4 py-2 font-body text-xs font-medium text-primary transition-colors hover:bg-primary/20"
         >
           {translate("audit.apply", $locale)}
         </button>
         <button
           onclick={clearFilters}
-          class="cursor-pointer rounded-md border border-plumage px-4 py-2 font-body text-xs text-crown-ash transition-colors hover:text-cream"
+          class="cursor-pointer rounded-md border border-border px-4 py-2 font-body text-xs text-text-muted transition-colors hover:bg-surface-hover hover:text-text"
         >
           {translate("audit.clear", $locale)}
         </button>
@@ -304,18 +306,20 @@
     </section>
 
     {#if loading}
-      <div class="flex items-center justify-center py-16">
-        <Loader2 class="size-6 animate-spin text-talon-gold" />
+      <div class="space-y-3 py-8">
+        {#each [0, 1, 2, 3, 4] as i (i)}
+          <Skeleton width="100%" height="5rem" />
+        {/each}
       </div>
     {:else if events.length === 0}
       <div
-        class="flex flex-col items-center justify-center rounded-lg border border-plumage py-20 text-center"
+        class="flex flex-col items-center justify-center rounded-lg border border-border py-20 text-center"
       >
-        <Download class="size-8 text-crown-ash-dark" />
-        <p class="mt-4 font-heading text-xl text-cream">
+        <Download class="size-8 text-text-muted-dark" />
+        <p class="mt-4 font-heading text-xl text-text">
           {translate("audit.empty.title", $locale)}
         </p>
-        <p class="mt-1 font-body text-sm text-crown-ash">
+        <p class="mt-1 font-body text-sm text-text-muted">
           {translate("audit.empty.description", $locale)}
         </p>
       </div>
@@ -323,20 +327,21 @@
       <div class="space-y-3">
         {#each events as event (event.eventId)}
           <article
-            class="rounded-lg border border-plumage bg-obsidian transition-colors hover:border-talon-gold/40"
+            use:hoverCardLift
+            class="rounded-lg border border-border bg-surface-elevated transition-colors hover:bg-surface-hover"
             data-testid={`audit-event-${event.eventId}`}
             data-event-type={event.eventType}
             data-task-id={event.taskId}
           >
-            <div class="border-b border-plumage/50 px-4 py-3">
+            <div class="border-b border-border/50 px-4 py-3">
               <div class="flex flex-wrap items-center gap-2">
                 <span
-                  class="rounded-full bg-talon-gold/10 px-2 py-0.5 font-mono text-[10px] tracking-wider text-talon-gold uppercase"
+                  class="rounded-full bg-surface-hover px-2 py-0.5 font-mono text-[10px] tracking-wider text-text-muted uppercase"
                 >
                   {eventTypeLabel(event.eventType)}
                 </span>
                 <span
-                  class="rounded-full bg-plumage/50 px-2 py-0.5 font-mono text-[10px] text-crown-ash uppercase"
+                  class="rounded-full bg-surface-hover px-2 py-0.5 font-mono text-[10px] text-text-muted uppercase"
                 >
                   {contextLabel(event.boundedContext)}
                 </span>
@@ -350,7 +355,7 @@
               </div>
 
               <div
-                class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[10px] text-crown-ash-dark"
+                class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[10px] text-text-muted-dark"
               >
                 <span>{formatTimestamp(event.timestamp)}</span>
                 <span
@@ -376,14 +381,14 @@
             >
               <div>
                 <p
-                  class="mb-1 font-mono text-[10px] tracking-wider text-crown-ash-dark uppercase"
+                  class="mb-1 font-mono text-[10px] tracking-wider text-text-muted-dark uppercase"
                 >
                   {translate("audit.actor", $locale)}
                 </p>
-                <p class="font-body text-sm text-cream">
+                <p class="font-body text-sm text-text">
                   {event.actor.displayName}
                 </p>
-                <p class="font-mono text-[10px] text-crown-ash">
+                <p class="font-mono text-[10px] text-text-muted">
                   {event.actor.kind}
                   {#if event.actor.agentType}
                     · {event.actor.agentType}
@@ -394,21 +399,21 @@
 
               <div>
                 <p
-                  class="mb-1 font-mono text-[10px] tracking-wider text-crown-ash-dark uppercase"
+                  class="mb-1 font-mono text-[10px] tracking-wider text-text-muted-dark uppercase"
                 >
                   {translate("audit.payloadDiff", $locale)}
                 </p>
                 <div class="space-y-1">
                   {#each event.payloadDiff as diff (diff.field)}
                     <div
-                      class="rounded border border-plumage/40 bg-obsidian-light px-2 py-1 font-mono text-[10px]"
+                      class="rounded border border-border/40 bg-surface-hover px-2 py-1 font-mono text-[10px]"
                     >
-                      <span class="text-crown-ash">{diff.field}:</span>
+                      <span class="text-text-muted">{diff.field}:</span>
                       {#if diff.before !== null}
-                        <span class="text-red-400/80 line-through"
+                        <span class="text-danger/80 line-through"
                           >{diff.before}</span
                         >
-                        <span class="text-crown-ash-dark"> → </span>
+                        <span class="text-text-muted-dark"> → </span>
                       {/if}
                       <span class="text-green-400/90">{diff.after}</span>
                     </div>
@@ -421,9 +426,9 @@
       </div>
 
       <div
-        class="mt-6 flex items-center justify-between rounded-lg border border-plumage px-4 py-3"
+        class="mt-6 flex items-center justify-between rounded-lg border border-border px-4 py-3"
       >
-        <span class="font-mono text-[10px] text-crown-ash">
+        <span class="font-mono text-[10px] text-text-muted">
           {translate("audit.pageSummary", $locale, {
             page: currentPageIndex + 1,
             count: events.length,
@@ -433,7 +438,7 @@
           <button
             onclick={goPrev}
             disabled={!canGoPrev}
-            class="inline-flex cursor-pointer items-center gap-1 rounded-md border border-plumage px-3 py-1.5 font-body text-xs text-crown-ash transition-colors hover:text-cream disabled:cursor-not-allowed disabled:opacity-40"
+            class="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border px-3 py-1.5 font-body text-xs text-text-muted transition-colors hover:bg-surface-hover hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
           >
             <ChevronLeft class="size-3.5" />
             {translate("common.previous", $locale)}
@@ -441,7 +446,7 @@
           <button
             onclick={goNext}
             disabled={!canGoNext}
-            class="inline-flex cursor-pointer items-center gap-1 rounded-md border border-plumage px-3 py-1.5 font-body text-xs text-crown-ash transition-colors hover:text-cream disabled:cursor-not-allowed disabled:opacity-40"
+            class="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border px-3 py-1.5 font-body text-xs text-text-muted transition-colors hover:bg-surface-hover hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
           >
             {translate("common.next", $locale)}
             <ChevronRight class="size-3.5" />

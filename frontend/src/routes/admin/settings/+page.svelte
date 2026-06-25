@@ -12,6 +12,7 @@
   } from "lucide-svelte";
   import { resolve } from "$app/paths";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
+  import Skeleton from "$lib/components/Skeleton.svelte";
   import { locale, translate } from "$lib/i18n";
   import { getTenant } from "$lib/auth";
   import {
@@ -41,7 +42,11 @@
   };
 
   const SETTINGS_SECTIONS = [
-    { key: "settings.nav.tenant", href: "/admin/settings#tenant", icon: Building2 },
+    {
+      key: "settings.nav.tenant",
+      href: "/admin/settings#tenant",
+      icon: Building2,
+    },
     {
       key: "settings.nav.llmProviders",
       href: "/admin/settings#llm-providers",
@@ -427,19 +432,12 @@
       </p>
 
       {#if loadingProviders}
-        <div
-          class="flex items-center gap-2 rounded-lg border border-plumage bg-obsidian-light p-6 text-crown-ash"
-        >
-          <div
-            class="size-4 animate-spin rounded-full border-2 border-plumage border-t-talon-gold"
-          ></div>
-          <span class="font-body text-sm"
-            >{translate("plans.loading", $locale)}</span
-          >
+        <div class="rounded-lg border border-border bg-surface-elevated p-6">
+          <Skeleton width="60%" height="1rem" count={4} />
         </div>
       {:else if loadError}
-        <div class="rounded-lg border border-red-500/30 bg-red-500/5 p-6">
-          <div class="flex items-center gap-2 text-red-400">
+        <div class="rounded-lg border border-danger/30 bg-danger/5 p-6">
+          <div class="flex items-center gap-2 text-danger">
             <AlertTriangle class="size-4" />
             <p class="font-body text-sm">{loadError}</p>
           </div>

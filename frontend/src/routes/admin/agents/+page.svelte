@@ -1,12 +1,14 @@
 <script lang="ts">
-  import { AlertTriangle, Bot, Loader2, Shield } from "lucide-svelte";
+  import { AlertTriangle, Bot, Shield } from "lucide-svelte";
   import { loadAgentCatalog, type AgentCatalogEntry } from "$lib/agent-catalog";
   import type { BoundTool } from "$lib/mocks/agent-catalog";
   import { getMockMcpServers } from "$lib/mocks/mcp-servers";
   import AgentCatalogDetail from "$lib/components/AgentCatalogDetail.svelte";
+  import Skeleton from "$lib/components/Skeleton.svelte";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
   import { locale, translate } from "$lib/i18n";
   import { formatLocaleDate } from "$lib/i18n/format";
+  import { hoverCardLift } from "$lib/motion/transitions";
 
   let entries = $state<AgentCatalogEntry[]>([]);
   let loading = $state(true);
@@ -87,8 +89,8 @@
 
   function trustScoreClass(score: number): string {
     if (score >= 90) return "text-green-400";
-    if (score >= 75) return "text-talon-gold";
-    return "text-red-400";
+    if (score >= 75) return "text-primary";
+    return "text-danger";
   }
 
   function visibilityLabel(entry: AgentCatalogEntry): string {
@@ -107,16 +109,16 @@
   >
     <div class="flex items-center justify-between px-4 py-3 lg:px-6">
       <div>
-        <HarpyHeading tag="h1" class="text-2xl text-cream"
+        <HarpyHeading tag="h1" class="text-2xl text-text"
           >{translate("agents.heading", $locale)}</HarpyHeading
         >
-        <p class="mt-1 font-body text-sm text-crown-ash">
+        <p class="mt-1 font-body text-sm text-text-muted">
           {translate("agents.subheading", $locale)}
         </p>
       </div>
       {#if dataSource === "api"}
         <span
-          class="rounded-full border border-plumage px-2.5 py-1 font-mono text-[10px] tracking-wider text-crown-ash uppercase"
+          class="rounded-full border border-border px-2.5 py-1 font-mono text-[10px] tracking-wider text-text-muted uppercase"
         >
           {translate("plans.source.live", $locale)}
         </span>
@@ -124,25 +126,24 @@
     </div>
 
     {#if loading}
-      <div class="flex flex-1 items-center justify-center">
-        <div class="flex items-center gap-2 text-crown-ash">
-          <Loader2 class="size-5 animate-spin" />
-          <span class="font-body text-sm"
-            >{translate("agents.loading", $locale)}</span
-          >
+      <div class="flex-1 overflow-x-auto px-4 pb-4 lg:px-6">
+        <div class="space-y-2">
+          {#each [0, 1, 2, 3, 4, 5, 6, 7] as i (i)}
+            <Skeleton width="100%" height="3rem" />
+          {/each}
         </div>
       </div>
     {:else if entries.length === 0 && loadError}
       <div class="flex flex-1 items-center justify-center">
         <div class="text-center">
-          <AlertTriangle class="mx-auto mb-3 size-10 text-red-400" />
-          <p class="font-body text-sm text-red-400">
+          <AlertTriangle class="mx-auto mb-3 size-10 text-danger" />
+          <p class="font-body text-sm text-danger">
             {translate("agents.loadError", $locale)}
           </p>
-          <p class="mt-1 font-mono text-xs text-crown-ash">{loadError}</p>
+          <p class="mt-1 font-mono text-xs text-text-muted">{loadError}</p>
           <button
             onclick={() => fetchCatalog()}
-            class="mt-4 cursor-pointer rounded-md border border-plumage px-4 py-2 font-body text-sm text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
+            class="mt-4 cursor-pointer rounded-md border border-border px-4 py-2 font-body text-sm text-text-muted transition-colors hover:bg-surface-hover hover:text-text"
           >
             {translate("common.retry", $locale)}
           </button>
@@ -150,20 +151,20 @@
       </div>
     {:else if entries.length === 0}
       <div class="flex flex-1 flex-col items-center justify-center px-4">
-        <Bot class="mb-4 size-12 text-talon-gold" />
-        <HarpyHeading tag="h2" class="mb-2 text-center text-xl text-cream">
+        <Bot class="mb-4 size-12 text-text-muted" />
+        <HarpyHeading tag="h2" class="mb-2 text-center text-xl text-text">
           {translate("agents.empty.title", $locale)}
         </HarpyHeading>
-        <p class="max-w-md text-center font-body text-sm text-crown-ash">
+        <p class="max-w-md text-center font-body text-sm text-text-muted">
           {translate("agents.empty.description", $locale)}
         </p>
       </div>
     {:else}
       {#if loadError && dataSource === "mock"}
         <div
-          class="mx-4 mb-2 rounded-md border border-talon-gold/30 bg-talon-gold/5 px-3 py-2 lg:mx-6"
+          class="mx-4 mb-2 rounded-md border border-border bg-surface-elevated px-3 py-2 lg:mx-6"
         >
-          <p class="font-mono text-xs text-talon-gold">
+          <p class="font-mono text-xs text-text-muted">
             {translate("agents.mockFallback", $locale)}
             {loadError}
           </p>
@@ -174,7 +175,7 @@
         <table class="w-full min-w-[720px] border-collapse">
           <thead>
             <tr
-              class="border-b border-plumage font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
+              class="border-b border-border/40 font-mono text-[10px] tracking-widest text-text-muted-dark uppercase"
             >
               <th class="px-3 py-2 text-left"
                 >{translate("agents.table.agentType", $locale)}</th
@@ -199,25 +200,26 @@
           <tbody>
             {#each entries as entry (entry.agentType.id)}
               <tr
+                use:hoverCardLift
                 onclick={() => selectEntry(entry)}
                 data-testid={`agent-row-${entry.agentType.id}`}
-                class="cursor-pointer border-b border-plumage/40 transition-colors hover:bg-obsidian-light/60 {selectedEntry
+                class="cursor-pointer border-b border-border/40 transition-colors hover:bg-surface-hover {selectedEntry
                   ?.agentType.id === entry.agentType.id
-                  ? 'bg-obsidian-light'
+                  ? 'bg-surface-hover'
                   : ''}"
               >
                 <td class="px-3 py-3">
-                  <p class="font-heading text-sm font-semibold text-cream">
+                  <p class="font-heading text-sm font-semibold text-text">
                     {entry.agentType.displayName || entry.agentType.name}
                   </p>
-                  <p class="font-mono text-[10px] text-crown-ash-dark">
+                  <p class="font-mono text-[10px] text-text-muted-dark">
                     {entry.agentType.id}
                   </p>
                 </td>
-                <td class="px-3 py-3 font-mono text-xs text-cream">
+                <td class="px-3 py-3 font-mono text-xs text-text">
                   {entry.activeVersion}
                 </td>
-                <td class="px-3 py-3 font-mono text-xs text-crown-ash">
+                <td class="px-3 py-3 font-mono text-xs text-text-muted">
                   {entry.canaryVersion ?? "—"}
                 </td>
                 <td class="px-3 py-3">
@@ -230,10 +232,12 @@
                     {entry.trustScore}
                   </span>
                 </td>
-                <td class="px-3 py-3 font-body text-xs text-crown-ash">
+                <td class="px-3 py-3 font-body text-xs text-text-muted">
                   {visibilityLabel(entry)}
                 </td>
-                <td class="px-3 py-3 font-mono text-[10px] text-crown-ash-dark">
+                <td
+                  class="px-3 py-3 font-mono text-[10px] text-text-muted-dark"
+                >
                   {formattedDate(entry.lastUpdated)}
                 </td>
               </tr>
@@ -246,7 +250,7 @@
 
   {#if selectedEntry}
     <div
-      class="hidden w-[55%] border-l border-plumage bg-obsidian transition-all duration-300 lg:block"
+      class="hidden w-[55%] border-l border-border bg-surface transition-all duration-300 lg:block"
     >
       <AgentCatalogDetail
         entry={selectedEntry}
@@ -261,9 +265,9 @@
 
 {#if toast}
   <div
-    class="fixed right-6 bottom-6 z-50 max-w-sm rounded-lg border border-plumage bg-obsidian-light px-4 py-3 shadow-lg"
+    class="fixed right-6 bottom-6 z-50 max-w-sm rounded-lg border border-border bg-surface-elevated px-4 py-3 shadow-lg"
     role="status"
   >
-    <p class="font-body text-sm text-cream">{toast}</p>
+    <p class="font-body text-sm text-text">{toast}</p>
   </div>
 {/if}
