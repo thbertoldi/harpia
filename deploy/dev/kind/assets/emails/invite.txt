@@ -1,0 +1,27 @@
+{{if eq .PreferredLanguage "pt-BR"}}Harpia — Bem-vindo
+
+Olá {{.FirstName}},
+
+Sua conta na Harpia foi criada. Abra o link abaixo para definir
+sua senha e ativar o acesso:
+
+{{.URL}}
+
+Seu nome de usuário: {{.PreferredLoginName}}
+Código: {{.Code}}
+
+Harpia — AI-enabled operations.
+{{else}}Harpia — Welcome
+
+Hi {{.FirstName}},
+
+Your Harpia account has been created. Open the link below to set
+your password and activate access:
+
+{{.URL}}
+
+Your username: {{.PreferredLoginName}}
+Code: {{.Code}}
+
+Harpia — AI-enabled operations.
+{{end}}

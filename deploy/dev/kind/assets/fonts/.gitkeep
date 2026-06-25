@@ -1,0 +1,5 @@
+# Drop self-hosted WOFF2 fonts here (see ../NOTES.md):
+#   BodoniModa-Regular.woff2   + BodoniModa-OFL.txt
+#   DMSans-Regular.woff2       + DMSans-OFL.txt
+#   Manrope-Regular.woff2      + Manrope-OFL.txt
+# Until present, theme.css degrades to system serif/sans via local() fallbacks.

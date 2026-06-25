@@ -1,0 +1,16 @@
+<!--
+  Harpia auth background — subtle obsidian radial gradient.
+  Center #121318 (surface) fading to #0a0b0e at the edges.
+  Pure SVG so no binary tooling is needed for the dev cluster; a real
+  1920x1080 PNG (~30KB) can replace this for production polish (see NOTES.md).
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080"
+     preserveAspectRatio="xMidYMid slice" role="img" aria-label="">
+  <defs>
+    <radialGradient id="obsidian" cx="50%" cy="50%" r="75%">
+      <stop offset="0%" stop-color="#121318"/>
+      <stop offset="100%" stop-color="#0a0b0e"/>
+    </radialGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#obsidian)"/>
+</svg>
