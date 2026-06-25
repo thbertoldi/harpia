@@ -5,7 +5,9 @@
 #   - Project "Harpia"
 #   - OIDC App "Harpia Web" (PKCE, no client secret, redirect localhost:5173)
 # After OIDC registration, uploads Harpia logo/icon assets and applies the instance
-# label policy (palette + activation) so /ui/login and /ui/console match Harpia.
+# label policy (palette + activation) so /ui/login and /ui/console match Harpia,
+# then pushes branded custom email message texts (password-reset / init / verify,
+# EN + pt-BR) to the message-text policy. All driven by /branding/apply-branding.sh.
 #
 # App type: OIDC_APP_TYPE_NATIVE (not USER_AGENT). The SPA runs in a browser but
 # dev redirect URIs use http://localhost — loopback HTTP is OIDC-compliant for

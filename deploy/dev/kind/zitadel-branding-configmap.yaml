@@ -184,7 +184,173 @@ data:
     POLICY_CHECK=$(api_json GET /admin/v1/policies/label)
     verify_label_policy "$POLICY_CHECK"
 
+    # ---- Custom email message texts (branded copy, EN + pt-BR) -------------
+    # Pushes subject/greeting/text/button into Zitadel's message-text policy:
+    #   PUT /management/v1/text/message/{type}/{language}
+    # Reads $BRANDING_DIR/email-texts.conf (lines: type|lang|field|value).
+    # Idempotent: PUT replaces the per-(type,language) text wholesale.
+    EMAIL_TEXTS_FILE="$BRANDING_DIR/email-texts.conf"
+
+    json_escape() {
+      # Escape backslash, double-quote; collapse to keep curl -d single-line.
+      printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'
+    }
+
+    put_message_text() {
+      mtype=$1; lang=$2; subject=$3; greeting=$4; text=$5; button=$6
+      body=$(cat <<EOF
+    {
+      "subject": "$(json_escape "$subject")",
+      "greeting": "$(json_escape "$greeting")",
+      "text": "$(json_escape "$text")",
+      "buttonText": "$(json_escape "$button")"
+    }
+    EOF
+    )
+      resp_file=$(mktemp)
+      status=$(api_json_status PUT "/management/v1/text/message/$mtype/$lang" "$body" "$resp_file")
+      case "$status" in
+        200|201|204) echo "  message text set: $mtype/$lang" ;;
+        *)
+          echo "ERROR: message text $mtype/$lang failed (HTTP $status)" >&2
+          cat "$resp_file" >&2 || true
+          rm -f "$resp_file"
+          exit 1
+          ;;
+      esac
+      rm -f "$resp_file"
+    }
+
+    if [ -f "$EMAIL_TEXTS_FILE" ]; then
+      echo "[branding] Applying custom email message texts..."
+      # Distinct (type,lang) pairs to a temp file so the loop runs in this
+      # shell (not a pipeline subshell) — that way put_message_text's exit 1
+      # aborts the whole script under set -eu.
+      PAIRS_FILE=$(mktemp)
+      grep -vE '^[[:space:]]*#' "$EMAIL_TEXTS_FILE" | grep -E '\|' \
+        | awk -F'|' '{print $1"|"$2}' | sort -u > "$PAIRS_FILE"
+      while IFS='|' read -r mtype lang; do
+        [ -n "$mtype" ] || continue
+        get_field() {
+          grep -E "^$mtype\|$lang\|$1\|" "$EMAIL_TEXTS_FILE" | head -1 \
+            | cut -d'|' -f4-
+        }
+        subject=$(get_field subject)
+        greeting=$(get_field greeting)
+        text=$(get_field text)
+        button=$(get_field button)
+        put_message_text "$mtype" "$lang" "$subject" "$greeting" "$text" "$button"
+      done < "$PAIRS_FILE"
+      rm -f "$PAIRS_FILE"
+    else
+      echo "[branding] No email-texts.conf found; skipping message-text overrides."
+    fi
+
     echo "[branding] Harpia theme applied (primary=$PRIMARY_COLOR background=$BACKGROUND_COLOR text=$FONT_COLOR)"
+  theme.css: |
+    /*
+     * Harpia overrides for Zitadel's hosted login/console (M6 §2.7).
+     * Applied via the instance label policy's customCSS where Zitadel exposes
+     * it; otherwise served as a static stylesheet and referenced from the
+     * notification/login template. Brand tokens mirror frontend tokens.css.
+     *
+     * NOTE: Zitadel's Angular login app uses scoped, hashed class names that
+     * shift between versions, so the reliable theming surface is the label
+     * policy palette (set in apply-branding.sh) PLUS broad element selectors
+     * below. Where a stable Zitadel hook is known it is used; otherwise we
+     * target body/background/button/card generically and flag it.
+     */
+    :root {
+      --harpia-bg: #121318;          /* surface */
+      --harpia-surface: #1a1b24;     /* surface-elevated / card */
+      --harpia-text: #f5f2eb;        /* cream text */
+      --harpia-primary: #c8920f;     /* gold */
+      --harpia-border: #2a2d3a;      /* hairline */
+    }
+
+    /* Fonts: local() first so self-hosted WOFF2 (assets/fonts/, see NOTES.md)
+       or an OS-installed copy is used; degrades to system serif/sans cleanly. */
+    @font-face {
+      font-family: "Bodoni Moda";
+      src: local("Bodoni Moda"), local("BodoniModa-Regular");
+      font-weight: 400 700;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: "DM Sans";
+      src: local("DM Sans"), local("DMSans-Regular");
+      font-weight: 400 600;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: "Manrope";
+      src: local("Manrope"), local("Manrope-Regular");
+      font-weight: 400 700;
+      font-display: swap;
+    }
+
+    /* Page background — generic; Zitadel renders the auth app in <body>. */
+    body,
+    .lgn-root,
+    .lgn-container {
+      background-color: var(--harpia-bg) !important;
+      color: var(--harpia-text) !important;
+      font-family: "DM Sans", system-ui, -apple-system, sans-serif !important;
+    }
+
+    /* Card / dialog surface — generic + Zitadel's known wrapper classes. */
+    .lgn-card,
+    [class*="card"],
+    .mat-card,
+    .mat-mdc-card {
+      background-color: var(--harpia-surface) !important;
+      border: 1px solid var(--harpia-border) !important;
+      color: var(--harpia-text) !important;
+    }
+
+    /* Headings use Manrope. */
+    h1, h2, h3, .lgn-title {
+      font-family: "Manrope", system-ui, sans-serif !important;
+      color: var(--harpia-text) !important;
+    }
+
+    /* Wordmark slot, if surfaced as text. */
+    .lgn-logo, .harpia-wordmark {
+      font-family: "Bodoni Moda", Georgia, serif !important;
+      color: var(--harpia-text) !important;
+    }
+
+    /* Primary buttons — gold on obsidian. Generic + Material raised button. */
+    button[type="submit"],
+    .lgn-raised-button,
+    .mat-raised-button,
+    .mat-mdc-raised-button,
+    .primary {
+      background-color: var(--harpia-primary) !important;
+      color: var(--harpia-bg) !important;
+      border: none !important;
+    }
+
+    /* Links / accents. */
+    a, .lgn-text-link {
+      color: var(--harpia-primary) !important;
+    }
+
+    /* Inputs sit on the card surface. */
+    input, .mat-input-element {
+      color: var(--harpia-text) !important;
+      caret-color: var(--harpia-primary) !important;
+    }
+  background.svg: |
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080" preserveAspectRatio="xMidYMid slice" role="img" aria-label="">
+      <defs>
+        <radialGradient id="obsidian" cx="50%" cy="50%" r="75%">
+          <stop offset="0%" stop-color="#121318"/>
+          <stop offset="100%" stop-color="#0a0b0e"/>
+        </radialGradient>
+      </defs>
+      <rect width="1920" height="1080" fill="url(#obsidian)"/>
+    </svg>
   icon.svg: |
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Harpia">
       <rect width="64" height="64" rx="12" fill="#121318"/>
@@ -194,13 +360,49 @@ data:
             fill="#C8920F">H</text>
     </svg>
   logo.svg: |
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 72" role="img" aria-label="Harpia">
-      <rect width="320" height="72" fill="none"/>
-      <text x="160" y="52" text-anchor="middle"
-            font-family="Georgia, 'Times New Roman', serif"
-            font-size="48" font-weight="700" letter-spacing="1"
-            fill="#C8920F">Harpia</text>
+    <!-- TODO: replace with final Bodoni Moda wordmark from design -->
+    <!-- Light variant (cream fill) for the dark Zitadel auth surface. -->
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 80" width="360" height="80" role="img" aria-label="Harpia">
+      <rect width="360" height="80" fill="none"/>
+      <text x="180" y="56" text-anchor="middle"
+            font-family="'Bodoni Moda', Georgia, 'Times New Roman', serif"
+            font-size="52" font-weight="600" letter-spacing="2"
+            fill="#F5F2EB">Harpia</text>
     </svg>
+  # Email message copy (branded, EN + pt-BR). The init Job parses these per
+  # language and PUTs them to /management/v1/text/message/{type}/{language}.
+  # Format per template: lines "<lang>|<field>|<value>" where field is one of
+  # subject, greeting, text, button. Keeps init-Job parsing trivial (no JSON
+  # tooling in the alpine container). Full HTML wrappers live in
+  # deploy/dev/kind/assets/emails/ (design reference) — see assets/NOTES.md.
+  email-texts.conf: |
+    # passwordreset
+    passwordreset|en|subject|Reset your Harpia password
+    passwordreset|en|greeting|Hi {{.FirstName}},
+    passwordreset|en|text|We received a request to reset your Harpia password. Use the button below to choose a new one. If you didn't request this, you can ignore this email.
+    passwordreset|en|button|Reset password
+    passwordreset|pt-BR|subject|Redefinir sua senha Harpia
+    passwordreset|pt-BR|greeting|Olá {{.FirstName}},
+    passwordreset|pt-BR|text|Recebemos um pedido para redefinir sua senha Harpia. Use o botão abaixo para escolher uma nova. Se você não fez este pedido, ignore este e-mail.
+    passwordreset|pt-BR|button|Redefinir senha
+    # init (invite / account activation)
+    init|en|subject|Welcome to Harpia
+    init|en|greeting|Hi {{.FirstName}},
+    init|en|text|Your Harpia account has been created. Use the button below to set your password and activate access.
+    init|en|button|Activate account
+    init|pt-BR|subject|Bem-vindo à Harpia
+    init|pt-BR|greeting|Olá {{.FirstName}},
+    init|pt-BR|text|Sua conta na Harpia foi criada. Use o botão abaixo para definir sua senha e ativar o acesso.
+    init|pt-BR|button|Ativar conta
+    # verifyemail (MFA / verification)
+    verifyemail|en|subject|Verify your Harpia sign-in
+    verifyemail|en|greeting|Hi {{.FirstName}},
+    verifyemail|en|text|Use the code or button below to complete verification and keep your Harpia account secure.
+    verifyemail|en|button|Confirm sign-in
+    verifyemail|pt-BR|subject|Verifique seu acesso Harpia
+    verifyemail|pt-BR|greeting|Olá {{.FirstName}},
+    verifyemail|pt-BR|text|Use o código ou o botão abaixo para concluir a verificação e proteger sua conta Harpia.
+    verifyemail|pt-BR|button|Confirmar acesso
 kind: ConfigMap
 metadata:
   name: zitadel-branding
