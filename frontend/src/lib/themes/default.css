@@ -31,6 +31,7 @@
   --token-surface-deep: #ece7dd;
   --token-surface-hover: #e3ded2;
   --token-surface-pop: #fbf9f4;
+  --token-danger: #b42318;
 }
 
 [data-theme="default"].dark {
@@ -44,4 +45,5 @@
   --token-surface-deep: #0a0b0e;
   --token-surface-hover: #20222c;
   --token-surface-pop: #2a2d3a;
+  --token-danger: #d9534f;
 }

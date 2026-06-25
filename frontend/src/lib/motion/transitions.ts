@@ -8,7 +8,8 @@ type TransitionConfig = {
   css?: (t: number, u: number) => string;
 };
 
-function opacityOnly(_: HTMLElement): TransitionConfig {
+function opacityOnly(_node: HTMLElement): TransitionConfig {
+  void _node;
   return { duration: 0, css: (t) => `opacity: ${t};` };
 }
 
@@ -33,6 +34,66 @@ export function cardLift(node: HTMLElement): TransitionConfig {
   };
 }
 
+/** Svelte action: animate cardLift on mouseenter / reverse on mouseleave. */
+export function hoverCardLift(node: HTMLElement): { destroy: () => void } {
+  if (prefersReducedMotion()) return { destroy: () => {} };
+
+  const cfg = cardLift(node);
+  let frame: number | null = null;
+  let currentT = 0;
+  let startT = 0;
+  let endT = 0;
+  let startTime = 0;
+
+  function applyStyles(t: number) {
+    if (!cfg.css) return;
+    const styleStr = cfg.css(t, 1 - t);
+    for (const part of styleStr.split(";")) {
+      const colon = part.indexOf(":");
+      if (colon === -1) continue;
+      const prop = part.slice(0, colon).trim();
+      const val = part.slice(colon + 1).trim();
+      if (prop && val) node.style.setProperty(prop, val);
+    }
+  }
+
+  function tick(now: number) {
+    const raw = Math.min(1, (now - startTime) / cfg.duration);
+    const eased = cubicOut(raw);
+    currentT = startT + (endT - startT) * eased;
+    applyStyles(currentT);
+    if (raw < 1) {
+      frame = requestAnimationFrame(tick);
+    } else {
+      frame = null;
+      currentT = endT;
+    }
+  }
+
+  function animateTo(target: number) {
+    if (frame) cancelAnimationFrame(frame);
+    startT = currentT;
+    endT = target;
+    startTime = performance.now();
+    frame = requestAnimationFrame(tick);
+  }
+
+  const onEnter = () => animateTo(1);
+  const onLeave = () => animateTo(0);
+  node.addEventListener("mouseenter", onEnter);
+  node.addEventListener("mouseleave", onLeave);
+
+  return {
+    destroy() {
+      if (frame) cancelAnimationFrame(frame);
+      node.removeEventListener("mouseenter", onEnter);
+      node.removeEventListener("mouseleave", onLeave);
+      node.style.removeProperty("transform");
+      node.style.removeProperty("box-shadow");
+    },
+  };
+}
+
 /** 50ms gold wash + 80ms decay; total 130ms. Used on chip + button activation. */
 export function chipFlash(node: HTMLElement): TransitionConfig {
   if (prefersReducedMotion()) return opacityOnly(node);
@@ -40,7 +101,8 @@ export function chipFlash(node: HTMLElement): TransitionConfig {
     duration: 130,
     easing: cubicOut,
     css: (t) => {
-      const wash = t < 50 / 130 ? 1 : Math.max(0, 1 - (t - 50 / 130) * (130 / 80));
+      const wash =
+        t < 50 / 130 ? 1 : Math.max(0, 1 - (t - 50 / 130) * (130 / 80));
       return `background-color: rgba(200, 146, 15, ${wash * 0.35});`;
     },
   };

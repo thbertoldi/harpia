@@ -28,6 +28,7 @@
   --token-surface-deep: #0a0b0e;
   --token-surface-hover: #20222c;
   --token-surface-pop: #2a2d3a;
+  --token-danger: #d9534f;
 }
 
 @theme {
@@ -45,6 +46,7 @@
   --color-text-muted-dark: var(--token-text-muted-dark);
   --color-border: var(--token-border);
   --color-accent: var(--token-accent);
+  --color-danger: var(--token-danger);
 
   /* shadcn-style aliases used by shared UI primitives */
   --color-background: var(--token-surface);

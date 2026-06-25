@@ -31,6 +31,7 @@
   --token-surface-deep: #e9ebee;
   --token-surface-hover: #eef0f3;
   --token-surface-pop: #ffffff;
+  --token-danger: #b42318;
 }
 
 [data-theme="aiuna"].dark {
@@ -47,4 +48,5 @@
   --token-surface-deep: #08090d;
   --token-surface-hover: #1d1f29;
   --token-surface-pop: #272a36;
+  --token-danger: #d9534f;
 }

@@ -47,6 +47,7 @@ const MODE_SENSITIVE_TOKENS = [
   "--token-text-muted",
   "--token-text-muted-dark",
   "--token-border",
+  "--token-danger",
 ];
 
 describe("theme light/dark token parity", () => {
