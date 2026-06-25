@@ -136,4 +136,160 @@ spec:
       targetPort: 8080
   selector:
     app: {{ $svcName }}
+{{- if .Values.zitadel.branding.enabled }}
+{{- $branding := .Values.zitadel.branding }}
+{{- $brandingCM := printf "%s-branding" $svcName }}
+---
+# Harpia branding for the hosted Zitadel auth UI + email texts (M6 §2.7).
+# Mirrors the dev pattern (deploy/dev/kind/zitadel-branding-configmap.yaml):
+# a ConfigMap of assets + an apply script, run once by a post-install Job that
+# reuses the admin PAT emitted by Zitadel's first-instance bootstrap.
+# Colors, wordmark, and email copy are parameterized via .Values.zitadel.branding
+# so a tenant can override per install.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $brandingCM }}
+  labels:
+    {{- include "harpia.labels" . | nindent 4 }}
+    app: {{ $svcName }}
+data:
+  logo.svg: |
+{{ $branding.logoSvg | indent 4 }}
+  icon.svg: |
+{{ $branding.iconSvg | indent 4 }}
+  background.svg: |
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080" preserveAspectRatio="xMidYMid slice" role="img" aria-label="">
+      <defs>
+        <radialGradient id="obsidian" cx="50%" cy="50%" r="75%">
+          <stop offset="0%" stop-color="{{ $branding.colors.background }}"/>
+          <stop offset="100%" stop-color="{{ $branding.colors.backgroundEdge }}"/>
+        </radialGradient>
+      </defs>
+      <rect width="1920" height="1080" fill="url(#obsidian)"/>
+    </svg>
+  email-texts.conf: |
+{{ $branding.emailTexts | indent 4 }}
+  apply-branding.sh: |
+    #!/bin/sh
+    # Apply Harpia branding (label policy palette + assets + email texts).
+    # Idempotent. Requires env PAT (IAM_OWNER token).
+    set -eu
+    ZITADEL_URL="${ZITADEL_URL:-http://{{ $svcName }}:8080}"
+    ZITADEL_HOST="${ZITADEL_HOST:-{{ .Values.zitadel.externalDomain }}}"
+    BRANDING_DIR="${BRANDING_DIR:-/branding}"
+    PRIMARY_COLOR="{{ $branding.colors.primary }}"
+    BACKGROUND_COLOR="{{ $branding.colors.background }}"
+    FONT_COLOR="{{ $branding.colors.font }}"
+    WARN_COLOR="{{ $branding.colors.warn }}"
+    [ -n "${PAT:-}" ] || { echo "ERROR: PAT required" >&2; exit 1; }
+
+    api() {
+      curl -sS -o "$3" -w "%{http_code}" -X "$1" "$ZITADEL_URL$2" \
+        -H "Authorization: Bearer $PAT" -H "Content-Type: application/json" \
+        -H "Host: $ZITADEL_HOST" ${4:+-d "$4"} || true
+    }
+    upload_asset() {
+      f=$2
+      [ -f "$f" ] || { echo "skip $3 (missing $f)"; return 0; }
+      st=$(curl -sS -o /tmp/a.txt -w "%{http_code}" -X POST \
+        "$ZITADEL_URL/assets/v1/instance/policy/label/$1" \
+        -H "Authorization: Bearer $PAT" -H "Host: $ZITADEL_HOST" \
+        -F "file=@$f" || true)
+      case "$st" in 200|201|204) echo "  uploaded $3" ;; *) echo "ERROR: $3 upload HTTP $st" >&2; cat /tmp/a.txt >&2; exit 1 ;; esac
+    }
+
+    echo "[branding] assets..."
+    upload_asset logo "$BRANDING_DIR/logo.svg" logo
+    upload_asset logo/dark "$BRANDING_DIR/logo.svg" "logo (dark)"
+    upload_asset icon "$BRANDING_DIR/icon.svg" icon
+    upload_asset icon/dark "$BRANDING_DIR/icon.svg" "icon (dark)"
+
+    echo "[branding] label policy..."
+    LP=$(cat <<EOF
+    {"primaryColor":"$PRIMARY_COLOR","backgroundColor":"$BACKGROUND_COLOR","fontColor":"$FONT_COLOR","warnColor":"$WARN_COLOR","primaryColorDark":"$PRIMARY_COLOR","backgroundColorDark":"$BACKGROUND_COLOR","fontColorDark":"$FONT_COLOR","warnColorDark":"$WARN_COLOR","hideLoginNameSuffix":true,"disableWatermark":true,"themeMode":"THEME_MODE_DARK"}
+    EOF
+    )
+    st=$(api PUT /admin/v1/policies/label /tmp/lp.txt "$LP")
+    case "$st" in 200|204|400) echo "  label policy update HTTP $st" ;; *) echo "ERROR: label policy HTTP $st" >&2; cat /tmp/lp.txt >&2; exit 1 ;; esac
+    st=$(api POST /admin/v1/policies/label/_activate /tmp/lp.txt '{}')
+    case "$st" in 200|204|400) echo "  label policy activate HTTP $st" ;; *) echo "ERROR: activate HTTP $st" >&2; exit 1 ;; esac
+
+    ETF="$BRANDING_DIR/email-texts.conf"
+    if [ -f "$ETF" ]; then
+      echo "[branding] email texts..."
+      esc() { printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'; }
+      PAIRS=$(mktemp)
+      grep -vE '^[[:space:]]*#' "$ETF" | grep -E '\|' | awk -F'|' '{print $1"|"$2}' | sort -u > "$PAIRS"
+      while IFS='|' read -r mt lg; do
+        [ -n "$mt" ] || continue
+        gf() { grep -E "^$mt\|$lg\|$1\|" "$ETF" | head -1 | cut -d'|' -f4-; }
+        BODY="{\"subject\":\"$(esc "$(gf subject)")\",\"greeting\":\"$(esc "$(gf greeting)")\",\"text\":\"$(esc "$(gf text)")\",\"buttonText\":\"$(esc "$(gf button)")\"}"
+        st=$(api PUT "/management/v1/text/message/$mt/$lg" /tmp/mt.txt "$BODY")
+        case "$st" in 200|201|204) echo "  message $mt/$lg" ;; *) echo "ERROR: message $mt/$lg HTTP $st" >&2; cat /tmp/mt.txt >&2; exit 1 ;; esac
+      done < "$PAIRS"
+      rm -f "$PAIRS"
+    fi
+    echo "[branding] done (primary=$PRIMARY_COLOR bg=$BACKGROUND_COLOR)"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $svcName }}-branding
+  labels:
+    {{- include "harpia.labels" . | nindent 4 }}
+    app: {{ $svcName }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: 6
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app: {{ $svcName }}
+    spec:
+      restartPolicy: OnFailure
+      volumes:
+        - name: machinekey
+          persistentVolumeClaim:
+            claimName: {{ $machinekeyPVC }}
+        - name: branding
+          configMap:
+            name: {{ $brandingCM }}
+            defaultMode: 0555
+      containers:
+        - name: branding
+          image: {{ $branding.image | quote }}
+          volumeMounts:
+            - name: machinekey
+              mountPath: /machinekey
+              readOnly: true
+            - name: branding
+              mountPath: /branding
+              readOnly: true
+          env:
+            - name: ZITADEL_URL
+              value: {{ printf "http://%s:8080" $svcName | quote }}
+            - name: ZITADEL_HOST
+              value: {{ .Values.zitadel.externalDomain | quote }}
+            - name: BRANDING_DIR
+              value: /branding
+          command: ["/bin/sh", "-eu", "-c"]
+          args:
+            - |
+              PAT_FILE=/machinekey/zitadel-admin-sa.pat
+              echo "Waiting for PAT..."
+              for i in $(seq 1 120); do [ -s "$PAT_FILE" ] && break; sleep 2; done
+              [ -s "$PAT_FILE" ] || { echo "ERROR: PAT not emitted"; exit 1; }
+              export PAT="$(cat "$PAT_FILE")"
+              echo "Waiting for Zitadel API..."
+              for i in $(seq 1 120); do
+                curl -sf -H "Host: $ZITADEL_HOST" "$ZITADEL_URL/.well-known/openid-configuration" >/dev/null 2>&1 && break
+                sleep 2
+              done
+              /branding/apply-branding.sh
+{{- end }}
 {{- end }}
