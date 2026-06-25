@@ -8,6 +8,7 @@
     getCurrentSubtask,
   } from "$lib/tasks/ongoing-tasks";
   import { locale, translate } from "$lib/i18n";
+  import { hoverCardLift } from "$lib/motion/transitions";
 
   let {
     task,
@@ -23,25 +24,26 @@
 
 <button
   type="button"
+  use:hoverCardLift
   {onclick}
-  class="w-full rounded-lg border border-plumage bg-obsidian-light/60 p-4 text-left transition-all duration-200 hover:border-talon-gold/50 hover:bg-obsidian-light"
+  class="w-full rounded-lg border border-border bg-surface-elevated p-4 text-left transition-colors hover:bg-surface-hover"
 >
-  <p class="truncate font-heading text-base font-semibold text-cream">
+  <p class="truncate font-heading text-base font-semibold text-text">
     {task.title}
   </p>
 
   {#if currentSubtask}
-    <p class="mt-1 line-clamp-2 font-body text-sm text-crown-ash">
+    <p class="mt-1 line-clamp-2 font-body text-sm text-text-muted">
       {currentSubtask.description}
     </p>
   {:else}
-    <p class="mt-1 font-body text-sm text-crown-ash-dark italic">
+    <p class="mt-1 font-body text-sm text-text-muted-dark italic">
       {translate("ongoing.noActiveSubtask", $locale)}
     </p>
   {/if}
 
   <div
-    class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[10px] tracking-wider text-crown-ash uppercase"
+    class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[10px] tracking-wider text-text-muted uppercase"
   >
     {#if agentLabel}
       <span class="inline-flex items-center gap-1">

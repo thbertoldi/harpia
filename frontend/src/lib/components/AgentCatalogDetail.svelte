@@ -7,12 +7,12 @@
     FlaskConical,
     History,
     Link2,
-    Loader2,
     RotateCcw,
     Trash2,
     X,
   } from "lucide-svelte";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
+  import Skeleton from "$lib/components/Skeleton.svelte";
   import {
     bindToolToAgentCatalogEntry,
     runTestInvocationForAgent,
@@ -215,7 +215,7 @@
               data-testid="agent-bind-selected-tool"
             >
               {#if bindingTool}
-                <Loader2 class="size-3 animate-spin" />
+                <Skeleton shape="circle" width="0.75rem" height="0.75rem" />
               {:else}
                 <Link2 class="size-3" />
               {/if}
@@ -231,7 +231,7 @@
           data-testid="agent-run-test-invocation"
         >
           {#if invoking}
-            <Loader2 class="size-3.5 animate-spin" />
+            <Skeleton shape="circle" width="0.875rem" height="0.875rem" />
           {:else}
             <FlaskConical class="size-3.5" />
           {/if}
