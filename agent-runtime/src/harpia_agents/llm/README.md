@@ -7,6 +7,7 @@ This module defines Harpia's canonical LLM abstraction for agent orchestration: 
 | Provider | Models (current) |
 |---|---|
 | Anthropic | `claude-3-5-sonnet-20241022`, `claude-3-opus-20240229`, `claude-3-haiku-20240307` |
+| DeepSeek | `deepseek-v4-flash`, `deepseek-v4-pro` |
 | OpenAI | `gpt-4o`, `gpt-4o-mini`, `openai-gpt-4o-mini` |
 | Ollama | `llama3:70b` |
 

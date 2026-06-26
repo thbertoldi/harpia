@@ -14,7 +14,7 @@ from harpia_agents.llm import LLMRegistry
 
 def _registry(response: str) -> LLMRegistry:
     return LLMRegistry.for_testing(
-        model_ids=["openai-gpt-4o-mini"],
+        model_ids=[MANIFEST.model_id],
         responses=[response],
     )
 

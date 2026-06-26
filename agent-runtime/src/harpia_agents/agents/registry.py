@@ -25,6 +25,7 @@ from harpia_agents.budget import (
     budget_policy_enabled,
 )
 from harpia_agents.llm import LLMRegistry
+from harpia_agents.llm.errors import ModelNotFoundError
 from harpia_agents.llm.provider import LLMProvider
 from harpia_agents.llm.providers.anthropic import AnthropicProvider
 from harpia_agents.llm.providers.deepseek import DeepSeekProvider
@@ -55,6 +56,34 @@ def _resolve_tenant_model_hint(elicitation_responses: Mapping[str, str] | None) 
     return str(elicitation_responses.get("requested_model", "")).strip()
 
 
+def _provider_for_model_id(model_id: str) -> str | None:
+    provider_models = {
+        AnthropicProvider.name: AnthropicProvider.supported_models,
+        DeepSeekProvider.name: DeepSeekProvider.supported_models,
+        OpenAIProvider.name: OpenAIProvider.supported_models,
+        OllamaProvider.name: OllamaProvider.supported_models,
+    }
+    for provider_name, model_ids in provider_models.items():
+        if model_id in model_ids:
+            return provider_name
+    return None
+
+
+def _model_id_for_resolved_provider(
+    model_id: str,
+    resolved: ResolvedProviderCredentials,
+) -> str:
+    provider_name = _provider_for_model_id(model_id)
+    if provider_name is None:
+        raise ModelNotFoundError(f"unknown model_id: {model_id}")
+    if provider_name != resolved.provider:
+        raise ModelNotFoundError(
+            f"model_id {model_id} is routed to provider {provider_name}, "
+            f"not resolved provider {resolved.provider}"
+        )
+    return model_id
+
+
 def _allow_local_llm_fallback() -> bool:
     return os.environ.get("HARPIA_ALLOW_DEV_AUTH", "").lower() in {"1", "true", "yes"}
 
@@ -80,9 +109,11 @@ def _model_id_for_run(
 ) -> str:
     model_hint = _resolve_tenant_model_hint(elicitation_responses)
     if model_hint:
+        if resolved is not None:
+            return _model_id_for_resolved_provider(model_hint, resolved)
         return model_hint
     if resolved is not None and resolved.default_model:
-        return resolved.default_model
+        return _model_id_for_resolved_provider(resolved.default_model, resolved)
     return _MANIFEST_MODEL_IDS[manifest_id]
 
 
