@@ -30,6 +30,14 @@ const DEFAULT_CONFIGS: Record<LLMProvider, LLMProviderConfigMeta> = {
     managed_by: "platform",
     last_rotated_at: null,
   },
+  deepseek: {
+    provider: "deepseek",
+    default_model: "deepseek-v4-flash",
+    allowed_models: [],
+    has_key: false,
+    managed_by: "platform",
+    last_rotated_at: null,
+  },
   openai: {
     provider: "openai",
     default_model: "gpt-4o",
@@ -63,7 +71,12 @@ export class MockLLMConfigClient implements LLMConfigClient {
     initial?: Partial<Record<LLMProvider, Partial<LLMProviderConfigMeta>>>,
   ) {
     this.store = new Map();
-    const providers: LLMProvider[] = ["anthropic", "openai", "ollama"];
+    const providers: LLMProvider[] = [
+      "anthropic",
+      "deepseek",
+      "openai",
+      "ollama",
+    ];
     for (const p of providers) {
       const defaults = deepClone(DEFAULT_CONFIGS[p]);
       const overrides = initial?.[p] ?? {};
