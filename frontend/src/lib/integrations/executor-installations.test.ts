@@ -10,6 +10,8 @@ import {
 import {
   buildIntegrationConfigJSON,
   connectionStatusLabelKey,
+  formKeyForCard,
+  formKeyForNewCard,
   formValuesFromCard,
   integrationKindForSkuKey,
   validateIntegrationForm,
@@ -21,6 +23,7 @@ const BASE_VALUES: DemoIntegrationFormValues = {
   displayName: "Demo integration",
   enabled: true,
   feedsText: "",
+  linkedinMode: "oauth",
   oauthCredentialId: "",
 };
 
@@ -49,8 +52,27 @@ describe("integration executor installations", () => {
     });
 
     expect(JSON.parse(config)).toEqual({
+      mode: "oauth",
       oauth_credential_id: "linkedin-prod",
     });
+  });
+
+  it("builds LinkedIn approval-only config without an OAuth credential", () => {
+    const config = buildIntegrationConfigJSON("linkedin", {
+      ...BASE_VALUES,
+      linkedinMode: "approval_only",
+      oauthCredentialId: "",
+    });
+
+    expect(JSON.parse(config)).toEqual({
+      mode: "approval_only",
+    });
+    expect(
+      validateIntegrationForm("linkedin", {
+        ...BASE_VALUES,
+        linkedinMode: "approval_only",
+      }),
+    ).toBeNull();
   });
 
   it("validates required RSS and LinkedIn fields", () => {
@@ -101,8 +123,27 @@ describe("integration executor installations", () => {
       displayName: "Morning feeds",
       enabled: true,
       feedsText: "https://example.com/feed.xml\nhttps://news.example/rss",
+      linkedinMode: "oauth",
       oauthCredentialId: "",
     });
+  });
+
+  it("uses installation id based form keys so many RSS groups do not collide", () => {
+    const first = {
+      kind: "rss",
+      sku: create(ExecutorSKUSchema, { id: "sku-rss", key: "rss-news-feed" }),
+      installation: create(ExecutorInstallationSchema, { id: "inst-rss-1" }),
+      connectionStatus: ConnectionStatus.CONNECTED,
+      configured: true,
+    } as DemoIntegrationCard;
+    const second = {
+      ...first,
+      installation: create(ExecutorInstallationSchema, { id: "inst-rss-2" }),
+    } as DemoIntegrationCard;
+
+    expect(formKeyForCard(first)).toBe("inst-rss-1");
+    expect(formKeyForCard(second)).toBe("inst-rss-2");
+    expect(formKeyForNewCard("rss-news-feed", 3)).toBe("new:rss-news-feed:3");
   });
 
   it("maps connection status values to translation keys", () => {

@@ -16,6 +16,7 @@ export const DEMO_INTEGRATION_SKU_KEYS = [
 
 export type DemoIntegrationSkuKey = (typeof DEMO_INTEGRATION_SKU_KEYS)[number];
 export type DemoIntegrationKind = "rss" | "linkedin";
+export type LinkedInIntegrationMode = "oauth" | "approval_only";
 export type IntegrationValidationCode =
   | "rssFeedsRequired"
   | "linkedinCredentialRequired";
@@ -24,6 +25,7 @@ export interface DemoIntegrationFormValues {
   displayName: string;
   enabled: boolean;
   feedsText: string;
+  linkedinMode: LinkedInIntegrationMode;
   oauthCredentialId: string;
 }
 
@@ -36,7 +38,16 @@ export interface DemoIntegrationCard {
   configured: boolean;
 }
 
+export interface DemoIntegrationGroup {
+  kind: DemoIntegrationKind;
+  sku: ExecutorSKU;
+  entitlement?: ExecutorEntitlement;
+  cards: DemoIntegrationCard[];
+  canAdd: boolean;
+}
+
 export interface DemoIntegrationContext {
+  groups: DemoIntegrationGroup[];
   cards: DemoIntegrationCard[];
 }
 
@@ -59,6 +70,14 @@ export function integrationKindForSkuKey(
   }
 }
 
+export function formKeyForCard(card: DemoIntegrationCard): string {
+  return card.installation?.id || `new:${card.sku.key}:0`;
+}
+
+export function formKeyForNewCard(skuKey: string, index: number): string {
+  return `new:${skuKey}:${index}`;
+}
+
 export async function loadDemoIntegrationContext(
   tenantId: string,
 ): Promise<DemoIntegrationContext> {
@@ -71,19 +90,21 @@ export async function loadDemoIntegrationContext(
   const entitlementBySkuID = new Map(
     entitlements.map((entitlement) => [entitlement.executorSkuId, entitlement]),
   );
-  const installationBySkuID = new Map<string, ExecutorInstallation>();
+  const installationsBySkuID = new Map<string, ExecutorInstallation[]>();
 
   for (const installation of installations) {
-    if (!installationBySkuID.has(installation.executorSkuId)) {
-      installationBySkuID.set(installation.executorSkuId, installation);
-    }
+    const current = installationsBySkuID.get(installation.executorSkuId) ?? [];
+    installationsBySkuID.set(installation.executorSkuId, [
+      ...current,
+      installation,
+    ]);
   }
 
   const order = new Map(
     DEMO_INTEGRATION_SKU_KEYS.map((key, index) => [key, index]),
   );
 
-  const cards = skus
+  const groups = skus
     .filter((sku) => isDemoIntegrationSkuKey(sku.key))
     .sort(
       (left, right) =>
@@ -96,20 +117,38 @@ export async function loadDemoIntegrationContext(
         throw new Error(`Unsupported integration SKU: ${sku.key}`);
       }
 
-      const installation = installationBySkuID.get(sku.id);
-      const connectionStatus = connectionStatusFromInstallation(installation);
+      const skuInstallations = installationsBySkuID.get(sku.id) ?? [];
+      const cards: DemoIntegrationCard[] = skuInstallations.map(
+        (installation) => ({
+          kind,
+          sku,
+          entitlement: entitlementBySkuID.get(sku.id),
+          installation,
+          connectionStatus: connectionStatusFromInstallation(installation),
+          configured: isInstallationConfigured(installation),
+        }),
+      );
+
+      if (cards.length === 0) {
+        cards.push({
+          kind,
+          sku,
+          entitlement: entitlementBySkuID.get(sku.id),
+          connectionStatus: ConnectionStatus.UNSPECIFIED,
+          configured: false,
+        });
+      }
 
       return {
         kind,
         sku,
         entitlement: entitlementBySkuID.get(sku.id),
-        installation,
-        connectionStatus,
-        configured: isInstallationConfigured(installation),
+        cards,
+        canAdd: kind === "rss",
       };
     });
 
-  return { cards };
+  return { groups, cards: groups.flatMap((group) => group.cards) };
 }
 
 export function formValuesFromCard(
@@ -120,6 +159,7 @@ export function formValuesFromCard(
       ? card.installation.detail.value.configJson
       : "",
   );
+  const mode = config.mode === "approval_only" ? "approval_only" : "oauth";
 
   return {
     displayName:
@@ -128,6 +168,7 @@ export function formValuesFromCard(
     feedsText: Array.isArray(config.feeds)
       ? config.feeds.filter(isString).join("\n")
       : "",
+    linkedinMode: mode,
     oauthCredentialId: isString(config.oauth_credential_id)
       ? config.oauth_credential_id
       : "",
@@ -141,7 +182,11 @@ export function validateIntegrationForm(
   if (kind === "rss" && parseFeedLines(values.feedsText).length === 0) {
     return "rssFeedsRequired";
   }
-  if (kind === "linkedin" && values.oauthCredentialId.trim().length === 0) {
+  if (
+    kind === "linkedin" &&
+    values.linkedinMode === "oauth" &&
+    values.oauthCredentialId.trim().length === 0
+  ) {
     return "linkedinCredentialRequired";
   }
   return null;
@@ -155,7 +200,12 @@ export function buildIntegrationConfigJSON(
     return JSON.stringify({ feeds: parseFeedLines(values.feedsText) });
   }
 
+  if (values.linkedinMode === "approval_only") {
+    return JSON.stringify({ mode: "approval_only" });
+  }
+
   return JSON.stringify({
+    mode: "oauth",
     oauth_credential_id: values.oauthCredentialId.trim(),
   });
 }
