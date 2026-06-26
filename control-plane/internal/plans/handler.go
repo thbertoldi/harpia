@@ -36,110 +36,6 @@ func (a *AssistantConfigurationStore) GetConfiguration(ctx context.Context, tena
 	return configurationToProto(cfg), nil
 }
 
-// UpdateFromSelection applies the user's selection to the persisted
-// PlanConfiguration. Server-authoritative; mirrors spec §2.6.
-func (a *AssistantConfigurationStore) UpdateFromSelection(ctx context.Context, tenantID, configID uuid.UUID, state planassistant.AssistantState, value string) (*plansv1.PlanConfiguration, error) {
-	domain, err := a.Repo.GetConfiguration(ctx, tenantID, configID)
-	if err != nil {
-		return nil, err
-	}
-	cfg := configurationToProto(domain)
-	switch state.Kind {
-	case planassistant.StateBindingStep:
-		cfg.SlotBindings = upsertSlotBinding(ctx, a.Executors, tenantID, cfg.SlotBindings, state.StepKey, value)
-	case planassistant.StateSetOverseer:
-		userID := value
-		if value == "self" {
-			if uid, ok := currentUserIDFromCtx(ctx); ok {
-				userID = uid
-			}
-		}
-		cfg.OverseerBindings = upsertOverseerBinding(cfg.OverseerBindings, state.StepKey, userID)
-	case planassistant.StateSetPolicies:
-		cfg.BehaviorPolicies = parsePolicyValue(value)
-	case planassistant.StateConfirm:
-		if value == "save" {
-			next := plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE
-			if cfg.Schedule != nil && cfg.Schedule.CronExpression != "" {
-				next = plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_SCHEDULED
-			}
-			cfg.Status = next
-		}
-	}
-	updatedDomain, err := configurationFromProto(cfg, domain)
-	if err != nil {
-		return nil, err
-	}
-	updated, err := a.Repo.UpdateConfiguration(ctx, updatedDomain)
-	if err != nil {
-		return nil, err
-	}
-	return configurationToProto(updated), nil
-}
-
-func upsertSlotBinding(ctx context.Context, lookup ExecutorLookup, tenantID uuid.UUID, existing []*plansv1.SlotBinding, stepKey, installationID string) []*plansv1.SlotBinding {
-	binding := &plansv1.SlotBinding{StepKey: stepKey, ExecutorInstallationId: installationID}
-	if lookup != nil && installationID != "" {
-		if parsedID, err := uuid.Parse(installationID); err == nil {
-			if inst, err := lookup.GetInstallationByID(ctx, tenantID, parsedID); err == nil {
-				if sku, err := lookup.GetSKUByID(ctx, inst.ExecutorSKUID); err == nil {
-					binding.ExecutorSkuId = sku.ID.String()
-					if kind, kindErr := dbExecutorKindToProto(inst.Kind); kindErr == nil {
-						binding.ExecutorKind = kind
-					}
-				}
-			}
-		}
-	}
-	for _, b := range existing {
-		if b.StepKey == stepKey {
-			b.ExecutorInstallationId = binding.ExecutorInstallationId
-			b.ExecutorSkuId = binding.ExecutorSkuId
-			b.ExecutorKind = binding.ExecutorKind
-			return existing
-		}
-	}
-	return append(existing, binding)
-}
-
-func upsertOverseerBinding(existing []*plansv1.OverseerBinding, stepKey, userID string) []*plansv1.OverseerBinding {
-	for _, b := range existing {
-		if b.StepKey == stepKey {
-			b.OverseerUserId = userID
-			return existing
-		}
-	}
-	return append(existing, &plansv1.OverseerBinding{StepKey: stepKey, OverseerUserId: userID})
-}
-
-func parsePolicyValue(v string) *plansv1.PlanBehaviorPolicies {
-	timeout := plansv1.ElicitationTimeoutBehavior_ELICITATION_TIMEOUT_BEHAVIOR_PAUSE_UNTIL_ANSWERED
-	approval := plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_REQUIRE_APPROVAL
-	hours := int32(24)
-	switch v {
-	case "PAUSE_UNTIL_ANSWERED+AUTO_PUBLISH":
-		approval = plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_AUTO_PUBLISH
-	case "FAIL_STEP+REQUIRE_APPROVAL":
-		timeout = plansv1.ElicitationTimeoutBehavior_ELICITATION_TIMEOUT_BEHAVIOR_FAIL_STEP
-	}
-	return &plansv1.PlanBehaviorPolicies{
-		ElicitationTimeoutBehavior: timeout,
-		ElicitationTimeoutHours:    hours,
-		PublishApprovalMode:        approval,
-	}
-}
-
-func currentUserIDFromCtx(ctx context.Context) (string, bool) {
-	rc, err := identity.RequireRequestContext(ctx)
-	if err != nil {
-		return "", false
-	}
-	if rc.UserID == "" {
-		return "", false
-	}
-	return rc.UserID, true
-}
-
 func configurationFromProto(proto *plansv1.PlanConfiguration, existing *PlanConfiguration) (*PlanConfiguration, error) {
 	if existing == nil {
 		return nil, errors.New("existing configuration is required")
@@ -560,6 +456,16 @@ func (h *PlanHandler) UpdatePlanConfiguration(ctx context.Context, req *connect.
 			Text:        "Configuration updated.",
 			PayloadJSON: chat.BuildConfigurationSavedPayload(),
 		})
+	}
+
+	// M6 (spec §2.1): when the matrix card's Save promotes status out of
+	// DRAFT, fire the assistant turn that emits the LandingCard. Best-effort
+	// — the status change is already persisted; NextTurn is idempotent, so a
+	// duplicate trigger (e.g. via the Save USER_SELECTION path) is harmless.
+	if h.assistant != nil &&
+		existing.Status == ConfigurationStatusDraft &&
+		updated.Status != ConfigurationStatusDraft {
+		_ = h.assistant.NextTurn(ctx, tenantID, updated.ID)
 	}
 
 	return connect.NewResponse(&plansv1.UpdatePlanConfigurationResponse{

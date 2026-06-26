@@ -2,12 +2,15 @@
   import "../app.css";
   import { Menu, X, Sun, Moon } from "lucide-svelte";
   import TenantSelector from "$lib/components/TenantSelector.svelte";
-  import InboxBadge from "$lib/components/InboxBadge.svelte";
   import BrandLockup from "$lib/components/BrandLockup.svelte";
   import { logout, getTenant } from "$lib/auth";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { resolve } from "$app/paths";
+  import { watchInbox } from "$lib/inbox/aggregator";
+  import { createCountTween } from "$lib/motion/springs";
+  import { planClient } from "$lib/rpc";
+  import { PlanConfigurationStatus } from "$lib/gen/harpia/plans/v1/plans_pb";
   import {
     applyColorScheme,
     initTheme,
@@ -102,6 +105,67 @@
   function isActive(path: string) {
     return isNavSectionActive(path, page.url.pathname);
   }
+
+  const inboxCountTween = createCountTween(0);
+  const yourPlansCountTween = createCountTween(0);
+
+  const inboxCountDisplay = $derived(Math.round($inboxCountTween));
+  const yourPlansCountDisplay = $derived(Math.round($yourPlansCountTween));
+
+  $effect(() => {
+    const tenantId = getTenant()?.id;
+    if (!tenantId) return;
+    const controller = new AbortController();
+    void (async () => {
+      try {
+        for await (const batch of watchInbox(tenantId, undefined, {
+          signal: controller.signal,
+        })) {
+          await inboxCountTween.set(batch.length);
+        }
+      } catch {
+        /* stream aborted or unavailable */
+      }
+    })();
+    return () => controller.abort();
+  });
+
+  $effect(() => {
+    const tenantId = getTenant()?.id;
+    if (!tenantId) return;
+    const controller = new AbortController();
+    let cancelled = false;
+
+    async function loadOnce() {
+      try {
+        let count = 0;
+        for await (const page of planClient.listPlanConfigurations(
+          { tenantId, pageSize: 100, pageToken: "" },
+          { signal: controller.signal },
+        )) {
+          for (const plan of page.planConfigurations) {
+            if (
+              plan.status === PlanConfigurationStatus.RUNNABLE ||
+              plan.status === PlanConfigurationStatus.SCHEDULED
+            ) {
+              count++;
+            }
+          }
+        }
+        if (!cancelled) await yourPlansCountTween.set(count);
+      } catch {
+        /* keep last-known count */
+      }
+    }
+
+    void loadOnce();
+    const intervalId = setInterval(loadOnce, 5000);
+    return () => {
+      cancelled = true;
+      controller.abort();
+      clearInterval(intervalId);
+    };
+  });
 </script>
 
 <svelte:head>
@@ -182,15 +246,28 @@
                 class="text-sm font-medium"
                 style="font-family: 'DM Sans', sans-serif">{section.label}</span
               >
-              {#if section.href === "/inbox"}
-                <InboxBadge />
+              {#if section.href === "/inbox" && inboxCountDisplay > 0}
+                <span
+                  class="ml-auto inline-flex items-center justify-center rounded-full bg-primary px-1.5 font-mono text-[11px] leading-none text-primary-foreground"
+                >
+                  {inboxCountDisplay}
+                </span>
               {/if}
             </a>
           {/each}
         </div>
 
         {#if personaMode === "operator"}
-          <YourPlansList />
+          <div class="relative mt-4">
+            {#if yourPlansCountDisplay > 0}
+              <span
+                class="absolute top-0 right-3 inline-flex items-center justify-center rounded-full bg-primary px-1.5 font-mono text-[11px] leading-none text-primary-foreground"
+              >
+                {yourPlansCountDisplay}
+              </span>
+            {/if}
+            <YourPlansList />
+          </div>
         {/if}
 
         <div class="mt-8 border-t border-plumage pt-6">

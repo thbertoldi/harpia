@@ -87,4 +87,40 @@ describe("editBinding", () => {
         ?.executorInstallationId,
     ).toBe("inst-new");
   });
+
+  it("adds a binding for a step that was previously unbound", async () => {
+    appendThreadMessage.mockResolvedValueOnce({});
+    updatePlanConfiguration.mockResolvedValueOnce({
+      planConfiguration: { id: "c" },
+    });
+    const template = {
+      id: "tpl",
+      steps: [{ key: "a" }, { key: "b" }],
+    } as PlanTemplate;
+    // Fresh DRAFT: no slot bindings yet (the regression case).
+    const config = {
+      id: "c",
+      status: PlanConfigurationStatus.DRAFT,
+      slotBindings: [],
+      overseerBindings: [],
+      behaviorPolicies: undefined,
+      schedule: undefined,
+      seedArtifacts: [],
+    } as unknown as PlanConfiguration;
+    await editBinding({
+      tenantId: "t",
+      configurationId: "c",
+      existingConfiguration: config,
+      template,
+      stepKey: "a",
+      newInstallationId: "inst-new",
+    });
+    expect(updatePlanConfiguration).toHaveBeenCalledTimes(1);
+    const call = updatePlanConfiguration.mock.calls[0][0];
+    expect(call.slotBindings).toHaveLength(1);
+    expect(
+      call.slotBindings.find((b: SlotBinding) => b.stepKey === "a")
+        ?.executorInstallationId,
+    ).toBe("inst-new");
+  });
 });

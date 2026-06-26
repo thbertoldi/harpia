@@ -2,6 +2,7 @@
   import { resolve } from "$app/paths";
   import { locale, translate } from "$lib/i18n";
   import type { InboxElicitationItem } from "$lib/inbox/types";
+  import { chipFlash } from "$lib/motion/transitions";
 
   interface Props {
     item: InboxElicitationItem;
@@ -15,7 +16,8 @@
       ? `/plans/configurations/${item.configurationId}#m-elicitation-${item.id}`
       : `/plans/executions/${item.planExecutionId}/elicitations/${item.id}`,
   )}
-  class="rounded border border-talon-gold bg-talon-gold px-3 py-1.5 text-[11px] font-semibold text-obsidian hover:opacity-90"
+  in:chipFlash
+  class="rounded border border-primary bg-primary px-3 py-1.5 text-[11px] font-semibold text-primary-foreground hover:opacity-90"
 >
   {translate("inbox.actions.openThread", $locale)}
 </a>

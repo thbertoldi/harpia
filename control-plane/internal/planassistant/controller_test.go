@@ -2,6 +2,7 @@ package planassistant_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -14,25 +15,26 @@ import (
 
 const testTemplateUUID = "11111111-1111-1111-1111-111111111111"
 
+// fakeChat records appended messages and serves them back from ListMessages
+// so the controller's dedup / idempotency paths are exercised realistically.
 type fakeChat struct {
 	appended []chat.AppendInput
-	listing  []*chatv1.ThreadMessage
+	stored   []*chatv1.ThreadMessage
 }
 
 func (f *fakeChat) AppendMessage(_ context.Context, _ uuid.UUID, in chat.AppendInput) (*chatv1.ThreadMessage, error) {
 	f.appended = append(f.appended, in)
-	return &chatv1.ThreadMessage{Id: uuid.NewString(), Kind: in.Kind, PayloadJson: in.PayloadJSON, Text: in.Text}, nil
+	msg := &chatv1.ThreadMessage{Id: uuid.NewString(), Kind: in.Kind, PayloadJson: in.PayloadJSON, Text: in.Text}
+	f.stored = append(f.stored, msg)
+	return msg, nil
 }
 func (f *fakeChat) ListMessages(_ context.Context, _ uuid.UUID, _ string, _ int64, _ int) ([]*chatv1.ThreadMessage, error) {
-	return f.listing, nil
+	return f.stored, nil
 }
 
 type fakeConfigs struct{ cur *plansv1.PlanConfiguration }
 
 func (f *fakeConfigs) GetConfiguration(_ context.Context, _, _ uuid.UUID) (*plansv1.PlanConfiguration, error) {
-	return f.cur, nil
-}
-func (f *fakeConfigs) UpdateFromSelection(_ context.Context, _, _ uuid.UUID, _ planassistant.AssistantState, _ string) (*plansv1.PlanConfiguration, error) {
 	return f.cur, nil
 }
 
@@ -48,17 +50,25 @@ func (f *fakeTemplates) GetTemplateByID(_ context.Context, _ uuid.UUID) (*plansv
 	return f.tpl, nil
 }
 
-func TestSeedThread_EmitsConfigurationStartedThenFirstPrompt(t *testing.T) {
-	chatStore := &fakeChat{}
-	tpl := mkTemplate("draft")
-	tpl.Id = testTemplateUUID
-	cfg := &plansv1.PlanConfiguration{Id: uuid.NewString(), PlanTemplateId: testTemplateUUID}
-	c := &planassistant.Controller{
+func newController(chatStore chat.Store, cfg *plansv1.PlanConfiguration, tpl *plansv1.PlanTemplate) *planassistant.Controller {
+	return &planassistant.Controller{
 		Chat:      chatStore,
 		Catalog:   fakeCatalog{},
 		Configs:   &fakeConfigs{cur: cfg},
 		Templates: &fakeTemplates{tpl: tpl},
 	}
+}
+
+func TestSeedThread_EmitsConfigurationStartedThenMatrix(t *testing.T) {
+	chatStore := &fakeChat{}
+	tpl := mkTemplate("draft")
+	tpl.Id = testTemplateUUID
+	cfg := &plansv1.PlanConfiguration{
+		Id:             uuid.NewString(),
+		PlanTemplateId: testTemplateUUID,
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+	}
+	c := newController(chatStore, cfg, tpl)
 	if err := c.SeedThread(context.Background(), uuid.New(), uuid.New()); err != nil {
 		t.Fatal(err)
 	}
@@ -71,30 +81,92 @@ func TestSeedThread_EmitsConfigurationStartedThenFirstPrompt(t *testing.T) {
 	if chatStore.appended[1].Kind != chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_ASSISTANT_PROMPT {
 		t.Fatalf("second message kind: %v", chatStore.appended[1].Kind)
 	}
+	if !strings.Contains(chatStore.appended[1].PayloadJSON, `"state":"BINDING_MATRIX"`) {
+		t.Fatalf("first prompt should be the matrix: %s", chatStore.appended[1].PayloadJSON)
+	}
 }
 
-func TestNextTurn_AdvancesAfterSelection(t *testing.T) {
+func TestNextTurn_EmitsMatrixWhileDraft(t *testing.T) {
 	chatStore := &fakeChat{}
 	tpl := mkTemplate("draft", "publish")
 	tpl.Id = testTemplateUUID
 	cfg := &plansv1.PlanConfiguration{
 		Id:             uuid.NewString(),
 		PlanTemplateId: testTemplateUUID,
-		SlotBindings:   []*plansv1.SlotBinding{{StepKey: "draft", ExecutorInstallationId: "inst"}, {StepKey: "publish", ExecutorInstallationId: "inst2"}},
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+		SlotBindings:   []*plansv1.SlotBinding{{StepKey: "draft", ExecutorInstallationId: "inst"}},
 	}
-	c := &planassistant.Controller{
-		Chat:      chatStore,
-		Catalog:   fakeCatalog{},
-		Configs:   &fakeConfigs{cur: cfg},
-		Templates: &fakeTemplates{tpl: tpl},
+	c := newController(chatStore, cfg, tpl)
+	if err := c.NextTurn(context.Background(), uuid.New(), uuid.New()); err != nil {
+		t.Fatal(err)
+	}
+	if len(chatStore.appended) != 1 {
+		t.Fatalf("expected 1 matrix prompt, got %d", len(chatStore.appended))
+	}
+	if !strings.Contains(chatStore.appended[0].PayloadJSON, `"state":"BINDING_MATRIX"`) {
+		t.Fatalf("expected matrix payload, got %s", chatStore.appended[0].PayloadJSON)
+	}
+}
+
+func TestNextTurn_DedupsIdenticalMatrix(t *testing.T) {
+	chatStore := &fakeChat{}
+	tpl := mkTemplate("draft")
+	tpl.Id = testTemplateUUID
+	cfg := &plansv1.PlanConfiguration{
+		Id:             uuid.NewString(),
+		PlanTemplateId: testTemplateUUID,
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+	}
+	c := newController(chatStore, cfg, tpl)
+	if err := c.NextTurn(context.Background(), uuid.New(), uuid.New()); err != nil {
+		t.Fatal(err)
 	}
 	if err := c.NextTurn(context.Background(), uuid.New(), uuid.New()); err != nil {
 		t.Fatal(err)
 	}
 	if len(chatStore.appended) != 1 {
-		t.Fatalf("expected 1 new prompt, got %d", len(chatStore.appended))
+		t.Fatalf("identical matrix should be deduped to 1, got %d", len(chatStore.appended))
 	}
-	if chatStore.appended[0].Kind != chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_ASSISTANT_PROMPT {
-		t.Fatalf("expected ASSISTANT_PROMPT, got %v", chatStore.appended[0].Kind)
+}
+
+func TestNextTurn_EmitsLandingOnPromotion(t *testing.T) {
+	chatStore := &fakeChat{}
+	tpl := mkTemplate("draft")
+	tpl.Id = testTemplateUUID
+	cfg := &plansv1.PlanConfiguration{
+		Id:             uuid.NewString(),
+		PlanTemplateId: testTemplateUUID,
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
+	}
+	c := newController(chatStore, cfg, tpl)
+	if err := c.NextTurn(context.Background(), uuid.New(), uuid.New()); err != nil {
+		t.Fatal(err)
+	}
+	if len(chatStore.appended) != 1 {
+		t.Fatalf("expected 1 landing prompt, got %d", len(chatStore.appended))
+	}
+	if !strings.Contains(chatStore.appended[0].PayloadJSON, `"state":"landing"`) {
+		t.Fatalf("expected landing payload, got %s", chatStore.appended[0].PayloadJSON)
+	}
+}
+
+func TestNextTurn_LandingIsIdempotent(t *testing.T) {
+	chatStore := &fakeChat{}
+	tpl := mkTemplate("draft")
+	tpl.Id = testTemplateUUID
+	cfg := &plansv1.PlanConfiguration{
+		Id:             uuid.NewString(),
+		PlanTemplateId: testTemplateUUID,
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
+	}
+	c := newController(chatStore, cfg, tpl)
+	if err := c.NextTurn(context.Background(), uuid.New(), uuid.New()); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.NextTurn(context.Background(), uuid.New(), uuid.New()); err != nil {
+		t.Fatal(err)
+	}
+	if len(chatStore.appended) != 1 {
+		t.Fatalf("landing should be emitted at most once, got %d", len(chatStore.appended))
 	}
 }

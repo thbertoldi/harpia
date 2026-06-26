@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { Loader2, Save, ShieldCheck } from "lucide-svelte";
+  import { Save, ShieldCheck } from "lucide-svelte";
+  import Skeleton from "$lib/components/Skeleton.svelte";
   import {
     ELICITATION_TIMEOUT_BEHAVIOR_OPTIONS,
     PUBLISH_APPROVAL_MODE_OPTIONS,
@@ -221,7 +222,7 @@
       class="inline-flex cursor-pointer items-center gap-2 rounded-md border border-talon-gold/60 bg-talon-gold/10 px-4 py-2 font-body text-sm text-talon-gold transition-colors hover:bg-talon-gold/20 disabled:cursor-not-allowed disabled:opacity-50"
     >
       {#if saving}
-        <Loader2 class="size-4 animate-spin" />
+        <Skeleton shape="circle" width="1rem" height="1rem" />
         {translate("plans.policies.saving", $locale)}
       {:else}
         <Save class="size-4" />

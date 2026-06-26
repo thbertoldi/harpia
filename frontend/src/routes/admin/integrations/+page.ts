@@ -1,6 +1,2 @@
-import { redirect } from "@sveltejs/kit";
-import type { PageLoad } from "./$types";
-
-export const load: PageLoad = () => {
-  throw redirect(302, "/integrations");
-};
+// Auth tokens live in localStorage and this page is client-effect driven.
+export const ssr = false;

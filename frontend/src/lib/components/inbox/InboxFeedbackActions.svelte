@@ -2,6 +2,7 @@
   import { resolve } from "$app/paths";
   import { locale, translate } from "$lib/i18n";
   import type { InboxFeedbackItem } from "$lib/inbox/types";
+  import { chipFlash } from "$lib/motion/transitions";
 
   interface Props {
     item: InboxFeedbackItem;
@@ -13,9 +14,10 @@
 </script>
 
 <a
-  href={resolve("/oversee")}
+  href={resolve("/inbox")}
   data-feedback-id={item.id}
-  class="rounded border border-plumage bg-transparent px-3 py-1.5 text-[11px] font-medium text-crown-ash hover:border-talon-gold hover:text-talon-gold"
+  in:chipFlash
+  class="rounded border border-border bg-transparent px-3 py-1.5 text-[11px] font-medium text-text-muted hover:bg-surface-hover hover:text-text"
 >
   {translate("inbox.actions.openThread", $locale)}
 </a>

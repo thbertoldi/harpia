@@ -1,0 +1,14 @@
+<!-- TODO: replace with final Bodoni Moda wordmark from design -->
+<!--
+  Harpia wordmark — light variant for the dark Zitadel auth surface.
+  Serif font-family is generic (Georgia / Times) so the SVG renders
+  standalone without bundling Bodoni Moda. Cream (#f5f2eb) fill on
+  transparent background. Drop the final designer render here verbatim.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 80" width="360" height="80" role="img" aria-label="Harpia">
+  <rect width="360" height="80" fill="none"/>
+  <text x="180" y="56" text-anchor="middle"
+        font-family="'Bodoni Moda', Georgia, 'Times New Roman', serif"
+        font-size="52" font-weight="600" letter-spacing="2"
+        fill="#f5f2eb">Harpia</text>
+</svg>

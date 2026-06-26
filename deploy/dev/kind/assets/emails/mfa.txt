@@ -1,0 +1,27 @@
+{{if eq .PreferredLanguage "pt-BR"}}Harpia — Verifique seu acesso
+
+Olá {{.FirstName}},
+
+Use o código abaixo para concluir a verificação em duas etapas:
+
+{{.Code}}
+
+Ou confirme pelo link: {{.URL}}
+
+Se você não tentou entrar, ignore este e-mail.
+
+Harpia — AI-enabled operations.
+{{else}}Harpia — Verify your sign-in
+
+Hi {{.FirstName}},
+
+Use the code below to complete two-step verification:
+
+{{.Code}}
+
+Or confirm via link: {{.URL}}
+
+If you didn't try to sign in, you can ignore this email.
+
+Harpia — AI-enabled operations.
+{{end}}

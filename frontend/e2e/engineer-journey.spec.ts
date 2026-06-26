@@ -3,7 +3,7 @@ import {
   ConnectionStatus,
   ExecutorKind,
 } from "../src/lib/gen/harpia/executors/v1/executors_pb";
-import { loginAsEngineer } from "./fixtures/personas";
+import { loginAsPlatformEngineer } from "./fixtures/personas";
 
 const RSS_SKU = {
   $typeName: "harpia.executors.v1.ExecutorSKU",
@@ -203,14 +203,42 @@ async function installExecutorApiStub(page: Page) {
   return { installations };
 }
 
+async function installAgentCatalogFallbackStub(page: Page) {
+  await page.route("**/harpia.agents.v1.AgentService/*", async (route) => {
+    const url = new URL(route.request().url());
+    const method = url.pathname.split("/").at(-1) ?? "";
+
+    if (method === "ListAgentTypes") {
+      const payload = new TextEncoder().encode(
+        JSON.stringify({ agentTypes: [], nextPageToken: "" }),
+      );
+      await route.fulfill({
+        status: 200,
+        headers: { "content-type": "application/connect+json" },
+        body: toStreamBody([encodeEnvelope(payload), endStreamEnvelope()]),
+      });
+      return;
+    }
+
+    await route.fulfill({
+      status: 404,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        message: `Unhandled AgentService method: ${method}`,
+      }),
+    });
+  });
+}
+
 test("Platform Engineer can complete agent integration journey", async ({
   page,
   baseURL,
 }) => {
-  await loginAsEngineer(page, baseURL);
+  await loginAsPlatformEngineer(page, baseURL);
+  await installAgentCatalogFallbackStub(page);
   const executorApi = await installExecutorApiStub(page);
 
-  await page.goto("/agents");
+  await page.goto("/admin/agents");
   await expect(
     page.getByRole("heading", { name: "Agent Catalog" }),
   ).toBeVisible();
@@ -219,7 +247,7 @@ test("Platform Engineer can complete agent integration journey", async ({
   await sampleAgentRow.click();
   await expect(page.getByText("Tenant Knowledge Search")).toBeVisible();
 
-  await page.goto("/integrations");
+  await page.goto("/admin/integrations");
   await expect(
     page.getByRole("heading", { name: "Integrations" }),
   ).toBeVisible();
@@ -258,7 +286,7 @@ test("Platform Engineer can complete agent integration journey", async ({
     },
   );
 
-  await page.goto("/agents");
+  await page.goto("/admin/agents");
   await expect(page.getByRole("row", { name: /Email Drafter/i })).toBeVisible({
     timeout: 15_000,
   });
@@ -283,7 +311,7 @@ test("Platform Engineer can complete agent integration journey", async ({
   const taskId = taskIdMatch?.[0];
   expect(taskId).toBeTruthy();
 
-  await page.goto("/audit");
+  await page.goto("/admin/audit");
   await page.getByPlaceholder("task-a1b2…").fill(taskId!);
   await page.getByRole("button", { name: "Apply" }).click();
 

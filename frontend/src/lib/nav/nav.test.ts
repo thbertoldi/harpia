@@ -8,51 +8,56 @@ import {
 
 describe("nav sections registry", () => {
   it("includes base sections for all roles", () => {
-    expect(filterNavSections("Leader")).toHaveLength(8);
-    expect(filterNavSections(undefined)).toHaveLength(4);
+    // 2 base ("all") sections + 4 permission-gated /admin/* sections.
+    expect(filterNavSections("Leader")).toHaveLength(6);
+    expect(filterNavSections(undefined)).toHaveLength(2);
   });
 
   it("shows integrations to leaders and engineers", () => {
     expect(
-      filterNavSections("Leader").some((d) => d.href === "/integrations"),
+      filterNavSections("Leader").some((d) => d.href === "/admin/integrations"),
     ).toBe(true);
     expect(
-      filterNavSections("Engineer").some((d) => d.href === "/integrations"),
+      filterNavSections("Engineer").some(
+        (d) => d.href === "/admin/integrations",
+      ),
     ).toBe(true);
     expect(
-      filterNavSections("Overseer").some((d) => d.href === "/integrations"),
+      filterNavSections("Overseer").some(
+        (d) => d.href === "/admin/integrations",
+      ),
     ).toBe(false);
   });
 
   it("shows audit log to leader, overseer, and engineer", () => {
-    expect(filterNavSections("Leader").some((d) => d.href === "/audit")).toBe(
-      true,
-    );
-    expect(filterNavSections("Overseer").some((d) => d.href === "/audit")).toBe(
-      true,
-    );
-    expect(filterNavSections("Engineer").some((d) => d.href === "/audit")).toBe(
-      true,
-    );
+    expect(
+      filterNavSections("Leader").some((d) => d.href === "/admin/audit"),
+    ).toBe(true);
+    expect(
+      filterNavSections("Overseer").some((d) => d.href === "/admin/audit"),
+    ).toBe(true);
+    expect(
+      filterNavSections("Engineer").some((d) => d.href === "/admin/audit"),
+    ).toBe(true);
   });
 
   it("shows agents catalog to leaders and engineers", () => {
-    expect(filterNavSections("Leader").some((d) => d.href === "/agents")).toBe(
-      true,
-    );
     expect(
-      filterNavSections("Engineer").some((d) => d.href === "/agents"),
+      filterNavSections("Leader").some((d) => d.href === "/admin/agents"),
     ).toBe(true);
     expect(
-      filterNavSections("Overseer").some((d) => d.href === "/agents"),
+      filterNavSections("Engineer").some((d) => d.href === "/admin/agents"),
+    ).toBe(true);
+    expect(
+      filterNavSections("Overseer").some((d) => d.href === "/admin/agents"),
     ).toBe(false);
   });
 
   it("hides permission-gated sections from unknown roles", () => {
-    expect(filterNavSections("member")).toHaveLength(4);
-    expect(filterNavSections("member").some((d) => d.href === "/audit")).toBe(
-      false,
-    );
+    expect(filterNavSections("member")).toHaveLength(2);
+    expect(
+      filterNavSections("member").some((d) => d.href === "/admin/audit"),
+    ).toBe(false);
   });
 
   it("shows plan catalog to all authenticated roles", () => {
@@ -69,8 +74,6 @@ describe("nav sections registry", () => {
       (s) => s.label,
     );
     expect(labels).toEqual([
-      "t:nav.tasks",
-      "t:nav.ongoing",
       "t:nav.needsYou",
       "t:nav.plans",
       "t:nav.integrations",
@@ -82,30 +85,28 @@ describe("nav sections registry", () => {
 });
 
 describe("isNavSectionActive", () => {
-  it("highlights home for /tasks but not /tasks/ongoing", () => {
-    expect(isNavSectionActive("/", "/tasks")).toBe(true);
-    expect(isNavSectionActive("/", "/tasks/ongoing")).toBe(false);
-    expect(isNavSectionActive("/tasks/ongoing", "/tasks/ongoing")).toBe(true);
+  it("matches exact paths only (no general nesting)", () => {
+    expect(isNavSectionActive("/inbox", "/inbox")).toBe(true);
+    expect(isNavSectionActive("/plans", "/plans")).toBe(true);
+    expect(isNavSectionActive("/plans", "/plans/abc")).toBe(false);
+    expect(isNavSectionActive("/inbox", "/admin/audit")).toBe(false);
   });
 
-  it("matches exact paths", () => {
-    expect(isNavSectionActive("/oversee", "/oversee")).toBe(true);
-    expect(isNavSectionActive("/oversee", "/audit")).toBe(false);
-    expect(isNavSectionActive("/plans", "/plans")).toBe(true);
+  it("keeps the home → /tasks special case", () => {
+    expect(isNavSectionActive("/", "/tasks")).toBe(true);
+    expect(isNavSectionActive("/", "/tasks/ongoing")).toBe(false);
   });
 });
 
 describe("navSectionDefs", () => {
   it("lists role-gated sections after base sections", () => {
     expect(navSectionDefs.map((d) => d.href)).toEqual([
-      "/",
-      "/tasks/ongoing",
       "/inbox",
       "/plans",
-      "/integrations",
-      "/audit",
-      "/agents",
-      "/settings",
+      "/admin/integrations",
+      "/admin/audit",
+      "/admin/agents",
+      "/admin/settings",
     ]);
   });
 });

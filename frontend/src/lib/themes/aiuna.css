@@ -26,6 +26,12 @@
   --token-text-muted: #606062;
   --token-text-muted-dark: #9ca3af;
   --token-border: #d7dbde;
+  /* 5-layer surfaces (light): sidebar deeper than the page, row-hover a
+     faint grey on the white cards, popover white (elevated via shadow). */
+  --token-surface-deep: #e9ebee;
+  --token-surface-hover: #eef0f3;
+  --token-surface-pop: #ffffff;
+  --token-danger: #b42318;
 }
 
 [data-theme="aiuna"].dark {
@@ -38,4 +44,9 @@
   --token-primary: #a47ade;
   --token-primary-bright: #b794f4;
   --token-on-primary: #141416;
+  /* 5-layer surfaces (dark). */
+  --token-surface-deep: #08090d;
+  --token-surface-hover: #1d1f29;
+  --token-surface-pop: #272a36;
+  --token-danger: #d9534f;
 }

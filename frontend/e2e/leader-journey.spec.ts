@@ -1,20 +1,14 @@
 import { expect, test } from "@playwright/test";
-import { TaskStatus } from "../src/lib/gen/harpia/tasks/v1/tasks_pb";
-import { loginAsLeader } from "./fixtures/personas";
+import { loginAsAna } from "./fixtures/personas";
 import { installTaskApiStub } from "./fixtures/tasks";
 
-test("Leader completes submit-to-result journey via watch stream", async ({
+test("Ana submits a task and lands in the M6 inbox", async ({
   page,
   baseURL,
 }) => {
   const taskApi = await installTaskApiStub(page);
-  const seededTask = taskApi.seedTask({
-    tenantId: "dev",
-    title: "Leader seeded task",
-    description: "Seeded task visible in dashboard list",
-  });
 
-  await loginAsLeader(page, baseURL);
+  await loginAsAna(page, baseURL);
   await page.goto("/");
   await expect(
     page.getByRole("heading", { name: "What do you want to get done?" }),
@@ -30,34 +24,6 @@ test("Leader completes submit-to-result journey via watch stream", async ({
 
   expect(taskApi.getCreateCallCount()).toBeGreaterThan(0);
 
-  await expect(page).toHaveURL(/\/tasks(\?id=|$)/);
-  const createdTaskId = new URL(page.url()).searchParams.get("id");
-  expect(createdTaskId).toBeTruthy();
-
-  await expect
-    .poll(() => taskApi.getListCallCount(), {
-      message: "Expected TaskService.ListTasks to be called",
-      timeout: 5_000,
-    })
-    .toBeGreaterThan(0);
-  await expect(
-    page.getByRole("button", { name: /Leader journey stub task/i }).first(),
-  ).toBeVisible();
-  await expect(page.getByText(seededTask.title)).toBeVisible();
-
-  await page.getByRole("button", { name: /Leader journey stub task/i }).click();
-
-  const completedTask = await taskApi.waitForTaskStatus(
-    createdTaskId as string,
-    TaskStatus.COMPLETED,
-    { timeoutMs: 10_000, pollMs: 50 },
-  );
-
-  await expect(
-    page.getByRole("heading", { name: completedTask.title }),
-  ).toBeVisible();
-
-  const watchEvents = taskApi.getWatchEventCount(completedTask.id);
-  expect(watchEvents).toBeGreaterThan(0);
-  expect(watchEvents).toBeGreaterThanOrEqual(3);
+  await expect(page).toHaveURL(/\/inbox$/);
+  await expect(page.getByRole("heading", { name: "Needs you" })).toBeVisible();
 });

@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { Check, X, Pencil, Loader2 } from "lucide-svelte";
+  import { Check, X, Pencil } from "lucide-svelte";
   import { requireTenantId } from "$lib/auth";
   import { toUserMessage } from "$lib/connect-errors";
+  import Skeleton from "$lib/components/Skeleton.svelte";
   import {
     feedbackClient,
     FeedbackDecision,
@@ -9,6 +10,7 @@
     type FeedbackRequest,
   } from "$lib/rpc";
   import { locale, translate } from "$lib/i18n";
+  import { chipFlash } from "$lib/motion/transitions";
 
   let {
     feedbackId,
@@ -100,12 +102,14 @@
 </script>
 
 {#if loading}
-  <div class="flex items-center justify-center py-16">
-    <Loader2 class="size-6 animate-spin text-talon-gold" />
+  <div class="space-y-3 py-8">
+    <Skeleton width="40%" height="1.5rem" />
+    <Skeleton width="100%" height="4rem" />
+    <Skeleton width="60%" height="2.5rem" />
   </div>
 {:else if error}
-  <div class="rounded-lg border border-red-500/20 bg-red-500/10 p-4">
-    <p class="font-mono text-sm text-red-400">{error}</p>
+  <div class="rounded-lg border border-danger/20 bg-danger/10 p-4">
+    <p class="font-mono text-sm text-danger">{error}</p>
   </div>
 {:else if submitted}
   <div
@@ -113,14 +117,14 @@
     class="animate-in fade-in flex flex-col items-center justify-center py-16 transition-all duration-500"
   >
     <div
-      class="flex h-16 w-16 items-center justify-center rounded-full bg-talon-gold/20"
+      class="flex h-16 w-16 items-center justify-center rounded-full bg-primary/20"
     >
-      <Check class="size-8 text-talon-gold" />
+      <Check class="size-8 text-primary" />
     </div>
-    <p class="mt-4 font-heading text-xl text-cream">
+    <p class="mt-4 font-heading text-xl text-text">
       {translate("feedback.submitted", $locale)}
     </p>
-    <p class="mt-1 font-body text-sm text-crown-ash">
+    <p class="mt-1 font-body text-sm text-text-muted">
       {submittedDecision === "Approve"
         ? translate("feedback.submitted.approved", $locale)
         : submittedDecision === "Reject"
@@ -132,25 +136,25 @@
   <div class="transition-all duration-300">
     <h2
       data-testid="feedback-panel-title"
-      class="mb-6 font-heading text-2xl font-bold text-cream"
+      class="mb-6 font-heading text-2xl font-bold text-text"
     >
       {translate("feedback.yourReview", $locale)}
     </h2>
 
-    <div class="mb-6 rounded-lg border border-plumage bg-obsidian-light p-5">
+    <div class="mb-6 rounded-lg border border-border bg-surface-elevated p-5">
       <p
-        class="mb-2 font-mono text-[10px] tracking-widest text-crown-ash uppercase"
+        class="mb-2 font-mono text-[10px] tracking-widest text-text-muted uppercase"
       >
         {translate("feedback.agentRequest", $locale)}
       </p>
       <p
         data-testid="feedback-question"
-        class="font-body text-base leading-relaxed text-cream"
+        class="font-body text-base leading-relaxed text-text"
       >
         {feedback.question}
       </p>
       {#if feedback.createdAt}
-        <p class="mt-2 font-mono text-xs text-crown-ash-dark">
+        <p class="mt-2 font-mono text-xs text-text-muted-dark">
           {translate("feedback.waiting", $locale)}
           {timeAgo(feedback.createdAt)}
         </p>
@@ -158,9 +162,9 @@
     </div>
 
     {#if feedback.options && feedback.options.length > 0}
-      <div class="mb-6 rounded-lg border border-plumage bg-obsidian p-4">
+      <div class="mb-6 rounded-lg border border-border bg-surface p-4">
         <p
-          class="mb-3 font-mono text-[10px] tracking-widest text-crown-ash uppercase"
+          class="mb-3 font-mono text-[10px] tracking-widest text-text-muted uppercase"
         >
           {translate("feedback.agentOutput", $locale)}
         </p>
@@ -168,7 +172,7 @@
           {#each feedback.options as option, idx (option)}
             <div
               data-testid={`feedback-option-${idx}`}
-              class="mb-2 rounded bg-obsidian-light px-3 py-2 font-mono text-sm leading-relaxed whitespace-pre-wrap text-crown-ash last:mb-0"
+              class="mb-2 rounded bg-surface-hover px-3 py-2 font-mono text-sm leading-relaxed whitespace-pre-wrap text-text-muted last:mb-0"
             >
               {option}
             </div>
@@ -181,14 +185,14 @@
       <div class="mb-6">
         <label
           for="feedback-comment"
-          class="mb-2 block font-mono text-[10px] tracking-widest text-crown-ash uppercase"
+          class="mb-2 block font-mono text-[10px] tracking-widest text-text-muted uppercase"
           >{translate("feedback.commentOptional", $locale)}</label
         >
         <textarea
           id="feedback-comment"
           bind:value={comment}
           placeholder={translate("feedback.commentPlaceholder", $locale)}
-          class="w-full resize-none rounded-lg border border-plumage bg-obsidian-light px-4 py-3 font-body text-sm text-cream placeholder:text-crown-ash-dark focus:border-talon-gold focus:ring-1 focus:ring-talon-gold/30 focus:outline-none"
+          class="w-full resize-none rounded-lg border border-border bg-surface-elevated px-4 py-3 font-body text-sm text-text placeholder:text-text-muted-dark focus:border-primary focus:ring-1 focus:ring-primary/30 focus:outline-none"
           rows="3"
         ></textarea>
       </div>
@@ -198,10 +202,11 @@
           onclick={() => handleDecision(FeedbackDecision.APPROVE, "Approve")}
           data-testid="feedback-approve"
           disabled={submitting}
-          class="flex items-center gap-2 rounded-lg bg-talon-gold px-5 py-2.5 font-body text-sm font-medium text-obsidian transition-all hover:bg-talon-gold-bright disabled:cursor-not-allowed disabled:opacity-50"
+          in:chipFlash
+          class="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 font-body text-sm font-medium text-primary-foreground transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {#if submitting}
-            <Loader2 class="size-4 animate-spin" />
+            <Skeleton shape="circle" width="1rem" height="1rem" />
           {:else}
             <Check class="size-4" />
           {/if}
@@ -211,10 +216,11 @@
           onclick={() => handleDecision(FeedbackDecision.REJECT, "Reject")}
           data-testid="feedback-reject-retry"
           disabled={submitting}
-          class="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-5 py-2.5 font-body text-sm font-medium text-red-400 transition-all hover:border-red-500/50 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+          in:chipFlash
+          class="flex items-center gap-2 rounded-lg border border-danger/30 bg-danger/10 px-5 py-2.5 font-body text-sm font-medium text-danger transition-all hover:border-danger/50 hover:bg-danger/20 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {#if submitting}
-            <Loader2 class="size-4 animate-spin" />
+            <Skeleton shape="circle" width="1rem" height="1rem" />
           {:else}
             <X class="size-4" />
           {/if}
@@ -224,10 +230,11 @@
           onclick={() => handleDecision(FeedbackDecision.MODIFY, "Modify")}
           data-testid="feedback-modify"
           disabled={submitting}
-          class="flex items-center gap-2 rounded-lg border border-plumage bg-transparent px-5 py-2.5 font-body text-sm font-medium text-crown-ash transition-all hover:border-talon-gold hover:text-talon-gold disabled:cursor-not-allowed disabled:opacity-50"
+          in:chipFlash
+          class="flex items-center gap-2 rounded-lg border border-border bg-transparent px-5 py-2.5 font-body text-sm font-medium text-text-muted transition-all hover:bg-surface-hover hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
         >
           {#if submitting}
-            <Loader2 class="size-4 animate-spin" />
+            <Skeleton shape="circle" width="1rem" height="1rem" />
           {:else}
             <Pencil class="size-4" />
           {/if}
@@ -237,16 +244,16 @@
     {/if}
 
     {#if feedback.status !== FeedbackStatus.PENDING}
-      <div class="rounded-lg border border-crown-ash/20 bg-obsidian-light p-4">
-        <p class="font-body text-sm text-crown-ash">
+      <div class="rounded-lg border border-border bg-surface-elevated p-4">
+        <p class="font-body text-sm text-text-muted">
           {translate("feedback.alreadyResolved", $locale)}
         </p>
       </div>
     {/if}
 
     {#if error}
-      <div class="mt-4 rounded-lg border border-red-500/20 bg-red-500/10 p-3">
-        <p class="font-mono text-xs text-red-400">{error}</p>
+      <div class="mt-4 rounded-lg border border-danger/20 bg-danger/10 p-3">
+        <p class="font-mono text-xs text-danger">{error}</p>
       </div>
     {/if}
   </div>

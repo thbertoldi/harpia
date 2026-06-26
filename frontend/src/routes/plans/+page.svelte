@@ -5,10 +5,10 @@
     CheckCircle2,
     Info,
     LayoutTemplate,
-    Loader2,
     Lock,
   } from "lucide-svelte";
   import { resolve } from "$app/paths";
+  import Skeleton from "$lib/components/Skeleton.svelte";
   import {
     formatPlanLockSummary,
     formatSkuLockMessage,
@@ -19,6 +19,7 @@
   } from "$lib/plans/plan-catalog";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
   import { locale, translate } from "$lib/i18n";
+  import { chipFlash, hoverCardLift } from "$lib/motion/transitions";
 
   let entries = $state<PlanCatalogEntry[]>([]);
   let loading = $state(true);
@@ -57,9 +58,9 @@
     if (reason === "available")
       return "border-green-500/40 bg-green-500/10 text-green-400";
     if (reason === "missing_entitlement") {
-      return "border-red-400/40 bg-red-400/10 text-red-400";
+      return "border-danger/40 bg-danger/10 text-danger";
     }
-    return "border-talon-gold/40 bg-talon-gold/10 text-talon-gold";
+    return "border-primary/40 bg-primary/10 text-primary";
   }
 
   function planActionLabel(entry: PlanCatalogEntry): string {
@@ -77,23 +78,23 @@
 <div class="flex min-h-[calc(100vh-3.5rem)] flex-col">
   <div class="flex items-center justify-between px-4 py-3 lg:px-6">
     <div>
-      <HarpyHeading tag="h1" class="text-2xl text-cream">
+      <HarpyHeading tag="h1" class="text-2xl text-text">
         {translate("plans.heading", $locale)}
       </HarpyHeading>
-      <p class="mt-1 font-body text-sm text-crown-ash">
+      <p class="mt-1 font-body text-sm text-text-muted">
         {translate("plans.subheading", $locale)}
       </p>
     </div>
     <div class="flex items-center gap-2">
       <a
         href={resolve("/plans/executions")}
-        class="rounded-md border border-plumage px-3 py-1.5 font-body text-xs text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
+        class="rounded-md border border-border px-3 py-1.5 font-body text-xs text-text-muted transition-colors hover:bg-surface-hover hover:text-text"
       >
         {translate("executions.list.heading", $locale)}
       </a>
       {#if dataSource === "api"}
         <span
-          class="rounded-full border border-plumage px-2.5 py-1 font-mono text-[10px] tracking-wider text-crown-ash uppercase"
+          class="rounded-full border border-border px-2.5 py-1 font-mono text-[10px] tracking-wider text-text-muted uppercase"
         >
           {translate("plans.source.live", $locale)}
         </span>
@@ -102,25 +103,35 @@
   </div>
 
   {#if loading}
-    <div class="flex flex-1 items-center justify-center">
-      <div class="flex items-center gap-2 text-crown-ash">
-        <Loader2 class="size-5 animate-spin" />
-        <span class="font-body text-sm"
-          >{translate("plans.loading", $locale)}</span
-        >
+    <div class="flex flex-1 flex-col gap-4 px-4 pb-6 lg:px-6">
+      <div class="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+        {#each [0, 1, 2, 3, 4, 5] as i (i)}
+          <div
+            class="flex flex-col rounded-lg border border-border bg-surface-elevated p-4"
+          >
+            <Skeleton width="60%" height="1.25rem" />
+            <div class="mt-3">
+              <Skeleton width="100%" height="0.75rem" count={3} />
+            </div>
+            <div class="mt-4">
+              <Skeleton width="40%" height="1.5rem" />
+            </div>
+          </div>
+        {/each}
       </div>
     </div>
   {:else if entries.length === 0 && loadError}
     <div class="flex flex-1 items-center justify-center">
       <div class="text-center">
-        <AlertTriangle class="mx-auto mb-3 size-10 text-red-400" />
-        <p class="font-body text-sm text-red-400">
+        <AlertTriangle class="mx-auto mb-3 size-10 text-danger" />
+        <p class="font-body text-sm text-danger">
           {translate("plans.loadError", $locale)}
         </p>
-        <p class="mt-1 font-mono text-xs text-crown-ash">{loadError}</p>
+        <p class="mt-1 font-mono text-xs text-text-muted">{loadError}</p>
         <button
           onclick={() => fetchCatalog()}
-          class="mt-4 cursor-pointer rounded-md border border-plumage px-4 py-2 font-body text-sm text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
+          in:chipFlash
+          class="mt-4 cursor-pointer rounded-md border border-border px-4 py-2 font-body text-sm text-text-muted transition-colors hover:bg-surface-hover hover:text-text"
         >
           {translate("plans.retry", $locale)}
         </button>
@@ -128,20 +139,20 @@
     </div>
   {:else if entries.length === 0}
     <div class="flex flex-1 flex-col items-center justify-center px-4">
-      <LayoutTemplate class="mb-4 size-12 text-talon-gold" />
-      <HarpyHeading tag="h2" class="mb-2 text-center text-xl text-cream">
+      <LayoutTemplate class="mb-4 size-12 text-text-muted" />
+      <HarpyHeading tag="h2" class="mb-2 text-center text-xl text-text">
         {translate("plans.empty.title", $locale)}
       </HarpyHeading>
-      <p class="max-w-md text-center font-body text-sm text-crown-ash">
+      <p class="max-w-md text-center font-body text-sm text-text-muted">
         {translate("plans.empty.description", $locale)}
       </p>
     </div>
   {:else}
     {#if loadError && dataSource === "mock"}
       <div
-        class="mx-4 mb-2 rounded-md border border-talon-gold/30 bg-talon-gold/5 px-3 py-2 lg:mx-6"
+        class="mx-4 mb-2 rounded-md border border-border bg-surface-elevated px-3 py-2 lg:mx-6"
       >
-        <p class="font-mono text-xs text-talon-gold">
+        <p class="font-mono text-xs text-text-muted">
           {translate("plans.apiFallback", $locale)}
           {loadError}
         </p>
@@ -153,23 +164,24 @@
     >
       {#each entries as entry (entry.template.id)}
         <article
-          class="flex flex-col rounded-lg border border-plumage bg-obsidian-light/40 p-4"
+          use:hoverCardLift
+          class="flex flex-col rounded-lg border border-border bg-surface-elevated p-4"
         >
           <div class="mb-3 flex items-start justify-between gap-3">
             <div>
               <div class="mb-1 flex items-center gap-2">
-                <BookOpen class="size-4 text-talon-gold" />
-                <HarpyHeading tag="h2" class="text-lg text-cream">
+                <BookOpen class="size-4 text-text-muted" />
+                <HarpyHeading tag="h2" class="text-lg text-text">
                   {entry.template.name}
                 </HarpyHeading>
               </div>
-              <p class="font-mono text-[10px] text-crown-ash-dark">
+              <p class="font-mono text-[10px] text-text-muted-dark">
                 {entry.template.key}
               </p>
             </div>
             <span
               class="inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[10px] tracking-wide uppercase {entry.isLocked
-                ? 'border-talon-gold/40 bg-talon-gold/10 text-talon-gold'
+                ? 'border-primary/40 bg-primary/10 text-primary'
                 : 'border-green-500/40 bg-green-500/10 text-green-400'}"
               title={formatPlanLockSummary(entry, $locale) ??
                 translate("plans.status.ready", $locale)}
@@ -184,18 +196,18 @@
             </span>
           </div>
 
-          <p class="mb-3 font-body text-sm text-crown-ash">
+          <p class="mb-3 font-body text-sm text-text-muted">
             {entry.template.description}
           </p>
 
           <div class="mb-4 flex flex-wrap gap-2">
             <span
-              class="rounded-full border border-plumage px-2 py-0.5 font-mono text-[10px] text-crown-ash uppercase"
+              class="rounded-full border border-border px-2 py-0.5 font-mono text-[10px] text-text-muted uppercase"
             >
               {entry.template.vertical}
             </span>
             <span
-              class="rounded-full border border-plumage px-2 py-0.5 font-mono text-[10px] text-crown-ash uppercase"
+              class="rounded-full border border-border px-2 py-0.5 font-mono text-[10px] text-text-muted uppercase"
             >
               {translate("plans.stepCount", $locale, {
                 count: entry.template.steps.length,
@@ -205,7 +217,7 @@
 
           <div class="mb-4">
             <p
-              class="mb-2 font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
+              class="mb-2 font-mono text-[10px] tracking-widest text-text-muted-dark uppercase"
             >
               {translate("plans.requiredExecutors", $locale)}
             </p>
@@ -249,25 +261,26 @@
           </div>
 
           <div
-            class="mt-auto flex items-center justify-between gap-3 border-t border-plumage/40 pt-3"
+            class="mt-auto flex items-center justify-between gap-3 border-t border-border/40 pt-3"
           >
             {#if entry.isLocked}
-              <p class="font-body text-xs text-crown-ash">
+              <p class="font-body text-xs text-text-muted">
                 {translate("plans.lockedHint", $locale)}
               </p>
               <a
-                href={resolve("/integrations")}
-                class="shrink-0 rounded-md border border-plumage px-3 py-1.5 font-body text-xs text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
+                href={resolve("/admin/integrations")}
+                class="shrink-0 rounded-md border border-border px-3 py-1.5 font-body text-xs text-text-muted transition-colors hover:bg-surface-hover hover:text-text"
               >
                 {translate("plans.goIntegrations", $locale)}
               </a>
             {:else}
-              <p class="font-body text-xs text-crown-ash">
+              <p class="font-body text-xs text-text-muted">
                 {translate("plans.readyHint", $locale)}
               </p>
               <a
                 href={resolve(`/plans/${entry.template.id}/configure`)}
-                class="shrink-0 rounded-md border border-talon-gold/60 bg-talon-gold/10 px-3 py-1.5 font-body text-xs text-talon-gold transition-colors hover:border-talon-gold hover:bg-talon-gold/20"
+                in:chipFlash
+                class="shrink-0 rounded-md bg-primary px-3 py-1.5 font-body text-xs font-medium text-primary-foreground transition-colors hover:opacity-90"
               >
                 {planActionLabel(entry)}
               </a>

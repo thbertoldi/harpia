@@ -8,10 +8,6 @@ const FRONTEND_ROOT = resolve(import.meta.dirname, "../../..");
 
 const HIGH_RISK_FILES = [
   "src/routes/+page.svelte",
-  "src/routes/integrations/+page.svelte",
-  "src/routes/tasks/ongoing/+page.svelte",
-  "src/routes/agents/+page.svelte",
-  "src/routes/audit/+page.svelte",
   "src/lib/components/TaskDetail.svelte",
   "src/lib/components/FeedbackPanel.svelte",
   "src/lib/components/OngoingTaskCard.svelte",

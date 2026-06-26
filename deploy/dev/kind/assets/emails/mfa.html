@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<!--
+  Harpia — MFA / verification email (maps to Zitadel's VerifyEmail /
+  PasswordlessRegistration message). Inline-styled, dark theme.
+  Variables: {{.URL}}, {{.Code}}, {{.PreferredLanguage}}, {{.FirstName}}.
+  EN default + pt-BR conditional.
+-->
+<html lang="{{.PreferredLanguage}}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Harpia</title>
+  </head>
+  <body style="margin:0;padding:0;background-color:#121318;font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#f5f2eb;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#121318;padding:32px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background-color:#1a1b24;border:1px solid #2a2d3a;border-radius:12px;overflow:hidden;">
+            <tr>
+              <td align="center" style="padding:32px 32px 8px 32px;">
+                <span style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:600;letter-spacing:2px;color:#f5f2eb;">Harpia</span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:8px 32px 24px 32px;">
+                {{if eq .PreferredLanguage "pt-BR"}}
+                <h1 style="font-family:'Manrope',sans-serif;font-size:20px;font-weight:600;color:#f5f2eb;margin:0 0 16px 0;">Verifique seu acesso</h1>
+                <p style="font-size:15px;line-height:1.6;color:#c9c6bf;margin:0 0 24px 0;">Olá {{.FirstName}}, use o código abaixo para concluir a verificação em duas etapas e proteger sua conta Harpia.</p>
+                {{else}}
+                <h1 style="font-family:'Manrope',sans-serif;font-size:20px;font-weight:600;color:#f5f2eb;margin:0 0 16px 0;">Verify your sign-in</h1>
+                <p style="font-size:15px;line-height:1.6;color:#c9c6bf;margin:0 0 24px 0;">Hi {{.FirstName}}, use the code below to complete two-step verification and keep your Harpia account secure.</p>
+                {{end}}
+                <p style="text-align:center;font-family:'Manrope',sans-serif;font-size:32px;font-weight:700;letter-spacing:6px;color:#c8920f;margin:0 0 24px 0;">{{.Code}}</p>
+                <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;">
+                  <tr>
+                    <td align="center" style="border-radius:8px;background-color:#c8920f;">
+                      <a href="{{.URL}}" style="display:inline-block;padding:12px 28px;font-family:'Manrope',sans-serif;font-size:15px;font-weight:600;color:#121318;text-decoration:none;border-radius:8px;">
+                        {{if eq .PreferredLanguage "pt-BR"}}Confirmar acesso{{else}}Confirm sign-in{{end}}
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+                <p style="font-size:13px;line-height:1.6;color:#8b8a86;margin:24px 0 0 0;">
+                  {{if eq .PreferredLanguage "pt-BR"}}Se você não tentou entrar, ignore este e-mail.{{else}}If you didn't try to sign in, you can ignore this email.{{end}}
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 32px 28px 32px;border-top:1px solid #2a2d3a;">
+                <p style="font-size:12px;line-height:1.5;color:#6f6e6a;margin:0;">Harpia — AI-enabled operations.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

@@ -4,3 +4,30 @@
 @import "./lib/themes/aiuna.css";
 @import "./lib/themes/tenant-base.css";
 @import "./lib/themes/brand.css";
+
+/* M6 global focus-visible — gold ring, 2px, 4px offset on every interactive element. */
+:where(
+  button,
+  [role="button"],
+  a,
+  input,
+  select,
+  textarea,
+  [tabindex]
+):focus-visible {
+  outline: 2px solid var(--token-primary);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+/* M6 reduced-motion fallback — collapse non-essential animation. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -26,6 +26,12 @@
   --token-text-muted: #6b7080;
   --token-text-muted-dark: #9da1ab;
   --token-border: #d4d0c8;
+  /* 5-layer surfaces (light): sidebar slightly deeper than the page,
+     row-hover deeper than cards, popover floats lightest. */
+  --token-surface-deep: #ece7dd;
+  --token-surface-hover: #e3ded2;
+  --token-surface-pop: #fbf9f4;
+  --token-danger: #b42318;
 }
 
 [data-theme="default"].dark {
@@ -35,4 +41,9 @@
   --token-text-muted: #9da1ab;
   --token-text-muted-dark: #6b7080;
   --token-border: #2a2d3a;
+  /* 5-layer surfaces (dark) — spec §2.5 values. */
+  --token-surface-deep: #0a0b0e;
+  --token-surface-hover: #20222c;
+  --token-surface-pop: #2a2d3a;
+  --token-danger: #d9534f;
 }

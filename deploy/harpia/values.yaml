@@ -54,6 +54,63 @@ zitadel:
     username: zitadel-admin-sa
     name: Admin Service Account
     patExpirationDate: "2099-01-01T00:00:00Z"
+  # Harpia auth-screen + email branding (M6 §2.7). Mirrors the dev cluster's
+  # zitadel-branding ConfigMap + init Job, parameterized so tenants can override.
+  branding:
+    enabled: true
+    # Image must provide curl + a POSIX shell (alpine/k8s ships both + kubectl).
+    image: alpine/k8s:1.31.0
+    colors:
+      primary: "#C8920F"        # gold
+      background: "#121318"     # obsidian surface
+      backgroundEdge: "#0A0B0E" # radial-gradient outer stop
+      font: "#F5F2EB"           # cream text
+      warn: "#CD3D56"
+    # Wordmark — light variant (cream) for the dark auth surface.
+    # TODO: replace with final Bodoni Moda render from design.
+    logoSvg: |
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 80" width="360" height="80" role="img" aria-label="Harpia">
+        <rect width="360" height="80" fill="none"/>
+        <text x="180" y="56" text-anchor="middle"
+              font-family="'Bodoni Moda', Georgia, 'Times New Roman', serif"
+              font-size="52" font-weight="600" letter-spacing="2"
+              fill="#F5F2EB">Harpia</text>
+      </svg>
+    iconSvg: |
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Harpia">
+        <rect width="64" height="64" rx="12" fill="#121318"/>
+        <text x="32" y="44" text-anchor="middle"
+              font-family="Georgia, 'Times New Roman', serif"
+              font-size="34" font-weight="700" fill="#C8920F">H</text>
+      </svg>
+    # Branded email copy (EN + pt-BR). Lines: type|lang|field|value.
+    # type one of: passwordreset, init, verifyemail. field one of:
+    # subject, greeting, text, button.
+    emailTexts: |
+      passwordreset|en|subject|Reset your Harpia password
+      passwordreset|en|greeting|Hi {{.FirstName}},
+      passwordreset|en|text|We received a request to reset your Harpia password. Use the button below to choose a new one. If you didn't request this, you can ignore this email.
+      passwordreset|en|button|Reset password
+      passwordreset|pt-BR|subject|Redefinir sua senha Harpia
+      passwordreset|pt-BR|greeting|Olá {{.FirstName}},
+      passwordreset|pt-BR|text|Recebemos um pedido para redefinir sua senha Harpia. Use o botão abaixo para escolher uma nova. Se você não fez este pedido, ignore este e-mail.
+      passwordreset|pt-BR|button|Redefinir senha
+      init|en|subject|Welcome to Harpia
+      init|en|greeting|Hi {{.FirstName}},
+      init|en|text|Your Harpia account has been created. Use the button below to set your password and activate access.
+      init|en|button|Activate account
+      init|pt-BR|subject|Bem-vindo à Harpia
+      init|pt-BR|greeting|Olá {{.FirstName}},
+      init|pt-BR|text|Sua conta na Harpia foi criada. Use o botão abaixo para definir sua senha e ativar o acesso.
+      init|pt-BR|button|Ativar conta
+      verifyemail|en|subject|Verify your Harpia sign-in
+      verifyemail|en|greeting|Hi {{.FirstName}},
+      verifyemail|en|text|Use the code or button below to complete verification and keep your Harpia account secure.
+      verifyemail|en|button|Confirm sign-in
+      verifyemail|pt-BR|subject|Verifique seu acesso Harpia
+      verifyemail|pt-BR|greeting|Olá {{.FirstName}},
+      verifyemail|pt-BR|text|Use o código ou o botão abaixo para concluir a verificação e proteger sua conta Harpia.
+      verifyemail|pt-BR|button|Confirmar acesso
 
 # OpenFGA
 openfga:

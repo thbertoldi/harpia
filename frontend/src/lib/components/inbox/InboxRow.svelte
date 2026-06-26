@@ -3,6 +3,7 @@
   import { locale, translate } from "$lib/i18n";
   import { formatRelativeTime } from "$lib/i18n/format";
   import type { InboxItem } from "$lib/inbox/types";
+  import { hoverCardLift } from "$lib/motion/transitions";
 
   interface Props {
     item: InboxItem;
@@ -16,10 +17,10 @@
   const subtypeKey = $derived(`inbox.subtype.${item.kind}`);
   const subtypePillClass = $derived(
     item.kind === "elicitation"
-      ? "border border-talon-gold/40 bg-talon-gold/10 text-talon-gold"
+      ? "border border-border bg-surface-hover text-text-muted"
       : item.kind === "approval"
-        ? "border border-talon-gold bg-talon-gold/15 text-cream"
-        : "border border-plumage bg-plumage text-crown-ash",
+        ? "border border-border bg-surface-hover text-text"
+        : "border border-border bg-surface text-text-muted",
   );
 
   const sourceLabel = $derived(
@@ -36,9 +37,10 @@
 </script>
 
 <div
-  class="rounded-lg border border-plumage bg-obsidian-light px-4 py-3 transition-colors hover:border-talon-gold"
+  use:hoverCardLift
+  class="rounded-lg border border-border bg-surface-elevated px-4 py-3 transition-colors hover:bg-surface-hover"
   class:border-l-2={urgent}
-  class:border-l-talon-gold={urgent}
+  class:border-l-primary={urgent}
 >
   <div class="grid grid-cols-[auto_1fr_auto] items-center gap-4">
     <span
@@ -47,13 +49,13 @@
       {translate(subtypeKey, $locale)}
     </span>
     <div class="min-w-0">
-      <div class="mb-1 font-mono text-[11px] text-crown-ash">
+      <div class="mb-1 font-mono text-[11px] text-text-muted">
         {sourceLabel}
       </div>
-      <div class="mb-1 text-[13px] leading-snug text-cream">
+      <div class="mb-1 text-[13px] leading-snug text-text">
         {displaySummary}
       </div>
-      <div class="flex gap-3 text-[11px] text-crown-ash">
+      <div class="flex gap-3 text-[11px] text-text-muted">
         <span>{formatRelativeTime(item.createdAt, $locale)}</span>
       </div>
     </div>
@@ -62,7 +64,7 @@
     </div>
   </div>
   {#if footer}
-    <div class="mt-3 border-t border-plumage pt-3">
+    <div class="mt-3 border-t border-border pt-3">
       {@render footer()}
     </div>
   {/if}

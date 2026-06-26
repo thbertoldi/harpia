@@ -96,7 +96,7 @@
   }
 
   .artifact-preview--error {
-    color: var(--color-error, #b42318);
+    color: var(--color-danger);
   }
 
   .artifact-preview--json,
