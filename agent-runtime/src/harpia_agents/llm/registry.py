@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from harpia_agents.llm.errors import ModelNotFoundError
 from harpia_agents.llm.provider import ChatMessage, CompletionChunk, CompletionResult, LLMProvider
 from harpia_agents.llm.providers.anthropic import AnthropicProvider
+from harpia_agents.llm.providers.deepseek import DeepSeekProvider
 from harpia_agents.llm.providers.ollama import OllamaProvider
 from harpia_agents.llm.providers.openai import OpenAIProvider
 from harpia_agents.llm.testing import FakeLLMProvider
@@ -44,6 +45,7 @@ class LLMRegistry:
     def default(cls) -> LLMRegistry:
         providers: list[LLMProvider] = [
             AnthropicProvider(),
+            DeepSeekProvider(),
             OpenAIProvider(),
             OllamaProvider(),
         ]

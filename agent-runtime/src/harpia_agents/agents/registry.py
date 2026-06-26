@@ -27,6 +27,7 @@ from harpia_agents.budget import (
 from harpia_agents.llm import LLMRegistry
 from harpia_agents.llm.provider import LLMProvider
 from harpia_agents.llm.providers.anthropic import AnthropicProvider
+from harpia_agents.llm.providers.deepseek import DeepSeekProvider
 from harpia_agents.llm.providers.ollama import OllamaProvider
 from harpia_agents.llm.providers.openai import OpenAIProvider
 from harpia_agents.llm.resolver import ResolvedProviderCredentials, TenantLLMResolver
@@ -42,8 +43,8 @@ AgentRunner = Callable[
 
 def _default_provider_for_manifest(manifest_id: str) -> str | None:
     providers = {
-        "newsletter-writer-senior": "openai",
-        "linkedin-voice-senior": "openai",
+        "newsletter-writer-senior": "deepseek",
+        "linkedin-voice-senior": "deepseek",
     }
     return providers.get(manifest_id)
 
@@ -63,6 +64,7 @@ def _build_registry_with_tenant_credentials(
 ) -> LLMRegistry:
     api_key = resolved.api_key.reveal()
     providers: list[LLMProvider] = [
+        DeepSeekProvider(api_key=api_key if resolved.provider == "deepseek" else None),
         OpenAIProvider(api_key=api_key if resolved.provider == "openai" else None),
         AnthropicProvider(api_key=api_key if resolved.provider == "anthropic" else None),
         OllamaProvider(),

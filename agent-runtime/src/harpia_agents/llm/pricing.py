@@ -35,6 +35,11 @@ OPENAI_PRICING: dict[str, ModelPricing] = {
     "openai-gpt-4o-mini": ModelPricing(input_per_million_usd=0.15, output_per_million_usd=0.6),
 }
 
+DEEPSEEK_PRICING: dict[str, ModelPricing] = {
+    "deepseek-v4-flash": ModelPricing(input_per_million_usd=0.0, output_per_million_usd=0.0),
+    "deepseek-v4-pro": ModelPricing(input_per_million_usd=0.0, output_per_million_usd=0.0),
+}
+
 OLLAMA_PRICING: dict[str, ModelPricing] = {
     "llama3:70b": ModelPricing(input_per_million_usd=0.0, output_per_million_usd=0.0),
 }

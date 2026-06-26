@@ -30,6 +30,21 @@ def test_build_registry_with_tenant_credentials_uses_openai_provider() -> None:
     assert provider.name == "openai"
 
 
+def test_build_registry_with_tenant_credentials_uses_deepseek_provider() -> None:
+    registry = _build_registry_with_tenant_credentials(
+        ResolvedProviderCredentials(
+            provider="deepseek",
+            api_key=RedactedSecret("ds-test"),
+            default_model="deepseek-v4-flash",
+            allowed_models=("deepseek-v4-flash",),
+            source=1,
+        )
+    )
+
+    provider = registry.resolve("deepseek-v4-flash")
+    assert provider.name == "deepseek"
+
+
 @pytest.mark.asyncio
 async def test_run_registered_agent_fails_closed_when_resolver_errors(
     monkeypatch: pytest.MonkeyPatch,
