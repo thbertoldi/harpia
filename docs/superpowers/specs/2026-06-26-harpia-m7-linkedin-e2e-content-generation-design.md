@@ -21,6 +21,7 @@ M7 ships the smallest true product path:
 4. **Plan configuration suggests/fills defaults** for topic, feed group, content brief, bindings, and approval policy while preserving the M6 Binding Matrix as the editable source of truth.
 5. **Run now executes the real plan path**: RSS integration -> newsletter writer agent -> LinkedIn voice agent -> publish approval gate.
 6. **UI ends at pending approval** with previews for `NewsList`, `TextDraft`, and `LinkedInPostDraft`.
+7. **All waiting-for-user states surface in the unified inbox** so Ana can find approvals, elicitations, and feedback from the same open-actions screen.
 
 Out of scope:
 
@@ -55,7 +56,7 @@ The Monday script should be:
    - publish approval mode: require approval
 8. Ana runs the plan.
 9. The plan executes through content generation and pauses at the publish approval.
-10. Ana sees the pending approval and can preview the LinkedIn draft. The actual publish button is not clicked during the Monday success path.
+10. Ana sees the pending approval in the run surface and in `/inbox`, then can preview the LinkedIn draft. The actual publish button is not clicked during the Monday success path.
 
 Success is a plan waiting for approval, not a completed published run.
 
@@ -266,7 +267,29 @@ UI should make the chain visible:
 
 ---
 
-## 10. Error Handling
+## 10. Unified Inbox Notifications
+
+M7 must preserve the M2/M3 interaction model: when the system waits for a human, the user should not have to stay on the run screen to discover it.
+
+Every pending user action from the LinkedIn run must appear in the unified inbox (`/inbox`):
+
+- publish approval requests
+- agent elicitations, if any still occur
+- feedback requests, if any are raised by the runtime
+
+Inbox items should include:
+
+- action kind (`approval`, `elicitation`, or `feedback`)
+- plan/configuration/run context
+- step name, such as `publish-linkedin`
+- link back to the plan thread or run/canvas
+- the existing action UI or preview entry point
+
+The Monday happy path must create a pending approval item in `/inbox` as soon as the workflow pauses before publish. Resolving the approval from either `/inbox` or the plan/run surface must update the other surface through the existing watch/aggregator paths.
+
+---
+
+## 11. Error Handling
 
 Expected failures should be legible:
 
@@ -281,7 +304,7 @@ Expected failures should be legible:
 
 ---
 
-## 11. Test Plan
+## 12. Test Plan
 
 Focused tests:
 
@@ -292,11 +315,13 @@ Focused tests:
   - Creating/updating an RSS group writes `config_json.feeds`.
   - Binding Matrix lists multiple RSS feed groups for `fetch-news`.
   - Suggest fills sports defaults and remains editable.
+  - pending publish approval appears in `/inbox` with a link/preview action.
 - Control plane:
   - multiple RSS `executor_installations` for one tenant/SKU are listed and bindable.
   - LinkedIn approval-only publish installation is bindable without real OAuth.
   - plan validation accepts a selected RSS feed group.
   - publish approval still occurs before LinkedIn publish.
+  - approval, elicitation, and feedback pending states remain listable by the inbox aggregator.
   - approving a dry-run publish step does not call LinkedIn and returns a dry-run confirmation.
   - `RunAgentActivity` no longer returns the stub failure.
 - Agent runtime:
@@ -317,7 +342,7 @@ Verification commands for implementation should include:
 
 ---
 
-## 12. Future Follow-Up
+## 13. Future Follow-Up
 
 After Monday, evolve toward the smart recommendation flow:
 
@@ -330,7 +355,7 @@ This follow-up should reuse M7's configuration fields and feed group model. It s
 
 ---
 
-## 13. References
+## 14. References
 
 - M6 design: `docs/superpowers/specs/2026-06-22-harpia-m6-lapidacao-design.md`
 - Roadmap revision: `docs/superpowers/specs/2026-06-22-aiuna-mvp-roadmap-revision.md`
