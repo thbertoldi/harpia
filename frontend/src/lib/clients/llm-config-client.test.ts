@@ -16,7 +16,7 @@ describe("MockLLMConfigClient", () => {
   describe("getLLMProviderConfigs", () => {
     it("returns all four providers with has_key=false by default", async () => {
       const res = await client.getLLMProviderConfigs({});
-      expect(res.configs.map((cfg) => cfg.provider).sort()).toEqual([
+      expect(res.configs.map((cfg) => cfg.provider)).toEqual([
         "anthropic",
         "deepseek",
         "ollama",

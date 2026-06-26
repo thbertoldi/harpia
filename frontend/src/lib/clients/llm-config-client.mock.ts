@@ -74,8 +74,8 @@ export class MockLLMConfigClient implements LLMConfigClient {
     const providers: LLMProvider[] = [
       "anthropic",
       "deepseek",
-      "openai",
       "ollama",
+      "openai",
     ];
     for (const p of providers) {
       const defaults = deepClone(DEFAULT_CONFIGS[p]);
