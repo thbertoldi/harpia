@@ -42,6 +42,16 @@ spec:
               value: "temporal:7233"
             - name: GARAGE_URL
               value: "http://garage:3900"
+            - name: GARAGE_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: garage-credentials
+                  key: accessKey
+            - name: GARAGE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: garage-credentials
+                  key: secretKey
             - name: ZITADEL_URL
               value: "http://zitadel:8080"
             - name: ZITADEL_HOST

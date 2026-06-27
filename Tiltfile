@@ -44,6 +44,7 @@ k8s_yaml([
     'deploy/dev/kind/postgres.yaml',
     'deploy/dev/kind/valkey.yaml',
     'deploy/dev/kind/garage.yaml',
+    'deploy/dev/kind/garage-bootstrap.yaml',
     'deploy/dev/kind/temporal.yaml',
     'deploy/dev/kind/zitadel.yaml',
     'deploy/dev/kind/zitadel-branding-configmap.yaml',
@@ -56,6 +57,10 @@ k8s_yaml([
 # starter at startup, so it must come up after Temporal is ready; the workers
 # poll Temporal too. UI on 8233.
 k8s_resource('temporal', port_forwards=['8233:8233'], labels=['infra'])
+
+# Garage object-store bootstrap: layout + bucket + access key. Artifact writes
+# fail until this runs, so the API and workers depend on it below.
+k8s_resource('garage-bootstrap', resource_deps=['garage'], labels=['infra'])
 
 # Temporal workers (built images, reused from harpia-api / harpia-agent).
 k8s_yaml('deploy/dev/kind/workers.yaml')
@@ -96,7 +101,7 @@ local_resource(
 
 k8s_resource(
     'harpia-api',
-    resource_deps=['db-migrate', 'temporal'],
+    resource_deps=['db-migrate', 'temporal', 'garage-bootstrap'],
     port_forwards=['19080:8080'],
 )
 
@@ -105,7 +110,7 @@ k8s_resource(
 # the API for the artifact/LLM/budget internal calls.
 k8s_resource(
     'harpia-plan-worker',
-    resource_deps=['db-migrate', 'temporal'],
+    resource_deps=['db-migrate', 'temporal', 'garage-bootstrap'],
     labels=['backend'],
 )
 k8s_resource(

@@ -30,6 +30,11 @@ NAMESPACE="${HARPIA_DEV_K8S_NAMESPACE:-default}"
 POSTGRES_USERNAME="${HARPIA_DEV_POSTGRES_USERNAME:-harpia}"
 POSTGRES_PASSWORD="${HARPIA_DEV_POSTGRES_PASSWORD:-$(random_hex 24)}"
 ZITADEL_KEY="${HARPIA_DEV_ZITADEL_KEY:-$(random_hex 16)}"
+# Garage S3 credentials. Defaults are fixed (not random) because the same key
+# must be imported into Garage by garage-bootstrap.yaml AND consumed by the API
+# / workers from this secret. The access key id must be GK + 24 hex chars.
+GARAGE_ACCESS_KEY="${HARPIA_DEV_GARAGE_ACCESS_KEY:-GKa1b2c3d4e5f6a7b8c9d0e1f2}"
+GARAGE_SECRET_KEY="${HARPIA_DEV_GARAGE_SECRET_KEY:-b1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5d6}"
 
 if ! command -v kubectl >/dev/null 2>&1; then
   echo "ERROR: kubectl is required to create dev kind Secrets." >&2
@@ -77,6 +82,11 @@ ensure_secret() {
       kubectl -n "$NAMESPACE" create secret generic "$name" \
         --from-literal=masterkey="$ZITADEL_KEY" >/dev/null
       ;;
+    garage-credentials)
+      kubectl -n "$NAMESPACE" create secret generic "$name" \
+        --from-literal=accessKey="$GARAGE_ACCESS_KEY" \
+        --from-literal=secretKey="$GARAGE_SECRET_KEY" >/dev/null
+      ;;
     *)
       echo "ERROR: unknown Secret ${name}" >&2
       exit 1
@@ -88,3 +98,4 @@ ensure_secret() {
 
 ensure_secret postgres-credentials username password
 ensure_secret zitadel-masterkey masterkey
+ensure_secret garage-credentials accessKey secretKey
