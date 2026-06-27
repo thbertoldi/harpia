@@ -24,7 +24,9 @@ func StartWorker(ctx context.Context, temporalClient client.Client, taskQueue st
 		w.RegisterActivity(planActivities.StartPlanExecutionActivity)
 		w.RegisterActivity(planActivities.CreateStepExecutionActivity)
 		w.RegisterActivity(planActivities.RunIntegrationActivity)
-		w.RegisterActivity(planActivities.RunAgentActivity)
+		// RunAgentActivity is owned by the Python agent-runtime worker. If the
+		// Go worker registers it too, Temporal may dispatch agent work to the
+		// old Go implementation and fail real plan executions.
 		w.RegisterActivity(planActivities.ResumeStepExecutionActivity)
 		w.RegisterActivity(planActivities.CompleteStepExecutionActivity)
 		w.RegisterActivity(planActivities.FailStepExecutionActivity)
