@@ -265,6 +265,11 @@ message UpdatePlanConfigurationRequest {
   repeated OverseerBinding overseer_bindings = 6;
   PlanBehaviorPolicies behavior_policies = 7;
   PlanSchedule schedule = 8;
+  // When true, emit a CONFIGURATION_SAVED thread event. Incremental edits
+  // (per-executor binding picks, Suggest) leave this false so the thread is
+  // not flooded with a saved message on every change; only explicit user
+  // saves announce.
+  bool announce_saved = 9;
 }
 
 message UpdatePlanConfigurationResponse {

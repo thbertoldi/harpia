@@ -59,9 +59,9 @@
   );
   const parseError = $derived(payload === null);
 
-  // The configuration + template are needed for editBinding (which writes a
-  // STEP_REBOUND and calls UpdatePlanConfiguration) and for the Save action's
-  // status promotion + policy writes. Loaded lazily off the ids.
+  // The configuration + template are needed for editBinding (which calls
+  // UpdatePlanConfiguration silently) and for the Save action's status
+  // promotion + policy writes. Loaded lazily off the ids.
   let configuration = $state<PlanConfiguration | null>(null);
   let template = $state<PlanTemplate | null>(null);
 
@@ -233,6 +233,8 @@
         overseerBindings: configuration.overseerBindings,
         behaviorPolicies: configuration.behaviorPolicies,
         schedule: configuration.schedule,
+        // Explicit user save — announce it in the thread.
+        announceSaved: true,
       });
       if (res.planConfiguration) configuration = res.planConfiguration;
       submitted = true;
@@ -283,8 +285,10 @@
           <span
             class="rounded border border-talon-gold/35 bg-talon-gold/[0.06] px-2 py-1 text-[10px] font-semibold tracking-[0.1em] text-talon-gold uppercase"
           >
-            {boundCount}/{rows.length}
-            {translate("assistant.bindingMatrix.progress", $locale)}
+            {translate("assistant.bindingMatrix.progress", $locale, {
+              bound: boundCount,
+              total: rows.length,
+            })}
           </span>
         </div>
       </div>
@@ -311,7 +315,7 @@
               type="button"
               disabled={saving}
               onclick={onSuggest}
-              class="cursor-pointer rounded-md bg-talon-gold px-3 py-2 text-[12px] font-semibold text-obsidian hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              class="cursor-pointer rounded-md bg-talon-gold px-3 py-2 text-[12px] font-semibold text-on-primary hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Apply
             </button>
@@ -329,7 +333,7 @@
           <!-- Step number -->
           <div
             class="flex size-5 items-center justify-center rounded-full border text-[10px] font-semibold {bound
-              ? 'border-talon-gold bg-talon-gold text-obsidian'
+              ? 'border-talon-gold bg-talon-gold text-on-primary'
               : 'border-plumage text-crown-ash-dark'}"
           >
             {rows.indexOf(row) + 1}
@@ -492,7 +496,7 @@
 
     {#if saveError}
       <p transition:fade class="text-[11px] text-red-400">
-        {translate("thread.loadError", $locale)}
+        {translate("thread.saveError", $locale)}
       </p>
     {/if}
   {/if}

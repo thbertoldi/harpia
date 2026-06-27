@@ -116,8 +116,7 @@ describe("applyLinkedInSuggestion", () => {
 });
 
 describe("editBinding", () => {
-  it("writes STEP_REBOUND then UpdatePlanConfiguration", async () => {
-    appendThreadMessage.mockResolvedValueOnce({});
+  it("updates the binding without flooding the thread (no STEP_REBOUND, no announce)", async () => {
     updatePlanConfiguration.mockResolvedValueOnce({
       planConfiguration: { id: "c" },
     });
@@ -145,16 +144,11 @@ describe("editBinding", () => {
       stepKey: "a",
       newInstallationId: "inst-new",
     });
-    expect(appendThreadMessage).toHaveBeenCalledWith(
-      "t",
-      "c",
-      "SYSTEM",
-      "STEP_REBOUND",
-      "",
-      expect.stringContaining("inst-old"),
-    );
+    // Incremental edit: no thread message, and the save is silent.
+    expect(appendThreadMessage).not.toHaveBeenCalled();
     expect(updatePlanConfiguration).toHaveBeenCalledTimes(1);
     const call = updatePlanConfiguration.mock.calls[0][0];
+    expect(call.announceSaved).toBeFalsy();
     expect(
       call.slotBindings.find((b: SlotBinding) => b.stepKey === "a")
         ?.executorInstallationId,

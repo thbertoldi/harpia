@@ -629,7 +629,7 @@
                       disabled={!keyInputs[provider.id].trim() ||
                         isSaving ||
                         isRemoving}
-                      class="rounded-md bg-talon-gold px-4 py-2 font-body text-sm font-medium text-obsidian transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                      class="rounded-md bg-talon-gold px-4 py-2 font-body text-sm font-medium text-on-primary transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
                       data-testid={`save-key-${provider.id}`}
                     >
                       {isSaving
@@ -649,7 +649,7 @@
                       disabled={!keyInputs[provider.id].trim() ||
                         isSaving ||
                         isRemoving}
-                      class="rounded-md bg-talon-gold px-4 py-2 font-body text-sm font-medium text-obsidian transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                      class="rounded-md bg-talon-gold px-4 py-2 font-body text-sm font-medium text-on-primary transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
                       data-testid={`rotate-key-${provider.id}`}
                     >
                       {isSaving

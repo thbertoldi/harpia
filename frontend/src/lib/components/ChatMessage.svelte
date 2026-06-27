@@ -21,7 +21,7 @@
 
   <div
     class="max-w-[75%] rounded-lg px-4 py-3 {role === 'user'
-      ? 'ml-12 bg-talon-gold text-obsidian'
+      ? 'ml-12 bg-talon-gold text-on-primary'
       : role === 'system'
         ? 'bg-plumage text-sm text-crown-ash'
         : 'border border-plumage bg-obsidian-light text-cream'}"

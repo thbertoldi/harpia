@@ -148,7 +148,7 @@
 
     {#if runError}
       <p transition:fade class="text-[11px] text-red-400">
-        {translate("thread.loadError", $locale)}
+        {translate("thread.runError", $locale)}
       </p>
     {/if}
   </div>

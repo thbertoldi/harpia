@@ -65,6 +65,8 @@
         overseerBindings: configuration.overseerBindings,
         behaviorPolicies: policiesToProto(values),
         schedule: configuration.schedule,
+        // Explicit user save — announce it in the thread.
+        announceSaved: true,
       });
       configuration = response.planConfiguration ?? configuration;
       saveNotice = translate("canvas.settings.saved", $locale);

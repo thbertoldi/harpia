@@ -193,7 +193,7 @@
             </p>
             <div class="mt-3 flex gap-2">
               <button
-                class="rounded-md bg-talon-gold px-4 py-2 font-body text-sm text-obsidian transition-colors hover:bg-talon-gold-bright"
+                class="rounded-md bg-talon-gold px-4 py-2 font-body text-sm text-on-primary transition-colors hover:bg-talon-gold-bright"
               >
                 {translate("feedback.approve", $locale)}
               </button>

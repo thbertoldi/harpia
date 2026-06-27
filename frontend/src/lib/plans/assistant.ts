@@ -40,23 +40,9 @@ export async function editBinding(args: {
   stepKey: string;
   newInstallationId: string;
 }): Promise<PlanConfiguration> {
-  const previous =
-    args.existingConfiguration.slotBindings.find(
-      (b) => b.stepKey === args.stepKey,
-    )?.executorInstallationId ?? "";
-  const reboundPayload = JSON.stringify({
-    step_key: args.stepKey,
-    previous_executor_installation_id: previous,
-    new_executor_installation_id: args.newInstallationId,
-  });
-  await appendThreadMessage(
-    args.tenantId,
-    args.configurationId,
-    "SYSTEM",
-    "STEP_REBOUND",
-    "",
-    reboundPayload,
-  );
+  // Incremental binding picks are not announced in the thread (no STEP_REBOUND
+  // event, announce_saved=false): the thread would otherwise flood with a
+  // message on every executor change. The explicit Save announces instead.
   // Upsert: a step bound for the first time has no existing entry, so .map
   // alone would silently drop the pick (the bug where a selected executor
   // never reached the canvas). Append when absent; the server resolves the
@@ -109,18 +95,8 @@ export async function applyLinkedInSuggestion(args: {
     installationIdsByStep: args.installationIdsByStep,
     today: args.today ?? new Date(),
   });
-  await appendThreadMessage(
-    args.tenantId,
-    args.configurationId,
-    "SYSTEM",
-    "STEP_REBOUND",
-    "",
-    JSON.stringify({
-      reason: "linkedin_suggestion",
-      topic: args.topic,
-      bound_steps: suggestion.slotBindings.map((binding) => binding.stepKey),
-    }),
-  );
+  // Suggest is an incremental edit (announce_saved=false, no thread event):
+  // the user reviews the populated matrix and then explicitly saves.
   const response = await planClient.updatePlanConfiguration({
     tenantId: args.tenantId,
     planConfigurationId: args.configurationId,

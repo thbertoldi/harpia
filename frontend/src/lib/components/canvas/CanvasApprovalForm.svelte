@@ -95,7 +95,7 @@
       type="button"
       onclick={() => submit(true)}
       disabled={submitting}
-      class="rounded border border-talon-gold bg-talon-gold px-3 py-1.5 text-[11px] font-semibold text-obsidian hover:opacity-90 disabled:opacity-50"
+      class="rounded border border-talon-gold bg-talon-gold px-3 py-1.5 text-[11px] font-semibold text-on-primary hover:opacity-90 disabled:opacity-50"
     >
       {translate(
         submitting ? "inbox.actions.submitting" : "inbox.actions.approve",

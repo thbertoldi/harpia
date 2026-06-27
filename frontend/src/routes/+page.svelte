@@ -190,7 +190,7 @@
               <div class="flex items-center gap-2">
                 <button
                   onclick={viewDashboard}
-                  class="inline-flex cursor-pointer items-center gap-2 rounded-md bg-talon-gold px-4 py-2 font-body text-sm font-medium text-obsidian transition-all hover:bg-talon-gold-bright"
+                  class="inline-flex cursor-pointer items-center gap-2 rounded-md bg-talon-gold px-4 py-2 font-body text-sm font-medium text-on-primary transition-all hover:bg-talon-gold-bright"
                 >
                   <LayoutDashboard class="size-4" />
                   {translate("home.openDashboard", $locale)}
