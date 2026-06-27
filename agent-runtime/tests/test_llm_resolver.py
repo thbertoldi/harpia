@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from harpia.llm_config.v1.llm_config_pb2 import CredentialBundle, ResolveLLMProviderForTenantResponse
 
 from harpia_agents.llm.resolver import TenantLLMResolver
@@ -22,6 +23,7 @@ class FakeResolverClient:
         )
 
 
+@pytest.mark.asyncio
 async def test_tenant_resolver_invokes_internal_rpc_with_tenant_headers() -> None:
     client = FakeResolverClient()
     resolver = TenantLLMResolver(client=client, auth_token="internal-token")
