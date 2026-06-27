@@ -115,6 +115,41 @@ describe("watchInbox", () => {
     expect(item?.planName).toBeTruthy();
   });
 
+  it("surfaces pending publish approvals with configuration and input artifact pointers", async () => {
+    const sources = singleEmitSources({
+      watchElicitations: () => yieldOnce([]),
+      watchApprovalRequests: () =>
+        yieldOnce([
+          makeApproval({
+            id: "approval-publish",
+            planConfigurationId: "config-linkedin",
+            planExecutionId: "exec-linkedin",
+            planStepKey: "publish-linkedin",
+            stepExecutionId: "step-publish",
+            inputArtifactId: "artifact-linkedin-draft",
+            requestedAt: "2026-06-26T15:00:00Z",
+          }),
+        ]),
+      loadFeedback: async () => [],
+    });
+    const iter = watchInbox("tenant-1", sources)[Symbol.asyncIterator]();
+    let item: InboxItem | undefined;
+    for (let i = 0; i < 5; i++) {
+      const { value, done } = await iter.next();
+      if (done) break;
+      item = value!.find((entry) => entry.id === "approval-publish");
+      if (item) break;
+    }
+
+    expect(item?.kind).toBe("approval");
+    expect(item?.configurationId).toBe("config-linkedin");
+    expect(item?.planExecutionId).toBe("exec-linkedin");
+    expect(item?.stepExecutionId).toBe("step-publish");
+    expect(item && "inputArtifactId" in item ? item.inputArtifactId : "").toBe(
+      "artifact-linkedin-draft",
+    );
+  });
+
   it("re-emits when a stream produces a new batch", async () => {
     async function* twoBatches(): AsyncIterable<ElicitationRequest[]> {
       yield [makeElicit({ id: "e-first" })];
