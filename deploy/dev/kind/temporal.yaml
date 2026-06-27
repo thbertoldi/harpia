@@ -1,0 +1,68 @@
+# Harpia Dev — Temporal dev server (single-binary, in-memory).
+#
+# `temporal server start-dev` runs the frontend + history + matching + an
+# internal worker in one process backed by an in-memory store — fast startup,
+# no external database. Data is ephemeral (lost on pod restart), which is the
+# right trade-off for local development. The control-plane API and the plan /
+# agent workers reach it at temporal:7233 (TEMPORAL_HOST).
+#
+# This is intentionally NOT the production topology — prod uses the Temporal
+# Helm chart / operator with a real datastore.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: temporal
+  labels:
+    app: temporal
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: temporal
+  template:
+    metadata:
+      labels:
+        app: temporal
+    spec:
+      containers:
+        - name: temporal
+          image: temporalio/temporal:latest
+          imagePullPolicy: IfNotPresent
+          args:
+            - server
+            - start-dev
+            - --ip
+            - "0.0.0.0"
+            - --namespace
+            - default
+            - --log-level
+            - warn
+          ports:
+            - name: grpc
+              containerPort: 7233
+            - name: ui
+              containerPort: 8233
+          readinessProbe:
+            tcpSocket:
+              port: 7233
+            initialDelaySeconds: 2
+            periodSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: temporal
+  labels:
+    app: temporal
+spec:
+  type: ClusterIP
+  ports:
+    - name: grpc
+      port: 7233
+      targetPort: 7233
+    - name: ui
+      port: 8233
+      targetPort: 8233
+  selector:
+    app: temporal

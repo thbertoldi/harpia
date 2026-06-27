@@ -6,6 +6,10 @@ import os
 
 from temporalio.client import Client
 from temporalio.worker import Worker
+from temporalio.worker.workflow_sandbox import (
+    SandboxedWorkflowRunner,
+    SandboxRestrictions,
+)
 
 from harpia_agents.llm import LLMRegistry
 from harpia_agents.temporal.worker import (
@@ -26,11 +30,24 @@ async def run_worker() -> None:
     configure_llm_registry(LLMRegistry.default())
 
     client = await Client.connect(temporal_host)
+    # The generated protobuf package (`harpia`) and the agent runtime
+    # (`harpia_agents`) run their heavy, activity-only logic at import time
+    # (e.g. harpia/__init__.py resolves a filesystem path, agents import LLM
+    # SDKs). Those imports are deterministic for workflow purposes, so pass
+    # them through the workflow sandbox instead of re-validating them — the
+    # workflow body still executes sandboxed.
+    runner = SandboxedWorkflowRunner(
+        restrictions=SandboxRestrictions.default.with_passthrough_modules(
+            "harpia",
+            "harpia_agents",
+        )
+    )
     worker = Worker(
         client,
         task_queue=task_queue,
         workflows=[HarpiaTaskWorkflow],
         activities=[decompose_task_activity, execute_subtask_activity, run_agent_activity],
+        workflow_runner=runner,
     )
     logger.info("Temporal worker started", extra={"host": temporal_host, "queue": task_queue})
     await worker.run()

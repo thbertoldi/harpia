@@ -44,12 +44,21 @@ k8s_yaml([
     'deploy/dev/kind/postgres.yaml',
     'deploy/dev/kind/valkey.yaml',
     'deploy/dev/kind/garage.yaml',
+    'deploy/dev/kind/temporal.yaml',
     'deploy/dev/kind/zitadel.yaml',
     'deploy/dev/kind/zitadel-branding-configmap.yaml',
     'deploy/dev/kind/zitadel-init.yaml',
     'deploy/dev/kind/openfga.yaml',
     'deploy/dev/kind/openfga-bootstrap.yaml',
 ])
+
+# Temporal dev server (in-memory single binary). The API builds its workflow
+# starter at startup, so it must come up after Temporal is ready; the workers
+# poll Temporal too. UI on 8233.
+k8s_resource('temporal', port_forwards=['8233:8233'], labels=['infra'])
+
+# Temporal workers (built images, reused from harpia-api / harpia-agent).
+k8s_yaml('deploy/dev/kind/workers.yaml')
 
 # ---- Host-side dev helpers (Zitadel OIDC, OpenFGA, Vite) ----
 local_resource(
@@ -85,7 +94,25 @@ local_resource(
     labels=['infra'],
 )
 
-k8s_resource('harpia-api', resource_deps=['db-migrate'], port_forwards=['19080:8080'])
+k8s_resource(
+    'harpia-api',
+    resource_deps=['db-migrate', 'temporal'],
+    port_forwards=['19080:8080'],
+)
+
+# Workers execute plan workflows + agent activities. Go worker needs the DB
+# (migrated) and Temporal; the agent worker needs Temporal and (at run time)
+# the API for the artifact/LLM/budget internal calls.
+k8s_resource(
+    'harpia-plan-worker',
+    resource_deps=['db-migrate', 'temporal'],
+    labels=['backend'],
+)
+k8s_resource(
+    'harpia-agent-worker',
+    resource_deps=['temporal', 'harpia-api'],
+    labels=['backend'],
+)
 
 local_resource(
     'zitadel-port-forward',

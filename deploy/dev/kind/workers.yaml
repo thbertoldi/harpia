@@ -1,0 +1,98 @@
+# Harpia Dev — Temporal workers.
+#
+# Plan execution needs two workers polling Temporal (the API/server role only
+# *starts* workflows; it does not execute them):
+#   - harpia-plan-worker  (Go)     runs the plan workflow + integration
+#                                  activities (RSS fetch, LinkedIn publish, …).
+#                                  Reuses the harpia-api image with
+#                                  HARPIA_ROLE=worker.
+#   - harpia-agent-worker (Python) runs RunAgentActivity (newsletter writer /
+#                                  LinkedIn voice), loading + persisting
+#                                  artifacts via the control-plane ArtifactService.
+#                                  Reuses the harpia-agent image with
+#                                  HARPIA_ROLE=worker.
+#
+# Both images are built by Tilt (docker_build maps the image name onto every
+# manifest that references it), so the workers live-reload with the servers.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: harpia-plan-worker
+  labels:
+    app: harpia-plan-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: harpia-plan-worker
+  template:
+    metadata:
+      labels:
+        app: harpia-plan-worker
+    spec:
+      containers:
+        - name: worker
+          image: harpia-api
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: HARPIA_ROLE
+              value: "worker"
+            - name: POSTGRES_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: password
+            - name: DATABASE_URL
+              value: "postgres://$(POSTGRES_USERNAME):$(POSTGRES_PASSWORD)@postgres:5432/harpia?sslmode=disable"
+            - name: VALKEY_URL
+              value: "valkey://valkey:6379"
+            - name: TEMPORAL_HOST
+              value: "temporal:7233"
+            - name: GARAGE_URL
+              value: "http://garage:3900"
+            - name: ZITADEL_URL
+              value: "http://zitadel:8080"
+            - name: ZITADEL_HOST
+              value: "localhost:8085"
+            - name: HARPIA_ALLOW_DEV_AUTH
+              value: "true"
+            - name: LOG_LEVEL
+              value: "debug"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: harpia-agent-worker
+  labels:
+    app: harpia-agent-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: harpia-agent-worker
+  template:
+    metadata:
+      labels:
+        app: harpia-agent-worker
+    spec:
+      containers:
+        - name: worker
+          image: harpia-agent
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: HARPIA_ROLE
+              value: "worker"
+            - name: TEMPORAL_HOST
+              value: "temporal:7233"
+            # The agent activity loads/persists artifacts and resolves tenant
+            # LLM credentials + budget against the control-plane internal API.
+            - name: HARPIA_CONTROL_PLANE_URL
+              value: "http://harpia-api:8080"
+            - name: HARPIA_ALLOW_DEV_AUTH
+              value: "true"
