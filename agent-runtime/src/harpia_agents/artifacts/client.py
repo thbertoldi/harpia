@@ -42,7 +42,7 @@ class ArtifactPayloadClient:
         timeout_ms: int = 5000,
     ) -> None:
         self._client = client or ArtifactServiceClient(
-            base_url=base_url or _control_plane_internal_base_url()
+            base_url or _control_plane_internal_base_url()
         )
         self._auth_token = auth_token if auth_token is not None else _default_internal_auth_token()
         self._timeout_ms = timeout_ms
