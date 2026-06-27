@@ -31,8 +31,6 @@
   const user = $derived(page.data.user);
   const integrationAccess = $derived(canManageIntegrations(user));
 
-  const localFormKeys = new WeakMap<DemoIntegrationCard, string>();
-
   let groups = $state<DemoIntegrationGroup[]>([]);
   let forms = $state<Record<string, DemoIntegrationFormValues>>({});
   let newCardCounters = $state<Record<string, number>>({});
@@ -119,25 +117,22 @@
   function addFeedGroup(group: DemoIntegrationGroup) {
     const next = (newCardCounters[group.sku.key] ?? 0) + 1;
     newCardCounters = { ...newCardCounters, [group.sku.key]: next };
+    const key = formKeyForNewCard(group.sku.key, next);
     const card: DemoIntegrationCard = {
       kind: group.kind,
       sku: group.sku,
       entitlement: group.entitlement,
+      localFormKey: key,
       connectionStatus: ConnectionStatus.UNSPECIFIED,
       configured: false,
     };
-    const key = formKeyForNewCard(group.sku.key, next);
-    localFormKeys.set(card, key);
     forms = { ...forms, [key]: formValuesFromCard(card) };
-    groups = groups.map((entry) =>
-      entry.sku.id === group.sku.id
-        ? { ...entry, cards: [...entry.cards, card] }
-        : entry,
-    );
+    group.cards = [...group.cards, card];
+    groups = [...groups];
   }
 
   function formKeyForRenderedCard(card: DemoIntegrationCard): string {
-    return localFormKeys.get(card) ?? formKeyForCard(card);
+    return formKeyForCard(card);
   }
 
   function formFor(card: DemoIntegrationCard): DemoIntegrationFormValues {

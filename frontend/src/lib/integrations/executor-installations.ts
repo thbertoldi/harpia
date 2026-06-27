@@ -34,6 +34,7 @@ export interface DemoIntegrationCard {
   sku: ExecutorSKU;
   entitlement?: ExecutorEntitlement;
   installation?: ExecutorInstallation;
+  localFormKey?: string;
   connectionStatus: ConnectionStatus;
   configured: boolean;
 }
@@ -71,7 +72,7 @@ export function integrationKindForSkuKey(
 }
 
 export function formKeyForCard(card: DemoIntegrationCard): string {
-  return card.installation?.id || `new:${card.sku.key}:0`;
+  return card.installation?.id || card.localFormKey || `new:${card.sku.key}:0`;
 }
 
 export function formKeyForNewCard(skuKey: string, index: number): string {

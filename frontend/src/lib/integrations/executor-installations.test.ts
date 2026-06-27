@@ -144,6 +144,18 @@ describe("integration executor installations", () => {
     expect(formKeyForCard(first)).toBe("inst-rss-1");
     expect(formKeyForCard(second)).toBe("inst-rss-2");
     expect(formKeyForNewCard("rss-news-feed", 3)).toBe("new:rss-news-feed:3");
+    expect(
+      formKeyForCard({
+        kind: "rss",
+        sku: create(ExecutorSKUSchema, {
+          id: "sku-rss",
+          key: "rss-news-feed",
+        }),
+        localFormKey: "new:rss-news-feed:4",
+        connectionStatus: ConnectionStatus.UNSPECIFIED,
+        configured: false,
+      }),
+    ).toBe("new:rss-news-feed:4");
   });
 
   it("maps connection status values to translation keys", () => {

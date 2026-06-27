@@ -142,12 +142,13 @@ describe("watchInbox", () => {
     }
 
     expect(item?.kind).toBe("approval");
-    expect(item?.configurationId).toBe("config-linkedin");
-    expect(item?.planExecutionId).toBe("exec-linkedin");
-    expect(item?.stepExecutionId).toBe("step-publish");
-    expect(item && "inputArtifactId" in item ? item.inputArtifactId : "").toBe(
-      "artifact-linkedin-draft",
-    );
+    if (!item || item.kind !== "approval") {
+      throw new Error("expected approval inbox item");
+    }
+    expect(item.configurationId).toBe("config-linkedin");
+    expect(item.planExecutionId).toBe("exec-linkedin");
+    expect(item.stepExecutionId).toBe("step-publish");
+    expect(item.inputArtifactId).toBe("artifact-linkedin-draft");
   });
 
   it("re-emits when a stream produces a new batch", async () => {
