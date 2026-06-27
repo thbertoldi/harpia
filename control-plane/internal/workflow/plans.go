@@ -758,6 +758,10 @@ func runExecutorActivity(ctx workflow.Context, kind string, input ExecutorActivi
 		activityName = RunIntegrationActivityName
 	case ExecutorKindAgent:
 		activityName = RunAgentActivityName
+		// Agent activities are served by the Python agent-runtime worker on a
+		// dedicated task queue; routing here keeps them off the Go worker
+		// (which would NotFound) and vice versa.
+		ctx = workflow.WithTaskQueue(ctx, AgentTaskQueueName)
 	default:
 		return result, fmt.Errorf("unsupported executor kind %q for step %q", kind, input.PlanStepKey)
 	}

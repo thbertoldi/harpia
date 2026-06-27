@@ -90,6 +90,12 @@ spec:
               value: "worker"
             - name: TEMPORAL_HOST
               value: "temporal:7233"
+            # Dedicated agent queue — the Go worker owns the plan workflow +
+            # integration/lifecycle activities on harpia-task-queue; this worker
+            # owns RunAgentActivity. Shared queue would misroute cross-language
+            # activities (NotFoundError).
+            - name: TEMPORAL_TASK_QUEUE
+              value: "harpia-agent-task-queue"
             # The agent activity loads/persists artifacts and resolves tenant
             # LLM credentials + budget against the control-plane internal API.
             - name: HARPIA_CONTROL_PLANE_URL

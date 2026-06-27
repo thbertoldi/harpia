@@ -335,6 +335,17 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 			AllowDevAuth: cfg.AllowDevAuth,
 		})),
 	)
+	// Internal ArtifactService for the Python agent worker (RunAgentActivity):
+	// loads upstream artifacts and persists agent output. Authenticated with the
+	// internal-service token (not the public request-context interceptor); tenant
+	// comes from the X-Tenant-ID header.
+	internalArtifactsPath, internalArtifactsConnectHandler := artifactsv1connect.NewArtifactServiceHandler(
+		artifactHandler,
+		connect.WithInterceptors(identity.NewInternalServiceInterceptor(identity.InternalServiceOptions{
+			Token:        cfg.InternalAuthToken,
+			AllowDevAuth: cfg.AllowDevAuth,
+		})),
+	)
 
 	mux.Handle(agentsPath, agentsHandler)
 	mux.Handle(executorsPath, executorsHandler)
@@ -347,6 +358,7 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	mux.Handle(budgetPath, budgetConnectHandler)
 	mux.Handle(internalLLMPath, internalLLMHandler)
 	mux.Handle("/internal"+internalBudgetPath, http.StripPrefix("/internal", internalBudgetConnectHandler))
+	mux.Handle("/internal"+internalArtifactsPath, http.StripPrefix("/internal", internalArtifactsConnectHandler))
 
 	var wrapped http.Handler = mux
 	wrapped = withLogging(logger)(wrapped)
