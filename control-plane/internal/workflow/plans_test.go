@@ -882,6 +882,42 @@ func assertArtifactIDs(t *testing.T, artifacts []ArtifactRef, expected []string)
 	}
 }
 
+func TestStepInputArtifactsAllowsInternalContentPreferencesSeed(t *testing.T) {
+	step := &plansv1.PlanStep{
+		Key:                 "write-draft",
+		InputArtifactTypeId: "harpia.artifacts.v1.NewsList",
+	}
+	inputs, err := stepInputArtifacts(
+		step,
+		[]string{"fetch-news"},
+		map[string][]ArtifactRef{
+			"write-draft": {{
+				Source:      "seed",
+				StepKey:     "write-draft",
+				InputName:   "harpia.internal.ContentPreferences",
+				LiteralJSON: `{"tone":"analytical"}`,
+			}},
+		},
+		map[string]ArtifactRef{
+			"fetch-news": {
+				Source:          "step_output",
+				StepKey:         "fetch-news",
+				ArtifactID:      "art-news",
+				ArtifactTypeKey: "harpia.artifacts.v1.NewsList",
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("stepInputArtifacts returned error: %v", err)
+	}
+	if len(inputs) == 0 {
+		t.Fatal("expected input artifacts")
+	}
+	if got := inputs[0].ArtifactTypeKey; got != "harpia.internal.ContentPreferences" {
+		t.Fatalf("internal seed artifact type = %q", got)
+	}
+}
+
 func TestPlanWorkflowID(t *testing.T) {
 	id := PlanWorkflowID("11111111-1111-1111-1111-111111111111")
 	if got, want := id, fmt.Sprintf("plan-execution-%s", "11111111-1111-1111-1111-111111111111"); got != want {

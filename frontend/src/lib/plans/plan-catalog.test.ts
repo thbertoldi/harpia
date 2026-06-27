@@ -141,7 +141,7 @@ describe("plan catalog lock state", () => {
     expect(lock.reason).toBe("available");
   });
 
-  it("builds a locked catalog entry from mock executor context", () => {
+  it("builds an available catalog entry from mock executor context", () => {
     const entry = buildPlanCatalogEntry(
       WEEKLY_NEWSLETTER_TEMPLATE,
       mockExecutorContext(),
@@ -149,14 +149,8 @@ describe("plan catalog lock state", () => {
 
     expect(entry.template.key).toBe("weekly-newsletter-linkedin");
     expect(entry.requiredSkus).toHaveLength(4);
-    expect(entry.isLocked).toBe(true);
-    expect(
-      entry.requiredSkus.some((sku) => sku.reason === "missing_installation"),
-    ).toBe(true);
-    expect(
-      entry.requiredSkus.some((sku) => sku.reason === "not_connected"),
-    ).toBe(true);
-    expect(entry.requiredSkus.some((sku) => sku.reason === "available")).toBe(
+    expect(entry.isLocked).toBe(false);
+    expect(entry.requiredSkus.every((sku) => sku.reason === "available")).toBe(
       true,
     );
   });

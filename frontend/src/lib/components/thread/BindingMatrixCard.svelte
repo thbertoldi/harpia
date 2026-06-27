@@ -3,12 +3,13 @@
   import { fade } from "svelte/transition";
   import type { ChatMessage } from "$lib/chat/types";
   import { locale, translate } from "$lib/i18n";
-  import { editBinding } from "$lib/plans/assistant";
+  import { applyLinkedInSuggestion, editBinding } from "$lib/plans/assistant";
   import {
     parseMatrixPayload,
     computeRunCostBRL,
     isMatrixComplete,
     type MatrixPayload,
+    type MatrixOption,
     type MatrixRow,
   } from "$lib/plans/matrix";
   import { cardLift, chipFlash } from "$lib/motion/transitions";
@@ -99,6 +100,8 @@
   let saving = $state(false);
   let submitted = $state(false);
   let saveError = $state(false);
+  let suggestOpen = $state(false);
+  let suggestedTopic = $state("sports");
 
   function optionLabel(row: MatrixRow): string {
     const opt = row.options.find((o) => o.id === row.current_executor_id);
@@ -143,6 +146,67 @@
       saveError = true;
     } finally {
       savingRowKey = null;
+    }
+  }
+
+  function optionMatchesTopic(option: MatrixOption, topic: string): boolean {
+    if (!topic) return false;
+    return [option.label, option.sublabel ?? "", option.value]
+      .join(" ")
+      .toLowerCase()
+      .includes(topic);
+  }
+
+  function installationIdsByStep(): Record<string, string> {
+    const ids: Record<string, string> = {};
+    const topic = suggestedTopic.trim().toLowerCase();
+    for (const row of rows) {
+      const preferred = row.options.find((option) =>
+        optionMatchesTopic(option, topic),
+      );
+      const fallback = row.options.find((option) => option.id.trim() !== "");
+      const selected = preferred ?? fallback;
+      if (selected?.id) ids[row.step_key] = selected.id;
+    }
+    return ids;
+  }
+
+  async function onSuggest() {
+    if (!configuration || !template) return;
+    saving = true;
+    saveError = false;
+    try {
+      const next = await applyLinkedInSuggestion({
+        tenantId,
+        configurationId,
+        existingConfiguration: configuration,
+        template,
+        topic: suggestedTopic,
+        installationIdsByStep: installationIdsByStep(),
+      });
+      configuration = next;
+      const nextBindings = new Map(
+        next.slotBindings.map((binding) => [
+          binding.stepKey,
+          binding.executorInstallationId,
+        ]),
+      );
+      if (payload) {
+        payload = {
+          ...payload,
+          policies_set: true,
+          rows: payload.rows.map((row) => ({
+            ...row,
+            current_executor_id:
+              nextBindings.get(row.step_key) ?? row.current_executor_id,
+          })),
+        };
+      }
+      suggestOpen = false;
+    } catch {
+      saveError = true;
+    } finally {
+      saving = false;
     }
   }
 
@@ -207,13 +271,53 @@
             {templateName}
           </h3>
         </div>
-        <span
-          class="rounded border border-talon-gold/35 bg-talon-gold/[0.06] px-2 py-1 text-[10px] font-semibold tracking-[0.1em] text-talon-gold uppercase"
-        >
-          {boundCount}/{rows.length}
-          {translate("assistant.bindingMatrix.progress", $locale)}
-        </span>
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={!configuration || !template || saving || submitted}
+            onclick={() => (suggestOpen = true)}
+            class="cursor-pointer rounded-md border border-plumage px-3 py-1.5 text-[12px] font-medium text-crown-ash hover:border-talon-gold hover:text-talon-gold disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Suggest
+          </button>
+          <span
+            class="rounded border border-talon-gold/35 bg-talon-gold/[0.06] px-2 py-1 text-[10px] font-semibold tracking-[0.1em] text-talon-gold uppercase"
+          >
+            {boundCount}/{rows.length}
+            {translate("assistant.bindingMatrix.progress", $locale)}
+          </span>
+        </div>
       </div>
+
+      {#if suggestOpen}
+        <div class="border-b border-plumage bg-surface-deep px-5 py-4">
+          <label
+            for={`suggest-topic-${message.id}`}
+            class="mb-1 block text-[11px] font-medium text-crown-ash"
+          >
+            Topic
+          </label>
+          <div class="flex gap-2">
+            <input
+              id={`suggest-topic-${message.id}`}
+              value={suggestedTopic}
+              oninput={(event) =>
+                (suggestedTopic = (
+                  event.currentTarget as HTMLInputElement
+                ).value)}
+              class="min-w-0 flex-1 rounded-md border border-plumage bg-surface-hover px-3 py-2 text-[13px] text-cream outline-none focus:border-talon-gold"
+            />
+            <button
+              type="button"
+              disabled={saving}
+              onclick={onSuggest}
+              class="cursor-pointer rounded-md bg-talon-gold px-3 py-2 text-[12px] font-semibold text-obsidian hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Apply
+            </button>
+          </div>
+        </div>
+      {/if}
 
       <!-- Rows -->
       {#each rows as row (row.step_key)}

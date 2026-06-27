@@ -1,5 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import { appendThreadMessage } from "$lib/chat/client";
+import { buildLinkedInSuggestion } from "$lib/plans/linkedin-suggestions";
 import { planClient } from "$lib/rpc";
 import {
   SlotBindingSchema,
@@ -89,6 +90,50 @@ export async function editBinding(args: {
   if (!response.planConfiguration) {
     throw new Error(
       "editBinding: UpdatePlanConfiguration returned no configuration",
+    );
+  }
+  return response.planConfiguration;
+}
+
+export async function applyLinkedInSuggestion(args: {
+  tenantId: string;
+  configurationId: string;
+  existingConfiguration: PlanConfiguration;
+  template: PlanTemplate;
+  topic: string;
+  installationIdsByStep: Record<string, string>;
+  today?: Date;
+}): Promise<PlanConfiguration> {
+  const suggestion = buildLinkedInSuggestion({
+    topic: args.topic,
+    installationIdsByStep: args.installationIdsByStep,
+    today: args.today ?? new Date(),
+  });
+  await appendThreadMessage(
+    args.tenantId,
+    args.configurationId,
+    "SYSTEM",
+    "STEP_REBOUND",
+    "",
+    JSON.stringify({
+      reason: "linkedin_suggestion",
+      topic: args.topic,
+      bound_steps: suggestion.slotBindings.map((binding) => binding.stepKey),
+    }),
+  );
+  const response = await planClient.updatePlanConfiguration({
+    tenantId: args.tenantId,
+    planConfigurationId: args.configurationId,
+    status: args.existingConfiguration.status,
+    seedArtifacts: suggestion.seedArtifacts,
+    slotBindings: suggestion.slotBindings,
+    overseerBindings: args.existingConfiguration.overseerBindings,
+    behaviorPolicies: suggestion.behaviorPolicies,
+    schedule: args.existingConfiguration.schedule,
+  });
+  if (!response.planConfiguration) {
+    throw new Error(
+      "applyLinkedInSuggestion: UpdatePlanConfiguration returned no configuration",
     );
   }
   return response.planConfiguration;

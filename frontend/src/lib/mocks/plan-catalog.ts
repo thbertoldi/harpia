@@ -285,7 +285,42 @@ export function mockExecutorContext(
           case: "integration",
           value: create(IntegrationInstallationSchema, {
             connectionStatus: ConnectionStatus.CONNECTED,
-            configJson: '{"feed_urls":["https://example.com/feed.xml"]}',
+            configJson: '{"feeds":["https://example.com/feed.xml"]}',
+          }),
+        },
+      }),
+      create(ExecutorInstallationSchema, {
+        id: "inst-rss-hn",
+        tenantId,
+        executorSkuId: SKU_IDS.rssNewsFeed,
+        kind: ExecutorCatalogKind.INTEGRATION,
+        displayName: "Hacker News Frontpage RSS",
+        enabled: true,
+        createdAt: "2026-06-02T10:00:00Z",
+        updatedAt: "2026-06-02T10:00:00Z",
+        detail: {
+          case: "integration",
+          value: create(IntegrationInstallationSchema, {
+            connectionStatus: ConnectionStatus.CONNECTED,
+            configJson: '{"feeds":["https://hnrss.org/frontpage"]}',
+          }),
+        },
+      }),
+      create(ExecutorInstallationSchema, {
+        id: "inst-rss-sports",
+        tenantId,
+        executorSkuId: SKU_IDS.rssNewsFeed,
+        kind: ExecutorCatalogKind.INTEGRATION,
+        displayName: "Sports headlines RSS",
+        enabled: true,
+        createdAt: "2026-06-02T10:00:00Z",
+        updatedAt: "2026-06-02T10:00:00Z",
+        detail: {
+          case: "integration",
+          value: create(IntegrationInstallationSchema, {
+            connectionStatus: ConnectionStatus.CONNECTED,
+            configJson:
+              '{"feeds":["https://feeds.folha.uol.com.br/esporte/rss091.xml"]}',
           }),
         },
       }),
@@ -307,6 +342,23 @@ export function mockExecutorContext(
         },
       }),
       create(ExecutorInstallationSchema, {
+        id: "inst-linkedin-voice",
+        tenantId,
+        executorSkuId: SKU_IDS.linkedinVoice,
+        kind: ExecutorCatalogKind.AGENT,
+        displayName: "LinkedIn Voice",
+        enabled: true,
+        createdAt: "2026-06-02T10:00:00Z",
+        updatedAt: "2026-06-02T10:00:00Z",
+        detail: {
+          case: "agent",
+          value: create(AgentInstallationSchema, {
+            manifestId: "linkedin-voice-senior",
+            manifestVersion: "1.0.0",
+          }),
+        },
+      }),
+      create(ExecutorInstallationSchema, {
         id: "inst-linkedin",
         tenantId,
         executorSkuId: SKU_IDS.linkedinPublish,
@@ -320,6 +372,23 @@ export function mockExecutorContext(
           value: create(IntegrationInstallationSchema, {
             connectionStatus: ConnectionStatus.DISCONNECTED,
             configJson: "{}",
+          }),
+        },
+      }),
+      create(ExecutorInstallationSchema, {
+        id: "inst-linkedin-approval",
+        tenantId,
+        executorSkuId: SKU_IDS.linkedinPublish,
+        kind: ExecutorCatalogKind.INTEGRATION,
+        displayName: "LinkedIn Approval Only",
+        enabled: true,
+        createdAt: "2026-06-02T10:00:00Z",
+        updatedAt: "2026-06-02T10:00:00Z",
+        detail: {
+          case: "integration",
+          value: create(IntegrationInstallationSchema, {
+            connectionStatus: ConnectionStatus.CONNECTED,
+            configJson: '{"mode":"approval_only"}',
           }),
         },
       }),

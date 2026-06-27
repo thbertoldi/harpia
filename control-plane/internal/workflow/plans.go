@@ -1042,12 +1042,14 @@ func seedArtifactsByStep(config *plansv1.PlanConfiguration) map[string][]Artifac
 		if stepKey == "" {
 			continue
 		}
+		artifactTypeKey := internalArtifactTypeKey(seed.InputName)
 		seeds[stepKey] = append(seeds[stepKey], ArtifactRef{
-			Source:      "seed",
-			StepKey:     stepKey,
-			InputName:   seed.InputName,
-			ArtifactID:  seed.ArtifactId,
-			LiteralJSON: seed.LiteralJson,
+			Source:          "seed",
+			StepKey:         stepKey,
+			InputName:       seed.InputName,
+			ArtifactID:      seed.ArtifactId,
+			LiteralJSON:     seed.LiteralJson,
+			ArtifactTypeKey: artifactTypeKey,
 		})
 	}
 	for key := range seeds {
@@ -1073,7 +1075,11 @@ func stepInputArtifacts(
 	inputs := append([]ArtifactRef(nil), seedArtifacts[step.Key]...)
 	for i := range inputs {
 		if strings.TrimSpace(inputs[i].ArtifactTypeKey) == "" {
-			inputs[i].ArtifactTypeKey = step.InputArtifactTypeId
+			if internal := internalArtifactTypeKey(inputs[i].InputName); internal != "" {
+				inputs[i].ArtifactTypeKey = internal
+			} else {
+				inputs[i].ArtifactTypeKey = step.InputArtifactTypeId
+			}
 		}
 	}
 	if len(upstreamStepKeys) == 0 {
@@ -1106,11 +1112,22 @@ func validateStepInputArtifactTypes(step *plansv1.PlanStep, inputs []ArtifactRef
 	}
 	for _, input := range inputs {
 		actual := strings.TrimSpace(input.ArtifactTypeKey)
+		if strings.HasPrefix(actual, "harpia.internal.") {
+			continue
+		}
 		if actual != "" && actual != expected {
 			return fmt.Errorf("step %q expected input artifact type %q but received %q from %q", step.Key, expected, actual, input.StepKey)
 		}
 	}
 	return nil
+}
+
+func internalArtifactTypeKey(inputName string) string {
+	trimmed := strings.TrimSpace(inputName)
+	if strings.HasPrefix(trimmed, "harpia.internal.") {
+		return trimmed
+	}
+	return ""
 }
 
 func sortStepKeys(keys []string, indexByKey map[string]int) {
