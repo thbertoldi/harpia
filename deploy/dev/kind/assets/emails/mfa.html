@@ -23,7 +23,7 @@
             </tr>
             <tr>
               <td style="padding:8px 32px 24px 32px;">
-                {{if eq .PreferredLanguage "pt-BR"}}
+                {{if or (eq .PreferredLanguage "pt") (eq .PreferredLanguage "pt-BR")}}
                 <h1 style="font-family:'Manrope',sans-serif;font-size:20px;font-weight:600;color:#f5f2eb;margin:0 0 16px 0;">Verifique seu acesso</h1>
                 <p style="font-size:15px;line-height:1.6;color:#c9c6bf;margin:0 0 24px 0;">Olá {{.FirstName}}, use o código abaixo para concluir a verificação em duas etapas e proteger sua conta Harpia.</p>
                 {{else}}
@@ -35,13 +35,13 @@
                   <tr>
                     <td align="center" style="border-radius:8px;background-color:#c8920f;">
                       <a href="{{.URL}}" style="display:inline-block;padding:12px 28px;font-family:'Manrope',sans-serif;font-size:15px;font-weight:600;color:#121318;text-decoration:none;border-radius:8px;">
-                        {{if eq .PreferredLanguage "pt-BR"}}Confirmar acesso{{else}}Confirm sign-in{{end}}
+                        {{if or (eq .PreferredLanguage "pt") (eq .PreferredLanguage "pt-BR")}}Confirmar acesso{{else}}Confirm sign-in{{end}}
                       </a>
                     </td>
                   </tr>
                 </table>
                 <p style="font-size:13px;line-height:1.6;color:#8b8a86;margin:24px 0 0 0;">
-                  {{if eq .PreferredLanguage "pt-BR"}}Se você não tentou entrar, ignore este e-mail.{{else}}If you didn't try to sign in, you can ignore this email.{{end}}
+                  {{if or (eq .PreferredLanguage "pt") (eq .PreferredLanguage "pt-BR")}}Se você não tentou entrar, ignore este e-mail.{{else}}If you didn't try to sign in, you can ignore this email.{{end}}
                 </p>
               </td>
             </tr>

@@ -1,4 +1,4 @@
-{{if eq .PreferredLanguage "pt-BR"}}Harpia — Bem-vindo
+{{if or (eq .PreferredLanguage "pt") (eq .PreferredLanguage "pt-BR")}}Harpia — Bem-vindo
 
 Olá {{.FirstName}},
 

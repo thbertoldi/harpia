@@ -83,7 +83,7 @@ zitadel:
               font-family="Georgia, 'Times New Roman', serif"
               font-size="34" font-weight="700" fill="#C8920F">H</text>
       </svg>
-    # Branded email copy (EN + pt-BR). Lines: type|lang|field|value.
+    # Branded email copy (EN + pt). Zitadel uses locale code "pt", not pt-BR.
     # type one of: passwordreset, init, verifyemail. field one of:
     # subject, greeting, text, button.
     emailTexts: |
@@ -91,26 +91,26 @@ zitadel:
       passwordreset|en|greeting|Hi {{.FirstName}},
       passwordreset|en|text|We received a request to reset your Harpia password. Use the button below to choose a new one. If you didn't request this, you can ignore this email.
       passwordreset|en|button|Reset password
-      passwordreset|pt-BR|subject|Redefinir sua senha Harpia
-      passwordreset|pt-BR|greeting|Olá {{.FirstName}},
-      passwordreset|pt-BR|text|Recebemos um pedido para redefinir sua senha Harpia. Use o botão abaixo para escolher uma nova. Se você não fez este pedido, ignore este e-mail.
-      passwordreset|pt-BR|button|Redefinir senha
+      passwordreset|pt|subject|Redefinir sua senha Harpia
+      passwordreset|pt|greeting|Olá {{.FirstName}},
+      passwordreset|pt|text|Recebemos um pedido para redefinir sua senha Harpia. Use o botão abaixo para escolher uma nova. Se você não fez este pedido, ignore este e-mail.
+      passwordreset|pt|button|Redefinir senha
       init|en|subject|Welcome to Harpia
       init|en|greeting|Hi {{.FirstName}},
       init|en|text|Your Harpia account has been created. Use the button below to set your password and activate access.
       init|en|button|Activate account
-      init|pt-BR|subject|Bem-vindo à Harpia
-      init|pt-BR|greeting|Olá {{.FirstName}},
-      init|pt-BR|text|Sua conta na Harpia foi criada. Use o botão abaixo para definir sua senha e ativar o acesso.
-      init|pt-BR|button|Ativar conta
+      init|pt|subject|Bem-vindo à Harpia
+      init|pt|greeting|Olá {{.FirstName}},
+      init|pt|text|Sua conta na Harpia foi criada. Use o botão abaixo para definir sua senha e ativar o acesso.
+      init|pt|button|Ativar conta
       verifyemail|en|subject|Verify your Harpia sign-in
       verifyemail|en|greeting|Hi {{.FirstName}},
       verifyemail|en|text|Use the code or button below to complete verification and keep your Harpia account secure.
       verifyemail|en|button|Confirm sign-in
-      verifyemail|pt-BR|subject|Verifique seu acesso Harpia
-      verifyemail|pt-BR|greeting|Olá {{.FirstName}},
-      verifyemail|pt-BR|text|Use o código ou o botão abaixo para concluir a verificação e proteger sua conta Harpia.
-      verifyemail|pt-BR|button|Confirmar acesso
+      verifyemail|pt|subject|Verifique seu acesso Harpia
+      verifyemail|pt|greeting|Olá {{.FirstName}},
+      verifyemail|pt|text|Use o código ou o botão abaixo para concluir a verificação e proteger sua conta Harpia.
+      verifyemail|pt|button|Confirmar acesso
 
 # OpenFGA
 openfga:

@@ -184,7 +184,8 @@ data:
     POLICY_CHECK=$(api_json GET /admin/v1/policies/label)
     verify_label_policy "$POLICY_CHECK"
 
-    # ---- Custom email message texts (branded copy, EN + pt-BR) -------------
+    # ---- Custom email message texts (branded copy, EN + pt) ----------------
+    # Zitadel locale codes use "pt" (not pt-BR) — see customize/texts docs.
     # Pushes subject/greeting/text/button into Zitadel's message-text policy:
     #   PUT /management/v1/text/message/{type}/{language}
     # Reads $BRANDING_DIR/email-texts.conf (lines: type|lang|field|value).
@@ -194,6 +195,11 @@ data:
     json_escape() {
       # Escape backslash, double-quote; collapse to keep curl -d single-line.
       printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'
+    }
+
+    normalize_lang() {
+      # Zitadel message-text API accepts "pt", not "pt-BR" (LANG-lg4DP).
+      case "$1" in pt-BR|pt_BR) echo pt ;; *) echo "$1" ;; esac
     }
 
     put_message_text() {
@@ -231,6 +237,7 @@ data:
         | awk -F'|' '{print $1"|"$2}' | sort -u > "$PAIRS_FILE"
       while IFS='|' read -r mtype lang; do
         [ -n "$mtype" ] || continue
+        lang=$(normalize_lang "$lang")
         get_field() {
           grep -E "^$mtype\|$lang\|$1\|" "$EMAIL_TEXTS_FILE" | head -1 \
             | cut -d'|' -f4-
@@ -369,7 +376,7 @@ data:
             font-size="52" font-weight="600" letter-spacing="2"
             fill="#F5F2EB">Harpia</text>
     </svg>
-  # Email message copy (branded, EN + pt-BR). The init Job parses these per
+  # Email message copy (branded, EN + pt). The init Job parses these per
   # language and PUTs them to /management/v1/text/message/{type}/{language}.
   # Format per template: lines "<lang>|<field>|<value>" where field is one of
   # subject, greeting, text, button. Keeps init-Job parsing trivial (no JSON
@@ -381,28 +388,28 @@ data:
     passwordreset|en|greeting|Hi {{.FirstName}},
     passwordreset|en|text|We received a request to reset your Harpia password. Use the button below to choose a new one. If you didn't request this, you can ignore this email.
     passwordreset|en|button|Reset password
-    passwordreset|pt-BR|subject|Redefinir sua senha Harpia
-    passwordreset|pt-BR|greeting|Olá {{.FirstName}},
-    passwordreset|pt-BR|text|Recebemos um pedido para redefinir sua senha Harpia. Use o botão abaixo para escolher uma nova. Se você não fez este pedido, ignore este e-mail.
-    passwordreset|pt-BR|button|Redefinir senha
+    passwordreset|pt|subject|Redefinir sua senha Harpia
+    passwordreset|pt|greeting|Olá {{.FirstName}},
+    passwordreset|pt|text|Recebemos um pedido para redefinir sua senha Harpia. Use o botão abaixo para escolher uma nova. Se você não fez este pedido, ignore este e-mail.
+    passwordreset|pt|button|Redefinir senha
     # init (invite / account activation)
     init|en|subject|Welcome to Harpia
     init|en|greeting|Hi {{.FirstName}},
     init|en|text|Your Harpia account has been created. Use the button below to set your password and activate access.
     init|en|button|Activate account
-    init|pt-BR|subject|Bem-vindo à Harpia
-    init|pt-BR|greeting|Olá {{.FirstName}},
-    init|pt-BR|text|Sua conta na Harpia foi criada. Use o botão abaixo para definir sua senha e ativar o acesso.
-    init|pt-BR|button|Ativar conta
+    init|pt|subject|Bem-vindo à Harpia
+    init|pt|greeting|Olá {{.FirstName}},
+    init|pt|text|Sua conta na Harpia foi criada. Use o botão abaixo para definir sua senha e ativar o acesso.
+    init|pt|button|Ativar conta
     # verifyemail (MFA / verification)
     verifyemail|en|subject|Verify your Harpia sign-in
     verifyemail|en|greeting|Hi {{.FirstName}},
     verifyemail|en|text|Use the code or button below to complete verification and keep your Harpia account secure.
     verifyemail|en|button|Confirm sign-in
-    verifyemail|pt-BR|subject|Verifique seu acesso Harpia
-    verifyemail|pt-BR|greeting|Olá {{.FirstName}},
-    verifyemail|pt-BR|text|Use o código ou o botão abaixo para concluir a verificação e proteger sua conta Harpia.
-    verifyemail|pt-BR|button|Confirmar acesso
+    verifyemail|pt|subject|Verifique seu acesso Harpia
+    verifyemail|pt|greeting|Olá {{.FirstName}},
+    verifyemail|pt|text|Use o código ou o botão abaixo para concluir a verificação e proteger sua conta Harpia.
+    verifyemail|pt|button|Confirmar acesso
 kind: ConfigMap
 metadata:
   name: zitadel-branding
