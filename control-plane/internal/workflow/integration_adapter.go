@@ -10,6 +10,7 @@ import (
 
 	"github.com/harpia/control-plane/internal/executors"
 	"github.com/harpia/control-plane/internal/executors/runtime"
+	"github.com/harpia/control-plane/internal/identity"
 )
 
 func (a *PlanActivities) RunIntegrationActivity(ctx context.Context, input ExecutorActivityInput) (ExecutorActivityResult, error) {
@@ -24,6 +25,12 @@ func (a *PlanActivities) RunIntegrationActivity(ctx context.Context, input Execu
 			Error:  err.Error(),
 		}, nil
 	}
+
+	// Temporal activities run without the request-scoped identity that HTTP
+	// middleware injects, so the tenant-scoped artifact/object store has no
+	// tenant to key on ("unauthenticated: missing request context"). Seed the
+	// context with the activity's tenant before invoking the integration.
+	ctx = identity.WithRequestContext(ctx, identity.RequestContext{TenantID: tenantID})
 
 	result, err := a.Integrations.Run(ctx, mapIntegrationRequest(tenantID, input))
 	if err != nil {
