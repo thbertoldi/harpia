@@ -1,0 +1,139 @@
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass, field
+
+import pytest
+
+from harpia_agents.temporal import worker
+
+
+@dataclass
+class FakeArtifactClient:
+    payloads: dict[str, dict[str, object]]
+    created: list[dict[str, object]] = field(default_factory=list)
+
+    async def get_payload(self, *, tenant_id: str, artifact_id: str) -> dict[str, object]:
+        return self.payloads[artifact_id]
+
+    async def create_payload(
+        self,
+        *,
+        tenant_id: str,
+        artifact_type_key: str,
+        payload: dict[str, object],
+        step_execution_id: str,
+    ) -> str:
+        self.created.append(
+            {
+                "tenant_id": tenant_id,
+                "artifact_type_key": artifact_type_key,
+                "payload": payload,
+                "step_execution_id": step_execution_id,
+            }
+        )
+        return f"artifact-{len(self.created)}"
+
+
+@pytest.mark.asyncio
+async def test_run_newsletter_agent_loads_news_artifact_and_persists_text_draft(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake = FakeArtifactClient(
+        payloads={
+            "news-1": {
+                "articles": [
+                    {
+                        "title": "Final match",
+                        "url": "https://example.com/match",
+                        "summary": "A decisive game.",
+                        "source": "Sports",
+                        "publishedAt": "2026-06-25T12:00:00Z",
+                    }
+                ]
+            }
+        }
+    )
+
+    async def fake_run_registered_agent(*args, **kwargs):
+        from harpia.artifacts.v1.artifacts_pb2 import TextDraft
+
+        assert kwargs["input_payload"].articles[0].title == "Final match"
+        assert kwargs["elicitation_responses"]["tone"] == "analytical"
+        return TextDraft(title="Newsletter", body="Draft body")
+
+    monkeypatch.setattr(worker, "ArtifactPayloadClient", lambda: fake)
+    monkeypatch.setattr(worker, "run_registered_agent", fake_run_registered_agent)
+
+    result = await worker.run_agent_activity(
+        {
+            "tenant_id": "00000000-0000-4000-8000-000000000001",
+            "step_execution_id": "step-write",
+            "output_artifact_type_key": "harpia.artifacts.v1.TextDraft",
+            "executor_installation_snapshot": {
+                "manifest_id": "newsletter-writer-senior",
+            },
+            "input_artifacts": [
+                {
+                    "artifact_type_key": "harpia.internal.ContentPreferences",
+                    "input_name": "harpia.internal.ContentPreferences",
+                    "literal_json": json.dumps({"tone": "analytical", "topic": "sports"}),
+                },
+                {
+                    "artifact_type_key": "harpia.artifacts.v1.NewsList",
+                    "artifact_id": "news-1",
+                },
+            ],
+        }
+    )
+
+    assert result == {"status": "completed", "output_artifact_id": "artifact-1"}
+    assert fake.created[0]["artifact_type_key"] == "harpia.artifacts.v1.TextDraft"
+    assert fake.created[0]["payload"] == {"title": "Newsletter", "body": "Draft body"}
+
+
+@pytest.mark.asyncio
+async def test_run_linkedin_agent_loads_text_draft_and_persists_linkedin_draft(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake = FakeArtifactClient(
+        payloads={
+            "draft-1": {
+                "title": "Newsletter",
+                "body": "Draft body",
+            }
+        }
+    )
+
+    async def fake_run_registered_agent(*args, **kwargs):
+        from harpia.artifacts.v1.artifacts_pb2 import LinkedInPostDraft
+
+        assert kwargs["input_payload"].title == "Newsletter"
+        return LinkedInPostDraft(text="LinkedIn text", hook="Newsletter", hashtags=["sports"])
+
+    monkeypatch.setattr(worker, "ArtifactPayloadClient", lambda: fake)
+    monkeypatch.setattr(worker, "run_registered_agent", fake_run_registered_agent)
+
+    result = await worker.run_agent_activity(
+        {
+            "tenant_id": "00000000-0000-4000-8000-000000000001",
+            "step_execution_id": "step-linkedin",
+            "output_artifact_type_key": "harpia.artifacts.v1.LinkedInPostDraft",
+            "executor_installation_snapshot": {
+                "manifest_id": "linkedin-voice-senior",
+            },
+            "input_artifacts": [
+                {
+                    "artifact_type_key": "harpia.artifacts.v1.TextDraft",
+                    "artifact_id": "draft-1",
+                }
+            ],
+        }
+    )
+
+    assert result == {"status": "completed", "output_artifact_id": "artifact-1"}
+    assert fake.created[0]["payload"] == {
+        "text": "LinkedIn text",
+        "hook": "Newsletter",
+        "hashtags": ["sports"],
+    }
