@@ -136,3 +136,42 @@ async def test_run_registered_agent_fails_closed_when_resolver_errors(
             ),
             llm_registry=registry,
         )
+
+
+@pytest.mark.asyncio
+async def test_run_registered_agent_does_not_dev_fallback_without_provider_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("HARPIA_ALLOW_DEV_AUTH", "true")
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "harpia_agents.agents.registry.TenantLLMResolver",
+        lambda: type(
+            "BrokenResolver",
+            (),
+            {"resolve": AsyncMock(side_effect=RuntimeError("resolver unavailable"))},
+        )(),
+    )
+
+    registry = LLMRegistry.for_testing(
+        model_ids=[MANIFEST.model_id],
+        responses=["## Draft\nGenerated content"],
+    )
+
+    with pytest.raises(RuntimeError, match="resolver unavailable"):
+        await run_registered_agent(
+            "newsletter-writer-senior",
+            tenant_id="00000000-0000-4000-8000-000000000001",
+            input_payload=NewsList(
+                articles=[
+                    NewsArticle(
+                        title="Story",
+                        url="https://example.com/story",
+                        summary="Summary",
+                        source="Example",
+                        published_at="2026-06-17T00:00:00Z",
+                    )
+                ]
+            ),
+            llm_registry=registry,
+        )

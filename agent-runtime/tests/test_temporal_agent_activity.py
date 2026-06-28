@@ -4,6 +4,9 @@ import json
 from dataclasses import dataclass, field
 
 import pytest
+from connectrpc.code import Code
+from connectrpc.errors import ConnectError
+from temporalio.exceptions import ApplicationError
 
 from harpia_agents.temporal import worker
 
@@ -137,3 +140,91 @@ async def test_run_linkedin_agent_loads_text_draft_and_persists_linkedin_draft(
         "hook": "Newsletter",
         "hashtags": ["sports"],
     }
+
+
+@pytest.mark.asyncio
+async def test_run_agent_activity_marks_llm_config_errors_non_retryable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake = FakeArtifactClient(
+        payloads={
+            "news-1": {
+                "articles": [
+                    {
+                        "title": "Final match",
+                        "url": "https://example.com/match",
+                        "summary": "A decisive game.",
+                        "source": "Sports",
+                        "publishedAt": "2026-06-25T12:00:00Z",
+                    }
+                ]
+            }
+        }
+    )
+
+    async def fake_run_registered_agent(*args, **kwargs):
+        raise ConnectError(
+            Code.FAILED_PRECONDITION,
+            'LLM_KEY_DECRYPTION_FAILED: unknown KEK version: "dev"',
+        )
+
+    monkeypatch.setattr(worker, "ArtifactPayloadClient", lambda: fake)
+    monkeypatch.setattr(worker, "run_registered_agent", fake_run_registered_agent)
+
+    with pytest.raises(ApplicationError) as err:
+        await worker.run_agent_activity(
+            {
+                "tenant_id": "00000000-0000-4000-8000-000000000001",
+                "step_execution_id": "step-write",
+                "output_artifact_type_key": "harpia.artifacts.v1.TextDraft",
+                "executor_installation_snapshot": {
+                    "manifest_id": "newsletter-writer-senior",
+                },
+                "input_artifacts": [
+                    {
+                        "artifact_type_key": "harpia.artifacts.v1.NewsList",
+                        "artifact_id": "news-1",
+                    },
+                ],
+            }
+        )
+
+    assert err.value.non_retryable is True
+    assert err.value.type == "ConnectError"
+    assert "LLM_KEY_DECRYPTION_FAILED" in str(err.value)
+
+
+@pytest.mark.asyncio
+async def test_run_agent_activity_marks_static_garage_credentials_non_retryable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class BrokenArtifactClient:
+        async def get_payload(self, *, tenant_id: str, artifact_id: str) -> dict[str, object]:
+            raise ConnectError(
+                Code.UNKNOWN,
+                "get garage object: get credentials: static credentials are empty",
+            )
+
+    monkeypatch.setattr(worker, "ArtifactPayloadClient", BrokenArtifactClient)
+
+    with pytest.raises(ApplicationError) as err:
+        await worker.run_agent_activity(
+            {
+                "tenant_id": "00000000-0000-4000-8000-000000000001",
+                "step_execution_id": "step-write",
+                "output_artifact_type_key": "harpia.artifacts.v1.TextDraft",
+                "executor_installation_snapshot": {
+                    "manifest_id": "newsletter-writer-senior",
+                },
+                "input_artifacts": [
+                    {
+                        "artifact_type_key": "harpia.artifacts.v1.NewsList",
+                        "artifact_id": "news-1",
+                    },
+                ],
+            }
+        )
+
+    assert err.value.non_retryable is True
+    assert err.value.type == "ConnectError"
+    assert "static credentials are empty" in str(err.value)

@@ -1,14 +1,17 @@
 import { create } from "@bufbuild/protobuf";
 import { describe, expect, it } from "vitest";
 import {
+  PlanExecutionSchema,
   StepExecutionSchema,
   StepExecutionStatus,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
 import {
+  filterPlanExecutionsByView,
   formatStepDuration,
   mergeStepExecutions,
   statusKeyForPlanExecution,
   statusKeyForStepExecution,
+  type PlanExecutionViewFilter,
 } from "$lib/plans/plan-execution";
 import { PlanExecutionStatus } from "$lib/rpc";
 
@@ -27,6 +30,17 @@ function makeStep(
     attempt: 1,
     createdAt,
     updatedAt,
+  });
+}
+
+function makeExecution(id: string, status: PlanExecutionStatus) {
+  return create(PlanExecutionSchema, {
+    id,
+    tenantId: "tenant-1",
+    planConfigurationId: "config-1",
+    status,
+    createdAt: "2026-06-15T15:00:00Z",
+    updatedAt: "2026-06-15T15:00:00Z",
   });
 }
 
@@ -91,5 +105,24 @@ describe("plan execution helpers", () => {
     expect(
       statusKeyForStepExecution(StepExecutionStatus.AWAITING_APPROVAL),
     ).toBe("executions.stepStatus.awaitingApproval");
+  });
+
+  it.each<[PlanExecutionViewFilter, string[]]>([
+    ["all", ["pending", "running", "completed", "failed", "cancelled"]],
+    ["running", ["pending", "running"]],
+    ["history", ["completed", "cancelled"]],
+    ["failed", ["failed"]],
+  ])("filters executions for the %s view", (view, expectedIds) => {
+    const executions = [
+      makeExecution("pending", PlanExecutionStatus.PENDING),
+      makeExecution("running", PlanExecutionStatus.RUNNING),
+      makeExecution("completed", PlanExecutionStatus.COMPLETED),
+      makeExecution("failed", PlanExecutionStatus.FAILED),
+      makeExecution("cancelled", PlanExecutionStatus.CANCELLED),
+    ];
+
+    expect(filterPlanExecutionsByView(executions, view).map((e) => e.id)).toEqual(
+      expectedIds,
+    );
   });
 });

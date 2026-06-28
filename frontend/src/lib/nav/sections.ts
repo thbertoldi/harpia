@@ -1,4 +1,5 @@
 import {
+  Activity,
   BookOpen,
   Bot,
   Inbox,
@@ -24,6 +25,12 @@ export const navSectionDefs: NavSectionDef[] = [
     i18nKey: "nav.plans",
     href: "/plans",
     icon: BookOpen,
+    visibleTo: "all",
+  },
+  {
+    i18nKey: "nav.executions",
+    href: "/plans/executions",
+    icon: Activity,
     visibleTo: "all",
   },
   {

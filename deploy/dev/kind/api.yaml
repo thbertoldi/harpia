@@ -62,6 +62,16 @@ spec:
               value: "true"
             - name: LOG_LEVEL
               value: "debug"
+            - name: HARPIA_LLM_KEK_V1_B64
+              valueFrom:
+                secretKeyRef:
+                  name: harpia-llm-kek
+                  key: v1_b64
+            - name: HARPIA_LLM_KEK_ACTIVE
+              valueFrom:
+                secretKeyRef:
+                  name: harpia-llm-kek
+                  key: active
           readinessProbe:
             httpGet:
               path: /api/v1/health

@@ -16,6 +16,7 @@ import {
 import { planClient } from "$lib/rpc";
 
 export type PlanExecutionDataSource = "api" | "mock";
+export type PlanExecutionViewFilter = "all" | "running" | "history" | "failed";
 
 export interface PlanExecutionResult {
   execution: PlanExecution;
@@ -81,6 +82,33 @@ export function isPlanExecutionTerminal(status: PlanExecutionStatus): boolean {
     status === PlanExecutionStatus.FAILED ||
     status === PlanExecutionStatus.CANCELLED
   );
+}
+
+export function filterPlanExecutionsByView(
+  executions: PlanExecution[],
+  view: PlanExecutionViewFilter,
+): PlanExecution[] {
+  switch (view) {
+    case "running":
+      return executions.filter(
+        (execution) =>
+          execution.status === PlanExecutionStatus.PENDING ||
+          execution.status === PlanExecutionStatus.RUNNING,
+      );
+    case "history":
+      return executions.filter(
+        (execution) =>
+          execution.status === PlanExecutionStatus.COMPLETED ||
+          execution.status === PlanExecutionStatus.CANCELLED,
+      );
+    case "failed":
+      return executions.filter(
+        (execution) => execution.status === PlanExecutionStatus.FAILED,
+      );
+    case "all":
+    default:
+      return executions;
+  }
 }
 
 export function statusKeyForPlanExecution(status: PlanExecutionStatus): string {

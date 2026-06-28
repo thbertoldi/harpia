@@ -88,6 +88,13 @@ def _allow_local_llm_fallback() -> bool:
     return os.environ.get("HARPIA_ALLOW_DEV_AUTH", "").lower() in {"1", "true", "yes"}
 
 
+def _provider_env_api_key(provider: str | None) -> str:
+    provider_name = (provider or "").strip().upper()
+    if not provider_name:
+        return ""
+    return os.environ.get(f"{provider_name}_API_KEY", "").strip()
+
+
 def _build_registry_with_tenant_credentials(
     resolved: ResolvedProviderCredentials,
 ) -> LLMRegistry:
@@ -192,7 +199,7 @@ async def run_registered_agent(
                 if not resolved_credentials.api_key.is_empty():
                     registry = _build_registry_with_tenant_credentials(resolved_credentials)
             except Exception:
-                if not _allow_local_llm_fallback():
+                if not _allow_local_llm_fallback() or not _provider_env_api_key(provider):
                     raise
 
     model_id = _model_id_for_run(

@@ -3,9 +3,11 @@
 import json
 from datetime import timedelta
 
+from connectrpc.errors import ConnectError
 from google.protobuf.json_format import MessageToDict, ParseDict
 from harpia.artifacts.v1.artifacts_pb2 import LinkedInPostDraft, NewsList, TextDraft
 from temporalio import activity, workflow
+from temporalio.exceptions import ApplicationError
 
 from harpia_agents.agents.newsletter_writer import ElicitationRequest
 from harpia_agents.agents.registry import run_registered_agent
@@ -16,10 +18,35 @@ from harpia_agents.llm import LLMRegistry
 
 _LLM_REGISTRY: LLMRegistry = LLMRegistry.default()
 
+_NON_RETRYABLE_CONNECT_ERROR_MARKERS = (
+    "LLM_KEY_DECRYPTION_FAILED",
+    "LLM_PROVIDER_NOT_CONFIGURED",
+    "LLM_PROVIDER_BLOCKED",
+    "HARPIA_INTERNAL_AUTH_TOKEN",
+    "static credentials are empty",
+)
+
 
 def configure_llm_registry(registry: LLMRegistry) -> None:
     global _LLM_REGISTRY
     _LLM_REGISTRY = registry
+
+
+def _is_non_retryable_activity_error(exc: Exception) -> bool:
+    if isinstance(exc, ValueError):
+        return True
+    if isinstance(exc, ConnectError):
+        message = str(exc)
+        return any(marker in message for marker in _NON_RETRYABLE_CONNECT_ERROR_MARKERS)
+    return False
+
+
+def _as_non_retryable_application_error(exc: Exception) -> ApplicationError:
+    return ApplicationError(
+        str(exc),
+        type=exc.__class__.__name__,
+        non_retryable=True,
+    )
 
 
 @activity.defn
@@ -132,6 +159,15 @@ def _extract_elicitation_responses(input_payload: dict) -> dict[str, str] | None
 @activity.defn(name="RunAgentActivity")
 async def run_agent_activity(input_payload: dict) -> dict:
     """Run a manifest-backed agent and return executor activity contract fields."""
+    try:
+        return await _run_agent_activity(input_payload)
+    except Exception as exc:
+        if _is_non_retryable_activity_error(exc):
+            raise _as_non_retryable_application_error(exc) from exc
+        raise
+
+
+async def _run_agent_activity(input_payload: dict) -> dict:
     tenant_id = require_temporal_tenant(input_payload)
     installation = input_payload.get("executor_installation_snapshot")
     if not isinstance(installation, dict):
@@ -180,9 +216,7 @@ async def run_agent_activity(input_payload: dict) -> dict:
                 {
                     "type": "object",
                     "required": list(result.required_fields),
-                    "properties": {
-                        field: {"type": "string"} for field in result.required_fields
-                    },
+                    "properties": {field: {"type": "string"} for field in result.required_fields},
                 }
             ),
         }
