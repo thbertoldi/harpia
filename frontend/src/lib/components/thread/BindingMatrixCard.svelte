@@ -306,9 +306,8 @@
               id={`suggest-topic-${message.id}`}
               value={suggestedTopic}
               oninput={(event) =>
-                (suggestedTopic = (
-                  event.currentTarget as HTMLInputElement
-                ).value)}
+                (suggestedTopic = (event.currentTarget as HTMLInputElement)
+                  .value)}
               class="min-w-0 flex-1 rounded-md border border-plumage bg-surface-hover px-3 py-2 text-[13px] text-cream outline-none focus:border-talon-gold"
             />
             <button
@@ -485,7 +484,7 @@
               in:chipFlash
               disabled={!complete || saving || !configuration}
               onclick={() => onSave(true)}
-              class="text-on-primary cursor-pointer rounded-md bg-primary px-3.5 py-2 text-[12px] font-semibold shadow-[0_1px_0_rgba(255,255,255,0.15)_inset] hover:opacity-90 disabled:cursor-not-allowed disabled:bg-surface-pop disabled:text-crown-ash-dark disabled:opacity-100 disabled:shadow-none"
+              class="cursor-pointer rounded-md bg-primary px-3.5 py-2 text-[12px] font-semibold text-on-primary shadow-[0_1px_0_rgba(255,255,255,0.15)_inset] hover:opacity-90 disabled:cursor-not-allowed disabled:bg-surface-pop disabled:text-crown-ash-dark disabled:opacity-100 disabled:shadow-none"
             >
               {translate("assistant.bindingMatrix.savePrimary", $locale)}
             </button>

@@ -91,9 +91,14 @@ describe("applyLinkedInSuggestion", () => {
     });
 
     const call = updatePlanConfiguration.mock.calls[0][0];
-    expect(call.slotBindings.map((binding: SlotBinding) => binding.stepKey)).toEqual(
-      ["fetch-news", "write-draft", "adapt-for-linkedin", "publish-linkedin"],
-    );
+    expect(
+      call.slotBindings.map((binding: SlotBinding) => binding.stepKey),
+    ).toEqual([
+      "fetch-news",
+      "write-draft",
+      "adapt-for-linkedin",
+      "publish-linkedin",
+    ]);
     expect(call.behaviorPolicies.publishApprovalMode).toBe(
       PublishApprovalMode.REQUIRE_APPROVAL,
     );

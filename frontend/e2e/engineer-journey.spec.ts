@@ -1005,7 +1005,7 @@ test("Platform Engineer can complete agent integration journey", async ({
   await page.getByRole("button", { name: "Suggest" }).click();
   await page.getByLabel("Topic").fill("sports");
   await page.getByRole("button", { name: "Apply" }).click();
-  await expect(page.getByText(/4\/4/)).toBeVisible();
+  await expect(page.getByText(/4 of 4 bound/i)).toBeVisible();
 
   const slotBindings = planApi.configuration.slotBindings as Record<
     string,

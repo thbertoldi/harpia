@@ -54,7 +54,11 @@ export function buildLinkedInSuggestion(
   const end = input.today;
   const start = addDays(end, -6);
   const slotBindings = [
-    slotBinding("fetch-news", ExecutorKind.INTEGRATION, input.installationIdsByStep),
+    slotBinding(
+      "fetch-news",
+      ExecutorKind.INTEGRATION,
+      input.installationIdsByStep,
+    ),
     slotBinding("write-draft", ExecutorKind.AGENT, input.installationIdsByStep),
     slotBinding(
       "adapt-for-linkedin",

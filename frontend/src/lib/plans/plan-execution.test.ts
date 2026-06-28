@@ -121,8 +121,8 @@ describe("plan execution helpers", () => {
       makeExecution("cancelled", PlanExecutionStatus.CANCELLED),
     ];
 
-    expect(filterPlanExecutionsByView(executions, view).map((e) => e.id)).toEqual(
-      expectedIds,
-    );
+    expect(
+      filterPlanExecutionsByView(executions, view).map((e) => e.id),
+    ).toEqual(expectedIds);
   });
 });

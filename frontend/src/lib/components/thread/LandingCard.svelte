@@ -138,7 +138,7 @@
           disabled={busyAction !== null}
           onclick={() => onAction(action)}
           class={isPrimary(action)
-            ? "text-on-primary cursor-pointer rounded-md bg-primary px-4 py-2 text-[13px] font-semibold shadow-[0_1px_0_rgba(255,255,255,0.15)_inset] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            ? "cursor-pointer rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-on-primary shadow-[0_1px_0_rgba(255,255,255,0.15)_inset] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             : "cursor-pointer rounded-md border border-plumage bg-transparent px-4 py-2 text-[13px] font-medium text-crown-ash hover:border-talon-gold hover:text-cream disabled:cursor-not-allowed disabled:opacity-50"}
         >
           {action.label}
