@@ -1,6 +1,7 @@
 package plans
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -370,17 +371,20 @@ func (h *PlanHandler) UpdatePlanConfiguration(ctx context.Context, req *connect.
 	}
 
 	updatedInput := &plansv1.CreatePlanConfigurationRequest{
-		WorkspaceId:         existing.WorkspaceID.UUID.String(),
-		Status:              req.Msg.Status,
-		SeedArtifacts:       req.Msg.SeedArtifacts,
-		SlotBindings:        req.Msg.SlotBindings,
-		OverseerBindings:    req.Msg.OverseerBindings,
-		BehaviorPolicies:    req.Msg.BehaviorPolicies,
-		Schedule:            req.Msg.Schedule,
-		ParameterValuesJson: req.Msg.ParameterValuesJson,
+		WorkspaceId:      existing.WorkspaceID.UUID.String(),
+		Status:           req.Msg.Status,
+		SeedArtifacts:    req.Msg.SeedArtifacts,
+		SlotBindings:     req.Msg.SlotBindings,
+		OverseerBindings: req.Msg.OverseerBindings,
+		BehaviorPolicies: req.Msg.BehaviorPolicies,
+		Schedule:         req.Msg.Schedule,
 	}
 	if !existing.WorkspaceID.Valid {
 		updatedInput.WorkspaceId = ""
+	}
+	parameterValues, err := parameterValuesForUpdate(req.Msg.ParameterValuesJson, existing.ParameterValues)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
 	if err := h.validator.ValidateSlotBindings(ctx, tenantID, template, updatedInput.Status, updatedInput.SlotBindings); err != nil {
@@ -389,7 +393,7 @@ func (h *PlanHandler) UpdatePlanConfiguration(ctx context.Context, req *connect.
 
 	config, err := h.buildConfigurationFromRequest(tenantID, template, updatedInput.WorkspaceId, updatedInput.Status,
 		updatedInput.SeedArtifacts, updatedInput.SlotBindings, updatedInput.OverseerBindings,
-		updatedInput.BehaviorPolicies, updatedInput.Schedule, updatedInput.ParameterValuesJson)
+		updatedInput.BehaviorPolicies, updatedInput.Schedule, "{}")
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
@@ -397,6 +401,7 @@ func (h *PlanHandler) UpdatePlanConfiguration(ctx context.Context, req *connect.
 	config.PlanTemplateID = existing.PlanTemplateID
 	config.PlanTemplateVersion = existing.PlanTemplateVersion
 	config.WorkspaceID = existing.WorkspaceID
+	config.ParameterValues = parameterValues
 
 	updated, err := h.repo.UpdateConfiguration(ctx, config)
 	if err != nil {
@@ -861,10 +866,25 @@ func normalizeParameterValuesJSON(parameterValuesJSON string) (json.RawMessage, 
 	if trimmed == "" {
 		return json.RawMessage(`{}`), nil
 	}
-	if !json.Valid([]byte(trimmed)) {
-		return nil, fmt.Errorf("parameter values must be valid JSON")
+	var values map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(trimmed), &values); err != nil {
+		return nil, fmt.Errorf("parameter values must be a JSON object: %w", err)
 	}
-	return json.RawMessage(trimmed), nil
+	if values == nil {
+		return nil, fmt.Errorf("parameter values must be a JSON object")
+	}
+	var compacted bytes.Buffer
+	if err := json.Compact(&compacted, []byte(trimmed)); err != nil {
+		return nil, fmt.Errorf("compact parameter values: %w", err)
+	}
+	return json.RawMessage(compacted.Bytes()), nil
+}
+
+func parameterValuesForUpdate(incoming string, existing json.RawMessage) (json.RawMessage, error) {
+	if strings.TrimSpace(incoming) == "" {
+		return existing, nil
+	}
+	return normalizeParameterValuesJSON(incoming)
 }
 
 func templateToProto(t *PlanTemplate) *plansv1.PlanTemplate {
@@ -933,11 +953,11 @@ func configurationToProto(c *PlanConfiguration) *plansv1.PlanConfiguration {
 	if c.WorkspaceID.Valid {
 		config.WorkspaceId = c.WorkspaceID.UUID.String()
 	}
-	if len(c.ParameterValues) > 0 {
-		config.ParameterValuesJson = string(c.ParameterValues)
-	} else {
-		config.ParameterValuesJson = "{}"
+	parameterValues, err := normalizeParameterValuesJSON(string(c.ParameterValues))
+	if err != nil {
+		parameterValues = json.RawMessage(`{}`)
 	}
+	config.ParameterValuesJson = string(parameterValues)
 
 	var seedArtifacts []*plansv1.SeedArtifactBinding
 	if len(c.SeedArtifacts) > 0 {
