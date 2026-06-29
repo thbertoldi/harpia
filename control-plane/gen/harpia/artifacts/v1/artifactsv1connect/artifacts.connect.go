@@ -48,6 +48,15 @@ const (
 	// ArtifactServiceGetArtifactProcedure is the fully-qualified name of the ArtifactService's
 	// GetArtifact RPC.
 	ArtifactServiceGetArtifactProcedure = "/harpia.artifacts.v1.ArtifactService/GetArtifact"
+	// ArtifactServiceListArtifactsProcedure is the fully-qualified name of the ArtifactService's
+	// ListArtifacts RPC.
+	ArtifactServiceListArtifactsProcedure = "/harpia.artifacts.v1.ArtifactService/ListArtifacts"
+	// ArtifactServiceListArtifactVersionsProcedure is the fully-qualified name of the ArtifactService's
+	// ListArtifactVersions RPC.
+	ArtifactServiceListArtifactVersionsProcedure = "/harpia.artifacts.v1.ArtifactService/ListArtifactVersions"
+	// ArtifactServiceSaveTextArtifactVersionProcedure is the fully-qualified name of the
+	// ArtifactService's SaveTextArtifactVersion RPC.
+	ArtifactServiceSaveTextArtifactVersionProcedure = "/harpia.artifacts.v1.ArtifactService/SaveTextArtifactVersion"
 	// ArtifactServiceGetArtifactPayloadProcedure is the fully-qualified name of the ArtifactService's
 	// GetArtifactPayload RPC.
 	ArtifactServiceGetArtifactPayloadProcedure = "/harpia.artifacts.v1.ArtifactService/GetArtifactPayload"
@@ -63,6 +72,9 @@ type ArtifactServiceClient interface {
 	CreateArtifact(context.Context, *connect.Request[v1.CreateArtifactRequest]) (*connect.Response[v1.CreateArtifactResponse], error)
 	CreateArtifactWithPayload(context.Context, *connect.Request[v1.CreateArtifactWithPayloadRequest]) (*connect.Response[v1.CreateArtifactWithPayloadResponse], error)
 	GetArtifact(context.Context, *connect.Request[v1.GetArtifactRequest]) (*connect.Response[v1.GetArtifactResponse], error)
+	ListArtifacts(context.Context, *connect.Request[v1.ListArtifactsRequest]) (*connect.ServerStreamForClient[v1.ListArtifactsResponse], error)
+	ListArtifactVersions(context.Context, *connect.Request[v1.ListArtifactVersionsRequest]) (*connect.Response[v1.ListArtifactVersionsResponse], error)
+	SaveTextArtifactVersion(context.Context, *connect.Request[v1.SaveTextArtifactVersionRequest]) (*connect.Response[v1.SaveTextArtifactVersionResponse], error)
 	GetArtifactPayload(context.Context, *connect.Request[v1.GetArtifactPayloadRequest]) (*connect.Response[v1.GetArtifactPayloadResponse], error)
 	PreviewArtifact(context.Context, *connect.Request[v1.PreviewArtifactRequest]) (*connect.Response[v1.PreviewArtifactResponse], error)
 }
@@ -108,6 +120,24 @@ func NewArtifactServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(artifactServiceMethods.ByName("GetArtifact")),
 			connect.WithClientOptions(opts...),
 		),
+		listArtifacts: connect.NewClient[v1.ListArtifactsRequest, v1.ListArtifactsResponse](
+			httpClient,
+			baseURL+ArtifactServiceListArtifactsProcedure,
+			connect.WithSchema(artifactServiceMethods.ByName("ListArtifacts")),
+			connect.WithClientOptions(opts...),
+		),
+		listArtifactVersions: connect.NewClient[v1.ListArtifactVersionsRequest, v1.ListArtifactVersionsResponse](
+			httpClient,
+			baseURL+ArtifactServiceListArtifactVersionsProcedure,
+			connect.WithSchema(artifactServiceMethods.ByName("ListArtifactVersions")),
+			connect.WithClientOptions(opts...),
+		),
+		saveTextArtifactVersion: connect.NewClient[v1.SaveTextArtifactVersionRequest, v1.SaveTextArtifactVersionResponse](
+			httpClient,
+			baseURL+ArtifactServiceSaveTextArtifactVersionProcedure,
+			connect.WithSchema(artifactServiceMethods.ByName("SaveTextArtifactVersion")),
+			connect.WithClientOptions(opts...),
+		),
 		getArtifactPayload: connect.NewClient[v1.GetArtifactPayloadRequest, v1.GetArtifactPayloadResponse](
 			httpClient,
 			baseURL+ArtifactServiceGetArtifactPayloadProcedure,
@@ -130,6 +160,9 @@ type artifactServiceClient struct {
 	createArtifact            *connect.Client[v1.CreateArtifactRequest, v1.CreateArtifactResponse]
 	createArtifactWithPayload *connect.Client[v1.CreateArtifactWithPayloadRequest, v1.CreateArtifactWithPayloadResponse]
 	getArtifact               *connect.Client[v1.GetArtifactRequest, v1.GetArtifactResponse]
+	listArtifacts             *connect.Client[v1.ListArtifactsRequest, v1.ListArtifactsResponse]
+	listArtifactVersions      *connect.Client[v1.ListArtifactVersionsRequest, v1.ListArtifactVersionsResponse]
+	saveTextArtifactVersion   *connect.Client[v1.SaveTextArtifactVersionRequest, v1.SaveTextArtifactVersionResponse]
 	getArtifactPayload        *connect.Client[v1.GetArtifactPayloadRequest, v1.GetArtifactPayloadResponse]
 	previewArtifact           *connect.Client[v1.PreviewArtifactRequest, v1.PreviewArtifactResponse]
 }
@@ -159,6 +192,21 @@ func (c *artifactServiceClient) GetArtifact(ctx context.Context, req *connect.Re
 	return c.getArtifact.CallUnary(ctx, req)
 }
 
+// ListArtifacts calls harpia.artifacts.v1.ArtifactService.ListArtifacts.
+func (c *artifactServiceClient) ListArtifacts(ctx context.Context, req *connect.Request[v1.ListArtifactsRequest]) (*connect.ServerStreamForClient[v1.ListArtifactsResponse], error) {
+	return c.listArtifacts.CallServerStream(ctx, req)
+}
+
+// ListArtifactVersions calls harpia.artifacts.v1.ArtifactService.ListArtifactVersions.
+func (c *artifactServiceClient) ListArtifactVersions(ctx context.Context, req *connect.Request[v1.ListArtifactVersionsRequest]) (*connect.Response[v1.ListArtifactVersionsResponse], error) {
+	return c.listArtifactVersions.CallUnary(ctx, req)
+}
+
+// SaveTextArtifactVersion calls harpia.artifacts.v1.ArtifactService.SaveTextArtifactVersion.
+func (c *artifactServiceClient) SaveTextArtifactVersion(ctx context.Context, req *connect.Request[v1.SaveTextArtifactVersionRequest]) (*connect.Response[v1.SaveTextArtifactVersionResponse], error) {
+	return c.saveTextArtifactVersion.CallUnary(ctx, req)
+}
+
 // GetArtifactPayload calls harpia.artifacts.v1.ArtifactService.GetArtifactPayload.
 func (c *artifactServiceClient) GetArtifactPayload(ctx context.Context, req *connect.Request[v1.GetArtifactPayloadRequest]) (*connect.Response[v1.GetArtifactPayloadResponse], error) {
 	return c.getArtifactPayload.CallUnary(ctx, req)
@@ -176,6 +224,9 @@ type ArtifactServiceHandler interface {
 	CreateArtifact(context.Context, *connect.Request[v1.CreateArtifactRequest]) (*connect.Response[v1.CreateArtifactResponse], error)
 	CreateArtifactWithPayload(context.Context, *connect.Request[v1.CreateArtifactWithPayloadRequest]) (*connect.Response[v1.CreateArtifactWithPayloadResponse], error)
 	GetArtifact(context.Context, *connect.Request[v1.GetArtifactRequest]) (*connect.Response[v1.GetArtifactResponse], error)
+	ListArtifacts(context.Context, *connect.Request[v1.ListArtifactsRequest], *connect.ServerStream[v1.ListArtifactsResponse]) error
+	ListArtifactVersions(context.Context, *connect.Request[v1.ListArtifactVersionsRequest]) (*connect.Response[v1.ListArtifactVersionsResponse], error)
+	SaveTextArtifactVersion(context.Context, *connect.Request[v1.SaveTextArtifactVersionRequest]) (*connect.Response[v1.SaveTextArtifactVersionResponse], error)
 	GetArtifactPayload(context.Context, *connect.Request[v1.GetArtifactPayloadRequest]) (*connect.Response[v1.GetArtifactPayloadResponse], error)
 	PreviewArtifact(context.Context, *connect.Request[v1.PreviewArtifactRequest]) (*connect.Response[v1.PreviewArtifactResponse], error)
 }
@@ -217,6 +268,24 @@ func NewArtifactServiceHandler(svc ArtifactServiceHandler, opts ...connect.Handl
 		connect.WithSchema(artifactServiceMethods.ByName("GetArtifact")),
 		connect.WithHandlerOptions(opts...),
 	)
+	artifactServiceListArtifactsHandler := connect.NewServerStreamHandler(
+		ArtifactServiceListArtifactsProcedure,
+		svc.ListArtifacts,
+		connect.WithSchema(artifactServiceMethods.ByName("ListArtifacts")),
+		connect.WithHandlerOptions(opts...),
+	)
+	artifactServiceListArtifactVersionsHandler := connect.NewUnaryHandler(
+		ArtifactServiceListArtifactVersionsProcedure,
+		svc.ListArtifactVersions,
+		connect.WithSchema(artifactServiceMethods.ByName("ListArtifactVersions")),
+		connect.WithHandlerOptions(opts...),
+	)
+	artifactServiceSaveTextArtifactVersionHandler := connect.NewUnaryHandler(
+		ArtifactServiceSaveTextArtifactVersionProcedure,
+		svc.SaveTextArtifactVersion,
+		connect.WithSchema(artifactServiceMethods.ByName("SaveTextArtifactVersion")),
+		connect.WithHandlerOptions(opts...),
+	)
 	artifactServiceGetArtifactPayloadHandler := connect.NewUnaryHandler(
 		ArtifactServiceGetArtifactPayloadProcedure,
 		svc.GetArtifactPayload,
@@ -241,6 +310,12 @@ func NewArtifactServiceHandler(svc ArtifactServiceHandler, opts ...connect.Handl
 			artifactServiceCreateArtifactWithPayloadHandler.ServeHTTP(w, r)
 		case ArtifactServiceGetArtifactProcedure:
 			artifactServiceGetArtifactHandler.ServeHTTP(w, r)
+		case ArtifactServiceListArtifactsProcedure:
+			artifactServiceListArtifactsHandler.ServeHTTP(w, r)
+		case ArtifactServiceListArtifactVersionsProcedure:
+			artifactServiceListArtifactVersionsHandler.ServeHTTP(w, r)
+		case ArtifactServiceSaveTextArtifactVersionProcedure:
+			artifactServiceSaveTextArtifactVersionHandler.ServeHTTP(w, r)
 		case ArtifactServiceGetArtifactPayloadProcedure:
 			artifactServiceGetArtifactPayloadHandler.ServeHTTP(w, r)
 		case ArtifactServicePreviewArtifactProcedure:
@@ -272,6 +347,18 @@ func (UnimplementedArtifactServiceHandler) CreateArtifactWithPayload(context.Con
 
 func (UnimplementedArtifactServiceHandler) GetArtifact(context.Context, *connect.Request[v1.GetArtifactRequest]) (*connect.Response[v1.GetArtifactResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("harpia.artifacts.v1.ArtifactService.GetArtifact is not implemented"))
+}
+
+func (UnimplementedArtifactServiceHandler) ListArtifacts(context.Context, *connect.Request[v1.ListArtifactsRequest], *connect.ServerStream[v1.ListArtifactsResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("harpia.artifacts.v1.ArtifactService.ListArtifacts is not implemented"))
+}
+
+func (UnimplementedArtifactServiceHandler) ListArtifactVersions(context.Context, *connect.Request[v1.ListArtifactVersionsRequest]) (*connect.Response[v1.ListArtifactVersionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("harpia.artifacts.v1.ArtifactService.ListArtifactVersions is not implemented"))
+}
+
+func (UnimplementedArtifactServiceHandler) SaveTextArtifactVersion(context.Context, *connect.Request[v1.SaveTextArtifactVersionRequest]) (*connect.Response[v1.SaveTextArtifactVersionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("harpia.artifacts.v1.ArtifactService.SaveTextArtifactVersion is not implemented"))
 }
 
 func (UnimplementedArtifactServiceHandler) GetArtifactPayload(context.Context, *connect.Request[v1.GetArtifactPayloadRequest]) (*connect.Response[v1.GetArtifactPayloadResponse], error) {

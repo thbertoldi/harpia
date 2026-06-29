@@ -58,6 +58,43 @@ message PlanTemplate {
   repeated PlanStepDependency edges = 8;
   string created_at = 9;
   string updated_at = 10;
+  repeated TemplateInputParameter input_parameters = 11;
+}
+
+enum TemplateInputParameterType {
+  TEMPLATE_INPUT_PARAMETER_TYPE_UNSPECIFIED = 0;
+  TEMPLATE_INPUT_PARAMETER_TYPE_TEXT = 1;
+  TEMPLATE_INPUT_PARAMETER_TYPE_TEXTAREA = 2;
+  TEMPLATE_INPUT_PARAMETER_TYPE_SELECT = 3;
+  TEMPLATE_INPUT_PARAMETER_TYPE_LANGUAGE = 4;
+  TEMPLATE_INPUT_PARAMETER_TYPE_DATE_RANGE = 5;
+  TEMPLATE_INPUT_PARAMETER_TYPE_INTEGRATION_SELECTOR = 6;
+}
+
+enum TemplateInputRuntimeTarget {
+  TEMPLATE_INPUT_RUNTIME_TARGET_UNSPECIFIED = 0;
+  TEMPLATE_INPUT_RUNTIME_TARGET_SEED_ARTIFACT = 1;
+  TEMPLATE_INPUT_RUNTIME_TARGET_SLOT_BINDING = 2;
+  TEMPLATE_INPUT_RUNTIME_TARGET_BEHAVIOR_POLICY = 3;
+}
+
+message TemplateInputRuntimeMapping {
+  TemplateInputRuntimeTarget target = 1;
+  string step_key = 2;
+  string input_name = 3;
+  string json_path = 4;
+  string policy_key = 5;
+}
+
+message TemplateInputParameter {
+  string key = 1;
+  string label = 2;
+  string description = 3;
+  TemplateInputParameterType type = 4;
+  bool required = 5;
+  string default_value_json = 6;
+  string options_json = 7;
+  repeated TemplateInputRuntimeMapping runtime_mappings = 8;
 }
 
 message PlanStep {
@@ -102,6 +139,7 @@ message PlanConfiguration {
   PlanSchedule schedule = 11;
   string created_at = 12;
   string updated_at = 13;
+  string parameter_values_json = 14;
 }
 
 enum PlanConfigurationStatus {
@@ -241,6 +279,7 @@ message CreatePlanConfigurationRequest {
   repeated OverseerBinding overseer_bindings = 7;
   PlanBehaviorPolicies behavior_policies = 8;
   PlanSchedule schedule = 9;
+  string parameter_values_json = 10;
 }
 
 message CreatePlanConfigurationResponse {
@@ -270,6 +309,7 @@ message UpdatePlanConfigurationRequest {
   // not flooded with a saved message on every change; only explicit user
   // saves announce.
   bool announce_saved = 9;
+  string parameter_values_json = 10;
 }
 
 message UpdatePlanConfigurationResponse {

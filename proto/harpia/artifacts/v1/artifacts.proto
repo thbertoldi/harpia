@@ -10,6 +10,9 @@ service ArtifactService {
   rpc CreateArtifact(CreateArtifactRequest) returns (CreateArtifactResponse);
   rpc CreateArtifactWithPayload(CreateArtifactWithPayloadRequest) returns (CreateArtifactWithPayloadResponse);
   rpc GetArtifact(GetArtifactRequest) returns (GetArtifactResponse);
+  rpc ListArtifacts(ListArtifactsRequest) returns (stream ListArtifactsResponse);
+  rpc ListArtifactVersions(ListArtifactVersionsRequest) returns (ListArtifactVersionsResponse);
+  rpc SaveTextArtifactVersion(SaveTextArtifactVersionRequest) returns (SaveTextArtifactVersionResponse);
   rpc GetArtifactPayload(GetArtifactPayloadRequest) returns (GetArtifactPayloadResponse);
   rpc PreviewArtifact(PreviewArtifactRequest) returns (PreviewArtifactResponse);
 }
@@ -29,6 +32,28 @@ message Artifact {
   string storage_uri = 4;
   string content_hash = 5;
   string created_at = 6;
+  string updated_at = 7;
+  string current_version_id = 8;
+  string artifact_type_key = 9;
+  string plan_configuration_id = 10;
+  string plan_execution_id = 11;
+  string step_execution_id = 12;
+  string status = 13;
+}
+
+message ArtifactVersion {
+  string id = 1;
+  string artifact_id = 2;
+  int32 version_number = 3;
+  string storage_uri = 4;
+  string content_hash = 5;
+  string source_plan_execution_id = 6;
+  string source_step_execution_id = 7;
+  string source_version_id = 8;
+  string created_by_user_id = 9;
+  string created_by_kind = 10;
+  string edit_summary = 11;
+  string created_at = 12;
 }
 
 message DateRange {
@@ -103,6 +128,8 @@ message CreateArtifactWithPayloadRequest {
   string artifact_type_key = 3;
   bytes payload_json = 4;
   optional string step_execution_id = 5;
+  optional string plan_configuration_id = 6;
+  optional string plan_execution_id = 7;
 }
 
 message CreateArtifactWithPayloadResponse {
@@ -118,9 +145,47 @@ message GetArtifactResponse {
   Artifact artifact = 1;
 }
 
+message ListArtifactsRequest {
+  string tenant_id = 1;
+  optional string plan_configuration_id = 2;
+  optional string plan_execution_id = 3;
+  optional string artifact_type_key = 4;
+  int32 page_size = 5;
+  string page_token = 6;
+}
+
+message ListArtifactsResponse {
+  repeated Artifact artifacts = 1;
+  string next_page_token = 2;
+}
+
+message ListArtifactVersionsRequest {
+  string tenant_id = 1;
+  string artifact_id = 2;
+}
+
+message ListArtifactVersionsResponse {
+  repeated ArtifactVersion versions = 1;
+}
+
+message SaveTextArtifactVersionRequest {
+  string tenant_id = 1;
+  string artifact_id = 2;
+  string expected_content_hash = 3;
+  string title = 4;
+  string text = 5;
+  string edit_summary = 6;
+}
+
+message SaveTextArtifactVersionResponse {
+  Artifact artifact = 1;
+  ArtifactVersion version = 2;
+}
+
 message GetArtifactPayloadRequest {
   string tenant_id = 1;
   string artifact_id = 2;
+  optional string artifact_version_id = 3;
 }
 
 message GetArtifactPayloadResponse {
@@ -136,6 +201,7 @@ message ArtifactListSummary {
 message PreviewArtifactRequest {
   string tenant_id = 1;
   string artifact_id = 2;
+  optional string artifact_version_id = 3;
 }
 
 message PreviewArtifactResponse {
