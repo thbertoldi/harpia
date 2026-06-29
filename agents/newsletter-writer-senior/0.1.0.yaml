@@ -5,7 +5,7 @@ description: Writes a markdown newsletter draft from curated news artifacts.
 capabilities:
   - newsletter-writing
   - news-synthesis
-model_id: openai-gpt-4o-mini
+model_id: deepseek-v4-flash
 system_prompt: |
   You are a senior newsletter writer.
   Convert {{articles}} into a coherent markdown newsletter draft.

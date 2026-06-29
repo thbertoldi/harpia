@@ -40,7 +40,12 @@ type HumanFeedbackSignal struct {
 }
 
 const (
-	TaskQueueName              = "harpia-task-queue"
+	TaskQueueName = "harpia-task-queue"
+	// AgentTaskQueueName is polled only by the Python agent-runtime worker,
+	// which owns RunAgentActivity. The Go worker serves the plan workflow plus
+	// integration + lifecycle activities on TaskQueueName. Agent steps are
+	// routed here so cross-language activities don't land on the wrong worker.
+	AgentTaskQueueName         = "harpia-agent-task-queue"
 	DecomposeTaskActivityName  = "DecomposeTaskActivity"
 	ExecuteSubtaskActivityName = "ExecuteSubtaskActivity"
 	HumanFeedbackSignalName    = "human-feedback-signal"

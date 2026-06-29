@@ -15,6 +15,19 @@ func TestParseInstallationConfigSuccess(t *testing.T) {
 	}
 }
 
+func TestParseInstallationConfigApprovalOnly(t *testing.T) {
+	config, err := ParseInstallationConfig(json.RawMessage(`{"mode":"approval_only"}`))
+	if err != nil {
+		t.Fatalf("ParseInstallationConfig() error = %v", err)
+	}
+	if config.Mode != ModeApprovalOnly {
+		t.Fatalf("Mode = %q, want %q", config.Mode, ModeApprovalOnly)
+	}
+	if config.OAuthCredentialID != "" {
+		t.Fatalf("OAuthCredentialID = %q, want empty", config.OAuthCredentialID)
+	}
+}
+
 func TestParseInstallationConfigRejectsInvalidInput(t *testing.T) {
 	cases := []struct {
 		name string

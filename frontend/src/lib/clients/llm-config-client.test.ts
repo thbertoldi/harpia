@@ -14,9 +14,14 @@ describe("MockLLMConfigClient", () => {
   });
 
   describe("getLLMProviderConfigs", () => {
-    it("returns all three providers with has_key=false by default", async () => {
+    it("returns all four providers with has_key=false by default", async () => {
       const res = await client.getLLMProviderConfigs({});
-      expect(res.configs).toHaveLength(3);
+      expect(res.configs.map((cfg) => cfg.provider)).toEqual([
+        "anthropic",
+        "deepseek",
+        "ollama",
+        "openai",
+      ]);
       for (const cfg of res.configs) {
         expect(cfg.has_key).toBe(false);
         expect(cfg.managed_by).toBe("platform");
@@ -69,6 +74,22 @@ describe("MockLLMConfigClient", () => {
       });
       expect(res.config.default_model).toBe("gpt-4o-mini");
       expect(res.config.allowed_models).toEqual(["gpt-4o", "gpt-4o-mini"]);
+    });
+
+    it("stores DeepSeek default model and allowed models", async () => {
+      const res = await client.setLLMProviderConfig({
+        provider: "deepseek",
+        api_key: "ds-test",
+        default_model: "deepseek-v4-flash",
+        allowed_models: ["deepseek-v4-flash", "deepseek-v4-pro"],
+      });
+      expect(res.config.provider).toBe("deepseek");
+      expect(res.config.default_model).toBe("deepseek-v4-flash");
+      expect(res.config.allowed_models).toEqual([
+        "deepseek-v4-flash",
+        "deepseek-v4-pro",
+      ]);
+      expect(JSON.stringify(res)).not.toContain("ds-test");
     });
 
     it("throws when api_key is empty", async () => {

@@ -10,6 +10,7 @@ def test_registry_resolves_known_models() -> None:
     assert registry.resolve("gpt-4o-mini").name == "openai"
     assert registry.resolve("claude-opus-4-7").name == "anthropic"
     assert registry.resolve("claude-3-haiku-20240307").name == "anthropic"
+    assert registry.resolve("deepseek-v4-flash").name == "deepseek"
     assert registry.resolve("llama3:70b").name == "ollama"
 
 

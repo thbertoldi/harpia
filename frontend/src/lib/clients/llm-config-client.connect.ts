@@ -47,6 +47,7 @@ function toDomainManagedBy(value: ProtoManagedBy): ManagedBy {
 function toDomainProvider(provider: string): LLMProvider {
   if (
     provider === "anthropic" ||
+    provider === "deepseek" ||
     provider === "openai" ||
     provider === "ollama"
   ) {

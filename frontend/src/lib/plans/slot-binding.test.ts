@@ -68,8 +68,11 @@ describe("slot binding compatibility", () => {
       context,
     );
 
-    expect(rssOptions).toHaveLength(1);
-    expect(rssOptions[0]?.installation.id).toBe("inst-rss");
+    expect(rssOptions.map((option) => option.installation.id)).toEqual([
+      "inst-rss",
+      "inst-rss-hn",
+      "inst-rss-sports",
+    ]);
     expect(writerOptions).toHaveLength(1);
     expect(writerOptions[0]?.installation.id).toBe("inst-writer");
   });
@@ -108,7 +111,19 @@ describe("slot binding compatibility", () => {
 
   it("returns no compatible options when a step SKU has no installation", () => {
     const context = mockExecutorContext();
-    const voiceOptions = getCompatibleInstallationsForStep(VOICE_STEP, context);
+    const voiceSkuID = context.skus.find(
+      (sku) => sku.key === "linkedin-voice-senior",
+    )!.id;
+    const contextWithoutVoice = {
+      ...context,
+      installations: context.installations.filter(
+        (installation) => installation.executorSkuId !== voiceSkuID,
+      ),
+    };
+    const voiceOptions = getCompatibleInstallationsForStep(
+      VOICE_STEP,
+      contextWithoutVoice,
+    );
 
     expect(voiceOptions).toHaveLength(0);
   });

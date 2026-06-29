@@ -377,16 +377,16 @@ func (r *RuntimeRepository) CompletePlanExecution(ctx context.Context, tenantID,
 	return nil
 }
 
-func (r *RuntimeRepository) FailPlanExecution(ctx context.Context, tenantID, executionID uuid.UUID) error {
+func (r *RuntimeRepository) FailPlanExecution(ctx context.Context, tenantID, executionID uuid.UUID, reason string) error {
 	now := time.Now().UTC()
 	if err := r.plans.UpdateExecutionStatus(ctx, tenantID, executionID, ExecutionStatusFailed, &now); err != nil {
 		return err
 	}
-	r.appendRunFinishedChatMessage(ctx, tenantID, executionID)
+	r.appendRunFinishedChatMessage(ctx, tenantID, executionID, reason)
 	return nil
 }
 
-func (r *RuntimeRepository) appendRunFinishedChatMessage(ctx context.Context, tenantID, executionID uuid.UUID) {
+func (r *RuntimeRepository) appendRunFinishedChatMessage(ctx context.Context, tenantID, executionID uuid.UUID, failureReasonOverride ...string) {
 	if r.chat == nil {
 		return
 	}
@@ -402,6 +402,11 @@ func (r *RuntimeRepository) appendRunFinishedChatMessage(ctx context.Context, te
 	if exec.Status == ExecutionStatusFailed {
 		kind = chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_RUN_FAILED
 		failureReason := executionFailureReason(exec)
+		if len(failureReasonOverride) > 0 {
+			if override := strings.TrimSpace(failureReasonOverride[0]); override != "" {
+				failureReason = override
+			}
+		}
 		text = "Run failed."
 		if failureReason != "" {
 			text = "Run failed: " + failureReason + "."

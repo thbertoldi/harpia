@@ -1,5 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import { appendThreadMessage } from "$lib/chat/client";
+import { buildLinkedInSuggestion } from "$lib/plans/linkedin-suggestions";
 import { planClient } from "$lib/rpc";
 import {
   SlotBindingSchema,
@@ -39,23 +40,9 @@ export async function editBinding(args: {
   stepKey: string;
   newInstallationId: string;
 }): Promise<PlanConfiguration> {
-  const previous =
-    args.existingConfiguration.slotBindings.find(
-      (b) => b.stepKey === args.stepKey,
-    )?.executorInstallationId ?? "";
-  const reboundPayload = JSON.stringify({
-    step_key: args.stepKey,
-    previous_executor_installation_id: previous,
-    new_executor_installation_id: args.newInstallationId,
-  });
-  await appendThreadMessage(
-    args.tenantId,
-    args.configurationId,
-    "SYSTEM",
-    "STEP_REBOUND",
-    "",
-    reboundPayload,
-  );
+  // Incremental binding picks are not announced in the thread (no STEP_REBOUND
+  // event, announce_saved=false): the thread would otherwise flood with a
+  // message on every executor change. The explicit Save announces instead.
   // Upsert: a step bound for the first time has no existing entry, so .map
   // alone would silently drop the pick (the bug where a selected executor
   // never reached the canvas). Append when absent; the server resolves the
@@ -89,6 +76,40 @@ export async function editBinding(args: {
   if (!response.planConfiguration) {
     throw new Error(
       "editBinding: UpdatePlanConfiguration returned no configuration",
+    );
+  }
+  return response.planConfiguration;
+}
+
+export async function applyLinkedInSuggestion(args: {
+  tenantId: string;
+  configurationId: string;
+  existingConfiguration: PlanConfiguration;
+  template: PlanTemplate;
+  topic: string;
+  installationIdsByStep: Record<string, string>;
+  today?: Date;
+}): Promise<PlanConfiguration> {
+  const suggestion = buildLinkedInSuggestion({
+    topic: args.topic,
+    installationIdsByStep: args.installationIdsByStep,
+    today: args.today ?? new Date(),
+  });
+  // Suggest is an incremental edit (announce_saved=false, no thread event):
+  // the user reviews the populated matrix and then explicitly saves.
+  const response = await planClient.updatePlanConfiguration({
+    tenantId: args.tenantId,
+    planConfigurationId: args.configurationId,
+    status: args.existingConfiguration.status,
+    seedArtifacts: suggestion.seedArtifacts,
+    slotBindings: suggestion.slotBindings,
+    overseerBindings: args.existingConfiguration.overseerBindings,
+    behaviorPolicies: suggestion.behaviorPolicies,
+    schedule: args.existingConfiguration.schedule,
+  });
+  if (!response.planConfiguration) {
+    throw new Error(
+      "applyLinkedInSuggestion: UpdatePlanConfiguration returned no configuration",
     );
   }
   return response.planConfiguration;

@@ -267,3 +267,75 @@ Verify the model with the OpenFGA CLI:
 STORE_ID=$(kubectl get configmap harpia-fga-config -o jsonpath='{.data.storeId}')
 fga model list --api-url http://localhost:18086 --store-id "$STORE_ID"
 ```
+
+## Object storage (Garage)
+
+Artifact payloads (NewsList, drafts, publish confirmations, …) are stored in
+Garage (S3). A fresh Garage node has no layout, bucket, or access key, so the
+`garage-bootstrap.yaml` Job initializes it idempotently: assigns a single-node
+layout, creates the `harpia` bucket, imports the dev access key, and grants it
+read/write. It runs the `garage` CLI via `kubectl exec` into the garage pod
+(Garage's CLI talks to its node over RPC).
+
+The access key lives in `Secret/garage-credentials` (created by
+`ensure-dev-kind-secrets.sh`). The **same** key is imported into Garage and read
+by the API + workers as `GARAGE_ACCESS_KEY` / `GARAGE_SECRET_KEY`, so the
+defaults are fixed (not random); override via `secrets.local.env`
+(`HARPIA_DEV_GARAGE_ACCESS_KEY` / `HARPIA_DEV_GARAGE_SECRET_KEY`). The access key
+id must be `GK` + 24 hex chars.
+
+```bash
+kubectl logs job/garage-bootstrap
+```
+
+## Plan execution (Temporal + workers)
+
+`mise run dev` (Tilt) brings up an in-memory Temporal dev server
+(`temporal.yaml`, `temporalio/temporal server start-dev`, UI on
+http://localhost:8233) and two workers (`workers.yaml`):
+
+- `harpia-plan-worker` (Go, reuses the `harpia-api` image, `HARPIA_ROLE=worker`)
+  — plan workflow + integration/lifecycle activities on `harpia-task-queue`.
+- `harpia-agent-worker` (Python, reuses `harpia-agent`, `HARPIA_ROLE=worker`) —
+  `RunAgentActivity` on the dedicated `harpia-agent-task-queue`.
+
+The queues are split on purpose: the workflow routes agent steps to the agent
+queue so cross-language activities don't land on a worker that hasn't registered
+them. The API depends on Temporal at startup (it builds the workflow starter
+then), and on `garage-bootstrap` so artifact writes succeed.
+
+Running a plan needs a tenant LLM key configured in `/admin/settings` (BYOK);
+without it the agent step fails at the provider call.
+
+## Troubleshooting — cluster DNS (`server misbehaving`)
+
+Symptom: image pulls fail (`ImagePullBackOff`) and/or in-cluster external calls
+(RSS feeds, `api.deepseek.com`) fail with
+`lookup <host> on <ip>:53: server misbehaving`. The kind node's resolver
+(Docker's embedded DNS, often `172.x.0.1`) intermittently can't resolve external
+names; CoreDNS forwards to it via `/etc/resolv.conf`.
+
+**Fix — point CoreDNS at public resolvers** (the node still has egress to them by
+IP):
+
+```bash
+kubectl -n kube-system get configmap coredns -o jsonpath='{.data.Corefile}' \
+  | sed 's#forward \. /etc/resolv.conf#forward . 1.1.1.1 8.8.8.8#' > /tmp/Corefile
+kubectl -n kube-system create configmap coredns --from-file=Corefile=/tmp/Corefile \
+  --dry-run=client -o yaml | kubectl -n kube-system apply -f -
+kubectl -n kube-system rollout restart deploy/coredns
+# verify from any pod:
+kubectl exec deploy/harpia-agent-worker -- python3 -c \
+  "import socket; print(socket.gethostbyname('api.deepseek.com'))"
+```
+
+This fixes **pod** DNS (workers' RSS/LLM calls). **Image pulls** use the node's
+own resolver, not CoreDNS — if an image won't pull, side-load it instead:
+
+```bash
+docker pull temporalio/temporal:latest
+kind load docker-image temporalio/temporal:latest --name kind
+```
+
+This is an environment issue (kind / Rancher Desktop networking), not app code;
+it can also clear after restarting the kind node or Rancher Desktop.

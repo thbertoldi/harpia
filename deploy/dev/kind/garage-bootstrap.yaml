@@ -1,0 +1,123 @@
+# Harpia Dev — Garage object store bootstrap.
+#
+# A fresh Garage node has no layout, bucket, or access key, so the S3 API
+# rejects all writes ("static credentials are empty" / NoSuchBucket). This Job
+# initializes Garage for Harpia artifact storage, idempotently:
+#   1. assign a cluster layout to the single dev node + apply it
+#   2. create the `harpia` bucket
+#   3. import the fixed dev access key (from Secret/garage-credentials, the same
+#      key the API + workers consume) and grant it read/write on the bucket
+#
+# Garage's CLI talks to its node over RPC, so rather than wire rpc-host/secret
+# we `kubectl exec` the garage binary inside the running garage pod (same
+# pattern as openfga-bootstrap using kubectl).
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: garage-bootstrap
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: garage-bootstrap
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: garage-bootstrap
+subjects:
+  - kind: ServiceAccount
+    name: garage-bootstrap
+roleRef:
+  kind: Role
+  name: garage-bootstrap
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: garage-bootstrap
+spec:
+  backoffLimit: 6
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: garage-bootstrap
+      containers:
+        - name: bootstrap
+          image: alpine/k8s:1.31.0
+          env:
+            - name: GARAGE_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: garage-credentials
+                  key: accessKey
+            - name: GARAGE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: garage-credentials
+                  key: secretKey
+          command: ["/bin/sh", "-eu", "-c"]
+          args:
+            - |
+              BUCKET="harpia"
+
+              echo "[1/5] Waiting for the garage pod to be Ready..."
+              for i in $(seq 1 120); do
+                GPOD=$(kubectl get pod -l app=garage \
+                  -o jsonpath='{.items[?(@.status.phase=="Running")].metadata.name}' 2>/dev/null \
+                  | awk '{print $1}')
+                if [ -n "$GPOD" ] && kubectl exec "$GPOD" -- /garage status >/dev/null 2>&1; then
+                  break
+                fi
+                sleep 2
+              done
+              [ -n "$GPOD" ] || { echo "ERROR: garage pod not found"; exit 1; }
+              echo "  garage pod = $GPOD"
+
+              gx() { kubectl exec "$GPOD" -- /garage "$@"; }
+
+              echo "[2/5] Ensuring cluster layout..."
+              if gx status 2>/dev/null | grep -q "NO ROLE ASSIGNED"; then
+                NODE_ID=$(gx status 2>/dev/null \
+                  | awk '/NO ROLE ASSIGNED/{print $1; exit}')
+                [ -n "$NODE_ID" ] || { echo "ERROR: could not resolve garage node id"; exit 1; }
+                echo "  assigning role to node $NODE_ID"
+                gx layout assign -z dev -c 1G "$NODE_ID"
+                gx layout apply --version 1
+              else
+                echo "  layout already assigned"
+              fi
+
+              echo "[3/5] Ensuring bucket '$BUCKET'..."
+              if gx bucket list 2>/dev/null | grep -qw "$BUCKET"; then
+                echo "  bucket exists"
+              else
+                gx bucket create "$BUCKET"
+              fi
+
+              echo "[4/5] Ensuring access key..."
+              if gx key list 2>/dev/null | grep -q "$GARAGE_ACCESS_KEY"; then
+                echo "  key already imported"
+              else
+                gx key import "$GARAGE_ACCESS_KEY" "$GARAGE_SECRET_KEY" --yes -n harpia-dev
+              fi
+
+              echo "[5/5] Granting read/write on '$BUCKET'..."
+              gx bucket allow --read --write "$BUCKET" --key "$GARAGE_ACCESS_KEY"
+
+              echo ""
+              echo "========================================"
+              echo "Garage ready for Harpia artifact storage."
+              echo "  bucket    = $BUCKET"
+              echo "  accessKey = $GARAGE_ACCESS_KEY"
+              echo "========================================"

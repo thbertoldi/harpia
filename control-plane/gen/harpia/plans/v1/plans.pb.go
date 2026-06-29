@@ -2071,8 +2071,13 @@ type UpdatePlanConfigurationRequest struct {
 	OverseerBindings    []*OverseerBinding      `protobuf:"bytes,6,rep,name=overseer_bindings,json=overseerBindings,proto3" json:"overseer_bindings,omitempty"`
 	BehaviorPolicies    *PlanBehaviorPolicies   `protobuf:"bytes,7,opt,name=behavior_policies,json=behaviorPolicies,proto3" json:"behavior_policies,omitempty"`
 	Schedule            *PlanSchedule           `protobuf:"bytes,8,opt,name=schedule,proto3" json:"schedule,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// When true, emit a CONFIGURATION_SAVED thread event. Incremental edits
+	// (per-executor binding picks, Suggest) leave this false so the thread is
+	// not flooded with a saved message on every change; only explicit user
+	// saves announce.
+	AnnounceSaved bool `protobuf:"varint,9,opt,name=announce_saved,json=announceSaved,proto3" json:"announce_saved,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdatePlanConfigurationRequest) Reset() {
@@ -2159,6 +2164,13 @@ func (x *UpdatePlanConfigurationRequest) GetSchedule() *PlanSchedule {
 		return x.Schedule
 	}
 	return nil
+}
+
+func (x *UpdatePlanConfigurationRequest) GetAnnounceSaved() bool {
+	if x != nil {
+		return x.AnnounceSaved
+	}
+	return false
 }
 
 type UpdatePlanConfigurationResponse struct {
@@ -4830,7 +4842,7 @@ const file_harpia_plans_v1_plans_proto_rawDesc = "" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x122\n" +
 	"\x15plan_configuration_id\x18\x02 \x01(\tR\x13planConfigurationId\"q\n" +
 	"\x1cGetPlanConfigurationResponse\x12Q\n" +
-	"\x12plan_configuration\x18\x01 \x01(\v2\".harpia.plans.v1.PlanConfigurationR\x11planConfiguration\"\xa1\x04\n" +
+	"\x12plan_configuration\x18\x01 \x01(\v2\".harpia.plans.v1.PlanConfigurationR\x11planConfiguration\"\xc8\x04\n" +
 	"\x1eUpdatePlanConfigurationRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x122\n" +
 	"\x15plan_configuration_id\x18\x02 \x01(\tR\x13planConfigurationId\x12@\n" +
@@ -4839,7 +4851,8 @@ const file_harpia_plans_v1_plans_proto_rawDesc = "" +
 	"\rslot_bindings\x18\x05 \x03(\v2\x1c.harpia.plans.v1.SlotBindingR\fslotBindings\x12M\n" +
 	"\x11overseer_bindings\x18\x06 \x03(\v2 .harpia.plans.v1.OverseerBindingR\x10overseerBindings\x12R\n" +
 	"\x11behavior_policies\x18\a \x01(\v2%.harpia.plans.v1.PlanBehaviorPoliciesR\x10behaviorPolicies\x129\n" +
-	"\bschedule\x18\b \x01(\v2\x1d.harpia.plans.v1.PlanScheduleR\bschedule\"t\n" +
+	"\bschedule\x18\b \x01(\v2\x1d.harpia.plans.v1.PlanScheduleR\bschedule\x12%\n" +
+	"\x0eannounce_saved\x18\t \x01(\bR\rannounceSaved\"t\n" +
 	"\x1fUpdatePlanConfigurationResponse\x12Q\n" +
 	"\x12plan_configuration\x18\x01 \x01(\v2\".harpia.plans.v1.PlanConfigurationR\x11planConfiguration\"\x83\x02\n" +
 	"\x1dListPlanConfigurationsRequest\x12\x1b\n" +

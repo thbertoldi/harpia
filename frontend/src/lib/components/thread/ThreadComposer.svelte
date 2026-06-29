@@ -55,7 +55,7 @@
       type="button"
       onclick={send}
       disabled={sending || value.trim().length === 0}
-      class="rounded border border-talon-gold bg-talon-gold px-3 py-2 text-[12px] font-semibold text-obsidian hover:opacity-90 disabled:opacity-50"
+      class="rounded border border-talon-gold bg-talon-gold px-3 py-2 text-[12px] font-semibold text-on-primary hover:opacity-90 disabled:opacity-50"
     >
       <Send class="size-4" />
     </button>

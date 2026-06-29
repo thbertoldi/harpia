@@ -82,13 +82,43 @@ func (m *memoryPayloadStore) Get(_ context.Context, storageURI string) ([]byte, 
 	return append([]byte(nil), payload...), nil
 }
 
-func newLinkedInTestArtifactStore() runtime.ExecutorArtifactStore {
+type linkedInTestArtifactStore struct {
+	*runtime.ExecutorArtifactStoreAdapter
+	repo    *memoryArtifactRepo
+	payload *memoryPayloadStore
+}
+
+func newLinkedInTestArtifactStore() *linkedInTestArtifactStore {
 	typeID := uuid.MustParse("44444444-4444-4444-4444-444444444444")
-	return runtime.NewExecutorArtifactStore(&memoryArtifactRepo{
+	repo := &memoryArtifactRepo{
 		types: map[string]*artifacts.ArtifactType{
 			artifacts.TypeKeyPublishConfirmation: {ID: typeID, Key: artifacts.TypeKeyPublishConfirmation},
 		},
-	}, &memoryPayloadStore{})
+	}
+	payload := &memoryPayloadStore{}
+	return &linkedInTestArtifactStore{
+		ExecutorArtifactStoreAdapter: runtime.NewExecutorArtifactStore(repo, payload),
+		repo:                         repo,
+		payload:                      payload,
+	}
+}
+
+func (s *linkedInTestArtifactStore) payloadForArtifact(t *testing.T, tenantID uuid.UUID, artifactIDRaw string) []byte {
+	t.Helper()
+
+	artifactID, err := uuid.Parse(artifactIDRaw)
+	if err != nil {
+		t.Fatalf("parse artifact id: %v", err)
+	}
+	artifact, err := s.repo.GetArtifact(context.Background(), tenantID, artifactID)
+	if err != nil {
+		t.Fatalf("load artifact: %v", err)
+	}
+	payload, err := s.payload.Get(context.Background(), artifact.StorageURI)
+	if err != nil {
+		t.Fatalf("load artifact payload: %v", err)
+	}
+	return payload
 }
 
 func TestHandlerExecuteSuccess(t *testing.T) {
@@ -130,6 +160,44 @@ func TestHandlerExecuteSuccess(t *testing.T) {
 	}
 	if publisher.LastRequest.OAuthCredentialID != "cred-123" {
 		t.Fatalf("oauth credential id = %q, want cred-123", publisher.LastRequest.OAuthCredentialID)
+	}
+}
+
+func TestHandlerApprovalOnlyCreatesDryRunConfirmationWithoutPublisher(t *testing.T) {
+	store := newLinkedInTestArtifactStore()
+	publisher := &linkedin.FakePublisher{}
+	handler := linkedin.NewHandler(store, publisher)
+	tenantID := uuid.MustParse("00000000-0000-4000-8000-000000000001")
+
+	result, err := handler.Execute(context.Background(), runtime.IntegrationExecutionRequest{
+		TenantID:              tenantID,
+		StepExecutionID:       "step-publish-linkedin",
+		OutputArtifactTypeKey: artifacts.TypeKeyPublishConfirmation,
+		InputArtifacts: []runtime.InputArtifactRef{{
+			ArtifactTypeKey: artifacts.TypeKeyLinkedInPostDraft,
+			LiteralJSON:     `{"text":"Ready for approval","hook":"Hook","hashtags":["sports"]}`,
+		}},
+		Installation: runtime.InstallationSnapshot{
+			ExecutorSKUKey: executors.SKULinkedInPublish,
+			ConfigJSON:     json.RawMessage(`{"mode":"approval_only"}`),
+		},
+	})
+	if err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if result.Status != runtime.IntegrationStatusCompleted {
+		t.Fatalf("Status = %q, want completed (%s)", result.Status, result.Error)
+	}
+	if publisher.Calls != 0 {
+		t.Fatalf("publisher calls = %d, want 0", publisher.Calls)
+	}
+
+	payload := store.payloadForArtifact(t, tenantID, result.OutputArtifactID)
+	if !strings.Contains(string(payload), `"platform":"linkedin-dry-run"`) {
+		t.Fatalf("payload = %s, want dry-run platform", payload)
+	}
+	if !strings.Contains(string(payload), `"externalId":"dry-run-step-publish-linkedin"`) {
+		t.Fatalf("payload = %s, want deterministic dry-run external id", payload)
 	}
 }
 

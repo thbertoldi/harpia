@@ -8,9 +8,9 @@ import {
 
 describe("nav sections registry", () => {
   it("includes base sections for all roles", () => {
-    // 2 base ("all") sections + 4 permission-gated /admin/* sections.
-    expect(filterNavSections("Leader")).toHaveLength(6);
-    expect(filterNavSections(undefined)).toHaveLength(2);
+    // 3 base ("all") sections + 4 permission-gated /admin/* sections.
+    expect(filterNavSections("Leader")).toHaveLength(7);
+    expect(filterNavSections(undefined)).toHaveLength(3);
   });
 
   it("shows integrations to leaders and engineers", () => {
@@ -54,7 +54,7 @@ describe("nav sections registry", () => {
   });
 
   it("hides permission-gated sections from unknown roles", () => {
-    expect(filterNavSections("member")).toHaveLength(2);
+    expect(filterNavSections("member")).toHaveLength(3);
     expect(
       filterNavSections("member").some((d) => d.href === "/admin/audit"),
     ).toBe(false);
@@ -76,6 +76,7 @@ describe("nav sections registry", () => {
     expect(labels).toEqual([
       "t:nav.needsYou",
       "t:nav.plans",
+      "t:nav.executions",
       "t:nav.integrations",
       "t:nav.audit",
       "t:nav.agents",
@@ -103,6 +104,7 @@ describe("navSectionDefs", () => {
     expect(navSectionDefs.map((d) => d.href)).toEqual([
       "/inbox",
       "/plans",
+      "/plans/executions",
       "/admin/integrations",
       "/admin/audit",
       "/admin/agents",

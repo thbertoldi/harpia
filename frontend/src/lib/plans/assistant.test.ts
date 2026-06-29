@@ -8,11 +8,13 @@ const { appendThreadMessage, updatePlanConfiguration } = vi.hoisted(() => ({
 vi.mock("$lib/chat/client", () => ({ appendThreadMessage }));
 vi.mock("$lib/rpc", () => ({ planClient: { updatePlanConfiguration } }));
 
-import { selectChip, editBinding } from "./assistant";
+import { selectChip, editBinding, applyLinkedInSuggestion } from "./assistant";
 import {
   PlanConfigurationStatus,
+  PublishApprovalMode,
   type PlanConfiguration,
   type PlanTemplate,
+  type SeedArtifactBinding,
   type SlotBinding,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
 
@@ -42,9 +44,84 @@ describe("selectChip", () => {
   });
 });
 
-describe("editBinding", () => {
-  it("writes STEP_REBOUND then UpdatePlanConfiguration", async () => {
+describe("applyLinkedInSuggestion", () => {
+  it("binds the Monday sports LinkedIn plan and stores content preferences", async () => {
     appendThreadMessage.mockResolvedValueOnce({});
+    updatePlanConfiguration.mockResolvedValueOnce({
+      planConfiguration: { id: "c" },
+    });
+    const config = {
+      id: "c",
+      status: PlanConfigurationStatus.DRAFT,
+      seedArtifacts: [],
+      slotBindings: [],
+      overseerBindings: [],
+      behaviorPolicies: undefined,
+      schedule: undefined,
+    } as unknown as PlanConfiguration;
+    const template = {
+      id: "tpl",
+      steps: [
+        { key: "fetch-news", defaultExecutorSkuKey: "rss-news-feed" },
+        {
+          key: "write-draft",
+          defaultExecutorSkuKey: "newsletter-writer-senior",
+        },
+        {
+          key: "adapt-for-linkedin",
+          defaultExecutorSkuKey: "linkedin-voice-senior",
+        },
+        { key: "publish-linkedin", defaultExecutorSkuKey: "linkedin-publish" },
+      ],
+    } as PlanTemplate;
+
+    await applyLinkedInSuggestion({
+      tenantId: "t",
+      configurationId: "c",
+      existingConfiguration: config,
+      template,
+      topic: "sports",
+      installationIdsByStep: {
+        "fetch-news": "inst-rss-sports",
+        "write-draft": "inst-newsletter",
+        "adapt-for-linkedin": "inst-linkedin-voice",
+        "publish-linkedin": "inst-linkedin-approval",
+      },
+      today: new Date("2026-06-26T12:00:00Z"),
+    });
+
+    const call = updatePlanConfiguration.mock.calls[0][0];
+    expect(
+      call.slotBindings.map((binding: SlotBinding) => binding.stepKey),
+    ).toEqual([
+      "fetch-news",
+      "write-draft",
+      "adapt-for-linkedin",
+      "publish-linkedin",
+    ]);
+    expect(call.behaviorPolicies.publishApprovalMode).toBe(
+      PublishApprovalMode.REQUIRE_APPROVAL,
+    );
+    const dateSeed = call.seedArtifacts.find(
+      (seed: SeedArtifactBinding) => seed.stepKey === "fetch-news",
+    );
+    expect(JSON.parse(dateSeed.literalJson)).toEqual({
+      startDate: "2026-06-20",
+      endDate: "2026-06-26",
+    });
+    const preferences = call.seedArtifacts.find(
+      (seed: SeedArtifactBinding) =>
+        seed.inputName === "harpia.internal.ContentPreferences",
+    );
+    expect(JSON.parse(preferences.literalJson)).toMatchObject({
+      topic: "sports",
+      tone: "analytical, concise, and practical",
+    });
+  });
+});
+
+describe("editBinding", () => {
+  it("updates the binding without flooding the thread (no STEP_REBOUND, no announce)", async () => {
     updatePlanConfiguration.mockResolvedValueOnce({
       planConfiguration: { id: "c" },
     });
@@ -72,16 +149,11 @@ describe("editBinding", () => {
       stepKey: "a",
       newInstallationId: "inst-new",
     });
-    expect(appendThreadMessage).toHaveBeenCalledWith(
-      "t",
-      "c",
-      "SYSTEM",
-      "STEP_REBOUND",
-      "",
-      expect.stringContaining("inst-old"),
-    );
+    // Incremental edit: no thread message, and the save is silent.
+    expect(appendThreadMessage).not.toHaveBeenCalled();
     expect(updatePlanConfiguration).toHaveBeenCalledTimes(1);
     const call = updatePlanConfiguration.mock.calls[0][0];
+    expect(call.announceSaved).toBeFalsy();
     expect(
       call.slotBindings.find((b: SlotBinding) => b.stepKey === "a")
         ?.executorInstallationId,

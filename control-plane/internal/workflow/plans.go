@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
+	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 
 	"github.com/harpia/control-plane/internal/executors"
@@ -51,6 +52,7 @@ const (
 	maxElicitationRoundsPerStep    int   = 10
 	defaultElicitationTimeoutHours       = 24
 	maxElicitationTimeoutHours     int32 = 720
+	planActivityMaximumAttempts    int32 = 3
 )
 
 type PlanExecutionInput struct {
@@ -66,9 +68,28 @@ type PlanWorkflowInput struct {
 	RetryStepArtifactsByKey map[string]ArtifactRef `json:"retry_step_artifacts_by_key,omitempty"`
 }
 
+type PlanFailureInput struct {
+	TenantID        string `json:"tenant_id"`
+	PlanExecutionID string `json:"plan_execution_id"`
+	Error           string `json:"error,omitempty"`
+}
+
 type PlanWorkflowResult struct {
 	PlanExecutionID string `json:"plan_execution_id"`
 	Status          string `json:"status"`
+}
+
+func planActivityOptions() workflow.ActivityOptions {
+	return workflow.ActivityOptions{
+		StartToCloseTimeout: 5 * time.Minute,
+		HeartbeatTimeout:    30 * time.Second,
+		RetryPolicy: &temporal.RetryPolicy{
+			InitialInterval:    time.Second,
+			BackoffCoefficient: 2,
+			MaximumInterval:    10 * time.Second,
+			MaximumAttempts:    planActivityMaximumAttempts,
+		},
+	}
 }
 
 type PlanExecutionSnapshot struct {
@@ -204,7 +225,7 @@ type PlanRuntimeStore interface {
 	CreateApprovalRequest(ctx context.Context, input CreateApprovalRequestInput) error
 	ResolveApprovalRequest(ctx context.Context, input ResolveApprovalRequestInput) error
 	CompletePlanExecution(ctx context.Context, tenantID, executionID uuid.UUID) error
-	FailPlanExecution(ctx context.Context, tenantID, executionID uuid.UUID) error
+	FailPlanExecution(ctx context.Context, tenantID, executionID uuid.UUID, reason string) error
 }
 
 type PlanActivities struct {
@@ -322,15 +343,15 @@ func (a *PlanActivities) CompletePlanExecutionActivity(ctx context.Context, inpu
 	return a.Runtime.CompletePlanExecution(ctx, tenantID, executionID)
 }
 
-func (a *PlanActivities) FailPlanExecutionActivity(ctx context.Context, input PlanWorkflowInput) error {
+func (a *PlanActivities) FailPlanExecutionActivity(ctx context.Context, input PlanFailureInput) error {
 	if a == nil || a.Runtime == nil {
 		return fmt.Errorf("plan runtime store is not configured")
 	}
-	tenantID, executionID, err := parsePlanWorkflowIDs(input)
+	tenantID, executionID, err := parsePlanFailureIDs(input)
 	if err != nil {
 		return err
 	}
-	return a.Runtime.FailPlanExecution(ctx, tenantID, executionID)
+	return a.Runtime.FailPlanExecution(ctx, tenantID, executionID, strings.TrimSpace(input.Error))
 }
 
 func (a *PlanActivities) RunAgentActivity(ctx context.Context, input ExecutorActivityInput) (ExecutorActivityResult, error) {
@@ -341,6 +362,18 @@ func (a *PlanActivities) RunAgentActivity(ctx context.Context, input ExecutorAct
 }
 
 func parsePlanWorkflowIDs(input PlanWorkflowInput) (uuid.UUID, uuid.UUID, error) {
+	tenantID, err := uuid.Parse(input.TenantID)
+	if err != nil {
+		return uuid.Nil, uuid.Nil, fmt.Errorf("parse tenant id: %w", err)
+	}
+	executionID, err := uuid.Parse(input.PlanExecutionID)
+	if err != nil {
+		return uuid.Nil, uuid.Nil, fmt.Errorf("parse plan execution id: %w", err)
+	}
+	return tenantID, executionID, nil
+}
+
+func parsePlanFailureIDs(input PlanFailureInput) (uuid.UUID, uuid.UUID, error) {
 	tenantID, err := uuid.Parse(input.TenantID)
 	if err != nil {
 		return uuid.Nil, uuid.Nil, fmt.Errorf("parse tenant id: %w", err)
@@ -370,11 +403,7 @@ func PlanScheduledExecution(ctx workflow.Context, input PlanExecutionInput) erro
 		input.PlanExecutionID = uuid.NewSHA1(uuid.NameSpaceURL, []byte(workflowID)).String()
 	}
 
-	ao := workflow.ActivityOptions{
-		StartToCloseTimeout: 5 * time.Minute,
-		HeartbeatTimeout:    30 * time.Second,
-	}
-	ctx = workflow.WithActivityOptions(ctx, ao)
+	ctx = workflow.WithActivityOptions(ctx, planActivityOptions())
 
 	var planInput PlanWorkflowInput
 	if err := workflow.ExecuteActivity(ctx, CreateScheduledPlanExecutionActivityName, input).Get(ctx, &planInput); err != nil {
@@ -403,11 +432,7 @@ func runPlanWorkflow(ctx workflow.Context, input PlanWorkflowInput) (PlanWorkflo
 		"plan_execution_id", input.PlanExecutionID,
 	)
 
-	ao := workflow.ActivityOptions{
-		StartToCloseTimeout: 5 * time.Minute,
-		HeartbeatTimeout:    30 * time.Second,
-	}
-	ctx = workflow.WithActivityOptions(ctx, ao)
+	ctx = workflow.WithActivityOptions(ctx, planActivityOptions())
 
 	result := PlanWorkflowResult{PlanExecutionID: input.PlanExecutionID, Status: "failed"}
 
@@ -416,7 +441,7 @@ func runPlanWorkflow(ctx workflow.Context, input PlanWorkflowInput) (PlanWorkflo
 		return result, err
 	}
 	if err := validatePlanSnapshot(loaded.Snapshot); err != nil {
-		_ = workflow.ExecuteActivity(ctx, FailPlanExecutionActivityName, input).Get(ctx, nil)
+		_ = workflow.ExecuteActivity(ctx, FailPlanExecutionActivityName, planFailureInput(input, err)).Get(ctx, nil)
 		return result, err
 	}
 	if loaded.Status != PlanExecutionStatusPending {
@@ -428,7 +453,7 @@ func runPlanWorkflow(ctx workflow.Context, input PlanWorkflowInput) (PlanWorkflo
 
 	order, err := topologicalPlanSteps(loaded.Snapshot.Template)
 	if err != nil {
-		_ = workflow.ExecuteActivity(ctx, FailPlanExecutionActivityName, input).Get(ctx, nil)
+		_ = workflow.ExecuteActivity(ctx, FailPlanExecutionActivityName, planFailureInput(input, err)).Get(ctx, nil)
 		return result, err
 	}
 	dependencies := dependencyIndex(loaded.Snapshot.Template)
@@ -664,10 +689,21 @@ func validatePlanSnapshot(snapshot PlanExecutionSnapshot) error {
 }
 
 func failPlan(ctx workflow.Context, input PlanWorkflowInput, cause error) error {
-	if failErr := workflow.ExecuteActivity(ctx, FailPlanExecutionActivityName, input).Get(ctx, nil); failErr != nil {
+	if failErr := workflow.ExecuteActivity(ctx, FailPlanExecutionActivityName, planFailureInput(input, cause)).Get(ctx, nil); failErr != nil {
 		return fmt.Errorf("%w; additionally failed to mark plan failed: %v", cause, failErr)
 	}
 	return cause
+}
+
+func planFailureInput(input PlanWorkflowInput, cause error) PlanFailureInput {
+	failure := PlanFailureInput{
+		TenantID:        input.TenantID,
+		PlanExecutionID: input.PlanExecutionID,
+	}
+	if cause != nil {
+		failure.Error = cause.Error()
+	}
+	return failure
 }
 
 func failStepAndPlan(
@@ -758,6 +794,10 @@ func runExecutorActivity(ctx workflow.Context, kind string, input ExecutorActivi
 		activityName = RunIntegrationActivityName
 	case ExecutorKindAgent:
 		activityName = RunAgentActivityName
+		// Agent activities are served by the Python agent-runtime worker on a
+		// dedicated task queue; routing here keeps them off the Go worker
+		// (which would NotFound) and vice versa.
+		ctx = workflow.WithTaskQueue(ctx, AgentTaskQueueName)
 	default:
 		return result, fmt.Errorf("unsupported executor kind %q for step %q", kind, input.PlanStepKey)
 	}
@@ -1042,12 +1082,14 @@ func seedArtifactsByStep(config *plansv1.PlanConfiguration) map[string][]Artifac
 		if stepKey == "" {
 			continue
 		}
+		artifactTypeKey := internalArtifactTypeKey(seed.InputName)
 		seeds[stepKey] = append(seeds[stepKey], ArtifactRef{
-			Source:      "seed",
-			StepKey:     stepKey,
-			InputName:   seed.InputName,
-			ArtifactID:  seed.ArtifactId,
-			LiteralJSON: seed.LiteralJson,
+			Source:          "seed",
+			StepKey:         stepKey,
+			InputName:       seed.InputName,
+			ArtifactID:      seed.ArtifactId,
+			LiteralJSON:     seed.LiteralJson,
+			ArtifactTypeKey: artifactTypeKey,
 		})
 	}
 	for key := range seeds {
@@ -1073,7 +1115,11 @@ func stepInputArtifacts(
 	inputs := append([]ArtifactRef(nil), seedArtifacts[step.Key]...)
 	for i := range inputs {
 		if strings.TrimSpace(inputs[i].ArtifactTypeKey) == "" {
-			inputs[i].ArtifactTypeKey = step.InputArtifactTypeId
+			if internal := internalArtifactTypeKey(inputs[i].InputName); internal != "" {
+				inputs[i].ArtifactTypeKey = internal
+			} else {
+				inputs[i].ArtifactTypeKey = step.InputArtifactTypeId
+			}
 		}
 	}
 	if len(upstreamStepKeys) == 0 {
@@ -1106,11 +1152,22 @@ func validateStepInputArtifactTypes(step *plansv1.PlanStep, inputs []ArtifactRef
 	}
 	for _, input := range inputs {
 		actual := strings.TrimSpace(input.ArtifactTypeKey)
+		if strings.HasPrefix(actual, "harpia.internal.") {
+			continue
+		}
 		if actual != "" && actual != expected {
 			return fmt.Errorf("step %q expected input artifact type %q but received %q from %q", step.Key, expected, actual, input.StepKey)
 		}
 	}
 	return nil
+}
+
+func internalArtifactTypeKey(inputName string) string {
+	trimmed := strings.TrimSpace(inputName)
+	if strings.HasPrefix(trimmed, "harpia.internal.") {
+		return trimmed
+	}
+	return ""
 }
 
 func sortStepKeys(keys []string, indexByKey map[string]int) {

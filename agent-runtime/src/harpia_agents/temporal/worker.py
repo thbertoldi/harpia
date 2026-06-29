@@ -1,25 +1,52 @@
 """Temporal activities and workflow wrapping LangGraph execution."""
 
 import json
-import uuid
 from datetime import timedelta
 
-from google.protobuf.json_format import MessageToDict
-from harpia.artifacts.v1.artifacts_pb2 import TextDraft
+from connectrpc.errors import ConnectError
+from google.protobuf.json_format import MessageToDict, ParseDict
+from harpia.artifacts.v1.artifacts_pb2 import LinkedInPostDraft, NewsList, TextDraft
 from temporalio import activity, workflow
+from temporalio.exceptions import ApplicationError
 
 from harpia_agents.agents.newsletter_writer import ElicitationRequest
 from harpia_agents.agents.registry import run_registered_agent
+from harpia_agents.artifacts.client import ArtifactPayloadClient
 from harpia_agents.graph import TaskState, build_graph
 from harpia_agents.identity import require_temporal_tenant
 from harpia_agents.llm import LLMRegistry
 
 _LLM_REGISTRY: LLMRegistry = LLMRegistry.default()
 
+_NON_RETRYABLE_CONNECT_ERROR_MARKERS = (
+    "LLM_KEY_DECRYPTION_FAILED",
+    "LLM_PROVIDER_NOT_CONFIGURED",
+    "LLM_PROVIDER_BLOCKED",
+    "HARPIA_INTERNAL_AUTH_TOKEN",
+    "static credentials are empty",
+)
+
 
 def configure_llm_registry(registry: LLMRegistry) -> None:
     global _LLM_REGISTRY
     _LLM_REGISTRY = registry
+
+
+def _is_non_retryable_activity_error(exc: Exception) -> bool:
+    if isinstance(exc, ValueError):
+        return True
+    if isinstance(exc, ConnectError):
+        message = str(exc)
+        return any(marker in message for marker in _NON_RETRYABLE_CONNECT_ERROR_MARKERS)
+    return False
+
+
+def _as_non_retryable_application_error(exc: Exception) -> ApplicationError:
+    return ApplicationError(
+        str(exc),
+        type=exc.__class__.__name__,
+        non_retryable=True,
+    )
 
 
 @activity.defn
@@ -52,24 +79,61 @@ async def execute_subtask_activity(input: dict) -> dict:
     return result
 
 
-def _extract_news_list_payload(input_payload: dict) -> dict[str, object]:
+def _parse_literal_json(raw: object) -> dict[str, object] | None:
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    decoded = json.loads(raw)
+    if not isinstance(decoded, dict):
+        raise ValueError("literal_json must decode to object")
+    return decoded
+
+
+async def _resolve_input_payload(
+    input_payload: dict,
+    *,
+    tenant_id: str,
+    artifact_type_key: str,
+) -> dict[str, object]:
     input_artifacts = input_payload.get("input_artifacts", [])
     if not isinstance(input_artifacts, list):
         raise ValueError("input_artifacts must be a list")
 
+    client = ArtifactPayloadClient()
     for artifact in input_artifacts:
         if not isinstance(artifact, dict):
             continue
         artifact_type = str(artifact.get("artifact_type_key", "")).strip()
-        literal_json = artifact.get("literal_json")
-        if artifact_type != "harpia.artifacts.v1.NewsList" or not isinstance(literal_json, str):
+        if artifact_type != artifact_type_key:
             continue
-        payload = json.loads(literal_json)
-        if not isinstance(payload, dict):
-            raise ValueError("NewsList literal_json must decode to object")
-        return payload
 
-    raise ValueError("missing NewsList input artifact with literal_json payload")
+        artifact_id = str(artifact.get("artifact_id", "")).strip()
+        if artifact_id:
+            return await client.get_payload(tenant_id=tenant_id, artifact_id=artifact_id)
+
+        literal = _parse_literal_json(artifact.get("literal_json"))
+        if literal is not None:
+            return literal
+
+    raise ValueError(f"missing input artifact {artifact_type_key}")
+
+
+def _extract_content_preferences(input_payload: dict) -> dict[str, str]:
+    responses: dict[str, str] = {}
+    input_artifacts = input_payload.get("input_artifacts", [])
+    if not isinstance(input_artifacts, list):
+        return responses
+
+    for artifact in input_artifacts:
+        if not isinstance(artifact, dict):
+            continue
+        if str(artifact.get("input_name", "")).strip() != "harpia.internal.ContentPreferences":
+            continue
+        literal = _parse_literal_json(artifact.get("literal_json")) or {}
+        for key in ("tone", "topic", "topics_to_avoid"):
+            value = literal.get(key)
+            if isinstance(value, str) and value.strip():
+                responses[key] = value.strip()
+    return responses
 
 
 def _extract_elicitation_responses(input_payload: dict) -> dict[str, str] | None:
@@ -95,7 +159,16 @@ def _extract_elicitation_responses(input_payload: dict) -> dict[str, str] | None
 @activity.defn(name="RunAgentActivity")
 async def run_agent_activity(input_payload: dict) -> dict:
     """Run a manifest-backed agent and return executor activity contract fields."""
-    require_temporal_tenant(input_payload)
+    try:
+        return await _run_agent_activity(input_payload)
+    except Exception as exc:
+        if _is_non_retryable_activity_error(exc):
+            raise _as_non_retryable_application_error(exc) from exc
+        raise
+
+
+async def _run_agent_activity(input_payload: dict) -> dict:
+    tenant_id = require_temporal_tenant(input_payload)
     installation = input_payload.get("executor_installation_snapshot")
     if not isinstance(installation, dict):
         raise ValueError("executor_installation_snapshot is required")
@@ -103,27 +176,68 @@ async def run_agent_activity(input_payload: dict) -> dict:
     if not manifest_id:
         raise ValueError("executor_installation_snapshot.manifest_id is required")
 
+    if manifest_id == "newsletter-writer-senior":
+        payload = await _resolve_input_payload(
+            input_payload,
+            tenant_id=tenant_id,
+            artifact_type_key="harpia.artifacts.v1.NewsList",
+        )
+        agent_input = NewsList()
+        ParseDict(payload, agent_input)
+        elicitation_responses = {
+            **_extract_content_preferences(input_payload),
+            **(_extract_elicitation_responses(input_payload) or {}),
+        }
+    elif manifest_id == "linkedin-voice-senior":
+        payload = await _resolve_input_payload(
+            input_payload,
+            tenant_id=tenant_id,
+            artifact_type_key="harpia.artifacts.v1.TextDraft",
+        )
+        agent_input = TextDraft()
+        ParseDict(payload, agent_input)
+        elicitation_responses = _extract_elicitation_responses(input_payload)
+    else:
+        raise ValueError(f"unsupported manifest id: {manifest_id}")
+
     result = await run_registered_agent(
         manifest_id,
-        tenant_id=str(input_payload.get("tenant_id", "")),
-        input_news_list=_extract_news_list_payload(input_payload),
+        tenant_id=tenant_id,
+        input_payload=agent_input,
         llm_registry=_LLM_REGISTRY,
-        elicitation_responses=_extract_elicitation_responses(input_payload),
+        elicitation_responses=elicitation_responses,
     )
     if isinstance(result, ElicitationRequest):
         return {
             "status": "elicitation_requested",
             "elicitation_thread_id": result.thread_id,
+            "elicitation_prompt": result.question,
+            "elicitation_schema_json": json.dumps(
+                {
+                    "type": "object",
+                    "required": list(result.required_fields),
+                    "properties": {field: {"type": "string"} for field in result.required_fields},
+                }
+            ),
         }
 
-    if not isinstance(result, TextDraft):
+    if isinstance(result, TextDraft):
+        output_type = "harpia.artifacts.v1.TextDraft"
+    elif isinstance(result, LinkedInPostDraft):
+        output_type = "harpia.artifacts.v1.LinkedInPostDraft"
+    else:
         raise ValueError("unsupported agent result type")
 
     payload = MessageToDict(result, preserving_proto_field_name=True)
+    artifact_id = await ArtifactPayloadClient().create_payload(
+        tenant_id=tenant_id,
+        artifact_type_key=str(input_payload.get("output_artifact_type_key") or output_type),
+        payload=payload,
+        step_execution_id=str(input_payload.get("step_execution_id", "")),
+    )
     return {
         "status": "completed",
-        "output_artifact_id": f"inline:text-draft:{uuid.uuid4()}",
-        "output_payload_json": payload,
+        "output_artifact_id": artifact_id,
     }
 
 

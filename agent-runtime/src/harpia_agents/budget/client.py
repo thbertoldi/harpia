@@ -104,7 +104,7 @@ class BudgetClient:
         auth_token: str | None = None,
         timeout_ms: int = 5000,
     ) -> None:
-        self._client = client or BudgetPolicyServiceClient(base_url=base_url or _budget_base_url())
+        self._client = client or BudgetPolicyServiceClient(base_url or _budget_base_url())
         self._auth_token = auth_token if auth_token is not None else _default_internal_auth_token()
         self._timeout_ms = timeout_ms
 

@@ -234,5 +234,5 @@ func registerStubActivities(env *testsuite.TestWorkflowEnvironment) {
 	register(workflow.CompleteStepExecutionActivityName, func(context.Context, workflow.StepStatusUpdateInput) error { return nil })
 	register(workflow.FailStepExecutionActivityName, func(context.Context, workflow.StepStatusUpdateInput) error { return nil })
 	register(workflow.CompletePlanExecutionActivityName, func(context.Context, workflow.PlanWorkflowInput) error { return nil })
-	register(workflow.FailPlanExecutionActivityName, func(context.Context, workflow.PlanWorkflowInput) error { return nil })
+	register(workflow.FailPlanExecutionActivityName, func(context.Context, workflow.PlanFailureInput) error { return nil })
 }

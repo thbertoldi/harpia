@@ -1,13 +1,13 @@
 import pytest
 from harpia.artifacts.v1.artifacts_pb2 import NewsArticle, NewsList, TextDraft
 
-from harpia_agents.agents.newsletter_writer import ElicitationRequest, run
+from harpia_agents.agents.newsletter_writer import ElicitationRequest, MANIFEST, run
 from harpia_agents.llm import LLMRegistry
 
 
 def _registry(response: str = "## Draft\nGenerated content") -> LLMRegistry:
     return LLMRegistry.for_testing(
-        model_ids=["openai-gpt-4o-mini"],
+        model_ids=[MANIFEST.model_id],
         responses=[response],
     )
 

@@ -21,7 +21,7 @@ export type LLMProviderErrorCode =
 // Domain types matching the proto contract (section 5)
 // ---------------------------------------------------------------------------
 
-export type LLMProvider = "anthropic" | "openai" | "ollama";
+export type LLMProvider = "anthropic" | "deepseek" | "openai" | "ollama";
 
 /**
  * `managed_by` mirrors the design note's enum.

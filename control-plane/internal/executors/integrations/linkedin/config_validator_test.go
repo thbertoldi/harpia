@@ -20,3 +20,10 @@ func TestConfigValidatorRejectsInvalidConfig(t *testing.T) {
 		t.Fatal("expected invalid config error")
 	}
 }
+
+func TestConfigValidatorAcceptsApprovalOnlyConfig(t *testing.T) {
+	validator := linkedin.NewConfigValidator()
+	if err := validator.ValidateConfig(json.RawMessage(`{"mode":"approval_only"}`)); err != nil {
+		t.Fatalf("ValidateConfig() error = %v", err)
+	}
+}

@@ -36,6 +36,11 @@
   --color-primary: var(--token-primary);
   --color-primary-bright: var(--token-primary-bright);
   --color-primary-foreground: var(--token-on-primary);
+  /* Text/icon color for use on a primary-colored background. Theme-aware:
+     dark on the default gold primary, white on the aiuna purple primary.
+     Buttons must use `text-on-primary` (not hardcoded `text-obsidian`) so
+     contrast holds across themes. */
+  --color-on-primary: var(--token-on-primary);
   --color-surface: var(--token-surface);
   --color-surface-elevated: var(--token-surface-elevated);
   --color-surface-deep: var(--token-surface-deep);

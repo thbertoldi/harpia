@@ -50,6 +50,11 @@ accepts structured fields — `subject`, `greeting`, `text`, `button_text`, `foo
 from these templates into those fields per language, which is what actually changes the
 emails users receive.
 
+**Locale code:** use `pt` in `email-texts.conf` (e.g. `init|pt|subject|…`). Zitadel does
+not accept `pt-BR` on `/management/v1/text/message/{type}/{language}` (`Language is not
+supported`). Portuguese email templates should match `PreferredLanguage` `pt` (and
+optionally `pt-BR` if the browser sends it).
+
 The full inline-styled `emails/*.html` files are the **design reference + future
 notification-template wrapper**. Zitadel's surrounding HTML email shell is customized
 separately (console → *Notifications → SMTP/Templates*, or a downstream mail provider

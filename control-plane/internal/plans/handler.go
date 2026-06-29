@@ -448,7 +448,10 @@ func (h *PlanHandler) UpdatePlanConfiguration(ctx context.Context, req *connect.
 		}
 	}
 
-	if h.chat != nil {
+	// Only announce on explicit user saves. Incremental edits (per-executor
+	// binding picks, Suggest) set announce_saved=false to avoid flooding the
+	// thread with a saved message on every change.
+	if h.chat != nil && req.Msg.AnnounceSaved {
 		_, _ = h.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
 			ThreadID:    updated.ID.String(),
 			Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,

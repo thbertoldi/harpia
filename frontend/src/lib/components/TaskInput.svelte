@@ -49,7 +49,7 @@
       type="submit"
       disabled={disabled || loading || !value.trim()}
       data-testid="task-input-submit"
-      class="flex h-10 w-10 items-center justify-center rounded-md bg-talon-gold text-obsidian transition-all hover:bg-talon-gold-bright disabled:cursor-not-allowed disabled:opacity-40"
+      class="flex h-10 w-10 items-center justify-center rounded-md bg-talon-gold text-on-primary transition-all hover:bg-talon-gold-bright disabled:cursor-not-allowed disabled:opacity-40"
     >
       <Send class="size-4" />
     </button>

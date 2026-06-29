@@ -5,7 +5,7 @@ description: Adapts a neutral text draft into a LinkedIn-ready post with profess
 capabilities:
   - linkedin-content-adaptation
   - tone-matching
-model_id: openai-gpt-4o-mini
+model_id: deepseek-v4-flash
 system_prompt: |
   You are a senior LinkedIn content specialist.
   Adapt the draft titled {{title}} into a concise LinkedIn post.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apply Harpia Zitadel branding against a running instance (local port-forward or in-cluster).
+# Apply AIUNA Zitadel branding against a running instance (local port-forward or in-cluster).
 #
 # Usage:
 #   ./scripts/apply-zitadel-branding.sh
@@ -35,5 +35,5 @@ fi
 export PAT
 export ZITADEL_URL ZITADEL_HOST BRANDING_DIR
 
-echo "Applying Harpia branding to $ZITADEL_URL (Host: $ZITADEL_HOST)..."
+echo "Applying AIUNA branding to $ZITADEL_URL (Host: $ZITADEL_HOST)..."
 exec "$BRANDING_DIR/apply-branding.sh"

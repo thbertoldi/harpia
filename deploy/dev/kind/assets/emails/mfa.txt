@@ -1,4 +1,4 @@
-{{if eq .PreferredLanguage "pt-BR"}}Harpia — Verifique seu acesso
+{{if or (eq .PreferredLanguage "pt") (eq .PreferredLanguage "pt-BR")}}Harpia — Verifique seu acesso
 
 Olá {{.FirstName}},
 

@@ -223,6 +223,7 @@ data:
       grep -vE '^[[:space:]]*#' "$ETF" | grep -E '\|' | awk -F'|' '{print $1"|"$2}' | sort -u > "$PAIRS"
       while IFS='|' read -r mt lg; do
         [ -n "$mt" ] || continue
+        lg=$(case "$lg" in pt-BR|pt_BR) echo pt ;; *) echo "$lg" ;; esac)
         gf() { grep -E "^$mt\|$lg\|$1\|" "$ETF" | head -1 | cut -d'|' -f4-; }
         BODY="{\"subject\":\"$(esc "$(gf subject)")\",\"greeting\":\"$(esc "$(gf greeting)")\",\"text\":\"$(esc "$(gf text)")\",\"buttonText\":\"$(esc "$(gf button)")\"}"
         st=$(api PUT "/management/v1/text/message/$mt/$lg" /tmp/mt.txt "$BODY")

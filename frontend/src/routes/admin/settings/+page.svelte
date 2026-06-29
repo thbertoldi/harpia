@@ -27,6 +27,7 @@
 
   const PROVIDERS: { id: LLMProvider; label: string }[] = [
     { id: "anthropic", label: "Anthropic" },
+    { id: "deepseek", label: "DeepSeek" },
     { id: "openai", label: "OpenAI" },
     { id: "ollama", label: "Ollama" },
   ];
@@ -37,6 +38,7 @@
       "claude-3-5-sonnet-20241022",
       "claude-3-5-haiku-20241022",
     ],
+    deepseek: ["deepseek-v4-flash", "deepseek-v4-pro"],
     openai: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"],
     ollama: ["llama3:8b", "llama3:70b", "mistral:7b"],
   };
@@ -77,6 +79,14 @@
       managed_by: "platform",
       last_rotated_at: null,
     },
+    deepseek: {
+      provider: "deepseek",
+      default_model: "deepseek-v4-flash",
+      allowed_models: [],
+      has_key: false,
+      managed_by: "platform",
+      last_rotated_at: null,
+    },
     openai: {
       provider: "openai",
       default_model: "gpt-4o",
@@ -101,16 +111,19 @@
   // Per-provider form state
   let keyInputs = $state<Record<LLMProvider, string>>({
     anthropic: "",
+    deepseek: "",
     openai: "",
     ollama: "",
   });
   let selectedModels = $state<Record<LLMProvider, string>>({
     anthropic: "claude-3-5-sonnet-20241022",
+    deepseek: "deepseek-v4-flash",
     openai: "gpt-4o",
     ollama: "llama3:8b",
   });
   let allowedModels = $state<Record<LLMProvider, string[]>>({
     anthropic: [],
+    deepseek: [],
     openai: [],
     ollama: [],
   });
@@ -616,7 +629,7 @@
                       disabled={!keyInputs[provider.id].trim() ||
                         isSaving ||
                         isRemoving}
-                      class="rounded-md bg-talon-gold px-4 py-2 font-body text-sm font-medium text-obsidian transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                      class="rounded-md bg-talon-gold px-4 py-2 font-body text-sm font-medium text-on-primary transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
                       data-testid={`save-key-${provider.id}`}
                     >
                       {isSaving
@@ -636,7 +649,7 @@
                       disabled={!keyInputs[provider.id].trim() ||
                         isSaving ||
                         isRemoving}
-                      class="rounded-md bg-talon-gold px-4 py-2 font-body text-sm font-medium text-obsidian transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                      class="rounded-md bg-talon-gold px-4 py-2 font-body text-sm font-medium text-on-primary transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
                       data-testid={`rotate-key-${provider.id}`}
                     >
                       {isSaving

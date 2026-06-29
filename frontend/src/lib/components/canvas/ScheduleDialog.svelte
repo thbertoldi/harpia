@@ -52,6 +52,8 @@
           cronExpression: cron,
           timezone: configuration.schedule?.timezone || "UTC",
         } satisfies PlanSchedule,
+        // Explicit user save — announce it in the thread.
+        announceSaved: true,
       });
       if (response.planConfiguration && onSaved)
         onSaved(response.planConfiguration);
@@ -169,7 +171,7 @@
           type="button"
           disabled={saving}
           onclick={save}
-          class="cursor-pointer rounded-md border border-talon-gold bg-talon-gold px-3 py-1.5 text-[12px] font-semibold text-obsidian hover:opacity-90 disabled:opacity-50"
+          class="cursor-pointer rounded-md border border-talon-gold bg-talon-gold px-3 py-1.5 text-[12px] font-semibold text-on-primary hover:opacity-90 disabled:opacity-50"
         >
           {translate("schedule.save", $locale)}
         </button>

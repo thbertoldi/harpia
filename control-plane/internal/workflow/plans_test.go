@@ -101,6 +101,23 @@ func TestPlanWorkflowRunsStepsInTopologicalOrder(t *testing.T) {
 	}
 }
 
+func TestPlanActivityOptionsUseBoundedRetries(t *testing.T) {
+	options := planActivityOptions()
+
+	if options.RetryPolicy == nil {
+		t.Fatal("RetryPolicy is nil")
+	}
+	if got, want := options.RetryPolicy.MaximumAttempts, int32(3); got != want {
+		t.Fatalf("MaximumAttempts = %d, want %d", got, want)
+	}
+	if options.RetryPolicy.InitialInterval <= 0 {
+		t.Fatal("InitialInterval must be positive")
+	}
+	if options.RetryPolicy.MaximumInterval <= 0 {
+		t.Fatal("MaximumInterval must be positive")
+	}
+}
+
 func TestPlanWorkflowRetrySkipsUpstreamSteps(t *testing.T) {
 	env := newPlanWorkflowTestEnv(t)
 
@@ -224,8 +241,8 @@ func TestPlanWorkflowFailsMissingExecutorBinding(t *testing.T) {
 			return nil
 		},
 	)
-	env.OnActivity(FailPlanExecutionActivityName, mock.Anything, input).Return(
-		func(ctx context.Context, workflowInput PlanWorkflowInput) error {
+	env.OnActivity(FailPlanExecutionActivityName, mock.Anything, matchPlanFailure(input, "missing executor installation snapshot")).Return(
+		func(ctx context.Context, failure PlanFailureInput) error {
 			failPlanCalled = true
 			return nil
 		},
@@ -288,8 +305,8 @@ func TestPlanWorkflowMarksStepAndPlanFailedWhenExecutorFails(t *testing.T) {
 			return nil
 		},
 	)
-	env.OnActivity(FailPlanExecutionActivityName, mock.Anything, input).Return(
-		func(ctx context.Context, workflowInput PlanWorkflowInput) error {
+	env.OnActivity(FailPlanExecutionActivityName, mock.Anything, matchPlanFailure(input, "rss executor unavailable")).Return(
+		func(ctx context.Context, failure PlanFailureInput) error {
 			failPlanCalled = true
 			return nil
 		},
@@ -452,8 +469,8 @@ func TestPlanWorkflowFailsTimedOutElicitationPerPolicy(t *testing.T) {
 			return nil
 		},
 	)
-	env.OnActivity(FailPlanExecutionActivityName, mock.Anything, input).Return(
-		func(ctx context.Context, workflowInput PlanWorkflowInput) error {
+	env.OnActivity(FailPlanExecutionActivityName, mock.Anything, matchPlanFailure(input, "policy failed the step")).Return(
+		func(ctx context.Context, failure PlanFailureInput) error {
 			failPlanCalled = true
 			return nil
 		},
@@ -516,8 +533,8 @@ func TestPlanWorkflowFailsPlanOnTimedOutElicitationPolicy(t *testing.T) {
 			return nil
 		},
 	)
-	env.OnActivity(FailPlanExecutionActivityName, mock.Anything, input).Return(
-		func(ctx context.Context, workflowInput PlanWorkflowInput) error {
+	env.OnActivity(FailPlanExecutionActivityName, mock.Anything, matchPlanFailure(input, "policy failed the plan")).Return(
+		func(ctx context.Context, failure PlanFailureInput) error {
 			failPlanCalled = true
 			return nil
 		},
@@ -778,12 +795,20 @@ func CompletePlanExecutionActivity(context.Context, PlanWorkflowInput) error {
 	return unexpectedActivityError("CompletePlanExecutionActivity")
 }
 
-func FailPlanExecutionActivity(context.Context, PlanWorkflowInput) error {
+func FailPlanExecutionActivity(context.Context, PlanFailureInput) error {
 	return unexpectedActivityError("FailPlanExecutionActivity")
 }
 
 func unexpectedActivityError(name string) error {
 	return errors.New("unexpected unmocked activity: " + name)
+}
+
+func matchPlanFailure(input PlanWorkflowInput, errorContains string) any {
+	return mock.MatchedBy(func(failure PlanFailureInput) bool {
+		return failure.TenantID == input.TenantID &&
+			failure.PlanExecutionID == input.PlanExecutionID &&
+			strings.Contains(failure.Error, errorContains)
+	})
 }
 
 func testPlanSnapshot() PlanExecutionSnapshot {
@@ -879,6 +904,42 @@ func assertArtifactIDs(t *testing.T, artifacts []ArtifactRef, expected []string)
 	}
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("artifact ids = %v, want %v", actual, expected)
+	}
+}
+
+func TestStepInputArtifactsAllowsInternalContentPreferencesSeed(t *testing.T) {
+	step := &plansv1.PlanStep{
+		Key:                 "write-draft",
+		InputArtifactTypeId: "harpia.artifacts.v1.NewsList",
+	}
+	inputs, err := stepInputArtifacts(
+		step,
+		[]string{"fetch-news"},
+		map[string][]ArtifactRef{
+			"write-draft": {{
+				Source:      "seed",
+				StepKey:     "write-draft",
+				InputName:   "harpia.internal.ContentPreferences",
+				LiteralJSON: `{"tone":"analytical"}`,
+			}},
+		},
+		map[string]ArtifactRef{
+			"fetch-news": {
+				Source:          "step_output",
+				StepKey:         "fetch-news",
+				ArtifactID:      "art-news",
+				ArtifactTypeKey: "harpia.artifacts.v1.NewsList",
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("stepInputArtifacts returned error: %v", err)
+	}
+	if len(inputs) == 0 {
+		t.Fatal("expected input artifacts")
+	}
+	if got := inputs[0].ArtifactTypeKey; got != "harpia.internal.ContentPreferences" {
+		t.Fatalf("internal seed artifact type = %q", got)
 	}
 }
 

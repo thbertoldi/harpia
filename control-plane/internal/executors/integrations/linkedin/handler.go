@@ -54,6 +54,15 @@ func (h *Handler) Execute(ctx context.Context, req runtime.IntegrationExecutionR
 		return failedResult(fmt.Errorf("parse linkedin post draft artifact: %w", err)), nil
 	}
 
+	if config.Mode == ModeApprovalOnly {
+		return h.createConfirmation(ctx, req, &artifactsv1.PublishConfirmation{
+			Platform:    "linkedin-dry-run",
+			ExternalId:  "dry-run-" + strings.TrimSpace(req.StepExecutionID),
+			Url:         "",
+			PublishedAt: time.Now().UTC().Format(time.RFC3339),
+		})
+	}
+
 	published, err := h.publisher.Publish(ctx, PublishRequest{
 		OAuthCredentialID: config.OAuthCredentialID,
 		Draft:             draft,
@@ -87,6 +96,14 @@ func (h *Handler) Execute(ctx context.Context, req runtime.IntegrationExecutionR
 		Url:         strings.TrimSpace(published.Permalink),
 		PublishedAt: published.PublishedAt.UTC().Format(time.RFC3339),
 	}
+	return h.createConfirmation(ctx, req, confirmation)
+}
+
+func (h *Handler) createConfirmation(
+	ctx context.Context,
+	req runtime.IntegrationExecutionRequest,
+	confirmation *artifactsv1.PublishConfirmation,
+) (runtime.IntegrationExecutionResult, error) {
 	payload, err := protojson.Marshal(confirmation)
 	if err != nil {
 		return runtime.IntegrationExecutionResult{}, fmt.Errorf("marshal publish confirmation: %w", err)

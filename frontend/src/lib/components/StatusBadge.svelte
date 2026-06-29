@@ -23,7 +23,7 @@
     [TaskStatus.PLANNING]: {
       key: "taskStatus.planning",
       bg: "bg-talon-gold/20",
-      text: "text-obsidian",
+      text: "text-talon-gold",
       dot: "bg-talon-gold",
     },
     [TaskStatus.IN_PROGRESS]: {

@@ -1,11 +1,14 @@
 <script lang="ts">
   import { resolve } from "$app/paths";
-  import { AlertTriangle, Loader2, Radar } from "lucide-svelte";
+  import { AlertTriangle, Loader2, Radar, RefreshCw } from "lucide-svelte";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
   import { locale, translate } from "$lib/i18n";
+  import { formatLocaleDateTime } from "$lib/i18n/format";
   import {
+    filterPlanExecutionsByView,
     loadPlanExecutions,
     statusKeyForPlanExecution,
+    type PlanExecutionViewFilter,
   } from "$lib/plans/plan-execution";
   import { PlanExecutionStatus, type PlanExecution } from "$lib/rpc";
 
@@ -13,6 +16,28 @@
   let loading = $state(true);
   let loadError = $state<string | null>(null);
   let source = $state<"api" | "mock">("api");
+  let selectedView = $state<PlanExecutionViewFilter>("all");
+
+  const filterViews: Array<{
+    key: PlanExecutionViewFilter;
+    labelKey: string;
+  }> = [
+    { key: "all", labelKey: "executions.list.filter.all" },
+    { key: "running", labelKey: "executions.list.filter.running" },
+    { key: "failed", labelKey: "executions.list.filter.failed" },
+    { key: "history", labelKey: "executions.list.filter.history" },
+  ];
+
+  const visibleExecutions = $derived(
+    filterPlanExecutionsByView(executions, selectedView),
+  );
+
+  const filterCounts = $derived({
+    all: executions.length,
+    running: filterPlanExecutionsByView(executions, "running").length,
+    failed: filterPlanExecutionsByView(executions, "failed").length,
+    history: filterPlanExecutionsByView(executions, "history").length,
+  });
 
   $effect(() => {
     void fetchExecutions();
@@ -52,6 +77,17 @@
     }
     return "border-talon-gold/40 bg-talon-gold/10 text-talon-gold";
   }
+
+  function filterButtonClass(view: PlanExecutionViewFilter): string {
+    return selectedView === view
+      ? "border-talon-gold bg-talon-gold/10 text-talon-gold"
+      : "border-plumage bg-obsidian-light/20 text-crown-ash hover:border-talon-gold/60 hover:text-cream";
+  }
+
+  function formatTimestamp(value: string): string {
+    if (!value) return translate("common.emDash", $locale);
+    return formatLocaleDateTime(value, $locale);
+  }
 </script>
 
 <div class="px-4 py-6 lg:px-6">
@@ -65,11 +101,22 @@
       </p>
     </div>
     {#if source === "api"}
-      <span
-        class="rounded-full border border-plumage px-2.5 py-1 font-mono text-[10px] tracking-wider text-crown-ash uppercase"
-      >
-        {translate("plans.source.live", $locale)}
-      </span>
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          onclick={() => fetchExecutions()}
+          class="inline-flex size-9 items-center justify-center rounded-md border border-plumage text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
+          aria-label={translate("common.retry", $locale)}
+          title={translate("common.retry", $locale)}
+        >
+          <RefreshCw class="size-4" />
+        </button>
+        <span
+          class="rounded-full border border-plumage px-2.5 py-1 font-mono text-[10px] tracking-wider text-crown-ash uppercase"
+        >
+          {translate("plans.source.live", $locale)}
+        </span>
+      </div>
     {/if}
   </div>
 
@@ -123,20 +170,66 @@
       </div>
     {/if}
 
+    <div class="mb-4 flex flex-wrap gap-2">
+      {#each filterViews as view (view.key)}
+        <button
+          type="button"
+          onclick={() => (selectedView = view.key)}
+          class="rounded-md border px-3 py-1.5 font-mono text-[10px] tracking-wider uppercase transition-colors {filterButtonClass(
+            view.key,
+          )}"
+        >
+          {translate(view.labelKey, $locale)}
+          <span class="ml-1 text-crown-ash-dark">
+            {filterCounts[view.key]}
+          </span>
+        </button>
+      {/each}
+    </div>
+
     <div class="space-y-3">
-      {#each executions as execution (execution.id)}
+      {#each visibleExecutions as execution (execution.id)}
         <a
           href={resolve(`/plans/executions/${execution.id}`)}
-          class="flex items-center justify-between rounded-lg border border-plumage bg-obsidian-light/20 px-4 py-3 transition-colors hover:border-talon-gold/60"
+          class="grid gap-3 rounded-lg border border-plumage bg-obsidian-light/20 px-4 py-3 transition-colors hover:border-talon-gold/60 md:grid-cols-[minmax(0,1fr)_auto]"
         >
-          <div>
-            <p class="font-heading text-base text-cream">{execution.id}</p>
-            <p class="mt-1 font-mono text-[10px] text-crown-ash-dark">
-              {translate("executions.list.updatedAt", $locale)}: {execution.updatedAt}
+          <div class="min-w-0">
+            <p class="truncate font-heading text-base text-cream">
+              {execution.id}
             </p>
+            <p class="mt-1 truncate font-mono text-[10px] text-crown-ash-dark">
+              {translate("executions.list.configuration", $locale)}:
+              {execution.planConfigurationId}
+            </p>
+            <dl class="mt-3 grid gap-2 sm:grid-cols-3">
+              <div>
+                <dt class="font-mono text-[10px] text-crown-ash-dark uppercase">
+                  {translate("executions.list.triggeredAt", $locale)}
+                </dt>
+                <dd class="mt-1 text-[12px] text-crown-ash">
+                  {formatTimestamp(execution.triggeredAt)}
+                </dd>
+              </div>
+              <div>
+                <dt class="font-mono text-[10px] text-crown-ash-dark uppercase">
+                  {translate("executions.list.updatedAt", $locale)}
+                </dt>
+                <dd class="mt-1 text-[12px] text-crown-ash">
+                  {formatTimestamp(execution.updatedAt)}
+                </dd>
+              </div>
+              <div>
+                <dt class="font-mono text-[10px] text-crown-ash-dark uppercase">
+                  {translate("executions.list.completedAt", $locale)}
+                </dt>
+                <dd class="mt-1 text-[12px] text-crown-ash">
+                  {formatTimestamp(execution.completedAt)}
+                </dd>
+              </div>
+            </dl>
           </div>
           <span
-            class="inline-flex items-center rounded-full border px-2.5 py-0.5 font-mono text-[10px] tracking-wider uppercase {statusClass(
+            class="inline-flex h-6 items-center justify-self-start rounded-full border px-2.5 py-0.5 font-mono text-[10px] tracking-wider uppercase md:justify-self-end {statusClass(
               execution.status,
             )}"
           >

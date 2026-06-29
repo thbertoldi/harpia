@@ -1,5 +1,5 @@
 #!/bin/sh
-# Apply Harpia branding to a Zitadel instance via Admin + Assets APIs.
+# Apply AIUNA branding to a Zitadel instance via Admin + Assets APIs.
 # Idempotent: safe to re-run after asset or palette changes.
 #
 # Required env:
@@ -116,7 +116,7 @@ verify_label_policy() {
   fi
 }
 
-echo "[branding] Uploading Harpia assets to instance label policy..."
+echo "[branding] Uploading AIUNA assets to instance label policy..."
 upload_instance_asset "logo" "$LOGO_FILE" "logo"
 upload_instance_asset "logo/dark" "$LOGO_FILE" "logo (dark)"
 upload_instance_asset "icon" "$ICON_FILE" "icon"
@@ -181,4 +181,4 @@ rm -f "$ACTIVATE_RESPONSE_FILE"
 POLICY_CHECK=$(api_json GET /admin/v1/policies/label)
 verify_label_policy "$POLICY_CHECK"
 
-echo "[branding] Harpia theme applied (primary=$PRIMARY_COLOR background=$BACKGROUND_COLOR text=$FONT_COLOR)"
+echo "[branding] AIUNA theme applied (primary=$PRIMARY_COLOR background=$BACKGROUND_COLOR text=$FONT_COLOR)"

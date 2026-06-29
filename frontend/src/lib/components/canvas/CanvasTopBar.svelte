@@ -94,7 +94,7 @@
     <button
       type="button"
       onclick={onAnswerNext}
-      class="flex items-center gap-1 rounded border border-talon-gold bg-talon-gold px-3 py-1 text-[11px] font-semibold text-obsidian hover:opacity-90"
+      class="flex items-center gap-1 rounded border border-talon-gold bg-talon-gold px-3 py-1 text-[11px] font-semibold text-on-primary hover:opacity-90"
     >
       <Reply class="size-3.5" />
       {translate("canvas.topbar.answerPending", $locale, {
