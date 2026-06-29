@@ -16,16 +16,17 @@ import (
 )
 
 type PlanTemplate struct {
-	ID          uuid.UUID
-	Key         string
-	Name        string
-	Description string
-	Vertical    string
-	Version     int32
-	Steps       []PlanStep
-	Edges       []PlanStepDependency
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID              uuid.UUID
+	Key             string
+	Name            string
+	Description     string
+	Vertical        string
+	Version         int32
+	InputParameters json.RawMessage
+	Steps           []PlanStep
+	Edges           []PlanStepDependency
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 type PlanStep struct {
@@ -57,6 +58,7 @@ type PlanConfiguration struct {
 	OverseerBindings    json.RawMessage
 	BehaviorPolicies    json.RawMessage
 	Schedule            json.RawMessage
+	ParameterValues     json.RawMessage
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
 }
@@ -117,12 +119,12 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 func (r *Repository) GetTemplateByID(ctx context.Context, templateID uuid.UUID) (*PlanTemplate, error) {
 	var template PlanTemplate
 	err := r.pool.QueryRow(ctx,
-		`SELECT id, key, name, description, vertical, version, created_at, updated_at
+		`SELECT id, key, name, description, vertical, version, input_parameters, created_at, updated_at
 		 FROM plan_templates WHERE id = $1`,
 		templateID,
 	).Scan(
 		&template.ID, &template.Key, &template.Name, &template.Description,
-		&template.Vertical, &template.Version, &template.CreatedAt, &template.UpdatedAt,
+		&template.Vertical, &template.Version, &template.InputParameters, &template.CreatedAt, &template.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get plan template: %w", err)
@@ -137,12 +139,12 @@ func (r *Repository) GetTemplateByID(ctx context.Context, templateID uuid.UUID) 
 func (r *Repository) GetTemplateByKey(ctx context.Context, key string) (*PlanTemplate, error) {
 	var template PlanTemplate
 	err := r.pool.QueryRow(ctx,
-		`SELECT id, key, name, description, vertical, version, created_at, updated_at
+		`SELECT id, key, name, description, vertical, version, input_parameters, created_at, updated_at
 		 FROM plan_templates WHERE key = $1`,
 		key,
 	).Scan(
 		&template.ID, &template.Key, &template.Name, &template.Description,
-		&template.Vertical, &template.Version, &template.CreatedAt, &template.UpdatedAt,
+		&template.Vertical, &template.Version, &template.InputParameters, &template.CreatedAt, &template.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get plan template by key: %w", err)
@@ -159,7 +161,7 @@ func (r *Repository) ListTemplates(ctx context.Context, vertical string, limit, 
 	var err error
 	if vertical != "" {
 		rows, err = r.pool.Query(ctx,
-			`SELECT id, key, name, description, vertical, version, created_at, updated_at
+			`SELECT id, key, name, description, vertical, version, input_parameters, created_at, updated_at
 			 FROM plan_templates
 			 WHERE vertical = $1
 			 ORDER BY name ASC
@@ -168,7 +170,7 @@ func (r *Repository) ListTemplates(ctx context.Context, vertical string, limit, 
 		)
 	} else {
 		rows, err = r.pool.Query(ctx,
-			`SELECT id, key, name, description, vertical, version, created_at, updated_at
+			`SELECT id, key, name, description, vertical, version, input_parameters, created_at, updated_at
 			 FROM plan_templates
 			 ORDER BY name ASC
 			 LIMIT $1 OFFSET $2`,
@@ -185,7 +187,7 @@ func (r *Repository) ListTemplates(ctx context.Context, vertical string, limit, 
 		var template PlanTemplate
 		if err := rows.Scan(
 			&template.ID, &template.Key, &template.Name, &template.Description,
-			&template.Vertical, &template.Version, &template.CreatedAt, &template.UpdatedAt,
+			&template.Vertical, &template.Version, &template.InputParameters, &template.CreatedAt, &template.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan plan template: %w", err)
 		}
@@ -259,14 +261,15 @@ func (r *Repository) CreateConfiguration(ctx context.Context, config *PlanConfig
 		row := q.QueryRow(ctx,
 			`INSERT INTO plan_configurations (
 				tenant_id, workspace_id, plan_template_id, plan_template_version, status,
-				seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule
-			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+				seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
+				parameter_values
+			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 			RETURNING id, tenant_id, workspace_id, plan_template_id, plan_template_version, status,
 			          seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
-			          created_at, updated_at`,
+			          parameter_values, created_at, updated_at`,
 			config.TenantID, config.WorkspaceID, config.PlanTemplateID, config.PlanTemplateVersion,
 			config.Status, config.SeedArtifacts, config.SlotBindings, config.OverseerBindings,
-			config.BehaviorPolicies, config.Schedule,
+			config.BehaviorPolicies, config.Schedule, config.ParameterValues,
 		)
 		return scanConfiguration(row, &created)
 	})
@@ -282,7 +285,7 @@ func (r *Repository) GetConfiguration(ctx context.Context, tenantID, configID uu
 		row := q.QueryRow(ctx,
 			`SELECT id, tenant_id, workspace_id, plan_template_id, plan_template_version, status,
 			        seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
-			        created_at, updated_at
+			        parameter_values, created_at, updated_at
 			 FROM plan_configurations
 			 WHERE id = $1 AND tenant_id = $2`,
 			configID, tenantID,
@@ -306,13 +309,14 @@ func (r *Repository) UpdateConfiguration(ctx context.Context, config *PlanConfig
 			     overseer_bindings = $4,
 			     behavior_policies = $5,
 			     schedule = $6,
+			     parameter_values = $7,
 			     updated_at = now()
-			 WHERE id = $7 AND tenant_id = $8
+			 WHERE id = $8 AND tenant_id = $9
 			 RETURNING id, tenant_id, workspace_id, plan_template_id, plan_template_version, status,
 			           seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
-			           created_at, updated_at`,
+			           parameter_values, created_at, updated_at`,
 			config.Status, config.SeedArtifacts, config.SlotBindings, config.OverseerBindings,
-			config.BehaviorPolicies, config.Schedule, config.ID, config.TenantID,
+			config.BehaviorPolicies, config.Schedule, config.ParameterValues, config.ID, config.TenantID,
 		)
 		return scanConfiguration(row, &updated)
 	})
@@ -352,7 +356,7 @@ func (r *Repository) ListConfigurations(ctx context.Context, tenantID uuid.UUID,
 			rows, err = q.Query(ctx,
 				`SELECT id, tenant_id, workspace_id, plan_template_id, plan_template_version, status,
 				        seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
-				        created_at, updated_at
+				        parameter_values, created_at, updated_at
 				 FROM plan_configurations
 				 WHERE tenant_id = $1 AND workspace_id = $2 AND status = $3
 				 ORDER BY created_at DESC
@@ -363,7 +367,7 @@ func (r *Repository) ListConfigurations(ctx context.Context, tenantID uuid.UUID,
 			rows, err = q.Query(ctx,
 				`SELECT id, tenant_id, workspace_id, plan_template_id, plan_template_version, status,
 				        seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
-				        created_at, updated_at
+				        parameter_values, created_at, updated_at
 				 FROM plan_configurations
 				 WHERE tenant_id = $1 AND workspace_id = $2
 				 ORDER BY created_at DESC
@@ -374,7 +378,7 @@ func (r *Repository) ListConfigurations(ctx context.Context, tenantID uuid.UUID,
 			rows, err = q.Query(ctx,
 				`SELECT id, tenant_id, workspace_id, plan_template_id, plan_template_version, status,
 				        seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
-				        created_at, updated_at
+				        parameter_values, created_at, updated_at
 				 FROM plan_configurations
 				 WHERE tenant_id = $1 AND status = $2
 				 ORDER BY created_at DESC
@@ -385,7 +389,7 @@ func (r *Repository) ListConfigurations(ctx context.Context, tenantID uuid.UUID,
 			rows, err = q.Query(ctx,
 				`SELECT id, tenant_id, workspace_id, plan_template_id, plan_template_version, status,
 				        seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
-				        created_at, updated_at
+				        parameter_values, created_at, updated_at
 				 FROM plan_configurations
 				 WHERE tenant_id = $1
 				 ORDER BY created_at DESC
@@ -404,7 +408,7 @@ func (r *Repository) ListConfigurations(ctx context.Context, tenantID uuid.UUID,
 				&config.ID, &config.TenantID, &config.WorkspaceID, &config.PlanTemplateID,
 				&config.PlanTemplateVersion, &config.Status, &config.SeedArtifacts,
 				&config.SlotBindings, &config.OverseerBindings, &config.BehaviorPolicies,
-				&config.Schedule, &config.CreatedAt, &config.UpdatedAt,
+				&config.Schedule, &config.ParameterValues, &config.CreatedAt, &config.UpdatedAt,
 			); err != nil {
 				return fmt.Errorf("scan plan configuration: %w", err)
 			}
@@ -954,7 +958,7 @@ func scanConfiguration(row pgx.Row, config *PlanConfiguration) error {
 		&config.ID, &config.TenantID, &config.WorkspaceID, &config.PlanTemplateID,
 		&config.PlanTemplateVersion, &config.Status, &config.SeedArtifacts,
 		&config.SlotBindings, &config.OverseerBindings, &config.BehaviorPolicies,
-		&config.Schedule, &config.CreatedAt, &config.UpdatedAt,
+		&config.Schedule, &config.ParameterValues, &config.CreatedAt, &config.UpdatedAt,
 	)
 }
 

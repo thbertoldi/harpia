@@ -20,6 +20,7 @@ import (
 	"github.com/harpia/control-plane/internal/planassistant"
 	"github.com/harpia/control-plane/internal/workflow"
 	cron "github.com/robfig/cron/v3"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // AssistantConfigurationStore adapts *Repository to planassistant.ConfigurationStore.
@@ -64,6 +65,10 @@ func configurationFromProto(proto *plansv1.PlanConfiguration, existing *PlanConf
 	if err != nil {
 		return nil, err
 	}
+	parameterValuesJSON, err := normalizeParameterValuesJSON(proto.GetParameterValuesJson())
+	if err != nil {
+		return nil, err
+	}
 	return &PlanConfiguration{
 		ID:                  existing.ID,
 		TenantID:            existing.TenantID,
@@ -76,6 +81,7 @@ func configurationFromProto(proto *plansv1.PlanConfiguration, existing *PlanConf
 		OverseerBindings:    overseerJSON,
 		BehaviorPolicies:    policiesJSON,
 		Schedule:            scheduleJSON,
+		ParameterValues:     parameterValuesJSON,
 		CreatedAt:           existing.CreatedAt,
 		UpdatedAt:           existing.UpdatedAt,
 	}, nil
@@ -296,7 +302,7 @@ func (h *PlanHandler) CreatePlanConfiguration(ctx context.Context, req *connect.
 
 	config, err := h.buildConfigurationFromRequest(tenantID, template, req.Msg.WorkspaceId, req.Msg.Status,
 		req.Msg.SeedArtifacts, req.Msg.SlotBindings, req.Msg.OverseerBindings,
-		req.Msg.BehaviorPolicies, req.Msg.Schedule)
+		req.Msg.BehaviorPolicies, req.Msg.Schedule, req.Msg.ParameterValuesJson)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
@@ -364,13 +370,14 @@ func (h *PlanHandler) UpdatePlanConfiguration(ctx context.Context, req *connect.
 	}
 
 	updatedInput := &plansv1.CreatePlanConfigurationRequest{
-		WorkspaceId:      existing.WorkspaceID.UUID.String(),
-		Status:           req.Msg.Status,
-		SeedArtifacts:    req.Msg.SeedArtifacts,
-		SlotBindings:     req.Msg.SlotBindings,
-		OverseerBindings: req.Msg.OverseerBindings,
-		BehaviorPolicies: req.Msg.BehaviorPolicies,
-		Schedule:         req.Msg.Schedule,
+		WorkspaceId:         existing.WorkspaceID.UUID.String(),
+		Status:              req.Msg.Status,
+		SeedArtifacts:       req.Msg.SeedArtifacts,
+		SlotBindings:        req.Msg.SlotBindings,
+		OverseerBindings:    req.Msg.OverseerBindings,
+		BehaviorPolicies:    req.Msg.BehaviorPolicies,
+		Schedule:            req.Msg.Schedule,
+		ParameterValuesJson: req.Msg.ParameterValuesJson,
 	}
 	if !existing.WorkspaceID.Valid {
 		updatedInput.WorkspaceId = ""
@@ -382,7 +389,7 @@ func (h *PlanHandler) UpdatePlanConfiguration(ctx context.Context, req *connect.
 
 	config, err := h.buildConfigurationFromRequest(tenantID, template, updatedInput.WorkspaceId, updatedInput.Status,
 		updatedInput.SeedArtifacts, updatedInput.SlotBindings, updatedInput.OverseerBindings,
-		updatedInput.BehaviorPolicies, updatedInput.Schedule)
+		updatedInput.BehaviorPolicies, updatedInput.Schedule, updatedInput.ParameterValuesJson)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
@@ -787,6 +794,7 @@ func (h *PlanHandler) buildConfigurationFromRequest(
 	overseerBindings []*plansv1.OverseerBinding,
 	behaviorPolicies *plansv1.PlanBehaviorPolicies,
 	schedule *plansv1.PlanSchedule,
+	parameterValuesJSON string,
 ) (*PlanConfiguration, error) {
 	statusStr, err := configurationStatusToString(status)
 	if err != nil {
@@ -828,6 +836,10 @@ func (h *PlanHandler) buildConfigurationFromRequest(
 	if err := validateScheduleForStatus(statusStr, scheduleJSON); err != nil {
 		return nil, err
 	}
+	parameterValues, err := normalizeParameterValuesJSON(parameterValuesJSON)
+	if err != nil {
+		return nil, err
+	}
 
 	return &PlanConfiguration{
 		TenantID:            tenantID,
@@ -840,7 +852,19 @@ func (h *PlanHandler) buildConfigurationFromRequest(
 		OverseerBindings:    overseerJSON,
 		BehaviorPolicies:    policiesJSON,
 		Schedule:            scheduleJSON,
+		ParameterValues:     parameterValues,
 	}, nil
+}
+
+func normalizeParameterValuesJSON(parameterValuesJSON string) (json.RawMessage, error) {
+	trimmed := strings.TrimSpace(parameterValuesJSON)
+	if trimmed == "" {
+		return json.RawMessage(`{}`), nil
+	}
+	if !json.Valid([]byte(trimmed)) {
+		return nil, fmt.Errorf("parameter values must be valid JSON")
+	}
+	return json.RawMessage(trimmed), nil
 }
 
 func templateToProto(t *PlanTemplate) *plansv1.PlanTemplate {
@@ -855,7 +879,7 @@ func templateToProto(t *PlanTemplate) *plansv1.PlanTemplate {
 			ToStepKey:   t.Edges[i].ToStepKey,
 		})
 	}
-	return &plansv1.PlanTemplate{
+	template := &plansv1.PlanTemplate{
 		Id:          t.ID.String(),
 		Key:         t.Key,
 		Name:        t.Name,
@@ -867,6 +891,14 @@ func templateToProto(t *PlanTemplate) *plansv1.PlanTemplate {
 		CreatedAt:   t.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:   t.UpdatedAt.Format(time.RFC3339),
 	}
+	if len(t.InputParameters) > 0 && string(t.InputParameters) != "null" {
+		raw := []byte(`{"inputParameters":` + string(t.InputParameters) + `}`)
+		var templateInputs plansv1.PlanTemplate
+		if err := protojson.Unmarshal(raw, &templateInputs); err == nil {
+			template.InputParameters = templateInputs.InputParameters
+		}
+	}
+	return template
 }
 
 func stepToProto(s *PlanStep) *plansv1.PlanStep {
@@ -900,6 +932,11 @@ func configurationToProto(c *PlanConfiguration) *plansv1.PlanConfiguration {
 	}
 	if c.WorkspaceID.Valid {
 		config.WorkspaceId = c.WorkspaceID.UUID.String()
+	}
+	if len(c.ParameterValues) > 0 {
+		config.ParameterValuesJson = string(c.ParameterValues)
+	} else {
+		config.ParameterValuesJson = "{}"
 	}
 
 	var seedArtifacts []*plansv1.SeedArtifactBinding
