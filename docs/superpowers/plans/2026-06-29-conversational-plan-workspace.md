@@ -413,7 +413,16 @@ ALTER TABLE artifacts
     ADD COLUMN plan_configuration_id UUID REFERENCES plan_configurations(id),
     ADD COLUMN plan_execution_id UUID REFERENCES plan_executions(id),
     ADD COLUMN step_execution_id UUID REFERENCES step_executions(id),
-    ADD COLUMN status TEXT NOT NULL DEFAULT 'generated';
+    ADD COLUMN status TEXT NOT NULL DEFAULT 'ARTIFACT_STATUS_GENERATED',
+    ADD CONSTRAINT artifacts_status_check CHECK (status IN (
+        'ARTIFACT_STATUS_UNSPECIFIED',
+        'ARTIFACT_STATUS_GENERATED',
+        'ARTIFACT_STATUS_EDITED',
+        'ARTIFACT_STATUS_APPROVED',
+        'ARTIFACT_STATUS_REJECTED',
+        'ARTIFACT_STATUS_SUPERSEDED',
+        'ARTIFACT_STATUS_FAILED'
+    ));
 
 CREATE TABLE artifact_versions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -426,9 +435,16 @@ CREATE TABLE artifact_versions (
     source_step_execution_id UUID REFERENCES step_executions(id),
     source_version_id UUID REFERENCES artifact_versions(id),
     created_by_user_id UUID,
-    created_by_kind TEXT NOT NULL DEFAULT 'system',
+    created_by_kind TEXT NOT NULL DEFAULT 'ARTIFACT_VERSION_CREATED_BY_KIND_SYSTEM',
     edit_summary TEXT NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT artifact_versions_created_by_kind_check CHECK (created_by_kind IN (
+        'ARTIFACT_VERSION_CREATED_BY_KIND_UNSPECIFIED',
+        'ARTIFACT_VERSION_CREATED_BY_KIND_SYSTEM',
+        'ARTIFACT_VERSION_CREATED_BY_KIND_AGENT',
+        'ARTIFACT_VERSION_CREATED_BY_KIND_INTEGRATION',
+        'ARTIFACT_VERSION_CREATED_BY_KIND_USER'
+    )),
     UNIQUE (artifact_id, version_number)
 );
 
@@ -452,7 +468,7 @@ SELECT
     content_hash,
     plan_execution_id,
     step_execution_id,
-    'system',
+    'ARTIFACT_VERSION_CREATED_BY_KIND_SYSTEM',
     'Initial artifact payload',
     created_at
 FROM artifacts;
@@ -1669,7 +1685,7 @@ Implement:
 7. Validate payload with `ValidatePayload`.
 8. Store payload using `ArtifactVersionObjectPath`.
 9. Parse `identity.RequestContextFrom(ctx).UserID` as UUID when available.
-10. Create artifact version with `CreatedByKind: ARTIFACT_VERSION_CREATED_BY_KIND_USER` and `EditSummary`.
+10. Create artifact version with `CreatedByKind: artifactsv1.ArtifactVersionCreatedByKind_ARTIFACT_VERSION_CREATED_BY_KIND_USER` and `EditSummary`.
 11. Return updated artifact and version.
 
 - [ ] **Step 7: Make preview/payload version-aware**
