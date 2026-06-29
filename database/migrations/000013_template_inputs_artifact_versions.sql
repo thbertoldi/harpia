@@ -6,13 +6,34 @@ ALTER TABLE plan_templates
 ALTER TABLE plan_configurations
     ADD COLUMN parameter_values JSONB NOT NULL DEFAULT '{}'::jsonb;
 
+ALTER TABLE plan_configurations
+    ADD CONSTRAINT plan_configurations_id_tenant_unique UNIQUE (id, tenant_id);
+
+ALTER TABLE plan_executions
+    ADD CONSTRAINT plan_executions_id_tenant_unique UNIQUE (id, tenant_id);
+
+ALTER TABLE step_executions
+    ADD CONSTRAINT step_executions_id_tenant_unique UNIQUE (id, tenant_id);
+
+ALTER TABLE artifacts
+    ADD CONSTRAINT artifacts_id_tenant_unique UNIQUE (id, tenant_id);
+
 ALTER TABLE artifacts
     ADD COLUMN updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     ADD COLUMN current_version_id UUID,
-    ADD COLUMN plan_configuration_id UUID REFERENCES plan_configurations(id),
-    ADD COLUMN plan_execution_id UUID REFERENCES plan_executions(id),
-    ADD COLUMN step_execution_id UUID REFERENCES step_executions(id),
+    ADD COLUMN plan_configuration_id UUID,
+    ADD COLUMN plan_execution_id UUID,
+    ADD COLUMN step_execution_id UUID,
     ADD COLUMN status TEXT NOT NULL DEFAULT 'ARTIFACT_STATUS_GENERATED',
+    ADD CONSTRAINT artifacts_plan_configuration_tenant_fk
+        FOREIGN KEY (plan_configuration_id, tenant_id)
+        REFERENCES plan_configurations(id, tenant_id),
+    ADD CONSTRAINT artifacts_plan_execution_tenant_fk
+        FOREIGN KEY (plan_execution_id, tenant_id)
+        REFERENCES plan_executions(id, tenant_id),
+    ADD CONSTRAINT artifacts_step_execution_tenant_fk
+        FOREIGN KEY (step_execution_id, tenant_id)
+        REFERENCES step_executions(id, tenant_id),
     ADD CONSTRAINT artifacts_status_check CHECK (status IN (
         'ARTIFACT_STATUS_UNSPECIFIED',
         'ARTIFACT_STATUS_GENERATED',
@@ -25,14 +46,14 @@ ALTER TABLE artifacts
 
 CREATE TABLE artifact_versions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    artifact_id UUID NOT NULL REFERENCES artifacts(id) ON DELETE CASCADE,
+    artifact_id UUID NOT NULL,
     tenant_id UUID NOT NULL REFERENCES tenants(id),
     version_number INTEGER NOT NULL,
     storage_uri TEXT NOT NULL,
     content_hash TEXT NOT NULL,
-    source_plan_execution_id UUID REFERENCES plan_executions(id),
-    source_step_execution_id UUID REFERENCES step_executions(id),
-    source_version_id UUID REFERENCES artifact_versions(id),
+    source_plan_execution_id UUID,
+    source_step_execution_id UUID,
+    source_version_id UUID,
     created_by_user_id UUID,
     created_by_kind TEXT NOT NULL DEFAULT 'ARTIFACT_VERSION_CREATED_BY_KIND_SYSTEM',
     edit_summary TEXT NOT NULL DEFAULT '',
@@ -44,7 +65,22 @@ CREATE TABLE artifact_versions (
         'ARTIFACT_VERSION_CREATED_BY_KIND_INTEGRATION',
         'ARTIFACT_VERSION_CREATED_BY_KIND_USER'
     )),
-    UNIQUE (artifact_id, version_number)
+    CONSTRAINT artifact_versions_artifact_tenant_fk
+        FOREIGN KEY (artifact_id, tenant_id)
+        REFERENCES artifacts(id, tenant_id)
+        ON DELETE CASCADE,
+    CONSTRAINT artifact_versions_source_plan_execution_tenant_fk
+        FOREIGN KEY (source_plan_execution_id, tenant_id)
+        REFERENCES plan_executions(id, tenant_id),
+    CONSTRAINT artifact_versions_source_step_execution_tenant_fk
+        FOREIGN KEY (source_step_execution_id, tenant_id)
+        REFERENCES step_executions(id, tenant_id),
+    CONSTRAINT artifact_versions_source_version_tenant_fk
+        FOREIGN KEY (source_version_id, tenant_id)
+        REFERENCES artifact_versions(id, tenant_id),
+    UNIQUE (artifact_id, version_number),
+    UNIQUE (id, tenant_id),
+    UNIQUE (id, artifact_id, tenant_id)
 );
 
 INSERT INTO artifact_versions (
@@ -81,8 +117,8 @@ WHERE v.artifact_id = a.id
 
 ALTER TABLE artifacts
     ADD CONSTRAINT artifacts_current_version_fk
-    FOREIGN KEY (current_version_id)
-    REFERENCES artifact_versions(id);
+    FOREIGN KEY (current_version_id, id, tenant_id)
+    REFERENCES artifact_versions(id, artifact_id, tenant_id);
 
 CREATE INDEX idx_artifacts_tenant_updated ON artifacts(tenant_id, updated_at DESC);
 CREATE INDEX idx_artifacts_plan_configuration ON artifacts(tenant_id, plan_configuration_id, updated_at DESC);
