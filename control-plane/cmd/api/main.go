@@ -148,17 +148,45 @@ func setupAPICache(ctx context.Context, valkeyURL string, logger *slog.Logger) a
 	return resources
 }
 
-func setupTemporalClient(cfg *config.Config, logger *slog.Logger) *workflow.TemporalClient {
+const (
+	temporalClientStartupTimeout = 60 * time.Second
+	temporalClientRetryInterval  = time.Second
+)
+
+func setupTemporalClient(ctx context.Context, cfg *config.Config, logger *slog.Logger) *workflow.TemporalClient {
 	if cfg.TemporalHost == "" {
 		return nil
 	}
 
-	temporalClient, err := workflow.NewTemporalClient(cfg.TemporalHost)
-	if err != nil {
-		logger.Warn("temporal client failed, running without workflow engine", "error", err)
-		return nil
+	deadlineCtx, cancel := context.WithTimeout(ctx, temporalClientStartupTimeout)
+	defer cancel()
+
+	var lastErr error
+	for attempt := 1; ; attempt++ {
+		temporalClient, err := workflow.NewTemporalClient(cfg.TemporalHost)
+		if err == nil {
+			if attempt > 1 {
+				logger.Info("temporal client connected", "host", cfg.TemporalHost, "attempt", attempt)
+			}
+			return temporalClient
+		}
+		lastErr = err
+
+		if deadlineCtx.Err() != nil {
+			logger.Warn("temporal client failed, running without workflow engine", "host", cfg.TemporalHost, "error", lastErr)
+			return nil
+		}
+
+		logger.Warn("temporal client dial failed, retrying", "host", cfg.TemporalHost, "attempt", attempt, "error", err)
+		timer := time.NewTimer(temporalClientRetryInterval)
+		select {
+		case <-deadlineCtx.Done():
+			timer.Stop()
+			logger.Warn("temporal client failed, running without workflow engine", "host", cfg.TemporalHost, "error", lastErr)
+			return nil
+		case <-timer.C:
+		}
 	}
-	return temporalClient
 }
 
 func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
@@ -202,7 +230,7 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	if cacheResources.client != nil {
 		defer cacheResources.client.Close()
 	}
-	temporalClient := setupTemporalClient(cfg, logger)
+	temporalClient := setupTemporalClient(ctx, cfg, logger)
 	if temporalClient != nil {
 		defer temporalClient.Close()
 	}

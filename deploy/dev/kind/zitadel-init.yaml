@@ -1,11 +1,11 @@
-# Harpia Dev — Zitadel post-init: register Harpia Web OIDC application and apply branding.
+# Harpia Dev — Zitadel post-init: register Harpia Web OIDC application and apply AIUNA branding.
 #
 # Reads the admin PAT written by Zitadel's first-instance bootstrap (see zitadel.yaml),
 # waits for OIDC discovery to come up, then calls the Management API to create:
 #   - Project "Harpia"
 #   - OIDC App "Harpia Web" (PKCE, no client secret, redirect localhost:5173)
-# After OIDC registration, uploads Harpia logo/icon assets and applies the instance
-# label policy (palette + activation) so /ui/login and /ui/console match Harpia,
+# After OIDC registration, uploads AIUNA logo/icon assets and applies the instance
+# label policy (palette + activation) so /ui/login and /ui/console match AIUNA,
 # then pushes branded custom email message texts (password-reset / init / verify,
 # EN + pt) to the message-text policy. All driven by /branding/apply-branding.sh.
 #
@@ -225,7 +225,7 @@ spec:
                 --from-literal=appId="$APP_ID" \
                 --dry-run=client -o yaml | kubectl apply -f -
 
-              echo "[6/8] Applying Harpia branding (assets + label policy)..."
+              echo "[6/8] Applying AIUNA branding (assets + label policy)..."
               export PAT
               export BRANDING_DIR=/branding
               /branding/apply-branding.sh
