@@ -1,6 +1,13 @@
 import { create } from "@bufbuild/protobuf";
 import { appendThreadMessage } from "$lib/chat/client";
-import { buildLinkedInSuggestion } from "$lib/plans/linkedin-suggestions";
+import {
+  buildDefaultLinkedInInputValues,
+  materializeLinkedInInputValues,
+} from "$lib/plans/linkedin-template-inputs";
+import {
+  parameterValuesJson,
+  type LinkedInTemplateInputValues,
+} from "$lib/plans/template-inputs";
 import { planClient } from "$lib/rpc";
 import {
   SlotBindingSchema,
@@ -72,6 +79,7 @@ export async function editBinding(args: {
     overseerBindings: args.existingConfiguration.overseerBindings,
     behaviorPolicies: args.existingConfiguration.behaviorPolicies,
     schedule: args.existingConfiguration.schedule,
+    parameterValuesJson: args.existingConfiguration.parameterValuesJson,
   });
   if (!response.planConfiguration) {
     throw new Error(
@@ -87,14 +95,18 @@ export async function applyLinkedInSuggestion(args: {
   existingConfiguration: PlanConfiguration;
   template: PlanTemplate;
   topic: string;
+  values?: LinkedInTemplateInputValues;
   installationIdsByStep: Record<string, string>;
   today?: Date;
 }): Promise<PlanConfiguration> {
-  const suggestion = buildLinkedInSuggestion({
-    topic: args.topic,
-    installationIdsByStep: args.installationIdsByStep,
-    today: args.today ?? new Date(),
-  });
+  const values = args.values
+    ? { ...args.values, dateRange: { ...args.values.dateRange } }
+    : buildDefaultLinkedInInputValues(args.today ?? new Date());
+  values.theme = args.topic.trim() || values.theme;
+  const suggestion = materializeLinkedInInputValues(
+    values,
+    args.installationIdsByStep,
+  );
   // Suggest is an incremental edit (announce_saved=false, no thread event):
   // the user reviews the populated matrix and then explicitly saves.
   const response = await planClient.updatePlanConfiguration({
@@ -106,6 +118,7 @@ export async function applyLinkedInSuggestion(args: {
     overseerBindings: args.existingConfiguration.overseerBindings,
     behaviorPolicies: suggestion.behaviorPolicies,
     schedule: args.existingConfiguration.schedule,
+    parameterValuesJson: parameterValuesJson(values),
   });
   if (!response.planConfiguration) {
     throw new Error(

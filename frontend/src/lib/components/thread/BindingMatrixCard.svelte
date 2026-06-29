@@ -4,6 +4,7 @@
   import type { ChatMessage } from "$lib/chat/types";
   import { locale, translate } from "$lib/i18n";
   import { applyLinkedInSuggestion, editBinding } from "$lib/plans/assistant";
+  import { buildDefaultLinkedInInputValues } from "$lib/plans/linkedin-template-inputs";
   import {
     parseMatrixPayload,
     computeRunCostBRL,
@@ -12,6 +13,7 @@
     type MatrixOption,
     type MatrixRow,
   } from "$lib/plans/matrix";
+  import type { LinkedInTemplateInputValues } from "$lib/plans/template-inputs";
   import { cardLift, chipFlash } from "$lib/motion/transitions";
   import { planClient } from "$lib/rpc";
   import {
@@ -101,7 +103,9 @@
   let submitted = $state(false);
   let saveError = $state(false);
   let suggestOpen = $state(false);
-  let suggestedTopic = $state("sports");
+  let inputValues = $state<LinkedInTemplateInputValues>(
+    buildDefaultLinkedInInputValues(),
+  );
 
   function optionLabel(row: MatrixRow): string {
     const opt = row.options.find((o) => o.id === row.current_executor_id);
@@ -159,7 +163,7 @@
 
   function installationIdsByStep(): Record<string, string> {
     const ids: Record<string, string> = {};
-    const topic = suggestedTopic.trim().toLowerCase();
+    const topic = inputValues.theme.trim().toLowerCase();
     for (const row of rows) {
       const preferred = row.options.find((option) =>
         optionMatchesTopic(option, topic),
@@ -181,7 +185,8 @@
         configurationId,
         existingConfiguration: configuration,
         template,
-        topic: suggestedTopic,
+        topic: inputValues.theme,
+        values: inputValues,
         installationIdsByStep: installationIdsByStep(),
       });
       configuration = next;
@@ -233,6 +238,7 @@
         overseerBindings: configuration.overseerBindings,
         behaviorPolicies: configuration.behaviorPolicies,
         schedule: configuration.schedule,
+        parameterValuesJson: configuration.parameterValuesJson,
         // Explicit user save — announce it in the thread.
         announceSaved: true,
       });
@@ -295,21 +301,92 @@
 
       {#if suggestOpen}
         <div class="border-b border-plumage bg-surface-deep px-5 py-4">
-          <label
-            for={`suggest-topic-${message.id}`}
-            class="mb-1 block text-[11px] font-medium text-crown-ash"
-          >
-            Topic
-          </label>
-          <div class="flex gap-2">
-            <input
-              id={`suggest-topic-${message.id}`}
-              value={suggestedTopic}
-              oninput={(event) =>
-                (suggestedTopic = (event.currentTarget as HTMLInputElement)
-                  .value)}
-              class="min-w-0 flex-1 rounded-md border border-plumage bg-surface-hover px-3 py-2 text-[13px] text-cream outline-none focus:border-talon-gold"
-            />
+          <div class="grid gap-3 md:grid-cols-2">
+            <label class="block">
+              <span class="mb-1 block text-[11px] font-medium text-crown-ash"
+                >Theme</span
+              >
+              <input
+                value={inputValues.theme}
+                oninput={(event) =>
+                  (inputValues = {
+                    ...inputValues,
+                    theme: (event.currentTarget as HTMLInputElement).value,
+                  })}
+                class="w-full rounded-md border border-plumage bg-surface-hover px-3 py-2 text-[13px] text-cream outline-none focus:border-talon-gold"
+              />
+            </label>
+            <label class="block">
+              <span class="mb-1 block text-[11px] font-medium text-crown-ash"
+                >Language</span
+              >
+              <select
+                value={inputValues.language}
+                onchange={(event) =>
+                  (inputValues = {
+                    ...inputValues,
+                    language: (event.currentTarget as HTMLSelectElement)
+                      .value as LinkedInTemplateInputValues["language"],
+                  })}
+                class="w-full rounded-md border border-plumage bg-surface-hover px-3 py-2 text-[13px] text-cream outline-none focus:border-talon-gold"
+              >
+                <option value="pt-BR">Portuguese</option>
+                <option value="en-US">English</option>
+                <option value="es">Spanish</option>
+              </select>
+            </label>
+            <label class="block">
+              <span class="mb-1 block text-[11px] font-medium text-crown-ash"
+                >Tone</span
+              >
+              <select
+                value={inputValues.tone}
+                onchange={(event) =>
+                  (inputValues = {
+                    ...inputValues,
+                    tone: (event.currentTarget as HTMLSelectElement).value,
+                  })}
+                class="w-full rounded-md border border-plumage bg-surface-hover px-3 py-2 text-[13px] text-cream outline-none focus:border-talon-gold"
+              >
+                <option value="analytical, concise, and practical">
+                  Analytical
+                </option>
+                <option value="friendly and clear">Friendly</option>
+                <option value="executive and direct">Executive</option>
+              </select>
+            </label>
+            <label class="block">
+              <span class="mb-1 block text-[11px] font-medium text-crown-ash"
+                >Audience</span
+              >
+              <input
+                value={inputValues.audience}
+                oninput={(event) =>
+                  (inputValues = {
+                    ...inputValues,
+                    audience: (event.currentTarget as HTMLInputElement).value,
+                  })}
+                class="w-full rounded-md border border-plumage bg-surface-hover px-3 py-2 text-[13px] text-cream outline-none focus:border-talon-gold"
+              />
+            </label>
+            <label class="block md:col-span-2">
+              <span class="mb-1 block text-[11px] font-medium text-crown-ash"
+                >Topics to avoid</span
+              >
+              <textarea
+                value={inputValues.topicsToAvoid}
+                oninput={(event) =>
+                  (inputValues = {
+                    ...inputValues,
+                    topicsToAvoid: (event.currentTarget as HTMLTextAreaElement)
+                      .value,
+                  })}
+                rows="2"
+                class="w-full resize-none rounded-md border border-plumage bg-surface-hover px-3 py-2 text-[13px] text-cream outline-none focus:border-talon-gold"
+              ></textarea>
+            </label>
+          </div>
+          <div class="mt-3 flex justify-end">
             <button
               type="button"
               disabled={saving}

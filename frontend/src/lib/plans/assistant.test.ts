@@ -115,7 +115,13 @@ describe("applyLinkedInSuggestion", () => {
     );
     expect(JSON.parse(preferences.literalJson)).toMatchObject({
       topic: "sports",
+      language: "pt-BR",
       tone: "analytical, concise, and practical",
+    });
+    expect(JSON.parse(call.parameterValuesJson)).toMatchObject({
+      theme: "sports",
+      language: "pt-BR",
+      approval_mode: "require_approval",
     });
   });
 });
@@ -140,6 +146,7 @@ describe("editBinding", () => {
       behaviorPolicies: undefined,
       schedule: undefined,
       seedArtifacts: [],
+      parameterValuesJson: "{\"theme\":\"existing\"}",
     } as unknown as PlanConfiguration;
     await editBinding({
       tenantId: "t",
@@ -158,6 +165,7 @@ describe("editBinding", () => {
       call.slotBindings.find((b: SlotBinding) => b.stepKey === "a")
         ?.executorInstallationId,
     ).toBe("inst-new");
+    expect(call.parameterValuesJson).toBe("{\"theme\":\"existing\"}");
   });
 
   it("adds a binding for a step that was previously unbound", async () => {
