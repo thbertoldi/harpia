@@ -25,6 +25,16 @@ message ArtifactType {
   string description = 5;
 }
 
+enum ArtifactStatus {
+  ARTIFACT_STATUS_UNSPECIFIED = 0;
+  ARTIFACT_STATUS_GENERATED = 1;
+  ARTIFACT_STATUS_EDITED = 2;
+  ARTIFACT_STATUS_APPROVED = 3;
+  ARTIFACT_STATUS_REJECTED = 4;
+  ARTIFACT_STATUS_SUPERSEDED = 5;
+  ARTIFACT_STATUS_FAILED = 6;
+}
+
 message Artifact {
   string id = 1;
   string artifact_type_id = 2;
@@ -38,7 +48,15 @@ message Artifact {
   string plan_configuration_id = 10;
   string plan_execution_id = 11;
   string step_execution_id = 12;
-  string status = 13;
+  ArtifactStatus status = 13;
+}
+
+enum ArtifactVersionCreatedByKind {
+  ARTIFACT_VERSION_CREATED_BY_KIND_UNSPECIFIED = 0;
+  ARTIFACT_VERSION_CREATED_BY_KIND_SYSTEM = 1;
+  ARTIFACT_VERSION_CREATED_BY_KIND_AGENT = 2;
+  ARTIFACT_VERSION_CREATED_BY_KIND_INTEGRATION = 3;
+  ARTIFACT_VERSION_CREATED_BY_KIND_USER = 4;
 }
 
 message ArtifactVersion {
@@ -51,7 +69,7 @@ message ArtifactVersion {
   string source_step_execution_id = 7;
   string source_version_id = 8;
   string created_by_user_id = 9;
-  string created_by_kind = 10;
+  ArtifactVersionCreatedByKind created_by_kind = 10;
   string edit_summary = 11;
   string created_at = 12;
 }
@@ -162,10 +180,13 @@ message ListArtifactsResponse {
 message ListArtifactVersionsRequest {
   string tenant_id = 1;
   string artifact_id = 2;
+  int32 page_size = 3;
+  string page_token = 4;
 }
 
 message ListArtifactVersionsResponse {
   repeated ArtifactVersion versions = 1;
+  string next_page_token = 2;
 }
 
 message SaveTextArtifactVersionRequest {

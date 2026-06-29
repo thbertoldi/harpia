@@ -250,6 +250,16 @@ rpc SaveTextArtifactVersion(SaveTextArtifactVersionRequest) returns (SaveTextArt
 Extend `Artifact`:
 
 ```proto
+enum ArtifactStatus {
+  ARTIFACT_STATUS_UNSPECIFIED = 0;
+  ARTIFACT_STATUS_GENERATED = 1;
+  ARTIFACT_STATUS_EDITED = 2;
+  ARTIFACT_STATUS_APPROVED = 3;
+  ARTIFACT_STATUS_REJECTED = 4;
+  ARTIFACT_STATUS_SUPERSEDED = 5;
+  ARTIFACT_STATUS_FAILED = 6;
+}
+
 message Artifact {
   string id = 1;
   string artifact_type_id = 2;
@@ -263,13 +273,21 @@ message Artifact {
   string plan_configuration_id = 10;
   string plan_execution_id = 11;
   string step_execution_id = 12;
-  string status = 13;
+  ArtifactStatus status = 13;
 }
 ```
 
 Add messages:
 
 ```proto
+enum ArtifactVersionCreatedByKind {
+  ARTIFACT_VERSION_CREATED_BY_KIND_UNSPECIFIED = 0;
+  ARTIFACT_VERSION_CREATED_BY_KIND_SYSTEM = 1;
+  ARTIFACT_VERSION_CREATED_BY_KIND_AGENT = 2;
+  ARTIFACT_VERSION_CREATED_BY_KIND_INTEGRATION = 3;
+  ARTIFACT_VERSION_CREATED_BY_KIND_USER = 4;
+}
+
 message ArtifactVersion {
   string id = 1;
   string artifact_id = 2;
@@ -280,7 +298,7 @@ message ArtifactVersion {
   string source_step_execution_id = 7;
   string source_version_id = 8;
   string created_by_user_id = 9;
-  string created_by_kind = 10;
+  ArtifactVersionCreatedByKind created_by_kind = 10;
   string edit_summary = 11;
   string created_at = 12;
 }
@@ -302,10 +320,13 @@ message ListArtifactsResponse {
 message ListArtifactVersionsRequest {
   string tenant_id = 1;
   string artifact_id = 2;
+  int32 page_size = 3;
+  string page_token = 4;
 }
 
 message ListArtifactVersionsResponse {
   repeated ArtifactVersion versions = 1;
+  string next_page_token = 2;
 }
 
 message SaveTextArtifactVersionRequest {
@@ -1532,7 +1553,7 @@ type Artifact struct {
 	PlanConfigurationID uuid.NullUUID
 	PlanExecutionID     uuid.NullUUID
 	StepExecutionID     uuid.NullUUID
-	Status              string
+	Status              artifactsv1.ArtifactStatus
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
 }
@@ -1552,7 +1573,7 @@ type ArtifactVersion struct {
 	SourceStepExecutionID uuid.NullUUID
 	SourceVersionID       uuid.NullUUID
 	CreatedByUserID       uuid.NullUUID
-	CreatedByKind         string
+	CreatedByKind         artifactsv1.ArtifactVersionCreatedByKind
 	EditSummary           string
 	CreatedAt             time.Time
 }
@@ -1571,7 +1592,7 @@ Add repository methods:
 ```go
 ListArtifacts(ctx context.Context, tenantID uuid.UUID, filter ArtifactListFilter) ([]Artifact, error)
 CreateArtifactVersion(ctx context.Context, artifact *Artifact, version *ArtifactVersion) (*ArtifactVersion, *Artifact, error)
-ListArtifactVersions(ctx context.Context, tenantID, artifactID uuid.UUID) ([]ArtifactVersion, error)
+ListArtifactVersions(ctx context.Context, tenantID, artifactID uuid.UUID, limit, offset int) ([]ArtifactVersion, string, error)
 GetArtifactVersion(ctx context.Context, tenantID, artifactID, versionID uuid.UUID) (*ArtifactVersion, error)
 ```
 
@@ -1580,7 +1601,7 @@ GetArtifactVersion(ctx context.Context, tenantID, artifactID, versionID uuid.UUI
 1. Load current artifact row for update.
 2. Compute `version_number = max(version_number) + 1`.
 3. Insert `artifact_versions`.
-4. Update `artifacts.storage_uri`, `artifacts.content_hash`, `artifacts.current_version_id`, `artifacts.status = 'edited'`, `artifacts.updated_at = now()`.
+4. Update `artifacts.storage_uri`, `artifacts.content_hash`, `artifacts.current_version_id`, `artifacts.status` to `ARTIFACT_STATUS_EDITED`, and `artifacts.updated_at = now()`.
 5. Return both version and updated artifact.
 
 - [ ] **Step 4: Add payload paths**
@@ -1635,6 +1656,8 @@ Implement:
 - `ListArtifactVersions`
 - `SaveTextArtifactVersion`
 
+`ListArtifactVersions` must honor `PageSize` and `PageToken`, and return `NextPageToken` when more versions remain.
+
 `SaveTextArtifactVersion` flow:
 
 1. `identity.RequireTenant`.
@@ -1646,7 +1669,7 @@ Implement:
 7. Validate payload with `ValidatePayload`.
 8. Store payload using `ArtifactVersionObjectPath`.
 9. Parse `identity.RequestContextFrom(ctx).UserID` as UUID when available.
-10. Create artifact version with `CreatedByKind: "user"` and `EditSummary`.
+10. Create artifact version with `CreatedByKind: ARTIFACT_VERSION_CREATED_BY_KIND_USER` and `EditSummary`.
 11. Return updated artifact and version.
 
 - [ ] **Step 7: Make preview/payload version-aware**
@@ -1806,8 +1829,19 @@ export async function listArtifactVersions(
   tenantId: string,
   artifactId: string,
 ): Promise<ArtifactVersion[]> {
-  const response = await artifactClient.listArtifactVersions({ tenantId, artifactId });
-  return [...response.versions].sort((left, right) => right.versionNumber - left.versionNumber);
+  const versions: ArtifactVersion[] = [];
+  let pageToken = "";
+  do {
+    const response = await artifactClient.listArtifactVersions({
+      tenantId,
+      artifactId,
+      pageSize: 100,
+      pageToken,
+    });
+    versions.push(...response.versions);
+    pageToken = response.nextPageToken;
+  } while (pageToken);
+  return versions.sort((left, right) => right.versionNumber - left.versionNumber);
 }
 
 export async function saveTextArtifactVersion(args: {
@@ -1832,7 +1866,10 @@ export async function saveTextArtifactVersion(args: {
 Create `frontend/src/lib/artifacts/text.ts`:
 
 ```ts
-import type { Artifact } from "$lib/gen/harpia/artifacts/v1/artifacts_pb";
+import {
+  ArtifactStatus,
+  type Artifact,
+} from "$lib/gen/harpia/artifacts/v1/artifacts_pb";
 
 export interface EditableTextProjection {
   editable: boolean;
@@ -1852,6 +1889,25 @@ export function artifactTitle(artifact: Pick<Artifact, "artifactTypeKey" | "id">
       return "Publish confirmation";
     default:
       return artifact.id;
+  }
+}
+
+export function artifactStatusLabel(status: ArtifactStatus): string {
+  switch (status) {
+    case ArtifactStatus.ARTIFACT_STATUS_GENERATED:
+      return "generated";
+    case ArtifactStatus.ARTIFACT_STATUS_EDITED:
+      return "edited";
+    case ArtifactStatus.ARTIFACT_STATUS_APPROVED:
+      return "approved";
+    case ArtifactStatus.ARTIFACT_STATUS_REJECTED:
+      return "rejected";
+    case ArtifactStatus.ARTIFACT_STATUS_SUPERSEDED:
+      return "superseded";
+    case ArtifactStatus.ARTIFACT_STATUS_FAILED:
+      return "failed";
+    default:
+      return "unspecified";
   }
 }
 
@@ -1898,7 +1954,7 @@ Create `frontend/src/lib/components/artifacts/ArtifactCard.svelte`:
   import { resolve } from "$app/paths";
   import { Edit3, Eye } from "lucide-svelte";
   import ArtifactPreview from "$lib/components/ArtifactPreview.svelte";
-  import { artifactTitle } from "$lib/artifacts/text";
+  import { artifactStatusLabel, artifactTitle } from "$lib/artifacts/text";
   import type { Artifact } from "$lib/gen/harpia/artifacts/v1/artifacts_pb";
 
   let {
@@ -1923,7 +1979,7 @@ Create `frontend/src/lib/components/artifacts/ArtifactCard.svelte`:
     <div class="min-w-0">
       <h3 class="truncate font-heading text-sm font-semibold text-cream">{title}</h3>
       <p class="mt-0.5 truncate font-mono text-[10px] text-crown-ash-dark">
-        {artifact.status || "generated"}
+        {artifactStatusLabel(artifact.status)}
       </p>
     </div>
     <div class="flex gap-1">
