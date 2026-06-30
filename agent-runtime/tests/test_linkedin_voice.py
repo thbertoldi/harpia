@@ -9,13 +9,29 @@ from harpia_agents.agents.linkedin_voice import (
     linkedin_post_draft_to_mapping,
     run,
 )
-from harpia_agents.llm import LLMRegistry
+from harpia_agents.llm import ChatMessage, LLMRegistry
+from harpia_agents.llm.testing import FakeLLMProvider
 
 
 def _registry(response: str) -> LLMRegistry:
     return LLMRegistry.for_testing(
         model_ids=[MANIFEST.model_id],
         responses=[response],
+    )
+
+
+def _capturing_registry(captured: list[ChatMessage], response: str) -> LLMRegistry:
+    def transform(messages):
+        captured.extend(messages)
+        return response
+
+    return LLMRegistry(
+        [
+            FakeLLMProvider(
+                model_ids=[MANIFEST.model_id],
+                transformer=transform,
+            )
+        ]
     )
 
 
@@ -63,6 +79,23 @@ async def test_run_returns_linkedin_post_draft_from_text_draft() -> None:
     assert result.hook == "Weekly AI Governance Brief"
     assert result.hashtags
     assert len(result.text) <= 3000
+
+
+@pytest.mark.asyncio
+async def test_run_prompt_preserves_source_language() -> None:
+    captured: list[ChatMessage] = []
+
+    result = await run(
+        _text_draft(),
+        llm_registry=_capturing_registry(
+            captured,
+            "LinkedIn-ready: Weekly AI Governance Brief\n\nShort body",
+        ),
+    )
+
+    assert isinstance(result, LinkedInPostDraft)
+    system_message = next(message for message in captured if message.role == "system")
+    assert "source language" in system_message.content
 
 
 @pytest.mark.asyncio

@@ -2,13 +2,29 @@ import pytest
 from harpia.artifacts.v1.artifacts_pb2 import NewsArticle, NewsList, TextDraft
 
 from harpia_agents.agents.newsletter_writer import ElicitationRequest, MANIFEST, run
-from harpia_agents.llm import LLMRegistry
+from harpia_agents.llm import ChatMessage, LLMRegistry
+from harpia_agents.llm.testing import FakeLLMProvider
 
 
 def _registry(response: str = "## Draft\nGenerated content") -> LLMRegistry:
     return LLMRegistry.for_testing(
         model_ids=[MANIFEST.model_id],
         responses=[response],
+    )
+
+
+def _capturing_registry(captured: list[ChatMessage], response: str) -> LLMRegistry:
+    def transform(messages):
+        captured.extend(messages)
+        return response
+
+    return LLMRegistry(
+        [
+            FakeLLMProvider(
+                model_ids=[MANIFEST.model_id],
+                transformer=transform,
+            )
+        ]
     )
 
 
@@ -47,6 +63,33 @@ async def test_run_returns_text_draft_referencing_each_article() -> None:
     assert "Open-source model release" in result.body
     assert "[source 1]" in result.body
     assert "[source 2]" in result.body
+
+
+@pytest.mark.asyncio
+async def test_run_passes_topic_language_and_audience_to_llm_prompt() -> None:
+    captured: list[ChatMessage] = []
+
+    result = await run(
+        _news_list(),
+        llm_registry=_capturing_registry(captured, "## Draft\nEnglish content"),
+        elicitation_responses={
+            "tone": "analytical",
+            "topic": "retail growth",
+            "language": "en-US",
+            "audience": "founders",
+            "topics_to_avoid": "rumors",
+        },
+    )
+
+    assert isinstance(result, TextDraft)
+    assert result.title == "Newsletter Draft: 2 Stories"
+    system_message = next(message for message in captured if message.role == "system")
+    user_message = next(message for message in captured if message.role == "user")
+    assert "Respect the requested language exactly." in system_message.content
+    assert "topic=retail growth" in user_message.content
+    assert "language=en-US" in user_message.content
+    assert "audience=founders" in user_message.content
+    assert "topics_to_avoid=rumors" in user_message.content
 
 
 @pytest.mark.asyncio

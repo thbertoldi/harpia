@@ -129,7 +129,7 @@ def _extract_content_preferences(input_payload: dict) -> dict[str, str]:
         if str(artifact.get("input_name", "")).strip() != "harpia.internal.ContentPreferences":
             continue
         literal = _parse_literal_json(artifact.get("literal_json")) or {}
-        for key in ("tone", "topic", "topics_to_avoid"):
+        for key in ("tone", "topic", "language", "audience", "topics_to_avoid"):
             value = literal.get(key)
             if isinstance(value, str) and value.strip():
                 responses[key] = value.strip()
@@ -234,6 +234,7 @@ async def _run_agent_activity(input_payload: dict) -> dict:
         artifact_type_key=str(input_payload.get("output_artifact_type_key") or output_type),
         payload=payload,
         step_execution_id=str(input_payload.get("step_execution_id", "")),
+        plan_execution_id=str(input_payload.get("plan_execution_id", "")),
     )
     return {
         "status": "completed",

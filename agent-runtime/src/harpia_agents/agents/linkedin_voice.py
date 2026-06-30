@@ -97,7 +97,7 @@ def _build_graph(*, llm_registry: LLMRegistry, model_id: str):
                     role="system",
                     content=(
                         "You are a senior LinkedIn content specialist. Adapt the input into a polished "
-                        "LinkedIn post while preserving factual meaning."
+                        "LinkedIn post while preserving factual meaning and the source language."
                     ),
                 ),
                 ChatMessage(

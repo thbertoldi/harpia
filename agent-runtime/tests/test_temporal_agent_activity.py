@@ -26,6 +26,7 @@ class FakeArtifactClient:
         artifact_type_key: str,
         payload: dict[str, object],
         step_execution_id: str,
+        plan_execution_id: str,
     ) -> str:
         self.created.append(
             {
@@ -33,6 +34,7 @@ class FakeArtifactClient:
                 "artifact_type_key": artifact_type_key,
                 "payload": payload,
                 "step_execution_id": step_execution_id,
+                "plan_execution_id": plan_execution_id,
             }
         )
         return f"artifact-{len(self.created)}"
@@ -63,6 +65,10 @@ async def test_run_newsletter_agent_loads_news_artifact_and_persists_text_draft(
 
         assert kwargs["input_payload"].articles[0].title == "Final match"
         assert kwargs["elicitation_responses"]["tone"] == "analytical"
+        assert kwargs["elicitation_responses"]["topic"] == "retail growth"
+        assert kwargs["elicitation_responses"]["language"] == "en-US"
+        assert kwargs["elicitation_responses"]["audience"] == "founders"
+        assert kwargs["elicitation_responses"]["topics_to_avoid"] == "rumors"
         return TextDraft(title="Newsletter", body="Draft body")
 
     monkeypatch.setattr(worker, "ArtifactPayloadClient", lambda: fake)
@@ -71,6 +77,7 @@ async def test_run_newsletter_agent_loads_news_artifact_and_persists_text_draft(
     result = await worker.run_agent_activity(
         {
             "tenant_id": "00000000-0000-4000-8000-000000000001",
+            "plan_execution_id": "plan-execution-write",
             "step_execution_id": "step-write",
             "output_artifact_type_key": "harpia.artifacts.v1.TextDraft",
             "executor_installation_snapshot": {
@@ -80,7 +87,15 @@ async def test_run_newsletter_agent_loads_news_artifact_and_persists_text_draft(
                 {
                     "artifact_type_key": "harpia.internal.ContentPreferences",
                     "input_name": "harpia.internal.ContentPreferences",
-                    "literal_json": json.dumps({"tone": "analytical", "topic": "sports"}),
+                    "literal_json": json.dumps(
+                        {
+                            "tone": "analytical",
+                            "topic": "retail growth",
+                            "language": "en-US",
+                            "audience": "founders",
+                            "topics_to_avoid": "rumors",
+                        }
+                    ),
                 },
                 {
                     "artifact_type_key": "harpia.artifacts.v1.NewsList",
@@ -93,6 +108,7 @@ async def test_run_newsletter_agent_loads_news_artifact_and_persists_text_draft(
     assert result == {"status": "completed", "output_artifact_id": "artifact-1"}
     assert fake.created[0]["artifact_type_key"] == "harpia.artifacts.v1.TextDraft"
     assert fake.created[0]["payload"] == {"title": "Newsletter", "body": "Draft body"}
+    assert fake.created[0]["plan_execution_id"] == "plan-execution-write"
 
 
 @pytest.mark.asyncio

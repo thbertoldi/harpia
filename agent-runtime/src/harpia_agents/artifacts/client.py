@@ -73,6 +73,7 @@ class ArtifactPayloadClient:
         artifact_type_key: str,
         payload: dict[str, object],
         step_execution_id: str,
+        plan_execution_id: str,
     ) -> str:
         response = await self._client.create_artifact_with_payload(
             CreateArtifactWithPayloadRequest(
@@ -80,6 +81,7 @@ class ArtifactPayloadClient:
                 artifact_type_key=artifact_type_key,
                 payload_json=json.dumps(payload).encode("utf-8"),
                 step_execution_id=step_execution_id,
+                plan_execution_id=plan_execution_id,
             ),
             headers=self._headers(tenant_id),
             timeout_ms=self._timeout_ms,

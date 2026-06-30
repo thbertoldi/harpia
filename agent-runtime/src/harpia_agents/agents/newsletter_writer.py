@@ -84,8 +84,12 @@ def _render_body(
     )
 
 
-def _build_title(news_list: NewsList) -> str:
-    return f"Newsletter Draft: {len(news_list.articles)} Stories"
+def _build_title(news_list: NewsList, language: str) -> str:
+    if language == "en-US":
+        return f"Newsletter Draft: {len(news_list.articles)} Stories"
+    if language == "es":
+        return f"Borrador de newsletter: {len(news_list.articles)} historias"
+    return f"Rascunho de newsletter: {len(news_list.articles)} noticias"
 
 
 def parse_news_list_payload(input_news_list: NewsList | Mapping[str, object]) -> NewsList:
@@ -119,6 +123,9 @@ def _build_graph(*, llm_registry: LLMRegistry, model_id: str):
                 )
             }
 
+        topic = state.elicitation_responses.get("topic", "").strip() or "the selected theme"
+        language = state.elicitation_responses.get("language", "").strip() or "pt-BR"
+        audience = state.elicitation_responses.get("audience", "").strip() or "the target audience"
         topics_to_avoid = _topics_to_avoid(state.elicitation_responses.get("topics_to_avoid"))
         article_lines = [
             f"- title={article.title}; summary={article.summary}; url={article.url}; source={article.source}"
@@ -131,12 +138,15 @@ def _build_graph(*, llm_registry: LLMRegistry, model_id: str):
                     role="system",
                     content=(
                         "You are a senior newsletter writer. Produce a concise markdown newsletter body "
-                        "that can be merged with a sources appendix."
+                        "that can be merged with a sources appendix. Respect the requested language exactly."
                     ),
                 ),
                 ChatMessage(
                     role="user",
                     content=(
+                        f"topic={topic}\n"
+                        f"language={language}\n"
+                        f"audience={audience}\n"
                         f"tone={tone}\n"
                         f"topics_to_avoid={','.join(topics_to_avoid) if topics_to_avoid else 'none'}\n"
                         "articles:\n"
@@ -147,7 +157,7 @@ def _build_graph(*, llm_registry: LLMRegistry, model_id: str):
         )
         llm_body = llm_result.content.strip() or "## Weekly News Brief"
         draft = TextDraft(
-            title=_build_title(state.news_list),
+            title=_build_title(state.news_list, language),
             body=_render_body(llm_body=llm_body, news_list=state.news_list),
         )
         _validate_text_draft_schema(draft)
