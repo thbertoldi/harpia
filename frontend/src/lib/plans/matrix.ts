@@ -40,6 +40,14 @@ export interface MatrixPayload {
   rows: MatrixRow[];
 }
 
+export interface MatrixHydrationInput {
+  slotBindings: Array<{
+    stepKey: string;
+    executorInstallationId: string;
+  }>;
+  policiesSet: boolean;
+}
+
 /**
  * Parse the matrix `ASSISTANT_PROMPT` payload.
  *
@@ -167,4 +175,25 @@ export function isMatrixComplete(payload: MatrixPayload): boolean {
   if (!payload.policies_set) return false;
   if (payload.rows.length === 0) return false;
   return payload.rows.every((row) => row.current_executor_id !== "");
+}
+
+export function hydrateMatrixPayload(
+  payload: MatrixPayload,
+  input: MatrixHydrationInput,
+): MatrixPayload {
+  const bindings = new Map(
+    input.slotBindings.map((binding) => [
+      binding.stepKey,
+      binding.executorInstallationId,
+    ]),
+  );
+  return {
+    ...payload,
+    policies_set: input.policiesSet,
+    rows: payload.rows.map((row) => ({
+      ...row,
+      current_executor_id:
+        bindings.get(row.step_key) ?? row.current_executor_id,
+    })),
+  };
 }

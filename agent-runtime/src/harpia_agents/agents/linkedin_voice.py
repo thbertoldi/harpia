@@ -97,7 +97,9 @@ def _build_graph(*, llm_registry: LLMRegistry, model_id: str):
                     role="system",
                     content=(
                         "You are a senior LinkedIn content specialist. Adapt the input into a polished "
-                        "LinkedIn post while preserving factual meaning and the source language."
+                        "LinkedIn post while preserving factual meaning. Preserve the draft's requested "
+                        "output language; if the body contains a Target language line, that requested "
+                        "output language overrides the language of source article titles and summaries."
                     ),
                 ),
                 ChatMessage(

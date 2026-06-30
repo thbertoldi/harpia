@@ -1,4 +1,7 @@
+import { create } from "@bufbuild/protobuf";
 import {
+  PreviewArtifactRequestSchema,
+  type PreviewArtifactRequest,
   type PreviewArtifactResponse,
 } from "$lib/gen/harpia/artifacts/v1/artifacts_pb";
 import { artifactClient } from "$lib/rpc";
@@ -14,16 +17,27 @@ export type FormattedArtifactPreview = {
   };
 };
 
+export function buildPreviewArtifactRequest(
+  tenantId: string,
+  artifactId: string,
+  artifactVersionId = "",
+): PreviewArtifactRequest {
+  const trimmedVersionId = artifactVersionId.trim();
+  return create(PreviewArtifactRequestSchema, {
+    tenantId,
+    artifactId,
+    artifactVersionId: trimmedVersionId || undefined,
+  });
+}
+
 export async function fetchArtifactPreview(
   tenantId: string,
   artifactId: string,
   artifactVersionId = "",
 ): Promise<PreviewArtifactResponse> {
-  return artifactClient.previewArtifact({
-    tenantId,
-    artifactId,
-    artifactVersionId,
-  });
+  return artifactClient.previewArtifact(
+    buildPreviewArtifactRequest(tenantId, artifactId, artifactVersionId),
+  );
 }
 
 export function formatArtifactPreview(

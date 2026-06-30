@@ -11,6 +11,7 @@
   import {
     parseMatrixPayload,
     computeRunCostBRL,
+    hydrateMatrixPayload,
     isMatrixComplete,
     type MatrixPayload,
     type MatrixOption,
@@ -81,6 +82,12 @@
         );
         if (controller.signal.aborted || !cfgRes.planConfiguration) return;
         configuration = cfgRes.planConfiguration;
+        if (payload) {
+          payload = hydrateMatrixPayload(payload, {
+            slotBindings: cfgRes.planConfiguration.slotBindings,
+            policiesSet: !!cfgRes.planConfiguration.behaviorPolicies,
+          });
+        }
         inputValues = linkedInInputValuesFromParameterValuesJson(
           cfgRes.planConfiguration.parameterValuesJson,
         );

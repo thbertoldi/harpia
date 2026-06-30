@@ -39,6 +39,7 @@ def _text_draft() -> TextDraft:
     return TextDraft(
         title="Weekly AI Governance Brief",
         body=(
+            "Target language: English (United States).\n\n"
             "## Overview\n"
             "Regulators published a new AI governance framework this week.\n\n"
             "## Highlights\n"
@@ -95,7 +96,9 @@ async def test_run_prompt_preserves_source_language() -> None:
 
     assert isinstance(result, LinkedInPostDraft)
     system_message = next(message for message in captured if message.role == "system")
-    assert "source language" in system_message.content
+    user_message = next(message for message in captured if message.role == "user")
+    assert "requested output language" in system_message.content
+    assert "Target language" in user_message.content
 
 
 @pytest.mark.asyncio

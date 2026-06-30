@@ -86,8 +86,11 @@ async def test_run_passes_topic_language_and_audience_to_llm_prompt() -> None:
     system_message = next(message for message in captured if message.role == "system")
     user_message = next(message for message in captured if message.role == "user")
     assert "Respect the requested language exactly." in system_message.content
+    assert "overrides the source article language" in system_message.content
     assert "topic=retail growth" in user_message.content
     assert "language=en-US" in user_message.content
+    assert "English (United States)" in user_message.content
+    assert "Write every generated paragraph" in user_message.content
     assert "audience=founders" in user_message.content
     assert "topics_to_avoid=rumors" in user_message.content
 

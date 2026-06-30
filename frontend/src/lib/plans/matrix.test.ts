@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   computeRunCostBRL,
+  hydrateMatrixPayload,
   isMatrixComplete,
   parseMatrixPayload,
   type MatrixPayload,
@@ -187,5 +188,38 @@ describe("isMatrixComplete", () => {
         }),
       ),
     ).toBe(true);
+  });
+});
+
+describe("hydrateMatrixPayload", () => {
+  it("uses saved slot bindings and behavior policies to refresh stale prompt payloads", () => {
+    const hydrated = hydrateMatrixPayload(
+      payload({
+        policies_set: false,
+        rows: [
+          row({ step_key: "fetch-news", current_executor_id: "" }),
+          row({ step_key: "write-draft", current_executor_id: "" }),
+        ],
+      }),
+      {
+        slotBindings: [
+          {
+            stepKey: "fetch-news",
+            executorInstallationId: "rss",
+          },
+          {
+            stepKey: "write-draft",
+            executorInstallationId: "writer",
+          },
+        ],
+        policiesSet: true,
+      },
+    );
+
+    expect(hydrated.policies_set).toBe(true);
+    expect(hydrated.rows.map((r) => r.current_executor_id)).toEqual([
+      "rss",
+      "writer",
+    ]);
   });
 });

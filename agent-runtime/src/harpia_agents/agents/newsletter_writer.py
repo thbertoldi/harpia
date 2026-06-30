@@ -66,6 +66,7 @@ def _render_body(
     *,
     llm_body: str,
     news_list: NewsList,
+    target_language: str,
 ) -> str:
     highlights = []
     sources = []
@@ -76,6 +77,7 @@ def _render_body(
         sources.append(f"- [{idx}] [{article.title}]({article.url}) - {article.source}")
 
     return (
+        f"Target language: {target_language}\n\n"
         f"{llm_body}\n\n"
         "### Highlights\n"
         f"{chr(10).join(highlights)}\n\n"
@@ -90,6 +92,24 @@ def _build_title(news_list: NewsList, language: str) -> str:
     if language == "es":
         return f"Borrador de newsletter: {len(news_list.articles)} historias"
     return f"Rascunho de newsletter: {len(news_list.articles)} noticias"
+
+
+def _language_instruction(language: str) -> str:
+    if language == "en-US":
+        return (
+            "English (United States). Write every generated paragraph, heading, "
+            "summary, and recommendation in English, even if source articles are "
+            "in Portuguese or another language."
+        )
+    if language == "es":
+        return (
+            "Spanish. Write every generated paragraph, heading, summary, and "
+            "recommendation in Spanish, even if source articles are in another language."
+        )
+    return (
+        "Brazilian Portuguese. Write every generated paragraph, heading, summary, "
+        "and recommendation in Brazilian Portuguese."
+    )
 
 
 def parse_news_list_payload(input_news_list: NewsList | Mapping[str, object]) -> NewsList:
@@ -125,6 +145,7 @@ def _build_graph(*, llm_registry: LLMRegistry, model_id: str):
 
         topic = state.elicitation_responses.get("topic", "").strip() or "the selected theme"
         language = state.elicitation_responses.get("language", "").strip() or "pt-BR"
+        language_instruction = _language_instruction(language)
         audience = state.elicitation_responses.get("audience", "").strip() or "the target audience"
         topics_to_avoid = _topics_to_avoid(state.elicitation_responses.get("topics_to_avoid"))
         article_lines = [
@@ -138,7 +159,8 @@ def _build_graph(*, llm_registry: LLMRegistry, model_id: str):
                     role="system",
                     content=(
                         "You are a senior newsletter writer. Produce a concise markdown newsletter body "
-                        "that can be merged with a sources appendix. Respect the requested language exactly."
+                        "that can be merged with a sources appendix. Respect the requested language exactly. "
+                        "The requested output language overrides the source article language."
                     ),
                 ),
                 ChatMessage(
@@ -146,6 +168,7 @@ def _build_graph(*, llm_registry: LLMRegistry, model_id: str):
                     content=(
                         f"topic={topic}\n"
                         f"language={language}\n"
+                        f"output_language={language_instruction}\n"
                         f"audience={audience}\n"
                         f"tone={tone}\n"
                         f"topics_to_avoid={','.join(topics_to_avoid) if topics_to_avoid else 'none'}\n"
@@ -158,7 +181,11 @@ def _build_graph(*, llm_registry: LLMRegistry, model_id: str):
         llm_body = llm_result.content.strip() or "## Weekly News Brief"
         draft = TextDraft(
             title=_build_title(state.news_list, language),
-            body=_render_body(llm_body=llm_body, news_list=state.news_list),
+            body=_render_body(
+                llm_body=llm_body,
+                news_list=state.news_list,
+                target_language=language_instruction,
+            ),
         )
         _validate_text_draft_schema(draft)
         return {"draft": draft}

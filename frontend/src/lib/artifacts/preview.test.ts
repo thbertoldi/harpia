@@ -5,7 +5,7 @@ import {
   PreviewArtifactResponseSchema,
   type PreviewArtifactResponse,
 } from "$lib/gen/harpia/artifacts/v1/artifacts_pb";
-import { formatArtifactPreview } from "./preview";
+import { buildPreviewArtifactRequest, formatArtifactPreview } from "./preview";
 
 function makePreview(
   preview: PreviewArtifactResponse["preview"],
@@ -14,6 +14,16 @@ function makePreview(
 }
 
 describe("formatArtifactPreview", () => {
+  it("omits empty artifact version ids from preview requests", () => {
+    expect(
+      "artifactVersionId" in
+        buildPreviewArtifactRequest("tenant-1", "artifact-1", ""),
+    ).toBe(false);
+    expect(
+      buildPreviewArtifactRequest("tenant-1", "artifact-1", "version-1"),
+    ).toMatchObject({ artifactVersionId: "version-1" });
+  });
+
   it("formats text previews", () => {
     const formatted = formatArtifactPreview(
       makePreview({ case: "textPreview", value: "# Title\n\nBody" }),
