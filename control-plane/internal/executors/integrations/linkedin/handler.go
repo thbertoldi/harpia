@@ -112,6 +112,7 @@ func (h *Handler) createConfirmation(
 	outputArtifactID, err := h.artifacts.CreateValidatedPayload(ctx, runtime.CreateArtifactRequest{
 		TenantID:              req.TenantID,
 		OutputArtifactTypeKey: req.OutputArtifactTypeKey,
+		PlanExecutionID:       req.PlanExecutionID,
 		StepExecutionID:       req.StepExecutionID,
 		Payload:               payload,
 	})

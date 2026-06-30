@@ -37,6 +37,30 @@ func BuildPreview(typeKey string, payload []byte) (*artifactsv1.PreviewArtifactR
 	}
 }
 
+func EditableTextPayload(typeKey string, currentPayload []byte, title, text string) ([]byte, error) {
+	switch typeKey {
+	case TypeKeyTextDraft:
+		var draft artifactsv1.TextDraft
+		if err := protojson.Unmarshal(currentPayload, &draft); err != nil {
+			return nil, fmt.Errorf("%w: %v", ErrInvalidPayload, err)
+		}
+		if strings.TrimSpace(title) != "" {
+			draft.Title = strings.TrimSpace(title)
+		}
+		draft.Body = text
+		return protojson.Marshal(&draft)
+	case TypeKeyLinkedInPostDraft:
+		var draft artifactsv1.LinkedInPostDraft
+		if err := protojson.Unmarshal(currentPayload, &draft); err != nil {
+			return nil, fmt.Errorf("%w: %v", ErrInvalidPayload, err)
+		}
+		draft.Text = text
+		return protojson.Marshal(&draft)
+	default:
+		return nil, fmt.Errorf("%w: artifact type %q is not editable text", ErrInvalidPayload, typeKey)
+	}
+}
+
 func buildTextDraftPreview(payload []byte) (*artifactsv1.PreviewArtifactResponse, error) {
 	msg := &artifactsv1.TextDraft{}
 	if err := protojson.Unmarshal(payload, msg); err != nil {

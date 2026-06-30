@@ -2,6 +2,8 @@ package artifacts
 
 import (
 	"context"
+	"sort"
+	"strconv"
 	"testing"
 	"time"
 
@@ -16,6 +18,7 @@ import (
 type mockRepository struct {
 	artifacts map[uuid.UUID]*Artifact
 	types     map[uuid.UUID]*ArtifactType
+	versions  map[uuid.UUID][]*ArtifactVersion
 }
 
 func (m *mockRepository) RegisterType(_ context.Context, artifactType *ArtifactType) (*ArtifactType, error) {
@@ -65,6 +68,115 @@ func (m *mockRepository) GetArtifact(_ context.Context, tenantID, artifactID uui
 		return nil, pgx.ErrNoRows
 	}
 	return artifact, nil
+}
+
+func (m *mockRepository) ListArtifacts(_ context.Context, tenantID uuid.UUID, filter ArtifactListFilter) ([]Artifact, error) {
+	var result []Artifact
+	for _, artifact := range m.artifacts {
+		if artifact.TenantID != tenantID {
+			continue
+		}
+		if filter.PlanConfigurationID != nil &&
+			(!artifact.PlanConfigurationID.Valid || artifact.PlanConfigurationID.UUID != *filter.PlanConfigurationID) {
+			continue
+		}
+		if filter.PlanExecutionID != nil &&
+			(!artifact.PlanExecutionID.Valid || artifact.PlanExecutionID.UUID != *filter.PlanExecutionID) {
+			continue
+		}
+		if filter.ArtifactTypeKey != "" {
+			typeKey := artifact.ArtifactTypeKey
+			if typeKey == "" {
+				if artifactType, ok := m.types[artifact.ArtifactTypeID]; ok {
+					typeKey = artifactType.Key
+				}
+			}
+			if typeKey != filter.ArtifactTypeKey {
+				continue
+			}
+		}
+		result = append(result, *artifact)
+	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].UpdatedAt.After(result[j].UpdatedAt)
+	})
+	start := min(filter.Offset, len(result))
+	end := min(start+filter.Limit, len(result))
+	return result[start:end], nil
+}
+
+func (m *mockRepository) CreateArtifactVersion(_ context.Context, artifact *Artifact, version *ArtifactVersion) (*ArtifactVersion, *Artifact, error) {
+	if m.artifacts == nil {
+		m.artifacts = make(map[uuid.UUID]*Artifact)
+	}
+	if m.versions == nil {
+		m.versions = make(map[uuid.UUID][]*ArtifactVersion)
+	}
+	current, ok := m.artifacts[artifact.ID]
+	if !ok || current.TenantID != artifact.TenantID {
+		return nil, nil, pgx.ErrNoRows
+	}
+
+	created := *version
+	if created.ID == uuid.Nil {
+		created.ID = uuid.New()
+	}
+	created.ArtifactID = artifact.ID
+	created.TenantID = artifact.TenantID
+	if created.VersionNumber == 0 {
+		created.VersionNumber = int32(len(m.versions[artifact.ID]) + 1)
+	}
+	if created.CreatedAt.IsZero() {
+		created.CreatedAt = time.Now().UTC()
+	}
+	m.versions[artifact.ID] = append(m.versions[artifact.ID], &created)
+
+	updated := *current
+	updated.StorageURI = created.StorageURI
+	updated.ContentHash = created.ContentHash
+	updated.CurrentVersionID = uuid.NullUUID{UUID: created.ID, Valid: true}
+	updated.Status = artifactsv1.ArtifactStatus_ARTIFACT_STATUS_EDITED
+	updated.UpdatedAt = created.CreatedAt
+	m.artifacts[artifact.ID] = &updated
+	return &created, &updated, nil
+}
+
+func (m *mockRepository) ListArtifactVersions(_ context.Context, tenantID, artifactID uuid.UUID, limit, offset int) ([]ArtifactVersion, string, error) {
+	artifact, ok := m.artifacts[artifactID]
+	if !ok || artifact.TenantID != tenantID {
+		return nil, "", pgx.ErrNoRows
+	}
+
+	versions := append([]*ArtifactVersion(nil), m.versions[artifactID]...)
+	sort.Slice(versions, func(i, j int) bool {
+		return versions[i].VersionNumber > versions[j].VersionNumber
+	})
+
+	start := min(offset, len(versions))
+	end := min(start+limit, len(versions))
+	result := make([]ArtifactVersion, 0, end-start)
+	for _, version := range versions[start:end] {
+		result = append(result, *version)
+	}
+
+	nextToken := ""
+	if end < len(versions) {
+		nextToken = strconv.Itoa(end)
+	}
+	return result, nextToken, nil
+}
+
+func (m *mockRepository) GetArtifactVersion(_ context.Context, tenantID, artifactID, versionID uuid.UUID) (*ArtifactVersion, error) {
+	artifact, ok := m.artifacts[artifactID]
+	if !ok || artifact.TenantID != tenantID {
+		return nil, pgx.ErrNoRows
+	}
+	for _, version := range m.versions[artifactID] {
+		if version.ID == versionID && version.TenantID == tenantID {
+			return version, nil
+		}
+	}
+	return nil, pgx.ErrNoRows
 }
 
 func tenantContext(tenantID uuid.UUID) context.Context {

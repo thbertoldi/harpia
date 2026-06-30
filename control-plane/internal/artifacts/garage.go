@@ -139,6 +139,10 @@ func ArtifactObjectPath(artifactID uuid.UUID, stepExecutionID string) string {
 	return path.Join("artifacts", artifactID.String()+".json")
 }
 
+func ArtifactVersionObjectPath(artifactID uuid.UUID, versionNumber int32) string {
+	return path.Join("artifacts", artifactID.String(), fmt.Sprintf("versions/%d.json", versionNumber))
+}
+
 func formatStorageURI(bucket, key string) string {
 	return "s3://" + bucket + "/" + key
 }

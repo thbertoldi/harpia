@@ -27,6 +27,7 @@ type InstallationSnapshot struct {
 
 type IntegrationExecutionRequest struct {
 	TenantID              uuid.UUID
+	PlanExecutionID       string
 	StepExecutionID       string
 	PlanStepKey           string
 	InputArtifacts        []InputArtifactRef

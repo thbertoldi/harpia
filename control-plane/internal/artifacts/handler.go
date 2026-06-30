@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -25,6 +27,10 @@ type RepositoryAPI interface {
 	GetTypeByKey(ctx context.Context, key string) (*ArtifactType, error)
 	CreateArtifact(ctx context.Context, artifact *Artifact) (*Artifact, error)
 	GetArtifact(ctx context.Context, tenantID, artifactID uuid.UUID) (*Artifact, error)
+	ListArtifacts(ctx context.Context, tenantID uuid.UUID, filter ArtifactListFilter) ([]Artifact, error)
+	CreateArtifactVersion(ctx context.Context, artifact *Artifact, version *ArtifactVersion) (*ArtifactVersion, *Artifact, error)
+	ListArtifactVersions(ctx context.Context, tenantID, artifactID uuid.UUID, limit, offset int) ([]ArtifactVersion, string, error)
+	GetArtifactVersion(ctx context.Context, tenantID, artifactID, versionID uuid.UUID) (*ArtifactVersion, error)
 }
 
 func NewHandler(repo RepositoryAPI, store PayloadStore) (*Handler, error) {
@@ -152,23 +158,35 @@ func (h *Handler) CreateArtifactWithPayload(ctx context.Context, req *connect.Re
 	}
 
 	artifactID := uuid.New()
-	stepExecutionID := ""
-	if req.Msg.StepExecutionId != nil {
-		stepExecutionID = *req.Msg.StepExecutionId
+	stepExecutionIDRaw := strings.TrimSpace(req.Msg.GetStepExecutionId())
+	stepExecutionID, err := optionalUUID(req.Msg.StepExecutionId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("step_execution_id: %w", err))
+	}
+	planConfigurationID, err := optionalUUID(req.Msg.PlanConfigurationId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("plan_configuration_id: %w", err))
+	}
+	planExecutionID, err := optionalUUID(req.Msg.PlanExecutionId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("plan_execution_id: %w", err))
 	}
 
-	objectPath := ArtifactObjectPath(artifactID, stepExecutionID)
+	objectPath := ArtifactObjectPath(artifactID, stepExecutionIDRaw)
 	storageURI, err := h.store.Put(ctx, objectPath, req.Msg.PayloadJson)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
 	created, err := h.repo.CreateArtifact(ctx, &Artifact{
-		ID:             artifactID,
-		TenantID:       tenantID,
-		ArtifactTypeID: artifactType.ID,
-		StorageURI:     storageURI,
-		ContentHash:    ContentHash(req.Msg.PayloadJson),
+		ID:                  artifactID,
+		TenantID:            tenantID,
+		ArtifactTypeID:      artifactType.ID,
+		StorageURI:          storageURI,
+		ContentHash:         ContentHash(req.Msg.PayloadJson),
+		PlanConfigurationID: planConfigurationID,
+		PlanExecutionID:     planExecutionID,
+		StepExecutionID:     stepExecutionID,
 	})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
@@ -203,6 +221,189 @@ func (h *Handler) GetArtifact(ctx context.Context, req *connect.Request[artifact
 	}), nil
 }
 
+func (h *Handler) ListArtifacts(ctx context.Context, req *connect.Request[artifactsv1.ListArtifactsRequest], stream *connect.ServerStream[artifactsv1.ListArtifactsResponse]) error {
+	tenantID, err := identity.RequireTenant(ctx, req.Msg.TenantId)
+	if err != nil {
+		return err
+	}
+	limit, offset, err := pageParams(req.Msg.PageSize, req.Msg.PageToken)
+	if err != nil {
+		return connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	filter := ArtifactListFilter{
+		Limit:           limit + 1,
+		Offset:          offset,
+		ArtifactTypeKey: strings.TrimSpace(req.Msg.GetArtifactTypeKey()),
+	}
+	if req.Msg.PlanConfigurationId != nil {
+		parsed, err := parseOptionalUUIDValue(req.Msg.GetPlanConfigurationId())
+		if err != nil {
+			return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("plan_configuration_id: %w", err))
+		}
+		if parsed != nil {
+			filter.PlanConfigurationID = parsed
+		}
+	}
+	if req.Msg.PlanExecutionId != nil {
+		parsed, err := parseOptionalUUIDValue(req.Msg.GetPlanExecutionId())
+		if err != nil {
+			return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("plan_execution_id: %w", err))
+		}
+		if parsed != nil {
+			filter.PlanExecutionID = parsed
+		}
+	}
+
+	items, err := h.repo.ListArtifacts(ctx, tenantID, filter)
+	if err != nil {
+		return connect.NewError(connect.CodeInternal, err)
+	}
+	nextPageToken := ""
+	if len(items) > limit {
+		items = items[:limit]
+		nextPageToken = strconv.Itoa(offset + limit)
+	}
+
+	resp := &artifactsv1.ListArtifactsResponse{
+		Artifacts:     make([]*artifactsv1.Artifact, 0, len(items)),
+		NextPageToken: nextPageToken,
+	}
+	for i := range items {
+		resp.Artifacts = append(resp.Artifacts, artifactToProto(&items[i]))
+	}
+	return stream.Send(resp)
+}
+
+func (h *Handler) ListArtifactVersions(ctx context.Context, req *connect.Request[artifactsv1.ListArtifactVersionsRequest]) (*connect.Response[artifactsv1.ListArtifactVersionsResponse], error) {
+	tenantID, err := identity.RequireTenant(ctx, req.Msg.TenantId)
+	if err != nil {
+		return nil, err
+	}
+	artifactID, err := uuid.Parse(req.Msg.ArtifactId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	limit, offset, err := pageParams(req.Msg.PageSize, req.Msg.PageToken)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	versions, nextToken, err := h.repo.ListArtifactVersions(ctx, tenantID, artifactID, limit, offset)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, err)
+		}
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	resp := &artifactsv1.ListArtifactVersionsResponse{
+		Versions:      make([]*artifactsv1.ArtifactVersion, 0, len(versions)),
+		NextPageToken: nextToken,
+	}
+	for i := range versions {
+		resp.Versions = append(resp.Versions, artifactVersionToProto(&versions[i]))
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (h *Handler) SaveTextArtifactVersion(ctx context.Context, req *connect.Request[artifactsv1.SaveTextArtifactVersionRequest]) (*connect.Response[artifactsv1.SaveTextArtifactVersionResponse], error) {
+	tenantID, err := identity.RequireTenant(ctx, req.Msg.TenantId)
+	if err != nil {
+		return nil, err
+	}
+	artifactID, err := uuid.Parse(req.Msg.ArtifactId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	artifact, err := h.repo.GetArtifact(ctx, tenantID, artifactID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, err)
+		}
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	if req.Msg.ExpectedContentHash != artifact.ContentHash {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("artifact content hash changed"))
+	}
+
+	artifactType, err := h.repo.GetTypeByID(ctx, artifact.ArtifactTypeID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("artifact type not found: %w", err))
+		}
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	currentPayload, err := h.store.Get(ctx, artifact.StorageURI)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	editedPayload, err := EditableTextPayload(artifactType.Key, currentPayload, req.Msg.Title, req.Msg.Text)
+	if err != nil {
+		if errors.Is(err, ErrInvalidPayload) {
+			return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		}
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	if err := ValidatePayload(artifactType.Key, editedPayload); err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	nextVersionNumber := int32(1)
+	versions, _, err := h.repo.ListArtifactVersions(ctx, tenantID, artifactID, 1, 0)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, err)
+		}
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	if len(versions) > 0 {
+		nextVersionNumber = versions[0].VersionNumber + 1
+	}
+
+	storageURI, err := h.store.Put(ctx, ArtifactVersionObjectPath(artifactID, nextVersionNumber), editedPayload)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	version := &ArtifactVersion{
+		ID:              uuid.New(),
+		ArtifactID:      artifactID,
+		TenantID:        tenantID,
+		VersionNumber:   nextVersionNumber,
+		StorageURI:      storageURI,
+		ContentHash:     ContentHash(editedPayload),
+		SourceVersionID: artifact.CurrentVersionID,
+		CreatedByUserID: userIDFromContext(ctx),
+		CreatedByKind:   artifactsv1.ArtifactVersionCreatedByKind_ARTIFACT_VERSION_CREATED_BY_KIND_USER,
+		EditSummary:     strings.TrimSpace(req.Msg.EditSummary),
+	}
+	if artifact.PlanExecutionID.Valid {
+		version.SourcePlanExecutionID = artifact.PlanExecutionID
+	}
+	if artifact.StepExecutionID.Valid {
+		version.SourceStepExecutionID = artifact.StepExecutionID
+	}
+
+	createdVersion, updatedArtifact, err := h.repo.CreateArtifactVersion(ctx, artifact, version)
+	if err != nil {
+		if errors.Is(err, ErrContentHashConflict) {
+			return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+		}
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, err)
+		}
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	return connect.NewResponse(&artifactsv1.SaveTextArtifactVersionResponse{
+		Artifact: artifactToProto(updatedArtifact),
+		Version:  artifactVersionToProto(createdVersion),
+	}), nil
+}
+
 func (h *Handler) GetArtifactPayload(ctx context.Context, req *connect.Request[artifactsv1.GetArtifactPayloadRequest]) (*connect.Response[artifactsv1.GetArtifactPayloadResponse], error) {
 	tenantID, err := identity.RequireTenant(ctx, req.Msg.TenantId)
 	if err != nil {
@@ -222,14 +423,32 @@ func (h *Handler) GetArtifactPayload(ctx context.Context, req *connect.Request[a
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	payload, err := h.store.Get(ctx, artifact.StorageURI)
+	storageURI := artifact.StorageURI
+	contentHash := artifact.ContentHash
+	if req.Msg.ArtifactVersionId != nil {
+		versionID, err := uuid.Parse(req.Msg.GetArtifactVersionId())
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		}
+		version, err := h.repo.GetArtifactVersion(ctx, tenantID, artifactID, versionID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil, connect.NewError(connect.CodeNotFound, err)
+			}
+			return nil, connect.NewError(connect.CodeInternal, err)
+		}
+		storageURI = version.StorageURI
+		contentHash = version.ContentHash
+	}
+
+	payload, err := h.store.Get(ctx, storageURI)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
 	return connect.NewResponse(&artifactsv1.GetArtifactPayloadResponse{
 		PayloadJson: payload,
-		ContentHash: artifact.ContentHash,
+		ContentHash: contentHash,
 	}), nil
 }
 
@@ -260,7 +479,23 @@ func (h *Handler) PreviewArtifact(ctx context.Context, req *connect.Request[arti
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	payload, err := h.store.Get(ctx, artifact.StorageURI)
+	storageURI := artifact.StorageURI
+	if req.Msg.ArtifactVersionId != nil {
+		versionID, err := uuid.Parse(req.Msg.GetArtifactVersionId())
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		}
+		version, err := h.repo.GetArtifactVersion(ctx, tenantID, artifactID, versionID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil, connect.NewError(connect.CodeNotFound, err)
+			}
+			return nil, connect.NewError(connect.CodeInternal, err)
+		}
+		storageURI = version.StorageURI
+	}
+
+	payload, err := h.store.Get(ctx, storageURI)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -316,12 +551,107 @@ func typeToProto(t *ArtifactType) *artifactsv1.ArtifactType {
 }
 
 func artifactToProto(a *Artifact) *artifactsv1.Artifact {
-	return &artifactsv1.Artifact{
-		Id:             a.ID.String(),
-		ArtifactTypeId: a.ArtifactTypeID.String(),
-		TenantId:       a.TenantID.String(),
-		StorageUri:     a.StorageURI,
-		ContentHash:    a.ContentHash,
-		CreatedAt:      a.CreatedAt.Format(time.RFC3339),
+	status := a.Status
+	if status == artifactsv1.ArtifactStatus_ARTIFACT_STATUS_UNSPECIFIED {
+		status = artifactsv1.ArtifactStatus_ARTIFACT_STATUS_GENERATED
 	}
+	return &artifactsv1.Artifact{
+		Id:                  a.ID.String(),
+		ArtifactTypeId:      a.ArtifactTypeID.String(),
+		TenantId:            a.TenantID.String(),
+		StorageUri:          a.StorageURI,
+		ContentHash:         a.ContentHash,
+		CreatedAt:           formatTime(a.CreatedAt),
+		UpdatedAt:           formatTime(a.UpdatedAt),
+		CurrentVersionId:    formatNullUUID(a.CurrentVersionID),
+		ArtifactTypeKey:     a.ArtifactTypeKey,
+		PlanConfigurationId: formatNullUUID(a.PlanConfigurationID),
+		PlanExecutionId:     formatNullUUID(a.PlanExecutionID),
+		StepExecutionId:     formatNullUUID(a.StepExecutionID),
+		Status:              status,
+	}
+}
+
+func artifactVersionToProto(v *ArtifactVersion) *artifactsv1.ArtifactVersion {
+	return &artifactsv1.ArtifactVersion{
+		Id:                    v.ID.String(),
+		ArtifactId:            v.ArtifactID.String(),
+		VersionNumber:         v.VersionNumber,
+		StorageUri:            v.StorageURI,
+		ContentHash:           v.ContentHash,
+		SourcePlanExecutionId: formatNullUUID(v.SourcePlanExecutionID),
+		SourceStepExecutionId: formatNullUUID(v.SourceStepExecutionID),
+		SourceVersionId:       formatNullUUID(v.SourceVersionID),
+		CreatedByUserId:       formatNullUUID(v.CreatedByUserID),
+		CreatedByKind:         v.CreatedByKind,
+		EditSummary:           v.EditSummary,
+		CreatedAt:             formatTime(v.CreatedAt),
+	}
+}
+
+func pageParams(pageSize int32, pageToken string) (int, int, error) {
+	limit := int(pageSize)
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	if strings.TrimSpace(pageToken) == "" {
+		return limit, 0, nil
+	}
+	offset, err := strconv.Atoi(pageToken)
+	if err != nil || offset < 0 {
+		return 0, 0, fmt.Errorf("invalid page token %q", pageToken)
+	}
+	return limit, offset, nil
+}
+
+func optionalUUID(raw *string) (uuid.NullUUID, error) {
+	if raw == nil || strings.TrimSpace(*raw) == "" {
+		return uuid.NullUUID{}, nil
+	}
+	parsed, err := uuid.Parse(strings.TrimSpace(*raw))
+	if err != nil {
+		return uuid.NullUUID{}, err
+	}
+	return uuid.NullUUID{UUID: parsed, Valid: true}, nil
+}
+
+func parseOptionalUUIDValue(raw string) (*uuid.UUID, error) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return nil, nil
+	}
+	parsed, err := uuid.Parse(trimmed)
+	if err != nil {
+		return nil, err
+	}
+	return &parsed, nil
+}
+
+func userIDFromContext(ctx context.Context) uuid.NullUUID {
+	rc, ok := identity.RequestContextFrom(ctx)
+	if !ok {
+		return uuid.NullUUID{}
+	}
+	parsed, err := uuid.Parse(strings.TrimSpace(rc.UserID))
+	if err != nil {
+		return uuid.NullUUID{}
+	}
+	return uuid.NullUUID{UUID: parsed, Valid: true}
+}
+
+func formatNullUUID(value uuid.NullUUID) string {
+	if !value.Valid {
+		return ""
+	}
+	return value.UUID.String()
+}
+
+func formatTime(value time.Time) string {
+	if value.IsZero() {
+		return ""
+	}
+	return value.UTC().Format(time.RFC3339)
 }

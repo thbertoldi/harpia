@@ -69,6 +69,7 @@ func (h *Handler) Execute(ctx context.Context, req runtime.IntegrationExecutionR
 	outputArtifactID, err := h.artifacts.CreateValidatedPayload(ctx, runtime.CreateArtifactRequest{
 		TenantID:              req.TenantID,
 		OutputArtifactTypeKey: req.OutputArtifactTypeKey,
+		PlanExecutionID:       req.PlanExecutionID,
 		StepExecutionID:       req.StepExecutionID,
 		Payload:               payload,
 	})

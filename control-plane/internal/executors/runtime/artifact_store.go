@@ -22,6 +22,7 @@ type ExecutorArtifactStore interface {
 type CreateArtifactRequest struct {
 	TenantID              uuid.UUID
 	OutputArtifactTypeKey string
+	PlanExecutionID       string
 	StepExecutionID       string
 	Payload               []byte
 }
@@ -96,16 +97,27 @@ func (g *ExecutorArtifactStoreAdapter) CreateValidatedPayload(ctx context.Contex
 	}
 
 	created, err := g.repo.CreateArtifact(ctx, &artifacts.Artifact{
-		ID:             artifactID,
-		TenantID:       req.TenantID,
-		ArtifactTypeID: artifactType.ID,
-		StorageURI:     storageURI,
-		ContentHash:    artifacts.ContentHash(req.Payload),
+		ID:              artifactID,
+		TenantID:        req.TenantID,
+		ArtifactTypeID:  artifactType.ID,
+		ArtifactTypeKey: artifactType.Key,
+		StorageURI:      storageURI,
+		ContentHash:     artifacts.ContentHash(req.Payload),
+		PlanExecutionID: nullableUUID(req.PlanExecutionID),
+		StepExecutionID: nullableUUID(req.StepExecutionID),
 	})
 	if err != nil {
 		return "", fmt.Errorf("create artifact: %w", err)
 	}
 	return created.ID.String(), nil
+}
+
+func nullableUUID(raw string) uuid.NullUUID {
+	parsed, err := uuid.Parse(strings.TrimSpace(raw))
+	if err != nil {
+		return uuid.NullUUID{}
+	}
+	return uuid.NullUUID{UUID: parsed, Valid: true}
 }
 
 func (g *ExecutorArtifactStoreAdapter) loadArtifactPayload(ctx context.Context, tenantID uuid.UUID, artifactIDRaw string) ([]byte, error) {
