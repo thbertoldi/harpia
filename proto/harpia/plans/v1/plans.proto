@@ -40,8 +40,9 @@ service PlanService {
   rpc RespondToApprovalRequest(RespondToApprovalRequestRequest) returns (RespondToApprovalRequestResponse);
   rpc WatchApprovalRequests(WatchApprovalRequestsRequest) returns (stream WatchApprovalRequestsResponse);
 
-  // Plan thread (per-PlanConfiguration chat thread).
-  // See docs/superpowers/specs/2026-06-21-harpia-ux-m3-plan-thread-design.md.
+  // Deprecated: use harpia.chat.v1.ThreadService message RPCs. These methods
+  // remain during Path B migration and resolve plan_configuration_id to the
+  // owning thread_id.
   rpc ListPlanThreadMessages(ListPlanThreadMessagesRequest) returns (ListPlanThreadMessagesResponse);
   rpc WatchPlanThreadMessages(WatchPlanThreadMessagesRequest) returns (stream WatchPlanThreadMessagesResponse);
   rpc AppendPlanThreadMessage(AppendPlanThreadMessageRequest) returns (AppendPlanThreadMessageResponse);
@@ -140,6 +141,7 @@ message PlanConfiguration {
   string created_at = 12;
   string updated_at = 13;
   string parameter_values_json = 14;
+  string thread_id = 15;
 }
 
 enum PlanConfigurationStatus {
@@ -280,6 +282,7 @@ message CreatePlanConfigurationRequest {
   PlanBehaviorPolicies behavior_policies = 8;
   PlanSchedule schedule = 9;
   string parameter_values_json = 10;
+  string thread_id = 11;
 }
 
 message CreatePlanConfigurationResponse {
@@ -310,6 +313,7 @@ message UpdatePlanConfigurationRequest {
   // saves announce.
   bool announce_saved = 9;
   string parameter_values_json = 10;
+  string thread_id = 11;
 }
 
 message UpdatePlanConfigurationResponse {

@@ -6,15 +6,45 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/harpia/control-plane/gen/harpia/chat/v1;chatv1";
 
+service ThreadService {
+  rpc CreateThread(CreateThreadRequest) returns (CreateThreadResponse);
+  rpc GetThread(GetThreadRequest) returns (GetThreadResponse);
+  rpc ListThreads(ListThreadsRequest) returns (stream ListThreadsResponse);
+  rpc ArchiveThread(ArchiveThreadRequest) returns (ArchiveThreadResponse);
+  rpc ListThreadMessages(ListThreadMessagesRequest) returns (ListThreadMessagesResponse);
+  rpc WatchThreadMessages(WatchThreadMessagesRequest) returns (stream WatchThreadMessagesResponse);
+  rpc AppendThreadMessage(AppendThreadMessageRequest) returns (AppendThreadMessageResponse);
+}
+
+message Thread {
+  string id = 1;
+  string tenant_id = 2;
+  string title = 3;
+  ThreadStatus status = 4;
+  string active_plan_configuration_id = 5;
+  string created_by_user_id = 6;
+  google.protobuf.Timestamp archived_at = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+enum ThreadStatus {
+  THREAD_STATUS_UNSPECIFIED = 0;
+  THREAD_STATUS_OPEN = 1;
+  THREAD_STATUS_RUNNING = 2;
+  THREAD_STATUS_NEEDS_ATTENTION = 3;
+  THREAD_STATUS_COMPLETED = 4;
+  THREAD_STATUS_ARCHIVED = 5;
+}
+
 // ThreadMessage is a single durable record in a chat thread.
 //
-// In M3 a thread is identified by a PlanConfiguration ID (thread_id =
-// plan_configuration_id). The schema is generic; future milestones may
-// reuse this type for non-Plan chat surfaces (see UX-M3 design spec §2.2).
+// thread_id is the owning Thread.id. During Path B migration, legacy
+// plan-thread RPCs resolve plan_configuration_id to the owning thread_id.
 message ThreadMessage {
   string id = 1;                                // UUID
   string tenant_id = 2;                          // UUID
-  string thread_id = 3;                          // generic; = plan_configuration_id in M3
+  string thread_id = 3;                          // UUID of the owning Thread
   string execution_id = 4;                       // optional; UUID of the PlanExecution this event belongs to
   ThreadMessageRole role = 5;
   ThreadMessageKind kind = 6;
@@ -23,6 +53,83 @@ message ThreadMessage {
   string author_user_id = 9;                     // optional; NULL for SYSTEM role
   int64 sequence_number = 10;                    // per-thread monotonic; used for WatchPlanThreadMessages resume
   google.protobuf.Timestamp created_at = 11;
+}
+
+message CreateThreadRequest {
+  string tenant_id = 1;
+  string title = 2;
+  string initial_message_text = 3;
+}
+
+message CreateThreadResponse {
+  Thread thread = 1;
+  ThreadMessage initial_message = 2;
+}
+
+message GetThreadRequest {
+  string tenant_id = 1;
+  string thread_id = 2;
+}
+
+message GetThreadResponse {
+  Thread thread = 1;
+}
+
+message ListThreadsRequest {
+  string tenant_id = 1;
+  optional ThreadStatus status = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListThreadsResponse {
+  repeated Thread threads = 1;
+  string next_page_token = 2;
+}
+
+message ArchiveThreadRequest {
+  string tenant_id = 1;
+  string thread_id = 2;
+}
+
+message ArchiveThreadResponse {
+  Thread thread = 1;
+}
+
+message ListThreadMessagesRequest {
+  string tenant_id = 1;
+  string thread_id = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListThreadMessagesResponse {
+  repeated ThreadMessage messages = 1;
+  string next_page_token = 2;
+}
+
+message WatchThreadMessagesRequest {
+  string tenant_id = 1;
+  string thread_id = 2;
+  int64 since_sequence_number = 3;
+}
+
+message WatchThreadMessagesResponse {
+  repeated ThreadMessage messages = 1;
+}
+
+message AppendThreadMessageRequest {
+  string tenant_id = 1;
+  string thread_id = 2;
+  ThreadMessageRole role = 3;
+  ThreadMessageKind kind = 4;
+  string text = 5;
+  string payload_json = 6;
+  string execution_id = 7;
+}
+
+message AppendThreadMessageResponse {
+  ThreadMessage message = 1;
 }
 
 enum ThreadMessageRole {
@@ -51,4 +158,12 @@ enum ThreadMessageKind {
   THREAD_MESSAGE_KIND_USER_SELECTION        = 15;   // payload_json: { "in_response_to_message_id": "...", "option_id": "...", "value": "..." }
   THREAD_MESSAGE_KIND_STEP_REBOUND          = 16;   // payload_json: { "step_key": "...", "previous_executor_installation_id": "...", "new_executor_installation_id": "..." }
   THREAD_MESSAGE_KIND_SCHEDULE_SET          = 17;   // payload_json: { "schedule_cron": "...", "timezone": "..." }
+  THREAD_MESSAGE_KIND_PLAN_PROPOSED = 18;
+  THREAD_MESSAGE_KIND_PLAN_ATTACHED = 19;
+  THREAD_MESSAGE_KIND_PLAN_UPDATED = 20;
+  THREAD_MESSAGE_KIND_PLAN_RUN_REQUESTED = 21;
+  THREAD_MESSAGE_KIND_ARTIFACT_CREATED = 22;
+  THREAD_MESSAGE_KIND_ARTIFACT_UPDATED = 23;
+  THREAD_MESSAGE_KIND_ERROR_RAISED = 24;
+  THREAD_MESSAGE_KIND_ERROR_RECOVERED = 25;
 }

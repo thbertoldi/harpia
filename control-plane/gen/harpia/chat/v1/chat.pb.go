@@ -22,6 +22,64 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type ThreadStatus int32
+
+const (
+	ThreadStatus_THREAD_STATUS_UNSPECIFIED     ThreadStatus = 0
+	ThreadStatus_THREAD_STATUS_OPEN            ThreadStatus = 1
+	ThreadStatus_THREAD_STATUS_RUNNING         ThreadStatus = 2
+	ThreadStatus_THREAD_STATUS_NEEDS_ATTENTION ThreadStatus = 3
+	ThreadStatus_THREAD_STATUS_COMPLETED       ThreadStatus = 4
+	ThreadStatus_THREAD_STATUS_ARCHIVED        ThreadStatus = 5
+)
+
+// Enum value maps for ThreadStatus.
+var (
+	ThreadStatus_name = map[int32]string{
+		0: "THREAD_STATUS_UNSPECIFIED",
+		1: "THREAD_STATUS_OPEN",
+		2: "THREAD_STATUS_RUNNING",
+		3: "THREAD_STATUS_NEEDS_ATTENTION",
+		4: "THREAD_STATUS_COMPLETED",
+		5: "THREAD_STATUS_ARCHIVED",
+	}
+	ThreadStatus_value = map[string]int32{
+		"THREAD_STATUS_UNSPECIFIED":     0,
+		"THREAD_STATUS_OPEN":            1,
+		"THREAD_STATUS_RUNNING":         2,
+		"THREAD_STATUS_NEEDS_ATTENTION": 3,
+		"THREAD_STATUS_COMPLETED":       4,
+		"THREAD_STATUS_ARCHIVED":        5,
+	}
+)
+
+func (x ThreadStatus) Enum() *ThreadStatus {
+	p := new(ThreadStatus)
+	*p = x
+	return p
+}
+
+func (x ThreadStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ThreadStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_harpia_chat_v1_chat_proto_enumTypes[0].Descriptor()
+}
+
+func (ThreadStatus) Type() protoreflect.EnumType {
+	return &file_harpia_chat_v1_chat_proto_enumTypes[0]
+}
+
+func (x ThreadStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ThreadStatus.Descriptor instead.
+func (ThreadStatus) EnumDescriptor() ([]byte, []int) {
+	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{0}
+}
+
 type ThreadMessageRole int32
 
 const (
@@ -58,11 +116,11 @@ func (x ThreadMessageRole) String() string {
 }
 
 func (ThreadMessageRole) Descriptor() protoreflect.EnumDescriptor {
-	return file_harpia_chat_v1_chat_proto_enumTypes[0].Descriptor()
+	return file_harpia_chat_v1_chat_proto_enumTypes[1].Descriptor()
 }
 
 func (ThreadMessageRole) Type() protoreflect.EnumType {
-	return &file_harpia_chat_v1_chat_proto_enumTypes[0]
+	return &file_harpia_chat_v1_chat_proto_enumTypes[1]
 }
 
 func (x ThreadMessageRole) Number() protoreflect.EnumNumber {
@@ -71,7 +129,7 @@ func (x ThreadMessageRole) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ThreadMessageRole.Descriptor instead.
 func (ThreadMessageRole) EnumDescriptor() ([]byte, []int) {
-	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{0}
+	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{1}
 }
 
 type ThreadMessageKind int32
@@ -95,6 +153,14 @@ const (
 	ThreadMessageKind_THREAD_MESSAGE_KIND_USER_SELECTION        ThreadMessageKind = 15 // payload_json: { "in_response_to_message_id": "...", "option_id": "...", "value": "..." }
 	ThreadMessageKind_THREAD_MESSAGE_KIND_STEP_REBOUND          ThreadMessageKind = 16 // payload_json: { "step_key": "...", "previous_executor_installation_id": "...", "new_executor_installation_id": "..." }
 	ThreadMessageKind_THREAD_MESSAGE_KIND_SCHEDULE_SET          ThreadMessageKind = 17 // payload_json: { "schedule_cron": "...", "timezone": "..." }
+	ThreadMessageKind_THREAD_MESSAGE_KIND_PLAN_PROPOSED         ThreadMessageKind = 18
+	ThreadMessageKind_THREAD_MESSAGE_KIND_PLAN_ATTACHED         ThreadMessageKind = 19
+	ThreadMessageKind_THREAD_MESSAGE_KIND_PLAN_UPDATED          ThreadMessageKind = 20
+	ThreadMessageKind_THREAD_MESSAGE_KIND_PLAN_RUN_REQUESTED    ThreadMessageKind = 21
+	ThreadMessageKind_THREAD_MESSAGE_KIND_ARTIFACT_CREATED      ThreadMessageKind = 22
+	ThreadMessageKind_THREAD_MESSAGE_KIND_ARTIFACT_UPDATED      ThreadMessageKind = 23
+	ThreadMessageKind_THREAD_MESSAGE_KIND_ERROR_RAISED          ThreadMessageKind = 24
+	ThreadMessageKind_THREAD_MESSAGE_KIND_ERROR_RECOVERED       ThreadMessageKind = 25
 )
 
 // Enum value maps for ThreadMessageKind.
@@ -118,6 +184,14 @@ var (
 		15: "THREAD_MESSAGE_KIND_USER_SELECTION",
 		16: "THREAD_MESSAGE_KIND_STEP_REBOUND",
 		17: "THREAD_MESSAGE_KIND_SCHEDULE_SET",
+		18: "THREAD_MESSAGE_KIND_PLAN_PROPOSED",
+		19: "THREAD_MESSAGE_KIND_PLAN_ATTACHED",
+		20: "THREAD_MESSAGE_KIND_PLAN_UPDATED",
+		21: "THREAD_MESSAGE_KIND_PLAN_RUN_REQUESTED",
+		22: "THREAD_MESSAGE_KIND_ARTIFACT_CREATED",
+		23: "THREAD_MESSAGE_KIND_ARTIFACT_UPDATED",
+		24: "THREAD_MESSAGE_KIND_ERROR_RAISED",
+		25: "THREAD_MESSAGE_KIND_ERROR_RECOVERED",
 	}
 	ThreadMessageKind_value = map[string]int32{
 		"THREAD_MESSAGE_KIND_UNSPECIFIED":           0,
@@ -138,6 +212,14 @@ var (
 		"THREAD_MESSAGE_KIND_USER_SELECTION":        15,
 		"THREAD_MESSAGE_KIND_STEP_REBOUND":          16,
 		"THREAD_MESSAGE_KIND_SCHEDULE_SET":          17,
+		"THREAD_MESSAGE_KIND_PLAN_PROPOSED":         18,
+		"THREAD_MESSAGE_KIND_PLAN_ATTACHED":         19,
+		"THREAD_MESSAGE_KIND_PLAN_UPDATED":          20,
+		"THREAD_MESSAGE_KIND_PLAN_RUN_REQUESTED":    21,
+		"THREAD_MESSAGE_KIND_ARTIFACT_CREATED":      22,
+		"THREAD_MESSAGE_KIND_ARTIFACT_UPDATED":      23,
+		"THREAD_MESSAGE_KIND_ERROR_RAISED":          24,
+		"THREAD_MESSAGE_KIND_ERROR_RECOVERED":       25,
 	}
 )
 
@@ -152,11 +234,11 @@ func (x ThreadMessageKind) String() string {
 }
 
 func (ThreadMessageKind) Descriptor() protoreflect.EnumDescriptor {
-	return file_harpia_chat_v1_chat_proto_enumTypes[1].Descriptor()
+	return file_harpia_chat_v1_chat_proto_enumTypes[2].Descriptor()
 }
 
 func (ThreadMessageKind) Type() protoreflect.EnumType {
-	return &file_harpia_chat_v1_chat_proto_enumTypes[1]
+	return &file_harpia_chat_v1_chat_proto_enumTypes[2]
 }
 
 func (x ThreadMessageKind) Number() protoreflect.EnumNumber {
@@ -165,19 +247,126 @@ func (x ThreadMessageKind) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ThreadMessageKind.Descriptor instead.
 func (ThreadMessageKind) EnumDescriptor() ([]byte, []int) {
-	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{1}
+	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{2}
+}
+
+type Thread struct {
+	state                     protoimpl.MessageState `protogen:"open.v1"`
+	Id                        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	TenantId                  string                 `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	Title                     string                 `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
+	Status                    ThreadStatus           `protobuf:"varint,4,opt,name=status,proto3,enum=harpia.chat.v1.ThreadStatus" json:"status,omitempty"`
+	ActivePlanConfigurationId string                 `protobuf:"bytes,5,opt,name=active_plan_configuration_id,json=activePlanConfigurationId,proto3" json:"active_plan_configuration_id,omitempty"`
+	CreatedByUserId           string                 `protobuf:"bytes,6,opt,name=created_by_user_id,json=createdByUserId,proto3" json:"created_by_user_id,omitempty"`
+	ArchivedAt                *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=archived_at,json=archivedAt,proto3" json:"archived_at,omitempty"`
+	CreatedAt                 *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt                 *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
+}
+
+func (x *Thread) Reset() {
+	*x = Thread{}
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Thread) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Thread) ProtoMessage() {}
+
+func (x *Thread) ProtoReflect() protoreflect.Message {
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Thread.ProtoReflect.Descriptor instead.
+func (*Thread) Descriptor() ([]byte, []int) {
+	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *Thread) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Thread) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *Thread) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *Thread) GetStatus() ThreadStatus {
+	if x != nil {
+		return x.Status
+	}
+	return ThreadStatus_THREAD_STATUS_UNSPECIFIED
+}
+
+func (x *Thread) GetActivePlanConfigurationId() string {
+	if x != nil {
+		return x.ActivePlanConfigurationId
+	}
+	return ""
+}
+
+func (x *Thread) GetCreatedByUserId() string {
+	if x != nil {
+		return x.CreatedByUserId
+	}
+	return ""
+}
+
+func (x *Thread) GetArchivedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ArchivedAt
+	}
+	return nil
+}
+
+func (x *Thread) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *Thread) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
 }
 
 // ThreadMessage is a single durable record in a chat thread.
 //
-// In M3 a thread is identified by a PlanConfiguration ID (thread_id =
-// plan_configuration_id). The schema is generic; future milestones may
-// reuse this type for non-Plan chat surfaces (see UX-M3 design spec §2.2).
+// thread_id is the owning Thread.id. During Path B migration, legacy
+// plan-thread RPCs resolve plan_configuration_id to the owning thread_id.
 type ThreadMessage struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                      // UUID
 	TenantId       string                 `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`          // UUID
-	ThreadId       string                 `protobuf:"bytes,3,opt,name=thread_id,json=threadId,proto3" json:"thread_id,omitempty"`          // generic; = plan_configuration_id in M3
+	ThreadId       string                 `protobuf:"bytes,3,opt,name=thread_id,json=threadId,proto3" json:"thread_id,omitempty"`          // UUID of the owning Thread
 	ExecutionId    string                 `protobuf:"bytes,4,opt,name=execution_id,json=executionId,proto3" json:"execution_id,omitempty"` // optional; UUID of the PlanExecution this event belongs to
 	Role           ThreadMessageRole      `protobuf:"varint,5,opt,name=role,proto3,enum=harpia.chat.v1.ThreadMessageRole" json:"role,omitempty"`
 	Kind           ThreadMessageKind      `protobuf:"varint,6,opt,name=kind,proto3,enum=harpia.chat.v1.ThreadMessageKind" json:"kind,omitempty"`
@@ -192,7 +381,7 @@ type ThreadMessage struct {
 
 func (x *ThreadMessage) Reset() {
 	*x = ThreadMessage{}
-	mi := &file_harpia_chat_v1_chat_proto_msgTypes[0]
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -204,7 +393,7 @@ func (x *ThreadMessage) String() string {
 func (*ThreadMessage) ProtoMessage() {}
 
 func (x *ThreadMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_chat_v1_chat_proto_msgTypes[0]
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -217,7 +406,7 @@ func (x *ThreadMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ThreadMessage.ProtoReflect.Descriptor instead.
 func (*ThreadMessage) Descriptor() ([]byte, []int) {
-	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{0}
+	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *ThreadMessage) GetId() string {
@@ -297,11 +486,808 @@ func (x *ThreadMessage) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+type CreateThreadRequest struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	TenantId           string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	Title              string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	InitialMessageText string                 `protobuf:"bytes,3,opt,name=initial_message_text,json=initialMessageText,proto3" json:"initial_message_text,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *CreateThreadRequest) Reset() {
+	*x = CreateThreadRequest{}
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateThreadRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateThreadRequest) ProtoMessage() {}
+
+func (x *CreateThreadRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateThreadRequest.ProtoReflect.Descriptor instead.
+func (*CreateThreadRequest) Descriptor() ([]byte, []int) {
+	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *CreateThreadRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *CreateThreadRequest) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *CreateThreadRequest) GetInitialMessageText() string {
+	if x != nil {
+		return x.InitialMessageText
+	}
+	return ""
+}
+
+type CreateThreadResponse struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Thread         *Thread                `protobuf:"bytes,1,opt,name=thread,proto3" json:"thread,omitempty"`
+	InitialMessage *ThreadMessage         `protobuf:"bytes,2,opt,name=initial_message,json=initialMessage,proto3" json:"initial_message,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *CreateThreadResponse) Reset() {
+	*x = CreateThreadResponse{}
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateThreadResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateThreadResponse) ProtoMessage() {}
+
+func (x *CreateThreadResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateThreadResponse.ProtoReflect.Descriptor instead.
+func (*CreateThreadResponse) Descriptor() ([]byte, []int) {
+	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *CreateThreadResponse) GetThread() *Thread {
+	if x != nil {
+		return x.Thread
+	}
+	return nil
+}
+
+func (x *CreateThreadResponse) GetInitialMessage() *ThreadMessage {
+	if x != nil {
+		return x.InitialMessage
+	}
+	return nil
+}
+
+type GetThreadRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ThreadId      string                 `protobuf:"bytes,2,opt,name=thread_id,json=threadId,proto3" json:"thread_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetThreadRequest) Reset() {
+	*x = GetThreadRequest{}
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetThreadRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetThreadRequest) ProtoMessage() {}
+
+func (x *GetThreadRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetThreadRequest.ProtoReflect.Descriptor instead.
+func (*GetThreadRequest) Descriptor() ([]byte, []int) {
+	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *GetThreadRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *GetThreadRequest) GetThreadId() string {
+	if x != nil {
+		return x.ThreadId
+	}
+	return ""
+}
+
+type GetThreadResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Thread        *Thread                `protobuf:"bytes,1,opt,name=thread,proto3" json:"thread,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetThreadResponse) Reset() {
+	*x = GetThreadResponse{}
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetThreadResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetThreadResponse) ProtoMessage() {}
+
+func (x *GetThreadResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetThreadResponse.ProtoReflect.Descriptor instead.
+func (*GetThreadResponse) Descriptor() ([]byte, []int) {
+	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *GetThreadResponse) GetThread() *Thread {
+	if x != nil {
+		return x.Thread
+	}
+	return nil
+}
+
+type ListThreadsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	Status        *ThreadStatus          `protobuf:"varint,2,opt,name=status,proto3,enum=harpia.chat.v1.ThreadStatus,oneof" json:"status,omitempty"`
+	PageSize      int32                  `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	PageToken     string                 `protobuf:"bytes,4,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListThreadsRequest) Reset() {
+	*x = ListThreadsRequest{}
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListThreadsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListThreadsRequest) ProtoMessage() {}
+
+func (x *ListThreadsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListThreadsRequest.ProtoReflect.Descriptor instead.
+func (*ListThreadsRequest) Descriptor() ([]byte, []int) {
+	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *ListThreadsRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *ListThreadsRequest) GetStatus() ThreadStatus {
+	if x != nil && x.Status != nil {
+		return *x.Status
+	}
+	return ThreadStatus_THREAD_STATUS_UNSPECIFIED
+}
+
+func (x *ListThreadsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListThreadsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+type ListThreadsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Threads       []*Thread              `protobuf:"bytes,1,rep,name=threads,proto3" json:"threads,omitempty"`
+	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListThreadsResponse) Reset() {
+	*x = ListThreadsResponse{}
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListThreadsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListThreadsResponse) ProtoMessage() {}
+
+func (x *ListThreadsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListThreadsResponse.ProtoReflect.Descriptor instead.
+func (*ListThreadsResponse) Descriptor() ([]byte, []int) {
+	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ListThreadsResponse) GetThreads() []*Thread {
+	if x != nil {
+		return x.Threads
+	}
+	return nil
+}
+
+func (x *ListThreadsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+type ArchiveThreadRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ThreadId      string                 `protobuf:"bytes,2,opt,name=thread_id,json=threadId,proto3" json:"thread_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ArchiveThreadRequest) Reset() {
+	*x = ArchiveThreadRequest{}
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ArchiveThreadRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ArchiveThreadRequest) ProtoMessage() {}
+
+func (x *ArchiveThreadRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ArchiveThreadRequest.ProtoReflect.Descriptor instead.
+func (*ArchiveThreadRequest) Descriptor() ([]byte, []int) {
+	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ArchiveThreadRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *ArchiveThreadRequest) GetThreadId() string {
+	if x != nil {
+		return x.ThreadId
+	}
+	return ""
+}
+
+type ArchiveThreadResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Thread        *Thread                `protobuf:"bytes,1,opt,name=thread,proto3" json:"thread,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ArchiveThreadResponse) Reset() {
+	*x = ArchiveThreadResponse{}
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ArchiveThreadResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ArchiveThreadResponse) ProtoMessage() {}
+
+func (x *ArchiveThreadResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ArchiveThreadResponse.ProtoReflect.Descriptor instead.
+func (*ArchiveThreadResponse) Descriptor() ([]byte, []int) {
+	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ArchiveThreadResponse) GetThread() *Thread {
+	if x != nil {
+		return x.Thread
+	}
+	return nil
+}
+
+type ListThreadMessagesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ThreadId      string                 `protobuf:"bytes,2,opt,name=thread_id,json=threadId,proto3" json:"thread_id,omitempty"`
+	PageSize      int32                  `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	PageToken     string                 `protobuf:"bytes,4,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListThreadMessagesRequest) Reset() {
+	*x = ListThreadMessagesRequest{}
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListThreadMessagesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListThreadMessagesRequest) ProtoMessage() {}
+
+func (x *ListThreadMessagesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListThreadMessagesRequest.ProtoReflect.Descriptor instead.
+func (*ListThreadMessagesRequest) Descriptor() ([]byte, []int) {
+	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *ListThreadMessagesRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *ListThreadMessagesRequest) GetThreadId() string {
+	if x != nil {
+		return x.ThreadId
+	}
+	return ""
+}
+
+func (x *ListThreadMessagesRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListThreadMessagesRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+type ListThreadMessagesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Messages      []*ThreadMessage       `protobuf:"bytes,1,rep,name=messages,proto3" json:"messages,omitempty"`
+	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListThreadMessagesResponse) Reset() {
+	*x = ListThreadMessagesResponse{}
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListThreadMessagesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListThreadMessagesResponse) ProtoMessage() {}
+
+func (x *ListThreadMessagesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListThreadMessagesResponse.ProtoReflect.Descriptor instead.
+func (*ListThreadMessagesResponse) Descriptor() ([]byte, []int) {
+	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *ListThreadMessagesResponse) GetMessages() []*ThreadMessage {
+	if x != nil {
+		return x.Messages
+	}
+	return nil
+}
+
+func (x *ListThreadMessagesResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+type WatchThreadMessagesRequest struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	TenantId            string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ThreadId            string                 `protobuf:"bytes,2,opt,name=thread_id,json=threadId,proto3" json:"thread_id,omitempty"`
+	SinceSequenceNumber int64                  `protobuf:"varint,3,opt,name=since_sequence_number,json=sinceSequenceNumber,proto3" json:"since_sequence_number,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *WatchThreadMessagesRequest) Reset() {
+	*x = WatchThreadMessagesRequest{}
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WatchThreadMessagesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WatchThreadMessagesRequest) ProtoMessage() {}
+
+func (x *WatchThreadMessagesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WatchThreadMessagesRequest.ProtoReflect.Descriptor instead.
+func (*WatchThreadMessagesRequest) Descriptor() ([]byte, []int) {
+	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *WatchThreadMessagesRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *WatchThreadMessagesRequest) GetThreadId() string {
+	if x != nil {
+		return x.ThreadId
+	}
+	return ""
+}
+
+func (x *WatchThreadMessagesRequest) GetSinceSequenceNumber() int64 {
+	if x != nil {
+		return x.SinceSequenceNumber
+	}
+	return 0
+}
+
+type WatchThreadMessagesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Messages      []*ThreadMessage       `protobuf:"bytes,1,rep,name=messages,proto3" json:"messages,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WatchThreadMessagesResponse) Reset() {
+	*x = WatchThreadMessagesResponse{}
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WatchThreadMessagesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WatchThreadMessagesResponse) ProtoMessage() {}
+
+func (x *WatchThreadMessagesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WatchThreadMessagesResponse.ProtoReflect.Descriptor instead.
+func (*WatchThreadMessagesResponse) Descriptor() ([]byte, []int) {
+	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *WatchThreadMessagesResponse) GetMessages() []*ThreadMessage {
+	if x != nil {
+		return x.Messages
+	}
+	return nil
+}
+
+type AppendThreadMessageRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ThreadId      string                 `protobuf:"bytes,2,opt,name=thread_id,json=threadId,proto3" json:"thread_id,omitempty"`
+	Role          ThreadMessageRole      `protobuf:"varint,3,opt,name=role,proto3,enum=harpia.chat.v1.ThreadMessageRole" json:"role,omitempty"`
+	Kind          ThreadMessageKind      `protobuf:"varint,4,opt,name=kind,proto3,enum=harpia.chat.v1.ThreadMessageKind" json:"kind,omitempty"`
+	Text          string                 `protobuf:"bytes,5,opt,name=text,proto3" json:"text,omitempty"`
+	PayloadJson   string                 `protobuf:"bytes,6,opt,name=payload_json,json=payloadJson,proto3" json:"payload_json,omitempty"`
+	ExecutionId   string                 `protobuf:"bytes,7,opt,name=execution_id,json=executionId,proto3" json:"execution_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AppendThreadMessageRequest) Reset() {
+	*x = AppendThreadMessageRequest{}
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AppendThreadMessageRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AppendThreadMessageRequest) ProtoMessage() {}
+
+func (x *AppendThreadMessageRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AppendThreadMessageRequest.ProtoReflect.Descriptor instead.
+func (*AppendThreadMessageRequest) Descriptor() ([]byte, []int) {
+	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *AppendThreadMessageRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *AppendThreadMessageRequest) GetThreadId() string {
+	if x != nil {
+		return x.ThreadId
+	}
+	return ""
+}
+
+func (x *AppendThreadMessageRequest) GetRole() ThreadMessageRole {
+	if x != nil {
+		return x.Role
+	}
+	return ThreadMessageRole_THREAD_MESSAGE_ROLE_UNSPECIFIED
+}
+
+func (x *AppendThreadMessageRequest) GetKind() ThreadMessageKind {
+	if x != nil {
+		return x.Kind
+	}
+	return ThreadMessageKind_THREAD_MESSAGE_KIND_UNSPECIFIED
+}
+
+func (x *AppendThreadMessageRequest) GetText() string {
+	if x != nil {
+		return x.Text
+	}
+	return ""
+}
+
+func (x *AppendThreadMessageRequest) GetPayloadJson() string {
+	if x != nil {
+		return x.PayloadJson
+	}
+	return ""
+}
+
+func (x *AppendThreadMessageRequest) GetExecutionId() string {
+	if x != nil {
+		return x.ExecutionId
+	}
+	return ""
+}
+
+type AppendThreadMessageResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Message       *ThreadMessage         `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AppendThreadMessageResponse) Reset() {
+	*x = AppendThreadMessageResponse{}
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AppendThreadMessageResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AppendThreadMessageResponse) ProtoMessage() {}
+
+func (x *AppendThreadMessageResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AppendThreadMessageResponse.ProtoReflect.Descriptor instead.
+func (*AppendThreadMessageResponse) Descriptor() ([]byte, []int) {
+	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *AppendThreadMessageResponse) GetMessage() *ThreadMessage {
+	if x != nil {
+		return x.Message
+	}
+	return nil
+}
+
 var File_harpia_chat_v1_chat_proto protoreflect.FileDescriptor
 
 const file_harpia_chat_v1_chat_proto_rawDesc = "" +
 	"\n" +
-	"\x19harpia/chat/v1/chat.proto\x12\x0eharpia.chat.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xab\x03\n" +
+	"\x19harpia/chat/v1/chat.proto\x12\x0eharpia.chat.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa2\x03\n" +
+	"\x06Thread\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
+	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x14\n" +
+	"\x05title\x18\x03 \x01(\tR\x05title\x124\n" +
+	"\x06status\x18\x04 \x01(\x0e2\x1c.harpia.chat.v1.ThreadStatusR\x06status\x12?\n" +
+	"\x1cactive_plan_configuration_id\x18\x05 \x01(\tR\x19activePlanConfigurationId\x12+\n" +
+	"\x12created_by_user_id\x18\x06 \x01(\tR\x0fcreatedByUserId\x12;\n" +
+	"\varchived_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"archivedAt\x129\n" +
+	"\n" +
+	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xab\x03\n" +
 	"\rThreadMessage\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x1b\n" +
@@ -315,12 +1301,71 @@ const file_harpia_chat_v1_chat_proto_rawDesc = "" +
 	"\x0fsequence_number\x18\n" +
 	" \x01(\x03R\x0esequenceNumber\x129\n" +
 	"\n" +
-	"created_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt*\x99\x01\n" +
+	"created_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"z\n" +
+	"\x13CreateThreadRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x14\n" +
+	"\x05title\x18\x02 \x01(\tR\x05title\x120\n" +
+	"\x14initial_message_text\x18\x03 \x01(\tR\x12initialMessageText\"\x8e\x01\n" +
+	"\x14CreateThreadResponse\x12.\n" +
+	"\x06thread\x18\x01 \x01(\v2\x16.harpia.chat.v1.ThreadR\x06thread\x12F\n" +
+	"\x0finitial_message\x18\x02 \x01(\v2\x1d.harpia.chat.v1.ThreadMessageR\x0einitialMessage\"L\n" +
+	"\x10GetThreadRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1b\n" +
+	"\tthread_id\x18\x02 \x01(\tR\bthreadId\"C\n" +
+	"\x11GetThreadResponse\x12.\n" +
+	"\x06thread\x18\x01 \x01(\v2\x16.harpia.chat.v1.ThreadR\x06thread\"\xb3\x01\n" +
+	"\x12ListThreadsRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x129\n" +
+	"\x06status\x18\x02 \x01(\x0e2\x1c.harpia.chat.v1.ThreadStatusH\x00R\x06status\x88\x01\x01\x12\x1b\n" +
+	"\tpage_size\x18\x03 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x04 \x01(\tR\tpageTokenB\t\n" +
+	"\a_status\"o\n" +
+	"\x13ListThreadsResponse\x120\n" +
+	"\athreads\x18\x01 \x03(\v2\x16.harpia.chat.v1.ThreadR\athreads\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"P\n" +
+	"\x14ArchiveThreadRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1b\n" +
+	"\tthread_id\x18\x02 \x01(\tR\bthreadId\"G\n" +
+	"\x15ArchiveThreadResponse\x12.\n" +
+	"\x06thread\x18\x01 \x01(\v2\x16.harpia.chat.v1.ThreadR\x06thread\"\x91\x01\n" +
+	"\x19ListThreadMessagesRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1b\n" +
+	"\tthread_id\x18\x02 \x01(\tR\bthreadId\x12\x1b\n" +
+	"\tpage_size\x18\x03 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x04 \x01(\tR\tpageToken\"\x7f\n" +
+	"\x1aListThreadMessagesResponse\x129\n" +
+	"\bmessages\x18\x01 \x03(\v2\x1d.harpia.chat.v1.ThreadMessageR\bmessages\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\x8a\x01\n" +
+	"\x1aWatchThreadMessagesRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1b\n" +
+	"\tthread_id\x18\x02 \x01(\tR\bthreadId\x122\n" +
+	"\x15since_sequence_number\x18\x03 \x01(\x03R\x13sinceSequenceNumber\"X\n" +
+	"\x1bWatchThreadMessagesResponse\x129\n" +
+	"\bmessages\x18\x01 \x03(\v2\x1d.harpia.chat.v1.ThreadMessageR\bmessages\"\x9e\x02\n" +
+	"\x1aAppendThreadMessageRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1b\n" +
+	"\tthread_id\x18\x02 \x01(\tR\bthreadId\x125\n" +
+	"\x04role\x18\x03 \x01(\x0e2!.harpia.chat.v1.ThreadMessageRoleR\x04role\x125\n" +
+	"\x04kind\x18\x04 \x01(\x0e2!.harpia.chat.v1.ThreadMessageKindR\x04kind\x12\x12\n" +
+	"\x04text\x18\x05 \x01(\tR\x04text\x12!\n" +
+	"\fpayload_json\x18\x06 \x01(\tR\vpayloadJson\x12!\n" +
+	"\fexecution_id\x18\a \x01(\tR\vexecutionId\"V\n" +
+	"\x1bAppendThreadMessageResponse\x127\n" +
+	"\amessage\x18\x01 \x01(\v2\x1d.harpia.chat.v1.ThreadMessageR\amessage*\xbc\x01\n" +
+	"\fThreadStatus\x12\x1d\n" +
+	"\x19THREAD_STATUS_UNSPECIFIED\x10\x00\x12\x16\n" +
+	"\x12THREAD_STATUS_OPEN\x10\x01\x12\x19\n" +
+	"\x15THREAD_STATUS_RUNNING\x10\x02\x12!\n" +
+	"\x1dTHREAD_STATUS_NEEDS_ATTENTION\x10\x03\x12\x1b\n" +
+	"\x17THREAD_STATUS_COMPLETED\x10\x04\x12\x1a\n" +
+	"\x16THREAD_STATUS_ARCHIVED\x10\x05*\x99\x01\n" +
 	"\x11ThreadMessageRole\x12#\n" +
 	"\x1fTHREAD_MESSAGE_ROLE_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cTHREAD_MESSAGE_ROLE_OVERSEER\x10\x01\x12\x1d\n" +
 	"\x19THREAD_MESSAGE_ROLE_AGENT\x10\x02\x12\x1e\n" +
-	"\x1aTHREAD_MESSAGE_ROLE_SYSTEM\x10\x03*\xe4\x05\n" +
+	"\x1aTHREAD_MESSAGE_ROLE_SYSTEM\x10\x03*\xa7\b\n" +
 	"\x11ThreadMessageKind\x12#\n" +
 	"\x1fTHREAD_MESSAGE_KIND_UNSPECIFIED\x10\x00\x12!\n" +
 	"\x1dTHREAD_MESSAGE_KIND_USER_TEXT\x10\x01\x12&\n" +
@@ -340,7 +1385,23 @@ const file_harpia_chat_v1_chat_proto_rawDesc = "" +
 	"$THREAD_MESSAGE_KIND_ASSISTANT_PROMPT\x10\x0e\x12&\n" +
 	"\"THREAD_MESSAGE_KIND_USER_SELECTION\x10\x0f\x12$\n" +
 	" THREAD_MESSAGE_KIND_STEP_REBOUND\x10\x10\x12$\n" +
-	" THREAD_MESSAGE_KIND_SCHEDULE_SET\x10\x11B\xb4\x01\n" +
+	" THREAD_MESSAGE_KIND_SCHEDULE_SET\x10\x11\x12%\n" +
+	"!THREAD_MESSAGE_KIND_PLAN_PROPOSED\x10\x12\x12%\n" +
+	"!THREAD_MESSAGE_KIND_PLAN_ATTACHED\x10\x13\x12$\n" +
+	" THREAD_MESSAGE_KIND_PLAN_UPDATED\x10\x14\x12*\n" +
+	"&THREAD_MESSAGE_KIND_PLAN_RUN_REQUESTED\x10\x15\x12(\n" +
+	"$THREAD_MESSAGE_KIND_ARTIFACT_CREATED\x10\x16\x12(\n" +
+	"$THREAD_MESSAGE_KIND_ARTIFACT_UPDATED\x10\x17\x12$\n" +
+	" THREAD_MESSAGE_KIND_ERROR_RAISED\x10\x18\x12'\n" +
+	"#THREAD_MESSAGE_KIND_ERROR_RECOVERED\x10\x192\xc3\x05\n" +
+	"\rThreadService\x12Y\n" +
+	"\fCreateThread\x12#.harpia.chat.v1.CreateThreadRequest\x1a$.harpia.chat.v1.CreateThreadResponse\x12P\n" +
+	"\tGetThread\x12 .harpia.chat.v1.GetThreadRequest\x1a!.harpia.chat.v1.GetThreadResponse\x12X\n" +
+	"\vListThreads\x12\".harpia.chat.v1.ListThreadsRequest\x1a#.harpia.chat.v1.ListThreadsResponse0\x01\x12\\\n" +
+	"\rArchiveThread\x12$.harpia.chat.v1.ArchiveThreadRequest\x1a%.harpia.chat.v1.ArchiveThreadResponse\x12k\n" +
+	"\x12ListThreadMessages\x12).harpia.chat.v1.ListThreadMessagesRequest\x1a*.harpia.chat.v1.ListThreadMessagesResponse\x12p\n" +
+	"\x13WatchThreadMessages\x12*.harpia.chat.v1.WatchThreadMessagesRequest\x1a+.harpia.chat.v1.WatchThreadMessagesResponse0\x01\x12n\n" +
+	"\x13AppendThreadMessage\x12*.harpia.chat.v1.AppendThreadMessageRequest\x1a+.harpia.chat.v1.AppendThreadMessageResponseB\xb4\x01\n" +
 	"\x12com.harpia.chat.v1B\tChatProtoP\x01Z9github.com/harpia/control-plane/gen/harpia/chat/v1;chatv1\xa2\x02\x03HCX\xaa\x02\x0eHarpia.Chat.V1\xca\x02\x0eHarpia\\Chat\\V1\xe2\x02\x1aHarpia\\Chat\\V1\\GPBMetadata\xea\x02\x10Harpia::Chat::V1b\x06proto3"
 
 var (
@@ -355,23 +1416,68 @@ func file_harpia_chat_v1_chat_proto_rawDescGZIP() []byte {
 	return file_harpia_chat_v1_chat_proto_rawDescData
 }
 
-var file_harpia_chat_v1_chat_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_harpia_chat_v1_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_harpia_chat_v1_chat_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_harpia_chat_v1_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_harpia_chat_v1_chat_proto_goTypes = []any{
-	(ThreadMessageRole)(0),        // 0: harpia.chat.v1.ThreadMessageRole
-	(ThreadMessageKind)(0),        // 1: harpia.chat.v1.ThreadMessageKind
-	(*ThreadMessage)(nil),         // 2: harpia.chat.v1.ThreadMessage
-	(*timestamppb.Timestamp)(nil), // 3: google.protobuf.Timestamp
+	(ThreadStatus)(0),                   // 0: harpia.chat.v1.ThreadStatus
+	(ThreadMessageRole)(0),              // 1: harpia.chat.v1.ThreadMessageRole
+	(ThreadMessageKind)(0),              // 2: harpia.chat.v1.ThreadMessageKind
+	(*Thread)(nil),                      // 3: harpia.chat.v1.Thread
+	(*ThreadMessage)(nil),               // 4: harpia.chat.v1.ThreadMessage
+	(*CreateThreadRequest)(nil),         // 5: harpia.chat.v1.CreateThreadRequest
+	(*CreateThreadResponse)(nil),        // 6: harpia.chat.v1.CreateThreadResponse
+	(*GetThreadRequest)(nil),            // 7: harpia.chat.v1.GetThreadRequest
+	(*GetThreadResponse)(nil),           // 8: harpia.chat.v1.GetThreadResponse
+	(*ListThreadsRequest)(nil),          // 9: harpia.chat.v1.ListThreadsRequest
+	(*ListThreadsResponse)(nil),         // 10: harpia.chat.v1.ListThreadsResponse
+	(*ArchiveThreadRequest)(nil),        // 11: harpia.chat.v1.ArchiveThreadRequest
+	(*ArchiveThreadResponse)(nil),       // 12: harpia.chat.v1.ArchiveThreadResponse
+	(*ListThreadMessagesRequest)(nil),   // 13: harpia.chat.v1.ListThreadMessagesRequest
+	(*ListThreadMessagesResponse)(nil),  // 14: harpia.chat.v1.ListThreadMessagesResponse
+	(*WatchThreadMessagesRequest)(nil),  // 15: harpia.chat.v1.WatchThreadMessagesRequest
+	(*WatchThreadMessagesResponse)(nil), // 16: harpia.chat.v1.WatchThreadMessagesResponse
+	(*AppendThreadMessageRequest)(nil),  // 17: harpia.chat.v1.AppendThreadMessageRequest
+	(*AppendThreadMessageResponse)(nil), // 18: harpia.chat.v1.AppendThreadMessageResponse
+	(*timestamppb.Timestamp)(nil),       // 19: google.protobuf.Timestamp
 }
 var file_harpia_chat_v1_chat_proto_depIdxs = []int32{
-	0, // 0: harpia.chat.v1.ThreadMessage.role:type_name -> harpia.chat.v1.ThreadMessageRole
-	1, // 1: harpia.chat.v1.ThreadMessage.kind:type_name -> harpia.chat.v1.ThreadMessageKind
-	3, // 2: harpia.chat.v1.ThreadMessage.created_at:type_name -> google.protobuf.Timestamp
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	0,  // 0: harpia.chat.v1.Thread.status:type_name -> harpia.chat.v1.ThreadStatus
+	19, // 1: harpia.chat.v1.Thread.archived_at:type_name -> google.protobuf.Timestamp
+	19, // 2: harpia.chat.v1.Thread.created_at:type_name -> google.protobuf.Timestamp
+	19, // 3: harpia.chat.v1.Thread.updated_at:type_name -> google.protobuf.Timestamp
+	1,  // 4: harpia.chat.v1.ThreadMessage.role:type_name -> harpia.chat.v1.ThreadMessageRole
+	2,  // 5: harpia.chat.v1.ThreadMessage.kind:type_name -> harpia.chat.v1.ThreadMessageKind
+	19, // 6: harpia.chat.v1.ThreadMessage.created_at:type_name -> google.protobuf.Timestamp
+	3,  // 7: harpia.chat.v1.CreateThreadResponse.thread:type_name -> harpia.chat.v1.Thread
+	4,  // 8: harpia.chat.v1.CreateThreadResponse.initial_message:type_name -> harpia.chat.v1.ThreadMessage
+	3,  // 9: harpia.chat.v1.GetThreadResponse.thread:type_name -> harpia.chat.v1.Thread
+	0,  // 10: harpia.chat.v1.ListThreadsRequest.status:type_name -> harpia.chat.v1.ThreadStatus
+	3,  // 11: harpia.chat.v1.ListThreadsResponse.threads:type_name -> harpia.chat.v1.Thread
+	3,  // 12: harpia.chat.v1.ArchiveThreadResponse.thread:type_name -> harpia.chat.v1.Thread
+	4,  // 13: harpia.chat.v1.ListThreadMessagesResponse.messages:type_name -> harpia.chat.v1.ThreadMessage
+	4,  // 14: harpia.chat.v1.WatchThreadMessagesResponse.messages:type_name -> harpia.chat.v1.ThreadMessage
+	1,  // 15: harpia.chat.v1.AppendThreadMessageRequest.role:type_name -> harpia.chat.v1.ThreadMessageRole
+	2,  // 16: harpia.chat.v1.AppendThreadMessageRequest.kind:type_name -> harpia.chat.v1.ThreadMessageKind
+	4,  // 17: harpia.chat.v1.AppendThreadMessageResponse.message:type_name -> harpia.chat.v1.ThreadMessage
+	5,  // 18: harpia.chat.v1.ThreadService.CreateThread:input_type -> harpia.chat.v1.CreateThreadRequest
+	7,  // 19: harpia.chat.v1.ThreadService.GetThread:input_type -> harpia.chat.v1.GetThreadRequest
+	9,  // 20: harpia.chat.v1.ThreadService.ListThreads:input_type -> harpia.chat.v1.ListThreadsRequest
+	11, // 21: harpia.chat.v1.ThreadService.ArchiveThread:input_type -> harpia.chat.v1.ArchiveThreadRequest
+	13, // 22: harpia.chat.v1.ThreadService.ListThreadMessages:input_type -> harpia.chat.v1.ListThreadMessagesRequest
+	15, // 23: harpia.chat.v1.ThreadService.WatchThreadMessages:input_type -> harpia.chat.v1.WatchThreadMessagesRequest
+	17, // 24: harpia.chat.v1.ThreadService.AppendThreadMessage:input_type -> harpia.chat.v1.AppendThreadMessageRequest
+	6,  // 25: harpia.chat.v1.ThreadService.CreateThread:output_type -> harpia.chat.v1.CreateThreadResponse
+	8,  // 26: harpia.chat.v1.ThreadService.GetThread:output_type -> harpia.chat.v1.GetThreadResponse
+	10, // 27: harpia.chat.v1.ThreadService.ListThreads:output_type -> harpia.chat.v1.ListThreadsResponse
+	12, // 28: harpia.chat.v1.ThreadService.ArchiveThread:output_type -> harpia.chat.v1.ArchiveThreadResponse
+	14, // 29: harpia.chat.v1.ThreadService.ListThreadMessages:output_type -> harpia.chat.v1.ListThreadMessagesResponse
+	16, // 30: harpia.chat.v1.ThreadService.WatchThreadMessages:output_type -> harpia.chat.v1.WatchThreadMessagesResponse
+	18, // 31: harpia.chat.v1.ThreadService.AppendThreadMessage:output_type -> harpia.chat.v1.AppendThreadMessageResponse
+	25, // [25:32] is the sub-list for method output_type
+	18, // [18:25] is the sub-list for method input_type
+	18, // [18:18] is the sub-list for extension type_name
+	18, // [18:18] is the sub-list for extension extendee
+	0,  // [0:18] is the sub-list for field type_name
 }
 
 func init() { file_harpia_chat_v1_chat_proto_init() }
@@ -379,15 +1485,16 @@ func file_harpia_chat_v1_chat_proto_init() {
 	if File_harpia_chat_v1_chat_proto != nil {
 		return
 	}
+	file_harpia_chat_v1_chat_proto_msgTypes[6].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_harpia_chat_v1_chat_proto_rawDesc), len(file_harpia_chat_v1_chat_proto_rawDesc)),
-			NumEnums:      2,
-			NumMessages:   1,
+			NumEnums:      3,
+			NumMessages:   16,
 			NumExtensions: 0,
-			NumServices:   0,
+			NumServices:   1,
 		},
 		GoTypes:           file_harpia_chat_v1_chat_proto_goTypes,
 		DependencyIndexes: file_harpia_chat_v1_chat_proto_depIdxs,

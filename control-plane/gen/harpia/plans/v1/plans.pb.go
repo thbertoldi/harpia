@@ -1150,6 +1150,7 @@ type PlanConfiguration struct {
 	CreatedAt           string                  `protobuf:"bytes,12,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt           string                  `protobuf:"bytes,13,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	ParameterValuesJson string                  `protobuf:"bytes,14,opt,name=parameter_values_json,json=parameterValuesJson,proto3" json:"parameter_values_json,omitempty"`
+	ThreadId            string                  `protobuf:"bytes,15,opt,name=thread_id,json=threadId,proto3" json:"thread_id,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -1278,6 +1279,13 @@ func (x *PlanConfiguration) GetUpdatedAt() string {
 func (x *PlanConfiguration) GetParameterValuesJson() string {
 	if x != nil {
 		return x.ParameterValuesJson
+	}
+	return ""
+}
+
+func (x *PlanConfiguration) GetThreadId() string {
+	if x != nil {
+		return x.ThreadId
 	}
 	return ""
 }
@@ -2130,6 +2138,7 @@ type CreatePlanConfigurationRequest struct {
 	BehaviorPolicies    *PlanBehaviorPolicies   `protobuf:"bytes,8,opt,name=behavior_policies,json=behaviorPolicies,proto3" json:"behavior_policies,omitempty"`
 	Schedule            *PlanSchedule           `protobuf:"bytes,9,opt,name=schedule,proto3" json:"schedule,omitempty"`
 	ParameterValuesJson string                  `protobuf:"bytes,10,opt,name=parameter_values_json,json=parameterValuesJson,proto3" json:"parameter_values_json,omitempty"`
+	ThreadId            string                  `protobuf:"bytes,11,opt,name=thread_id,json=threadId,proto3" json:"thread_id,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -2230,6 +2239,13 @@ func (x *CreatePlanConfigurationRequest) GetSchedule() *PlanSchedule {
 func (x *CreatePlanConfigurationRequest) GetParameterValuesJson() string {
 	if x != nil {
 		return x.ParameterValuesJson
+	}
+	return ""
+}
+
+func (x *CreatePlanConfigurationRequest) GetThreadId() string {
+	if x != nil {
+		return x.ThreadId
 	}
 	return ""
 }
@@ -2390,6 +2406,7 @@ type UpdatePlanConfigurationRequest struct {
 	// saves announce.
 	AnnounceSaved       bool   `protobuf:"varint,9,opt,name=announce_saved,json=announceSaved,proto3" json:"announce_saved,omitempty"`
 	ParameterValuesJson string `protobuf:"bytes,10,opt,name=parameter_values_json,json=parameterValuesJson,proto3" json:"parameter_values_json,omitempty"`
+	ThreadId            string `protobuf:"bytes,11,opt,name=thread_id,json=threadId,proto3" json:"thread_id,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -2490,6 +2507,13 @@ func (x *UpdatePlanConfigurationRequest) GetAnnounceSaved() bool {
 func (x *UpdatePlanConfigurationRequest) GetParameterValuesJson() string {
 	if x != nil {
 		return x.ParameterValuesJson
+	}
+	return ""
+}
+
+func (x *UpdatePlanConfigurationRequest) GetThreadId() string {
+	if x != nil {
+		return x.ThreadId
 	}
 	return ""
 }
@@ -5078,7 +5102,7 @@ const file_harpia_plans_v1_plans_proto_rawDesc = "" +
 	"\x13ExecutorRequirement\x12B\n" +
 	"\rexecutor_kind\x18\x01 \x01(\x0e2\x1d.harpia.plans.v1.ExecutorKindR\fexecutorKind\x123\n" +
 	"\x15required_capabilities\x18\x02 \x03(\tR\x14requiredCapabilities\x12'\n" +
-	"\x0fconnection_type\x18\x03 \x01(\tR\x0econnectionType\"\xe3\x05\n" +
+	"\x0fconnection_type\x18\x03 \x01(\tR\x0econnectionType\"\x80\x06\n" +
 	"\x11PlanConfiguration\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12!\n" +
@@ -5096,7 +5120,8 @@ const file_harpia_plans_v1_plans_proto_rawDesc = "" +
 	"created_at\x18\f \x01(\tR\tcreatedAt\x12\x1d\n" +
 	"\n" +
 	"updated_at\x18\r \x01(\tR\tupdatedAt\x122\n" +
-	"\x15parameter_values_json\x18\x0e \x01(\tR\x13parameterValuesJson\"\x93\x01\n" +
+	"\x15parameter_values_json\x18\x0e \x01(\tR\x13parameterValuesJson\x12\x1b\n" +
+	"\tthread_id\x18\x0f \x01(\tR\bthreadId\"\x93\x01\n" +
 	"\x13SeedArtifactBinding\x12\x19\n" +
 	"\bstep_key\x18\x01 \x01(\tR\astepKey\x12\x1d\n" +
 	"\n" +
@@ -5165,7 +5190,7 @@ const file_harpia_plans_v1_plans_proto_rawDesc = "" +
 	"\t_vertical\"\x89\x01\n" +
 	"\x19ListPlanTemplatesResponse\x12D\n" +
 	"\x0eplan_templates\x18\x01 \x03(\v2\x1d.harpia.plans.v1.PlanTemplateR\rplanTemplates\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\xee\x04\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\x8b\x05\n" +
 	"\x1eCreatePlanConfigurationRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12!\n" +
 	"\fworkspace_id\x18\x02 \x01(\tR\vworkspaceId\x12(\n" +
@@ -5177,14 +5202,15 @@ const file_harpia_plans_v1_plans_proto_rawDesc = "" +
 	"\x11behavior_policies\x18\b \x01(\v2%.harpia.plans.v1.PlanBehaviorPoliciesR\x10behaviorPolicies\x129\n" +
 	"\bschedule\x18\t \x01(\v2\x1d.harpia.plans.v1.PlanScheduleR\bschedule\x122\n" +
 	"\x15parameter_values_json\x18\n" +
-	" \x01(\tR\x13parameterValuesJson\"t\n" +
+	" \x01(\tR\x13parameterValuesJson\x12\x1b\n" +
+	"\tthread_id\x18\v \x01(\tR\bthreadId\"t\n" +
 	"\x1fCreatePlanConfigurationResponse\x12Q\n" +
 	"\x12plan_configuration\x18\x01 \x01(\v2\".harpia.plans.v1.PlanConfigurationR\x11planConfiguration\"n\n" +
 	"\x1bGetPlanConfigurationRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x122\n" +
 	"\x15plan_configuration_id\x18\x02 \x01(\tR\x13planConfigurationId\"q\n" +
 	"\x1cGetPlanConfigurationResponse\x12Q\n" +
-	"\x12plan_configuration\x18\x01 \x01(\v2\".harpia.plans.v1.PlanConfigurationR\x11planConfiguration\"\xfc\x04\n" +
+	"\x12plan_configuration\x18\x01 \x01(\v2\".harpia.plans.v1.PlanConfigurationR\x11planConfiguration\"\x99\x05\n" +
 	"\x1eUpdatePlanConfigurationRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x122\n" +
 	"\x15plan_configuration_id\x18\x02 \x01(\tR\x13planConfigurationId\x12@\n" +
@@ -5196,7 +5222,8 @@ const file_harpia_plans_v1_plans_proto_rawDesc = "" +
 	"\bschedule\x18\b \x01(\v2\x1d.harpia.plans.v1.PlanScheduleR\bschedule\x12%\n" +
 	"\x0eannounce_saved\x18\t \x01(\bR\rannounceSaved\x122\n" +
 	"\x15parameter_values_json\x18\n" +
-	" \x01(\tR\x13parameterValuesJson\"t\n" +
+	" \x01(\tR\x13parameterValuesJson\x12\x1b\n" +
+	"\tthread_id\x18\v \x01(\tR\bthreadId\"t\n" +
 	"\x1fUpdatePlanConfigurationResponse\x12Q\n" +
 	"\x12plan_configuration\x18\x01 \x01(\v2\".harpia.plans.v1.PlanConfigurationR\x11planConfiguration\"\x83\x02\n" +
 	"\x1dListPlanConfigurationsRequest\x12\x1b\n" +

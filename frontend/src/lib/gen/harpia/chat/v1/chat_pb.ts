@@ -2,8 +2,8 @@
 // @generated from file harpia/chat/v1/chat.proto (package harpia.chat.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
-import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
@@ -12,14 +12,70 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file harpia/chat/v1/chat.proto.
  */
 export const file_harpia_chat_v1_chat: GenFile = /*@__PURE__*/
-  fileDesc("ChloYXJwaWEvY2hhdC92MS9jaGF0LnByb3RvEg5oYXJwaWEuY2hhdC52MSK+AgoNVGhyZWFkTWVzc2FnZRIKCgJpZBgBIAEoCRIRCgl0ZW5hbnRfaWQYAiABKAkSEQoJdGhyZWFkX2lkGAMgASgJEhQKDGV4ZWN1dGlvbl9pZBgEIAEoCRIvCgRyb2xlGAUgASgOMiEuaGFycGlhLmNoYXQudjEuVGhyZWFkTWVzc2FnZVJvbGUSLwoEa2luZBgGIAEoDjIhLmhhcnBpYS5jaGF0LnYxLlRocmVhZE1lc3NhZ2VLaW5kEgwKBHRleHQYByABKAkSFAoMcGF5bG9hZF9qc29uGAggASgJEhYKDmF1dGhvcl91c2VyX2lkGAkgASgJEhcKD3NlcXVlbmNlX251bWJlchgKIAEoAxIuCgpjcmVhdGVkX2F0GAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCqZAQoRVGhyZWFkTWVzc2FnZVJvbGUSIwofVEhSRUFEX01FU1NBR0VfUk9MRV9VTlNQRUNJRklFRBAAEiAKHFRIUkVBRF9NRVNTQUdFX1JPTEVfT1ZFUlNFRVIQARIdChlUSFJFQURfTUVTU0FHRV9ST0xFX0FHRU5UEAISHgoaVEhSRUFEX01FU1NBR0VfUk9MRV9TWVNURU0QAyrkBQoRVGhyZWFkTWVzc2FnZUtpbmQSIwofVEhSRUFEX01FU1NBR0VfS0lORF9VTlNQRUNJRklFRBAAEiEKHVRIUkVBRF9NRVNTQUdFX0tJTkRfVVNFUl9URVhUEAESJgoiVEhSRUFEX01FU1NBR0VfS0lORF9BU1NJU1RBTlRfVEVYVBACEisKJ1RIUkVBRF9NRVNTQUdFX0tJTkRfQ09ORklHVVJBVElPTl9TQVZFRBADEiMKH1RIUkVBRF9NRVNTQUdFX0tJTkRfUlVOX1NUQVJURUQQBBIlCiFUSFJFQURfTUVTU0FHRV9LSU5EX1JVTl9DT01QTEVURUQQBRIiCh5USFJFQURfTUVTU0FHRV9LSU5EX1JVTl9GQUlMRUQQBhIiCh5USFJFQURfTUVTU0FHRV9LSU5EX1NURVBfQk9VTkQQBxIqCiZUSFJFQURfTUVTU0FHRV9LSU5EX0VMSUNJVEFUSU9OX1JBSVNFRBAIEiwKKFRIUkVBRF9NRVNTQUdFX0tJTkRfRUxJQ0lUQVRJT05fQU5TV0VSRUQQCRInCiNUSFJFQURfTUVTU0FHRV9LSU5EX0FQUFJPVkFMX1JBSVNFRBAKEigKJFRIUkVBRF9NRVNTQUdFX0tJTkRfQVBQUk9WQUxfREVDSURFRBALEiQKIFRIUkVBRF9NRVNTQUdFX0tJTkRfU1RFUF9TVEFSVEVEEAwSLQopVEhSRUFEX01FU1NBR0VfS0lORF9DT05GSUdVUkFUSU9OX1NUQVJURUQQDRIoCiRUSFJFQURfTUVTU0FHRV9LSU5EX0FTU0lTVEFOVF9QUk9NUFQQDhImCiJUSFJFQURfTUVTU0FHRV9LSU5EX1VTRVJfU0VMRUNUSU9OEA8SJAogVEhSRUFEX01FU1NBR0VfS0lORF9TVEVQX1JFQk9VTkQQEBIkCiBUSFJFQURfTUVTU0FHRV9LSU5EX1NDSEVEVUxFX1NFVBARQrQBChJjb20uaGFycGlhLmNoYXQudjFCCUNoYXRQcm90b1ABWjlnaXRodWIuY29tL2hhcnBpYS9jb250cm9sLXBsYW5lL2dlbi9oYXJwaWEvY2hhdC92MTtjaGF0djGiAgNIQ1iqAg5IYXJwaWEuQ2hhdC5WMcoCDkhhcnBpYVxDaGF0XFYx4gIaSGFycGlhXENoYXRcVjFcR1BCTWV0YWRhdGHqAhBIYXJwaWE6OkNoYXQ6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp]);
+  fileDesc("ChloYXJwaWEvY2hhdC92MS9jaGF0LnByb3RvEg5oYXJwaWEuY2hhdC52MSK3AgoGVGhyZWFkEgoKAmlkGAEgASgJEhEKCXRlbmFudF9pZBgCIAEoCRINCgV0aXRsZRgDIAEoCRIsCgZzdGF0dXMYBCABKA4yHC5oYXJwaWEuY2hhdC52MS5UaHJlYWRTdGF0dXMSJAocYWN0aXZlX3BsYW5fY29uZmlndXJhdGlvbl9pZBgFIAEoCRIaChJjcmVhdGVkX2J5X3VzZXJfaWQYBiABKAkSLwoLYXJjaGl2ZWRfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCmNyZWF0ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYCSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIr4CCg1UaHJlYWRNZXNzYWdlEgoKAmlkGAEgASgJEhEKCXRlbmFudF9pZBgCIAEoCRIRCgl0aHJlYWRfaWQYAyABKAkSFAoMZXhlY3V0aW9uX2lkGAQgASgJEi8KBHJvbGUYBSABKA4yIS5oYXJwaWEuY2hhdC52MS5UaHJlYWRNZXNzYWdlUm9sZRIvCgRraW5kGAYgASgOMiEuaGFycGlhLmNoYXQudjEuVGhyZWFkTWVzc2FnZUtpbmQSDAoEdGV4dBgHIAEoCRIUCgxwYXlsb2FkX2pzb24YCCABKAkSFgoOYXV0aG9yX3VzZXJfaWQYCSABKAkSFwoPc2VxdWVuY2VfbnVtYmVyGAogASgDEi4KCmNyZWF0ZWRfYXQYCyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIlUKE0NyZWF0ZVRocmVhZFJlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgJEg0KBXRpdGxlGAIgASgJEhwKFGluaXRpYWxfbWVzc2FnZV90ZXh0GAMgASgJInYKFENyZWF0ZVRocmVhZFJlc3BvbnNlEiYKBnRocmVhZBgBIAEoCzIWLmhhcnBpYS5jaGF0LnYxLlRocmVhZBI2Cg9pbml0aWFsX21lc3NhZ2UYAiABKAsyHS5oYXJwaWEuY2hhdC52MS5UaHJlYWRNZXNzYWdlIjgKEEdldFRocmVhZFJlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgJEhEKCXRocmVhZF9pZBgCIAEoCSI7ChFHZXRUaHJlYWRSZXNwb25zZRImCgZ0aHJlYWQYASABKAsyFi5oYXJwaWEuY2hhdC52MS5UaHJlYWQijAEKEkxpc3RUaHJlYWRzUmVxdWVzdBIRCgl0ZW5hbnRfaWQYASABKAkSMQoGc3RhdHVzGAIgASgOMhwuaGFycGlhLmNoYXQudjEuVGhyZWFkU3RhdHVzSACIAQESEQoJcGFnZV9zaXplGAMgASgFEhIKCnBhZ2VfdG9rZW4YBCABKAlCCQoHX3N0YXR1cyJXChNMaXN0VGhyZWFkc1Jlc3BvbnNlEicKB3RocmVhZHMYASADKAsyFi5oYXJwaWEuY2hhdC52MS5UaHJlYWQSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIjwKFEFyY2hpdmVUaHJlYWRSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRIRCgl0aHJlYWRfaWQYAiABKAkiPwoVQXJjaGl2ZVRocmVhZFJlc3BvbnNlEiYKBnRocmVhZBgBIAEoCzIWLmhhcnBpYS5jaGF0LnYxLlRocmVhZCJoChlMaXN0VGhyZWFkTWVzc2FnZXNSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRIRCgl0aHJlYWRfaWQYAiABKAkSEQoJcGFnZV9zaXplGAMgASgFEhIKCnBhZ2VfdG9rZW4YBCABKAkiZgoaTGlzdFRocmVhZE1lc3NhZ2VzUmVzcG9uc2USLwoIbWVzc2FnZXMYASADKAsyHS5oYXJwaWEuY2hhdC52MS5UaHJlYWRNZXNzYWdlEhcKD25leHRfcGFnZV90b2tlbhgCIAEoCSJhChpXYXRjaFRocmVhZE1lc3NhZ2VzUmVxdWVzdBIRCgl0ZW5hbnRfaWQYASABKAkSEQoJdGhyZWFkX2lkGAIgASgJEh0KFXNpbmNlX3NlcXVlbmNlX251bWJlchgDIAEoAyJOChtXYXRjaFRocmVhZE1lc3NhZ2VzUmVzcG9uc2USLwoIbWVzc2FnZXMYASADKAsyHS5oYXJwaWEuY2hhdC52MS5UaHJlYWRNZXNzYWdlIt4BChpBcHBlbmRUaHJlYWRNZXNzYWdlUmVxdWVzdBIRCgl0ZW5hbnRfaWQYASABKAkSEQoJdGhyZWFkX2lkGAIgASgJEi8KBHJvbGUYAyABKA4yIS5oYXJwaWEuY2hhdC52MS5UaHJlYWRNZXNzYWdlUm9sZRIvCgRraW5kGAQgASgOMiEuaGFycGlhLmNoYXQudjEuVGhyZWFkTWVzc2FnZUtpbmQSDAoEdGV4dBgFIAEoCRIUCgxwYXlsb2FkX2pzb24YBiABKAkSFAoMZXhlY3V0aW9uX2lkGAcgASgJIk0KG0FwcGVuZFRocmVhZE1lc3NhZ2VSZXNwb25zZRIuCgdtZXNzYWdlGAEgASgLMh0uaGFycGlhLmNoYXQudjEuVGhyZWFkTWVzc2FnZSq8AQoMVGhyZWFkU3RhdHVzEh0KGVRIUkVBRF9TVEFUVVNfVU5TUEVDSUZJRUQQABIWChJUSFJFQURfU1RBVFVTX09QRU4QARIZChVUSFJFQURfU1RBVFVTX1JVTk5JTkcQAhIhCh1USFJFQURfU1RBVFVTX05FRURTX0FUVEVOVElPThADEhsKF1RIUkVBRF9TVEFUVVNfQ09NUExFVEVEEAQSGgoWVEhSRUFEX1NUQVRVU19BUkNISVZFRBAFKpkBChFUaHJlYWRNZXNzYWdlUm9sZRIjCh9USFJFQURfTUVTU0FHRV9ST0xFX1VOU1BFQ0lGSUVEEAASIAocVEhSRUFEX01FU1NBR0VfUk9MRV9PVkVSU0VFUhABEh0KGVRIUkVBRF9NRVNTQUdFX1JPTEVfQUdFTlQQAhIeChpUSFJFQURfTUVTU0FHRV9ST0xFX1NZU1RFTRADKqcIChFUaHJlYWRNZXNzYWdlS2luZBIjCh9USFJFQURfTUVTU0FHRV9LSU5EX1VOU1BFQ0lGSUVEEAASIQodVEhSRUFEX01FU1NBR0VfS0lORF9VU0VSX1RFWFQQARImCiJUSFJFQURfTUVTU0FHRV9LSU5EX0FTU0lTVEFOVF9URVhUEAISKwonVEhSRUFEX01FU1NBR0VfS0lORF9DT05GSUdVUkFUSU9OX1NBVkVEEAMSIwofVEhSRUFEX01FU1NBR0VfS0lORF9SVU5fU1RBUlRFRBAEEiUKIVRIUkVBRF9NRVNTQUdFX0tJTkRfUlVOX0NPTVBMRVRFRBAFEiIKHlRIUkVBRF9NRVNTQUdFX0tJTkRfUlVOX0ZBSUxFRBAGEiIKHlRIUkVBRF9NRVNTQUdFX0tJTkRfU1RFUF9CT1VORBAHEioKJlRIUkVBRF9NRVNTQUdFX0tJTkRfRUxJQ0lUQVRJT05fUkFJU0VEEAgSLAooVEhSRUFEX01FU1NBR0VfS0lORF9FTElDSVRBVElPTl9BTlNXRVJFRBAJEicKI1RIUkVBRF9NRVNTQUdFX0tJTkRfQVBQUk9WQUxfUkFJU0VEEAoSKAokVEhSRUFEX01FU1NBR0VfS0lORF9BUFBST1ZBTF9ERUNJREVEEAsSJAogVEhSRUFEX01FU1NBR0VfS0lORF9TVEVQX1NUQVJURUQQDBItCilUSFJFQURfTUVTU0FHRV9LSU5EX0NPTkZJR1VSQVRJT05fU1RBUlRFRBANEigKJFRIUkVBRF9NRVNTQUdFX0tJTkRfQVNTSVNUQU5UX1BST01QVBAOEiYKIlRIUkVBRF9NRVNTQUdFX0tJTkRfVVNFUl9TRUxFQ1RJT04QDxIkCiBUSFJFQURfTUVTU0FHRV9LSU5EX1NURVBfUkVCT1VORBAQEiQKIFRIUkVBRF9NRVNTQUdFX0tJTkRfU0NIRURVTEVfU0VUEBESJQohVEhSRUFEX01FU1NBR0VfS0lORF9QTEFOX1BST1BPU0VEEBISJQohVEhSRUFEX01FU1NBR0VfS0lORF9QTEFOX0FUVEFDSEVEEBMSJAogVEhSRUFEX01FU1NBR0VfS0lORF9QTEFOX1VQREFURUQQFBIqCiZUSFJFQURfTUVTU0FHRV9LSU5EX1BMQU5fUlVOX1JFUVVFU1RFRBAVEigKJFRIUkVBRF9NRVNTQUdFX0tJTkRfQVJUSUZBQ1RfQ1JFQVRFRBAWEigKJFRIUkVBRF9NRVNTQUdFX0tJTkRfQVJUSUZBQ1RfVVBEQVRFRBAXEiQKIFRIUkVBRF9NRVNTQUdFX0tJTkRfRVJST1JfUkFJU0VEEBgSJwojVEhSRUFEX01FU1NBR0VfS0lORF9FUlJPUl9SRUNPVkVSRUQQGTLDBQoNVGhyZWFkU2VydmljZRJZCgxDcmVhdGVUaHJlYWQSIy5oYXJwaWEuY2hhdC52MS5DcmVhdGVUaHJlYWRSZXF1ZXN0GiQuaGFycGlhLmNoYXQudjEuQ3JlYXRlVGhyZWFkUmVzcG9uc2USUAoJR2V0VGhyZWFkEiAuaGFycGlhLmNoYXQudjEuR2V0VGhyZWFkUmVxdWVzdBohLmhhcnBpYS5jaGF0LnYxLkdldFRocmVhZFJlc3BvbnNlElgKC0xpc3RUaHJlYWRzEiIuaGFycGlhLmNoYXQudjEuTGlzdFRocmVhZHNSZXF1ZXN0GiMuaGFycGlhLmNoYXQudjEuTGlzdFRocmVhZHNSZXNwb25zZTABElwKDUFyY2hpdmVUaHJlYWQSJC5oYXJwaWEuY2hhdC52MS5BcmNoaXZlVGhyZWFkUmVxdWVzdBolLmhhcnBpYS5jaGF0LnYxLkFyY2hpdmVUaHJlYWRSZXNwb25zZRJrChJMaXN0VGhyZWFkTWVzc2FnZXMSKS5oYXJwaWEuY2hhdC52MS5MaXN0VGhyZWFkTWVzc2FnZXNSZXF1ZXN0GiouaGFycGlhLmNoYXQudjEuTGlzdFRocmVhZE1lc3NhZ2VzUmVzcG9uc2UScAoTV2F0Y2hUaHJlYWRNZXNzYWdlcxIqLmhhcnBpYS5jaGF0LnYxLldhdGNoVGhyZWFkTWVzc2FnZXNSZXF1ZXN0GisuaGFycGlhLmNoYXQudjEuV2F0Y2hUaHJlYWRNZXNzYWdlc1Jlc3BvbnNlMAESbgoTQXBwZW5kVGhyZWFkTWVzc2FnZRIqLmhhcnBpYS5jaGF0LnYxLkFwcGVuZFRocmVhZE1lc3NhZ2VSZXF1ZXN0GisuaGFycGlhLmNoYXQudjEuQXBwZW5kVGhyZWFkTWVzc2FnZVJlc3BvbnNlQrQBChJjb20uaGFycGlhLmNoYXQudjFCCUNoYXRQcm90b1ABWjlnaXRodWIuY29tL2hhcnBpYS9jb250cm9sLXBsYW5lL2dlbi9oYXJwaWEvY2hhdC92MTtjaGF0djGiAgNIQ1iqAg5IYXJwaWEuQ2hhdC5WMcoCDkhhcnBpYVxDaGF0XFYx4gIaSGFycGlhXENoYXRcVjFcR1BCTWV0YWRhdGHqAhBIYXJwaWE6OkNoYXQ6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp]);
+
+/**
+ * @generated from message harpia.chat.v1.Thread
+ */
+export type Thread = Message<"harpia.chat.v1.Thread"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string tenant_id = 2;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: string title = 3;
+   */
+  title: string;
+
+  /**
+   * @generated from field: harpia.chat.v1.ThreadStatus status = 4;
+   */
+  status: ThreadStatus;
+
+  /**
+   * @generated from field: string active_plan_configuration_id = 5;
+   */
+  activePlanConfigurationId: string;
+
+  /**
+   * @generated from field: string created_by_user_id = 6;
+   */
+  createdByUserId: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp archived_at = 7;
+   */
+  archivedAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 8;
+   */
+  createdAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp updated_at = 9;
+   */
+  updatedAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message harpia.chat.v1.Thread.
+ * Use `create(ThreadSchema)` to create a new message.
+ */
+export const ThreadSchema: GenMessage<Thread> = /*@__PURE__*/
+  messageDesc(file_harpia_chat_v1_chat, 0);
 
 /**
  * ThreadMessage is a single durable record in a chat thread.
  *
- * In M3 a thread is identified by a PlanConfiguration ID (thread_id =
- * plan_configuration_id). The schema is generic; future milestones may
- * reuse this type for non-Plan chat surfaces (see UX-M3 design spec §2.2).
+ * thread_id is the owning Thread.id. During Path B migration, legacy
+ * plan-thread RPCs resolve plan_configuration_id to the owning thread_id.
  *
  * @generated from message harpia.chat.v1.ThreadMessage
  */
@@ -39,7 +95,7 @@ export type ThreadMessage = Message<"harpia.chat.v1.ThreadMessage"> & {
   tenantId: string;
 
   /**
-   * generic; = plan_configuration_id in M3
+   * UUID of the owning Thread
    *
    * @generated from field: string thread_id = 3;
    */
@@ -101,7 +157,391 @@ export type ThreadMessage = Message<"harpia.chat.v1.ThreadMessage"> & {
  * Use `create(ThreadMessageSchema)` to create a new message.
  */
 export const ThreadMessageSchema: GenMessage<ThreadMessage> = /*@__PURE__*/
-  messageDesc(file_harpia_chat_v1_chat, 0);
+  messageDesc(file_harpia_chat_v1_chat, 1);
+
+/**
+ * @generated from message harpia.chat.v1.CreateThreadRequest
+ */
+export type CreateThreadRequest = Message<"harpia.chat.v1.CreateThreadRequest"> & {
+  /**
+   * @generated from field: string tenant_id = 1;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: string title = 2;
+   */
+  title: string;
+
+  /**
+   * @generated from field: string initial_message_text = 3;
+   */
+  initialMessageText: string;
+};
+
+/**
+ * Describes the message harpia.chat.v1.CreateThreadRequest.
+ * Use `create(CreateThreadRequestSchema)` to create a new message.
+ */
+export const CreateThreadRequestSchema: GenMessage<CreateThreadRequest> = /*@__PURE__*/
+  messageDesc(file_harpia_chat_v1_chat, 2);
+
+/**
+ * @generated from message harpia.chat.v1.CreateThreadResponse
+ */
+export type CreateThreadResponse = Message<"harpia.chat.v1.CreateThreadResponse"> & {
+  /**
+   * @generated from field: harpia.chat.v1.Thread thread = 1;
+   */
+  thread?: Thread | undefined;
+
+  /**
+   * @generated from field: harpia.chat.v1.ThreadMessage initial_message = 2;
+   */
+  initialMessage?: ThreadMessage | undefined;
+};
+
+/**
+ * Describes the message harpia.chat.v1.CreateThreadResponse.
+ * Use `create(CreateThreadResponseSchema)` to create a new message.
+ */
+export const CreateThreadResponseSchema: GenMessage<CreateThreadResponse> = /*@__PURE__*/
+  messageDesc(file_harpia_chat_v1_chat, 3);
+
+/**
+ * @generated from message harpia.chat.v1.GetThreadRequest
+ */
+export type GetThreadRequest = Message<"harpia.chat.v1.GetThreadRequest"> & {
+  /**
+   * @generated from field: string tenant_id = 1;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: string thread_id = 2;
+   */
+  threadId: string;
+};
+
+/**
+ * Describes the message harpia.chat.v1.GetThreadRequest.
+ * Use `create(GetThreadRequestSchema)` to create a new message.
+ */
+export const GetThreadRequestSchema: GenMessage<GetThreadRequest> = /*@__PURE__*/
+  messageDesc(file_harpia_chat_v1_chat, 4);
+
+/**
+ * @generated from message harpia.chat.v1.GetThreadResponse
+ */
+export type GetThreadResponse = Message<"harpia.chat.v1.GetThreadResponse"> & {
+  /**
+   * @generated from field: harpia.chat.v1.Thread thread = 1;
+   */
+  thread?: Thread | undefined;
+};
+
+/**
+ * Describes the message harpia.chat.v1.GetThreadResponse.
+ * Use `create(GetThreadResponseSchema)` to create a new message.
+ */
+export const GetThreadResponseSchema: GenMessage<GetThreadResponse> = /*@__PURE__*/
+  messageDesc(file_harpia_chat_v1_chat, 5);
+
+/**
+ * @generated from message harpia.chat.v1.ListThreadsRequest
+ */
+export type ListThreadsRequest = Message<"harpia.chat.v1.ListThreadsRequest"> & {
+  /**
+   * @generated from field: string tenant_id = 1;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: optional harpia.chat.v1.ThreadStatus status = 2;
+   */
+  status?: ThreadStatus | undefined;
+
+  /**
+   * @generated from field: int32 page_size = 3;
+   */
+  pageSize: number;
+
+  /**
+   * @generated from field: string page_token = 4;
+   */
+  pageToken: string;
+};
+
+/**
+ * Describes the message harpia.chat.v1.ListThreadsRequest.
+ * Use `create(ListThreadsRequestSchema)` to create a new message.
+ */
+export const ListThreadsRequestSchema: GenMessage<ListThreadsRequest> = /*@__PURE__*/
+  messageDesc(file_harpia_chat_v1_chat, 6);
+
+/**
+ * @generated from message harpia.chat.v1.ListThreadsResponse
+ */
+export type ListThreadsResponse = Message<"harpia.chat.v1.ListThreadsResponse"> & {
+  /**
+   * @generated from field: repeated harpia.chat.v1.Thread threads = 1;
+   */
+  threads: Thread[];
+
+  /**
+   * @generated from field: string next_page_token = 2;
+   */
+  nextPageToken: string;
+};
+
+/**
+ * Describes the message harpia.chat.v1.ListThreadsResponse.
+ * Use `create(ListThreadsResponseSchema)` to create a new message.
+ */
+export const ListThreadsResponseSchema: GenMessage<ListThreadsResponse> = /*@__PURE__*/
+  messageDesc(file_harpia_chat_v1_chat, 7);
+
+/**
+ * @generated from message harpia.chat.v1.ArchiveThreadRequest
+ */
+export type ArchiveThreadRequest = Message<"harpia.chat.v1.ArchiveThreadRequest"> & {
+  /**
+   * @generated from field: string tenant_id = 1;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: string thread_id = 2;
+   */
+  threadId: string;
+};
+
+/**
+ * Describes the message harpia.chat.v1.ArchiveThreadRequest.
+ * Use `create(ArchiveThreadRequestSchema)` to create a new message.
+ */
+export const ArchiveThreadRequestSchema: GenMessage<ArchiveThreadRequest> = /*@__PURE__*/
+  messageDesc(file_harpia_chat_v1_chat, 8);
+
+/**
+ * @generated from message harpia.chat.v1.ArchiveThreadResponse
+ */
+export type ArchiveThreadResponse = Message<"harpia.chat.v1.ArchiveThreadResponse"> & {
+  /**
+   * @generated from field: harpia.chat.v1.Thread thread = 1;
+   */
+  thread?: Thread | undefined;
+};
+
+/**
+ * Describes the message harpia.chat.v1.ArchiveThreadResponse.
+ * Use `create(ArchiveThreadResponseSchema)` to create a new message.
+ */
+export const ArchiveThreadResponseSchema: GenMessage<ArchiveThreadResponse> = /*@__PURE__*/
+  messageDesc(file_harpia_chat_v1_chat, 9);
+
+/**
+ * @generated from message harpia.chat.v1.ListThreadMessagesRequest
+ */
+export type ListThreadMessagesRequest = Message<"harpia.chat.v1.ListThreadMessagesRequest"> & {
+  /**
+   * @generated from field: string tenant_id = 1;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: string thread_id = 2;
+   */
+  threadId: string;
+
+  /**
+   * @generated from field: int32 page_size = 3;
+   */
+  pageSize: number;
+
+  /**
+   * @generated from field: string page_token = 4;
+   */
+  pageToken: string;
+};
+
+/**
+ * Describes the message harpia.chat.v1.ListThreadMessagesRequest.
+ * Use `create(ListThreadMessagesRequestSchema)` to create a new message.
+ */
+export const ListThreadMessagesRequestSchema: GenMessage<ListThreadMessagesRequest> = /*@__PURE__*/
+  messageDesc(file_harpia_chat_v1_chat, 10);
+
+/**
+ * @generated from message harpia.chat.v1.ListThreadMessagesResponse
+ */
+export type ListThreadMessagesResponse = Message<"harpia.chat.v1.ListThreadMessagesResponse"> & {
+  /**
+   * @generated from field: repeated harpia.chat.v1.ThreadMessage messages = 1;
+   */
+  messages: ThreadMessage[];
+
+  /**
+   * @generated from field: string next_page_token = 2;
+   */
+  nextPageToken: string;
+};
+
+/**
+ * Describes the message harpia.chat.v1.ListThreadMessagesResponse.
+ * Use `create(ListThreadMessagesResponseSchema)` to create a new message.
+ */
+export const ListThreadMessagesResponseSchema: GenMessage<ListThreadMessagesResponse> = /*@__PURE__*/
+  messageDesc(file_harpia_chat_v1_chat, 11);
+
+/**
+ * @generated from message harpia.chat.v1.WatchThreadMessagesRequest
+ */
+export type WatchThreadMessagesRequest = Message<"harpia.chat.v1.WatchThreadMessagesRequest"> & {
+  /**
+   * @generated from field: string tenant_id = 1;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: string thread_id = 2;
+   */
+  threadId: string;
+
+  /**
+   * @generated from field: int64 since_sequence_number = 3;
+   */
+  sinceSequenceNumber: bigint;
+};
+
+/**
+ * Describes the message harpia.chat.v1.WatchThreadMessagesRequest.
+ * Use `create(WatchThreadMessagesRequestSchema)` to create a new message.
+ */
+export const WatchThreadMessagesRequestSchema: GenMessage<WatchThreadMessagesRequest> = /*@__PURE__*/
+  messageDesc(file_harpia_chat_v1_chat, 12);
+
+/**
+ * @generated from message harpia.chat.v1.WatchThreadMessagesResponse
+ */
+export type WatchThreadMessagesResponse = Message<"harpia.chat.v1.WatchThreadMessagesResponse"> & {
+  /**
+   * @generated from field: repeated harpia.chat.v1.ThreadMessage messages = 1;
+   */
+  messages: ThreadMessage[];
+};
+
+/**
+ * Describes the message harpia.chat.v1.WatchThreadMessagesResponse.
+ * Use `create(WatchThreadMessagesResponseSchema)` to create a new message.
+ */
+export const WatchThreadMessagesResponseSchema: GenMessage<WatchThreadMessagesResponse> = /*@__PURE__*/
+  messageDesc(file_harpia_chat_v1_chat, 13);
+
+/**
+ * @generated from message harpia.chat.v1.AppendThreadMessageRequest
+ */
+export type AppendThreadMessageRequest = Message<"harpia.chat.v1.AppendThreadMessageRequest"> & {
+  /**
+   * @generated from field: string tenant_id = 1;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: string thread_id = 2;
+   */
+  threadId: string;
+
+  /**
+   * @generated from field: harpia.chat.v1.ThreadMessageRole role = 3;
+   */
+  role: ThreadMessageRole;
+
+  /**
+   * @generated from field: harpia.chat.v1.ThreadMessageKind kind = 4;
+   */
+  kind: ThreadMessageKind;
+
+  /**
+   * @generated from field: string text = 5;
+   */
+  text: string;
+
+  /**
+   * @generated from field: string payload_json = 6;
+   */
+  payloadJson: string;
+
+  /**
+   * @generated from field: string execution_id = 7;
+   */
+  executionId: string;
+};
+
+/**
+ * Describes the message harpia.chat.v1.AppendThreadMessageRequest.
+ * Use `create(AppendThreadMessageRequestSchema)` to create a new message.
+ */
+export const AppendThreadMessageRequestSchema: GenMessage<AppendThreadMessageRequest> = /*@__PURE__*/
+  messageDesc(file_harpia_chat_v1_chat, 14);
+
+/**
+ * @generated from message harpia.chat.v1.AppendThreadMessageResponse
+ */
+export type AppendThreadMessageResponse = Message<"harpia.chat.v1.AppendThreadMessageResponse"> & {
+  /**
+   * @generated from field: harpia.chat.v1.ThreadMessage message = 1;
+   */
+  message?: ThreadMessage | undefined;
+};
+
+/**
+ * Describes the message harpia.chat.v1.AppendThreadMessageResponse.
+ * Use `create(AppendThreadMessageResponseSchema)` to create a new message.
+ */
+export const AppendThreadMessageResponseSchema: GenMessage<AppendThreadMessageResponse> = /*@__PURE__*/
+  messageDesc(file_harpia_chat_v1_chat, 15);
+
+/**
+ * @generated from enum harpia.chat.v1.ThreadStatus
+ */
+export enum ThreadStatus {
+  /**
+   * @generated from enum value: THREAD_STATUS_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: THREAD_STATUS_OPEN = 1;
+   */
+  OPEN = 1,
+
+  /**
+   * @generated from enum value: THREAD_STATUS_RUNNING = 2;
+   */
+  RUNNING = 2,
+
+  /**
+   * @generated from enum value: THREAD_STATUS_NEEDS_ATTENTION = 3;
+   */
+  NEEDS_ATTENTION = 3,
+
+  /**
+   * @generated from enum value: THREAD_STATUS_COMPLETED = 4;
+   */
+  COMPLETED = 4,
+
+  /**
+   * @generated from enum value: THREAD_STATUS_ARCHIVED = 5;
+   */
+  ARCHIVED = 5,
+}
+
+/**
+ * Describes the enum harpia.chat.v1.ThreadStatus.
+ */
+export const ThreadStatusSchema: GenEnum<ThreadStatus> = /*@__PURE__*/
+  enumDesc(file_harpia_chat_v1_chat, 0);
 
 /**
  * @generated from enum harpia.chat.v1.ThreadMessageRole
@@ -138,7 +578,7 @@ export enum ThreadMessageRole {
  * Describes the enum harpia.chat.v1.ThreadMessageRole.
  */
 export const ThreadMessageRoleSchema: GenEnum<ThreadMessageRole> = /*@__PURE__*/
-  enumDesc(file_harpia_chat_v1_chat, 0);
+  enumDesc(file_harpia_chat_v1_chat, 1);
 
 /**
  * @generated from enum harpia.chat.v1.ThreadMessageKind
@@ -267,11 +707,114 @@ export enum ThreadMessageKind {
    * @generated from enum value: THREAD_MESSAGE_KIND_SCHEDULE_SET = 17;
    */
   SCHEDULE_SET = 17,
+
+  /**
+   * @generated from enum value: THREAD_MESSAGE_KIND_PLAN_PROPOSED = 18;
+   */
+  PLAN_PROPOSED = 18,
+
+  /**
+   * @generated from enum value: THREAD_MESSAGE_KIND_PLAN_ATTACHED = 19;
+   */
+  PLAN_ATTACHED = 19,
+
+  /**
+   * @generated from enum value: THREAD_MESSAGE_KIND_PLAN_UPDATED = 20;
+   */
+  PLAN_UPDATED = 20,
+
+  /**
+   * @generated from enum value: THREAD_MESSAGE_KIND_PLAN_RUN_REQUESTED = 21;
+   */
+  PLAN_RUN_REQUESTED = 21,
+
+  /**
+   * @generated from enum value: THREAD_MESSAGE_KIND_ARTIFACT_CREATED = 22;
+   */
+  ARTIFACT_CREATED = 22,
+
+  /**
+   * @generated from enum value: THREAD_MESSAGE_KIND_ARTIFACT_UPDATED = 23;
+   */
+  ARTIFACT_UPDATED = 23,
+
+  /**
+   * @generated from enum value: THREAD_MESSAGE_KIND_ERROR_RAISED = 24;
+   */
+  ERROR_RAISED = 24,
+
+  /**
+   * @generated from enum value: THREAD_MESSAGE_KIND_ERROR_RECOVERED = 25;
+   */
+  ERROR_RECOVERED = 25,
 }
 
 /**
  * Describes the enum harpia.chat.v1.ThreadMessageKind.
  */
 export const ThreadMessageKindSchema: GenEnum<ThreadMessageKind> = /*@__PURE__*/
-  enumDesc(file_harpia_chat_v1_chat, 1);
+  enumDesc(file_harpia_chat_v1_chat, 2);
+
+/**
+ * @generated from service harpia.chat.v1.ThreadService
+ */
+export const ThreadService: GenService<{
+  /**
+   * @generated from rpc harpia.chat.v1.ThreadService.CreateThread
+   */
+  createThread: {
+    methodKind: "unary";
+    input: typeof CreateThreadRequestSchema;
+    output: typeof CreateThreadResponseSchema;
+  },
+  /**
+   * @generated from rpc harpia.chat.v1.ThreadService.GetThread
+   */
+  getThread: {
+    methodKind: "unary";
+    input: typeof GetThreadRequestSchema;
+    output: typeof GetThreadResponseSchema;
+  },
+  /**
+   * @generated from rpc harpia.chat.v1.ThreadService.ListThreads
+   */
+  listThreads: {
+    methodKind: "server_streaming";
+    input: typeof ListThreadsRequestSchema;
+    output: typeof ListThreadsResponseSchema;
+  },
+  /**
+   * @generated from rpc harpia.chat.v1.ThreadService.ArchiveThread
+   */
+  archiveThread: {
+    methodKind: "unary";
+    input: typeof ArchiveThreadRequestSchema;
+    output: typeof ArchiveThreadResponseSchema;
+  },
+  /**
+   * @generated from rpc harpia.chat.v1.ThreadService.ListThreadMessages
+   */
+  listThreadMessages: {
+    methodKind: "unary";
+    input: typeof ListThreadMessagesRequestSchema;
+    output: typeof ListThreadMessagesResponseSchema;
+  },
+  /**
+   * @generated from rpc harpia.chat.v1.ThreadService.WatchThreadMessages
+   */
+  watchThreadMessages: {
+    methodKind: "server_streaming";
+    input: typeof WatchThreadMessagesRequestSchema;
+    output: typeof WatchThreadMessagesResponseSchema;
+  },
+  /**
+   * @generated from rpc harpia.chat.v1.ThreadService.AppendThreadMessage
+   */
+  appendThreadMessage: {
+    methodKind: "unary";
+    input: typeof AppendThreadMessageRequestSchema;
+    output: typeof AppendThreadMessageResponseSchema;
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_harpia_chat_v1_chat, 0);
 

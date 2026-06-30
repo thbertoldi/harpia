@@ -137,8 +137,9 @@ type PlanServiceClient interface {
 	GetApprovalRequest(context.Context, *connect.Request[v1.GetApprovalRequestRequest]) (*connect.Response[v1.GetApprovalRequestResponse], error)
 	RespondToApprovalRequest(context.Context, *connect.Request[v1.RespondToApprovalRequestRequest]) (*connect.Response[v1.RespondToApprovalRequestResponse], error)
 	WatchApprovalRequests(context.Context, *connect.Request[v1.WatchApprovalRequestsRequest]) (*connect.ServerStreamForClient[v1.WatchApprovalRequestsResponse], error)
-	// Plan thread (per-PlanConfiguration chat thread).
-	// See docs/superpowers/specs/2026-06-21-harpia-ux-m3-plan-thread-design.md.
+	// Deprecated: use harpia.chat.v1.ThreadService message RPCs. These methods
+	// remain during Path B migration and resolve plan_configuration_id to the
+	// owning thread_id.
 	ListPlanThreadMessages(context.Context, *connect.Request[v1.ListPlanThreadMessagesRequest]) (*connect.Response[v1.ListPlanThreadMessagesResponse], error)
 	WatchPlanThreadMessages(context.Context, *connect.Request[v1.WatchPlanThreadMessagesRequest]) (*connect.ServerStreamForClient[v1.WatchPlanThreadMessagesResponse], error)
 	AppendPlanThreadMessage(context.Context, *connect.Request[v1.AppendPlanThreadMessageRequest]) (*connect.Response[v1.AppendPlanThreadMessageResponse], error)
@@ -480,8 +481,9 @@ type PlanServiceHandler interface {
 	GetApprovalRequest(context.Context, *connect.Request[v1.GetApprovalRequestRequest]) (*connect.Response[v1.GetApprovalRequestResponse], error)
 	RespondToApprovalRequest(context.Context, *connect.Request[v1.RespondToApprovalRequestRequest]) (*connect.Response[v1.RespondToApprovalRequestResponse], error)
 	WatchApprovalRequests(context.Context, *connect.Request[v1.WatchApprovalRequestsRequest], *connect.ServerStream[v1.WatchApprovalRequestsResponse]) error
-	// Plan thread (per-PlanConfiguration chat thread).
-	// See docs/superpowers/specs/2026-06-21-harpia-ux-m3-plan-thread-design.md.
+	// Deprecated: use harpia.chat.v1.ThreadService message RPCs. These methods
+	// remain during Path B migration and resolve plan_configuration_id to the
+	// owning thread_id.
 	ListPlanThreadMessages(context.Context, *connect.Request[v1.ListPlanThreadMessagesRequest]) (*connect.Response[v1.ListPlanThreadMessagesResponse], error)
 	WatchPlanThreadMessages(context.Context, *connect.Request[v1.WatchPlanThreadMessagesRequest], *connect.ServerStream[v1.WatchPlanThreadMessagesResponse]) error
 	AppendPlanThreadMessage(context.Context, *connect.Request[v1.AppendPlanThreadMessageRequest]) (*connect.Response[v1.AppendPlanThreadMessageResponse], error)
