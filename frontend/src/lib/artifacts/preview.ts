@@ -1,11 +1,7 @@
-import { createClient } from "@connectrpc/connect";
 import {
-  ArtifactService,
   type PreviewArtifactResponse,
 } from "$lib/gen/harpia/artifacts/v1/artifacts_pb";
-import { transport } from "$lib/transport";
-
-export const artifactClient = createClient(ArtifactService, transport);
+import { artifactClient } from "$lib/rpc";
 
 export type ArtifactPreviewKind = "text" | "list" | "json" | "empty";
 
@@ -21,10 +17,12 @@ export type FormattedArtifactPreview = {
 export async function fetchArtifactPreview(
   tenantId: string,
   artifactId: string,
+  artifactVersionId = "",
 ): Promise<PreviewArtifactResponse> {
   return artifactClient.previewArtifact({
     tenantId,
     artifactId,
+    artifactVersionId,
   });
 }
 

@@ -2,6 +2,7 @@ import {
   Activity,
   BookOpen,
   Bot,
+  Files,
   Inbox,
   Plug,
   ScrollText,
@@ -25,6 +26,12 @@ export const navSectionDefs: NavSectionDef[] = [
     i18nKey: "nav.plans",
     href: "/plans",
     icon: BookOpen,
+    visibleTo: "all",
+  },
+  {
+    i18nKey: "nav.artifacts",
+    href: "/artifacts",
+    icon: Files,
     visibleTo: "all",
   },
   {

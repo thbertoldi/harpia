@@ -9,12 +9,14 @@
   let {
     tenantId,
     artifactId,
+    artifactVersionId = "",
     preview = $bindable<FormattedArtifactPreview | null>(null),
     loading = $bindable(false),
     error = $bindable<string | null>(null),
   }: {
     tenantId: string;
     artifactId: string;
+    artifactVersionId?: string;
     preview?: FormattedArtifactPreview | null;
     loading?: boolean;
     error?: string | null;
@@ -31,7 +33,7 @@
     loading = true;
     error = null;
 
-    fetchArtifactPreview(tenantId, artifactId)
+    fetchArtifactPreview(tenantId, artifactId, artifactVersionId)
       .then((response) => {
         if (cancelled) return;
         preview = formatArtifactPreview(response);
