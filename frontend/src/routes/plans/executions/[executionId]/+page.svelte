@@ -2,6 +2,7 @@
   import { resolve } from "$app/paths";
   import { ArrowLeft, ExternalLink, FileText, ListChecks } from "lucide-svelte";
   import ArtifactPreview from "$lib/components/ArtifactPreview.svelte";
+  import ArtifactRail from "$lib/components/artifacts/ArtifactRail.svelte";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
   import StepExecutionStatusBadge from "$lib/components/StepExecutionStatusBadge.svelte";
   import ThreadMessage from "$lib/components/thread/ThreadMessage.svelte";
@@ -255,7 +256,18 @@
       {/if}
     </section>
 
-    <aside>
+    <aside class="space-y-5">
+      <div>
+        <ArtifactRail tenantId={data.tenantId} artifacts={data.artifacts} />
+        {#if data.artifactsError}
+          <p
+            class="mt-3 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 font-mono text-xs text-red-300"
+          >
+            {translate("artifacts.loadError", $locale)}
+          </p>
+        {/if}
+      </div>
+
       <div class="mb-3 flex items-center gap-2">
         <ListChecks class="size-4 text-talon-gold" />
         <h2 class="font-heading text-base font-semibold text-cream">

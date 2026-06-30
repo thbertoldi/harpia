@@ -1,6 +1,7 @@
 <script lang="ts">
   import { browser } from "$app/environment";
   import { resolve } from "$app/paths";
+  import { listArtifacts } from "$lib/artifacts/artifacts";
   import { getTenant } from "$lib/auth";
   import { locale, translate } from "$lib/i18n";
   import { loadThreadMessages } from "$lib/chat/client";
@@ -8,8 +9,7 @@
   import type { ChatMessage } from "$lib/chat/types";
   import { buildThreadSections } from "$lib/plans/thread";
   import PlanDagMiniMap from "$lib/components/PlanDagMiniMap.svelte";
-  import ThreadMessage from "$lib/components/thread/ThreadMessage.svelte";
-  import ExecutionSection from "$lib/components/thread/ExecutionSection.svelte";
+  import ConversationalWorkspace from "$lib/components/thread/ConversationalWorkspace.svelte";
   import ThreadComposer from "$lib/components/thread/ThreadComposer.svelte";
   import HintBanner from "$lib/components/thread/HintBanner.svelte";
   import PlanThreadTopBar from "$lib/components/PlanThreadTopBar.svelte";
@@ -19,6 +19,12 @@
     PlanConfigurationStatus,
     type PlanConfiguration,
   } from "$lib/gen/harpia/plans/v1/plans_pb";
+  import type { Artifact } from "$lib/gen/harpia/artifacts/v1/artifacts_pb";
+  import {
+    mapStepRowsToActivity,
+    type PlanActivityItem,
+  } from "$lib/plans/activity";
+  import { loadPlanExecutionDetail } from "$lib/plans/plan-execution-detail";
   import { planClient } from "$lib/rpc";
   import { Expand } from "lucide-svelte";
 
@@ -28,11 +34,21 @@
   let loadError = $state(false);
   let scheduleOpen = $state(false);
   // Server is the source of truth for configuration mutations performed by
-  // the assistant. Start with the load-time snapshot and refetch when an
-  // incoming chat message indicates a mutation happened.
-  let liveConfiguration = $state<PlanConfiguration | undefined>(
-    data.configuration,
+  // the assistant. Use load-time data until an incoming chat message indicates
+  // a mutation happened, then keep the refetched snapshot as an override.
+  let liveConfigurationOverride = $state<PlanConfiguration | undefined>();
+  const liveConfiguration = $derived(
+    liveConfigurationOverride ?? data.configuration,
   );
+  let workspaceArtifacts = $state<Artifact[]>([]);
+  let workspaceActivityItems = $state<PlanActivityItem[]>([]);
+  let workspaceLoadError = $state(false);
+
+  $effect(() => {
+    const configurationId = data.configurationId;
+    liveConfigurationOverride = undefined;
+    void configurationId;
+  });
 
   const tenantId = $derived(getTenant()?.id ?? "");
 
@@ -125,7 +141,8 @@
           { tenantId, planConfigurationId: data.configurationId },
           { signal: controller.signal },
         );
-        if (res.planConfiguration) liveConfiguration = res.planConfiguration;
+        if (res.planConfiguration)
+          liveConfigurationOverride = res.planConfiguration;
       } catch {
         // best-effort; pill stays stale until the next refetch
       }
@@ -143,6 +160,55 @@
       if (s.kind === "execution") return s.group.executionId;
     }
     return null;
+  });
+  const planScopeMessages = $derived(
+    sections.flatMap((section) =>
+      section.kind === "plan-scope" ? [section.message] : [],
+    ),
+  );
+  const latestExecutionSequence = $derived.by(() => {
+    if (!mostRecentExecutionId) return 0n;
+    let latest = 0n;
+    for (const message of messages) {
+      if (
+        message.executionId === mostRecentExecutionId &&
+        message.sequenceNumber > latest
+      ) {
+        latest = message.sequenceNumber;
+      }
+    }
+    return latest;
+  });
+
+  $effect(() => {
+    const executionId = mostRecentExecutionId;
+    const executionSequence = latestExecutionSequence;
+    void executionSequence;
+    if (!tenantId || !executionId) {
+      workspaceArtifacts = [];
+      workspaceActivityItems = [];
+      workspaceLoadError = false;
+      return;
+    }
+    const controller = new AbortController();
+    workspaceLoadError = false;
+    (async () => {
+      try {
+        const [detail, artifacts] = await Promise.all([
+          loadPlanExecutionDetail(tenantId, executionId),
+          listArtifacts({ tenantId, planExecutionId: executionId }),
+        ]);
+        if (controller.signal.aborted) return;
+        workspaceActivityItems = mapStepRowsToActivity(detail.rows);
+        workspaceArtifacts = artifacts;
+      } catch {
+        if (controller.signal.aborted) return;
+        workspaceLoadError = true;
+      }
+    })();
+    return () => {
+      controller.abort();
+    };
   });
 
   // Deep-link anchor: handle three formats and scroll once when target arrives:
@@ -199,7 +265,7 @@
   <title>{translate("thread.title", $locale)} · Harpia</title>
 </svelte:head>
 
-<div class="mx-auto flex max-w-3xl flex-col gap-3 px-4 py-6">
+<div class="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-6">
   {#if data.template && liveConfiguration}
     <PlanThreadTopBar
       planName={data.template.name}
@@ -225,6 +291,14 @@
 
   <HintBanner threadId={data.configurationId} />
 
+  {#if workspaceLoadError}
+    <p
+      class="rounded border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+    >
+      {translate("artifacts.loadError", $locale)}
+    </p>
+  {/if}
+
   {#if loadError}
     <p
       class="rounded border border-plumage bg-obsidian-light px-4 py-3 text-sm text-crown-ash"
@@ -238,46 +312,13 @@
       {translate("thread.empty", $locale)}
     </p>
   {:else}
-    <div class="flex flex-col gap-2">
-      {#each sections as section (section.kind === "execution" ? section.group.executionId : section.message.id)}
-        {#if section.kind === "plan-scope"}
-          {@const isLastAssistantPrompt = (() => {
-            if (section.message.kind !== "ASSISTANT_PROMPT") return false;
-            const idx = messages.findIndex((m) => m.id === section.message.id);
-            if (idx < 0) return false;
-            const after = messages.slice(idx + 1);
-            const answered = after.some((m) => {
-              if (m.kind !== "USER_SELECTION") return false;
-              try {
-                return (
-                  JSON.parse(m.payloadJson)?.in_response_to_message_id ===
-                  section.message.id
-                );
-              } catch {
-                return false;
-              }
-            });
-            return !answered;
-          })()}
-          {@const isAnsweredPrompt =
-            section.message.kind === "ASSISTANT_PROMPT" &&
-            !isLastAssistantPrompt}
-          <ThreadMessage
-            message={section.message}
-            configurationId={data.configurationId}
-            {tenantId}
-            isLive={isLastAssistantPrompt}
-            isAnswered={isAnsweredPrompt}
-          />
-        {:else}
-          <ExecutionSection
-            group={section.group}
-            defaultExpanded={section.group.executionId ===
-              mostRecentExecutionId}
-          />
-        {/if}
-      {/each}
-    </div>
+    <ConversationalWorkspace
+      {tenantId}
+      configurationId={data.configurationId}
+      messages={planScopeMessages}
+      activityItems={workspaceActivityItems}
+      artifacts={workspaceArtifacts}
+    />
   {/if}
 
   <ThreadComposer {tenantId} configurationId={data.configurationId} />
