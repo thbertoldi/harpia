@@ -551,6 +551,7 @@
   "artifacts.emptyDescription": "Execute um plano para gerar listas de fontes, rascunhos, posts do LinkedIn e confirmações de publicação.",
   "artifacts.rail.heading": "Artefatos",
   "artifacts.rail.subheading": "Saídas geradas nesta execução.",
+  "artifacts.rail.backToRail": "Voltar para a barra lateral",
   "artifacts.detail.back": "Voltar para artefatos",
   "artifacts.detail.type": "Tipo",
   "artifacts.detail.updatedAt": "Atualizado",

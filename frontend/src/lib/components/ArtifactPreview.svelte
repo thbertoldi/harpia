@@ -10,6 +10,7 @@
     tenantId,
     artifactId,
     artifactVersionId = "",
+    constrained = true,
     preview = $bindable<FormattedArtifactPreview | null>(null),
     loading = $bindable(false),
     error = $bindable<string | null>(null),
@@ -17,6 +18,8 @@
     tenantId: string;
     artifactId: string;
     artifactVersionId?: string;
+    /** When true, caps preview height and scrolls overflow inline. */
+    constrained?: boolean;
     preview?: FormattedArtifactPreview | null;
     loading?: boolean;
     error?: string | null;
@@ -58,34 +61,44 @@
   });
 </script>
 
-{#if loading}
-  <p class="artifact-preview artifact-preview--loading">
-    {translate("artifactPreview.loading", $locale)}
-  </p>
-{:else if error}
-  <p class="artifact-preview artifact-preview--error">{error}</p>
-{:else if preview}
-  {#if preview.kind === "list" && preview.listSummary}
-    <div class="artifact-preview artifact-preview--list">
-      <p>
-        {translate("artifactPreview.articles", $locale, {
-          count: preview.listSummary.articleCount,
-        })}
-      </p>
-      <ul>
-        {#each preview.listSummary.titles as title, i (i)}
-          <li>{title}</li>
-        {/each}
-      </ul>
-    </div>
-  {:else if preview.kind === "json"}
-    <pre class="artifact-preview artifact-preview--json">{preview.text}</pre>
-  {:else}
-    <pre class="artifact-preview artifact-preview--text">{preview.text}</pre>
+<div
+  class="artifact-preview-body"
+  class:artifact-preview-body--constrained={constrained}
+>
+  {#if loading}
+    <p class="artifact-preview artifact-preview--loading">
+      {translate("artifactPreview.loading", $locale)}
+    </p>
+  {:else if error}
+    <p class="artifact-preview artifact-preview--error">{error}</p>
+  {:else if preview}
+    {#if preview.kind === "list" && preview.listSummary}
+      <div class="artifact-preview artifact-preview--list">
+        <p>
+          {translate("artifactPreview.articles", $locale, {
+            count: preview.listSummary.articleCount,
+          })}
+        </p>
+        <ul>
+          {#each preview.listSummary.titles as title, i (i)}
+            <li>{title}</li>
+          {/each}
+        </ul>
+      </div>
+    {:else if preview.kind === "json"}
+      <pre class="artifact-preview artifact-preview--json">{preview.text}</pre>
+    {:else}
+      <pre class="artifact-preview artifact-preview--text">{preview.text}</pre>
+    {/if}
   {/if}
-{/if}
+</div>
 
 <style>
+  .artifact-preview-body--constrained {
+    max-height: 24rem;
+    overflow-y: auto;
+  }
+
   .artifact-preview {
     margin: 0;
     white-space: pre-wrap;

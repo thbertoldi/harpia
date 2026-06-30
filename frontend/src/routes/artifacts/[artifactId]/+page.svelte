@@ -111,6 +111,7 @@
           tenantId={data.tenantId}
           artifactId={data.artifact.id}
           artifactVersionId={selectedVersionId}
+          constrained={false}
         />
       </section>
 

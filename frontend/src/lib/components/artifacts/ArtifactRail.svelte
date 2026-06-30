@@ -6,9 +6,11 @@
   let {
     tenantId,
     artifacts,
+    onOpenArtifact,
   }: {
     tenantId: string;
     artifacts: Artifact[];
+    onOpenArtifact?: (artifactId: string) => void;
   } = $props();
 </script>
 
@@ -31,7 +33,12 @@
   {:else}
     <div class="flex flex-col gap-2">
       {#each artifacts as artifact (artifact.id)}
-        <ArtifactCard {tenantId} {artifact} compact />
+        <ArtifactCard
+          {tenantId}
+          {artifact}
+          compact
+          onOpen={onOpenArtifact}
+        />
       {/each}
     </div>
   {/if}

@@ -2,6 +2,7 @@ import {
   Activity,
   Bot,
   Compass,
+  Files,
   Inbox,
   Plug,
   Plus,
@@ -22,6 +23,7 @@ const OPERATOR_SECTIONS: M1Section[] = [
   { i18nKey: "nav.needsYou", href: "/inbox", icon: Inbox },
   { i18nKey: "nav.discover", href: "/discover", icon: Compass },
   { i18nKey: "nav.newPlan", href: "/new", icon: Plus },
+  { i18nKey: "nav.artifacts", href: "/artifacts", icon: Files },
   { i18nKey: "nav.executions", href: "/plans/executions", icon: Activity },
 ];
 

@@ -551,6 +551,7 @@
   "artifacts.emptyDescription": "Run a plan to generate source lists, drafts, LinkedIn posts, and publish confirmations.",
   "artifacts.rail.heading": "Artifacts",
   "artifacts.rail.subheading": "Generated outputs for this run.",
+  "artifacts.rail.backToRail": "Back to rail",
   "artifacts.detail.back": "Back to artifacts",
   "artifacts.detail.type": "Type",
   "artifacts.detail.updatedAt": "Updated",

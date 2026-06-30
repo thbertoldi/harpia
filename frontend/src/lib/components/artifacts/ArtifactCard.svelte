@@ -10,10 +10,12 @@
     tenantId,
     artifact,
     compact = false,
+    onOpen,
   }: {
     tenantId: string;
     artifact: Artifact;
     compact?: boolean;
+    onOpen?: (artifactId: string) => void;
   } = $props();
 
   const title = $derived(artifactTitle(artifact));
@@ -34,14 +36,26 @@
       </p>
     </div>
     <div class="flex gap-1">
-      <a
-        href={resolve(`/artifacts/${artifact.id}`)}
-        class="inline-flex size-8 items-center justify-center rounded-md border border-plumage text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
-        aria-label={translate("artifacts.actions.open", $locale)}
-        title={translate("artifacts.actions.open", $locale)}
-      >
-        <Eye class="size-4" />
-      </a>
+      {#if onOpen}
+        <button
+          type="button"
+          class="inline-flex size-8 items-center justify-center rounded-md border border-plumage text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
+          aria-label={translate("artifacts.actions.open", $locale)}
+          title={translate("artifacts.actions.open", $locale)}
+          onclick={() => onOpen(artifact.id)}
+        >
+          <Eye class="size-4" />
+        </button>
+      {:else}
+        <a
+          href={resolve(`/artifacts/${artifact.id}`)}
+          class="inline-flex size-8 items-center justify-center rounded-md border border-plumage text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
+          aria-label={translate("artifacts.actions.open", $locale)}
+          title={translate("artifacts.actions.open", $locale)}
+        >
+          <Eye class="size-4" />
+        </a>
+      {/if}
       {#if editable}
         <a
           href={resolve(`/artifacts/${artifact.id}?edit=1`)}

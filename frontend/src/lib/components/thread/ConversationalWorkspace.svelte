@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { goto } from "$app/navigation";
-  import { resolve } from "$app/paths";
+  import ArtifactDetailPanel from "$lib/components/artifacts/ArtifactDetailPanel.svelte";
   import ArtifactRail from "$lib/components/artifacts/ArtifactRail.svelte";
   import PlanActivityTimeline from "$lib/components/thread/PlanActivityTimeline.svelte";
   import ThreadMessage from "$lib/components/thread/ThreadMessage.svelte";
@@ -22,8 +21,27 @@
     artifacts: Artifact[];
   } = $props();
 
+  let selectedPreviewArtifactId = $state<string | null>(null);
+
+  const selectedArtifact = $derived(
+    selectedPreviewArtifactId
+      ? (artifacts.find((artifact) => artifact.id === selectedPreviewArtifactId) ??
+        null)
+      : null,
+  );
+
+  $effect(() => {
+    if (selectedPreviewArtifactId && !selectedArtifact) {
+      selectedPreviewArtifactId = null;
+    }
+  });
+
   function openArtifact(artifactId: string) {
-    void goto(resolve(`/artifacts/${artifactId}`));
+    selectedPreviewArtifactId = artifactId;
+  }
+
+  function closeArtifactPreview() {
+    selectedPreviewArtifactId = null;
   }
 
   function isSelectionAnswerFor(
@@ -73,5 +91,13 @@
       {/each}
     </div>
   </main>
-  <ArtifactRail {tenantId} {artifacts} />
+  {#if selectedArtifact}
+    <ArtifactDetailPanel
+      {tenantId}
+      artifact={selectedArtifact}
+      onClose={closeArtifactPreview}
+    />
+  {:else}
+    <ArtifactRail {tenantId} {artifacts} onOpenArtifact={openArtifact} />
+  {/if}
 </div>
