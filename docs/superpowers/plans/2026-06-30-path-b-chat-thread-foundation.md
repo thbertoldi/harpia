@@ -152,7 +152,7 @@ cd /home/thbertoldi/harpia && atlas migrate hash --dir file://database/migration
 - Modify: `proto/harpia/plans/v1/plans.proto`
 - Generated: `control-plane/gen/**`, `frontend/src/lib/gen/**`, `agent-runtime/src/harpia_agents/gen/**`
 
-- [ ] **Step 1: Add the thread model to `chat.proto`**
+- [x] **Step 1: Add the thread model to `chat.proto`**
 
 Insert this block above `message ThreadMessage`:
 
@@ -179,7 +179,7 @@ enum ThreadStatus {
 }
 ```
 
-- [ ] **Step 2: Add thread service request and response messages**
+- [x] **Step 2: Add thread service request and response messages**
 
 Insert this block after `ThreadMessage`:
 
@@ -262,7 +262,7 @@ message AppendThreadMessageResponse {
 }
 ```
 
-- [ ] **Step 3: Add `ThreadService`**
+- [x] **Step 3: Add `ThreadService`**
 
 Insert this service below the file options:
 
@@ -278,7 +278,7 @@ service ThreadService {
 }
 ```
 
-- [ ] **Step 4: Add new message kinds**
+- [x] **Step 4: Add new message kinds**
 
 Append these enum values after `THREAD_MESSAGE_KIND_SCHEDULE_SET = 17;`:
 
@@ -293,7 +293,7 @@ Append these enum values after `THREAD_MESSAGE_KIND_SCHEDULE_SET = 17;`:
   THREAD_MESSAGE_KIND_ERROR_RECOVERED = 25;
 ```
 
-- [ ] **Step 5: Add `thread_id` to plan configuration contracts**
+- [x] **Step 5: Add `thread_id` to plan configuration contracts**
 
 In `proto/harpia/plans/v1/plans.proto`, add field 15 to
 `PlanConfiguration`:
@@ -354,7 +354,7 @@ message UpdatePlanConfigurationRequest {
 }
 ```
 
-- [ ] **Step 6: Mark plan-thread RPC comments as deprecated**
+- [x] **Step 6: Mark plan-thread RPC comments as deprecated**
 
 Replace the current plan-thread comment with:
 
@@ -364,7 +364,7 @@ Replace the current plan-thread comment with:
   // owning thread_id.
 ```
 
-- [ ] **Step 7: Generate clients and verify proto lint**
+- [x] **Step 7: Generate clients and verify proto lint**
 
 Run:
 
@@ -375,7 +375,7 @@ cd /home/thbertoldi/harpia/proto && buf generate && buf lint
 Expected: `buf lint` exits 0 and generated chat connect files include
 `ThreadService`.
 
-- [ ] **Step 8: Commit proto foundation**
+- [x] **Step 8: Commit proto foundation**
 
 Run:
 
