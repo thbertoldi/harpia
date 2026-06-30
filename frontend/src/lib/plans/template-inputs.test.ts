@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { PublishApprovalMode } from "$lib/gen/harpia/plans/v1/plans_pb";
 import {
   buildDefaultLinkedInInputValues,
+  linkedInInputValuesFromParameterValuesJson,
   materializeLinkedInInputValues,
 } from "./linkedin-template-inputs";
 import { parameterValuesJson, parseParameterValuesJson } from "./template-inputs";
@@ -95,5 +96,38 @@ describe("LinkedIn template input materialization", () => {
     });
     expect(parseParameterValuesJson(json)).toEqual(JSON.parse(json));
     expect(parseParameterValuesJson("not-json")).toEqual({});
+  });
+
+  it("restores saved parameter values into editable LinkedIn inputs", () => {
+    const values = linkedInInputValuesFromParameterValuesJson(
+      JSON.stringify({
+        theme: "retail growth",
+        language: "en-US",
+        tone: "executive and direct",
+        audience: "founders",
+        topics_to_avoid: "rumors",
+        source_group: "rss-selected",
+        date_range: {
+          startDate: "2026-06-01",
+          endDate: "2026-06-07",
+        },
+        approval_mode: "auto_publish",
+      }),
+      new Date("2026-06-29T12:00:00Z"),
+    );
+
+    expect(values).toEqual({
+      theme: "retail growth",
+      language: "en-US",
+      tone: "executive and direct",
+      audience: "founders",
+      topicsToAvoid: "rumors",
+      sourceGroupInstallationId: "rss-selected",
+      dateRange: {
+        startDate: "2026-06-01",
+        endDate: "2026-06-07",
+      },
+      approvalMode: "auto_publish",
+    });
   });
 });

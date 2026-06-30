@@ -4,7 +4,10 @@
   import type { ChatMessage } from "$lib/chat/types";
   import { locale, translate } from "$lib/i18n";
   import { applyLinkedInSuggestion, editBinding } from "$lib/plans/assistant";
-  import { buildDefaultLinkedInInputValues } from "$lib/plans/linkedin-template-inputs";
+  import {
+    buildDefaultLinkedInInputValues,
+    linkedInInputValuesFromParameterValuesJson,
+  } from "$lib/plans/linkedin-template-inputs";
   import {
     parseMatrixPayload,
     computeRunCostBRL,
@@ -78,6 +81,9 @@
         );
         if (controller.signal.aborted || !cfgRes.planConfiguration) return;
         configuration = cfgRes.planConfiguration;
+        inputValues = linkedInInputValuesFromParameterValuesJson(
+          cfgRes.planConfiguration.parameterValuesJson,
+        );
         const tplRes = await planClient.getPlanTemplate(
           { planTemplateId: cfgRes.planConfiguration.planTemplateId },
           { signal: controller.signal },

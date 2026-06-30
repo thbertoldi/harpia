@@ -10,7 +10,11 @@ import {
   type SeedArtifactBinding,
   type SlotBinding,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
-import type { LinkedInTemplateInputValues } from "./template-inputs";
+import {
+  parseParameterValuesJson,
+  type DateRangeValue,
+  type LinkedInTemplateInputValues,
+} from "./template-inputs";
 
 export interface LinkedInMaterialization {
   seedArtifacts: SeedArtifactBinding[];
@@ -45,6 +49,60 @@ export function buildDefaultLinkedInInputValues(
       endDate: isoDate(end),
     },
     approvalMode: "require_approval",
+  };
+}
+
+function isLanguage(value: unknown): value is LinkedInTemplateInputValues["language"] {
+  return value === "pt-BR" || value === "en-US" || value === "es";
+}
+
+function isApprovalMode(
+  value: unknown,
+): value is LinkedInTemplateInputValues["approvalMode"] {
+  return value === "require_approval" || value === "auto_publish";
+}
+
+function parseDateRange(value: unknown): DateRangeValue | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const candidate = value as Record<string, unknown>;
+  return typeof candidate.startDate === "string" &&
+    typeof candidate.endDate === "string"
+    ? {
+        startDate: candidate.startDate,
+        endDate: candidate.endDate,
+      }
+    : null;
+}
+
+export function linkedInInputValuesFromParameterValuesJson(
+  raw: string | undefined,
+  today = new Date(),
+): LinkedInTemplateInputValues {
+  const defaults = buildDefaultLinkedInInputValues(today);
+  const parsed = parseParameterValuesJson(raw);
+  const dateRange = parseDateRange(parsed.date_range);
+
+  return {
+    ...defaults,
+    theme: typeof parsed.theme === "string" ? parsed.theme : defaults.theme,
+    language: isLanguage(parsed.language) ? parsed.language : defaults.language,
+    tone: typeof parsed.tone === "string" ? parsed.tone : defaults.tone,
+    audience:
+      typeof parsed.audience === "string" ? parsed.audience : defaults.audience,
+    topicsToAvoid:
+      typeof parsed.topics_to_avoid === "string"
+        ? parsed.topics_to_avoid
+        : defaults.topicsToAvoid,
+    sourceGroupInstallationId:
+      typeof parsed.source_group === "string"
+        ? parsed.source_group
+        : defaults.sourceGroupInstallationId,
+    dateRange: dateRange ?? defaults.dateRange,
+    approvalMode: isApprovalMode(parsed.approval_mode)
+      ? parsed.approval_mode
+      : defaults.approvalMode,
   };
 }
 
