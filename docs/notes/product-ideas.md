@@ -21,11 +21,24 @@ policies, and schedule — should be completed **in the chat interface**, so the
 **RUNNABLE the moment planning finishes**. This is ADR-012 §10 ("chat is a
 PlanConfiguration assistant") made real end-to-end.
 **Current state:** only the proposal/confirmation step is conversational (shipped via
-`conversational-plan-proposal`). Slot binding / overseer / policies / schedule still
-happen on the binding-matrix / configured surface.
-**Next:** decompose into stages (bind → overseer → policies → schedule → confirm RUNNABLE),
-each its own OpenSpec change. Likely a multi-change epic.
-**Links:** ADR-012 §10; builds on `openspec/changes/conversational-plan-proposal` (shipped).
+`conversational-plan-proposal`). The configured side has a backend state machine
+(`planassistant`: `BINDING_MATRIX → landing`) but binding is a flat matrix, overseer is a
+read-only stub, policies are LinkedIn-only, and schedule is a post-save modal.
+
+**Architecture:** extend the `planassistant` backend state machine (persisted `ASSISTANT_PROMPT`
+messages) — NOT client-side like the proposal. Re-enable the already-defined `USER_SELECTION`
+and `STEP_REBOUND` message kinds. No new ADR (ADR-012 §10 covers it).
+
+**UX decision:** conversational-first, with the **binding matrix kept as a collapsible
+"edit all" fallback**; both surfaces sync via `UpdatePlanConfiguration`.
+
+**Decomposition (4 sequenced OpenSpec changes, 1→2→3→4):**
+1. `conversational-slot-binding` — guided per-step "who handles X?" chips (incl. RSS presets); re-enable USER_SELECTION/STEP_REBOUND.
+2. `conversational-overseer` — "who oversees the agent steps?" (wire the stubbed overseer; MVP self/tenant user).
+3. `conversational-policies` — approval mode + elicitation timeout as enum chips (generalize beyond LinkedIn).
+4. `conversational-schedule-promote` — schedule in-flow, validate invariants, promote → RUNNABLE (reuse the shipped celebration), add "Revise" backward handoff.
+
+**Links:** ADR-012 §10; builds on `openspec/changes/archive/2026-07-01-conversational-plan-proposal`.
 
 ## Content
 
