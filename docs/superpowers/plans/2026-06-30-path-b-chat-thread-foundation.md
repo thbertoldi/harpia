@@ -1320,7 +1320,7 @@ git commit -m "feat: implement thread service handler"
 - Modify: `control-plane/internal/plans/thread_handler.go`
 - Modify: `control-plane/internal/plans/thread_handler_test.go`
 
-- [ ] **Step 1: Add compatibility tests**
+- [x] **Step 1: Add compatibility tests**
 
 Update `control-plane/internal/plans/thread_handler_test.go` so
 `TestAppendPlanThreadMessage_PersistsOverseerText` creates separate ids:
@@ -1360,7 +1360,7 @@ if got := createdConfig.ThreadID; got != threadID {
 }
 ```
 
-- [ ] **Step 2: Run failing compatibility test**
+- [x] **Step 2: Run failing compatibility test**
 
 Run:
 
@@ -1370,7 +1370,7 @@ cd /home/thbertoldi/harpia/control-plane && go test ./internal/plans -run TestAp
 
 Expected: fails because `PlanHandler` still appends to configuration id.
 
-- [ ] **Step 3: Add thread id field to repository model**
+- [x] **Step 3: Add thread id field to repository model**
 
 In `control-plane/internal/plans/repository.go`, add:
 
@@ -1420,7 +1420,7 @@ to include `thread_id` immediately after `parameter_values`.
 Update `scanConfiguration` so it scans `&config.ThreadID` immediately after
 `&config.ParameterValues`.
 
-- [ ] **Step 4: Add handler resolver hook**
+- [x] **Step 4: Add handler resolver hook**
 
 In `control-plane/internal/plans/handler.go`, add this field to `PlanHandler`:
 
@@ -1453,7 +1453,7 @@ func (r *Repository) GetThreadIDForConfiguration(ctx context.Context, tenantID, 
 }
 ```
 
-- [ ] **Step 5: Resolve legacy thread ids in `thread_handler.go`**
+- [x] **Step 5: Resolve legacy thread ids in `thread_handler.go`**
 
 In each legacy plan-thread RPC, parse `configID`, resolve `threadID`, and use
 `threadID.String()` for chat store calls:
@@ -1471,7 +1471,7 @@ if err != nil {
 
 For `WatchPlanThreadMessages`, return `connect.CodeNotFound` on resolver errors.
 
-- [ ] **Step 6: Map `thread_id` in plan configuration create/update handlers**
+- [x] **Step 6: Map `thread_id` in plan configuration create/update handlers**
 
 In `control-plane/internal/plans/handler.go`, wherever repository
 `PlanConfiguration` is converted to proto, set:
@@ -1510,7 +1510,7 @@ if rawThreadID := strings.TrimSpace(req.Msg.GetThreadId()); rawThreadID != "" {
 }
 ```
 
-- [ ] **Step 7: Run compatibility tests**
+- [x] **Step 7: Run compatibility tests**
 
 Run:
 
@@ -1520,7 +1520,7 @@ cd /home/thbertoldi/harpia/control-plane && go test ./internal/plans -run 'Test(
 
 Expected: tests pass.
 
-- [ ] **Step 8: Commit compatibility bridge**
+- [x] **Step 8: Commit compatibility bridge**
 
 Run:
 
