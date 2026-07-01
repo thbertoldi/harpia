@@ -889,7 +889,7 @@ git commit -m "feat: add thread repository"
 - Create: `control-plane/internal/threads/handler.go`
 - Create: `control-plane/internal/threads/handler_test.go`
 
-- [ ] **Step 1: Add handler tests with fakes**
+- [x] **Step 1: Add handler tests with fakes**
 
 Create `control-plane/internal/threads/handler_test.go` with tests that exercise
 the public contract:
@@ -1002,7 +1002,7 @@ func TestCreateThreadPersistsInitialMessage(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run the failing handler test**
+- [x] **Step 2: Run the failing handler test**
 
 Run:
 
@@ -1012,7 +1012,7 @@ cd /home/thbertoldi/harpia/control-plane && go test ./internal/threads -run Test
 
 Expected: fails because `NewHandler` and RPC methods do not exist.
 
-- [ ] **Step 3: Implement handler**
+- [x] **Step 3: Implement handler**
 
 Create `control-plane/internal/threads/handler.go`:
 
@@ -1177,7 +1177,7 @@ func parseRequiredUUID(raw, name string) (uuid.UUID, error) {
 }
 ```
 
-- [ ] **Step 4: Add message list/append/watch methods**
+- [x] **Step 4: Add message list/append/watch methods**
 
 Add these methods to `control-plane/internal/threads/handler.go`:
 
@@ -1292,7 +1292,7 @@ func (h *Handler) WatchThreadMessages(ctx context.Context, req *connect.Request[
 }
 ```
 
-- [ ] **Step 5: Run thread handler tests**
+- [x] **Step 5: Run thread handler tests**
 
 Run:
 
@@ -1302,7 +1302,7 @@ cd /home/thbertoldi/harpia/control-plane && go test ./internal/threads -count=1
 
 Expected: tests pass.
 
-- [ ] **Step 6: Commit ThreadService handler**
+- [x] **Step 6: Commit ThreadService handler**
 
 Run:
 
