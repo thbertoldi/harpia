@@ -27,6 +27,28 @@
     return hit ?? null;
   });
 
+  async function startFromPrompt() {
+    if (creating || !tenantId) return;
+    const text = composerText.trim();
+    if (text.length === 0) return;
+    creating = true;
+    createError = null;
+    try {
+      const threadResponse = await threadClient.createThread({
+        tenantId,
+        title: text.slice(0, 60),
+        initialMessageText: text,
+      });
+      const threadId = threadResponse.thread?.id;
+      if (!threadId) throw new Error("createThread returned no id");
+      await goto(resolve(`/chat/${threadId}`));
+    } catch (e) {
+      createError = e instanceof Error ? e.message : "Failed to start";
+    } finally {
+      creating = false;
+    }
+  }
+
   async function pickTemplate(templateId: string) {
     if (creating || !tenantId) return;
     creating = true;
@@ -84,8 +106,9 @@
       type="text"
       bind:value={composerText}
       onkeydown={(e) => {
-        if (e.key === "Enter" && matchedTemplate)
-          void pickTemplate(matchedTemplate.id);
+        if (e.key !== "Enter") return;
+        if (matchedTemplate) void pickTemplate(matchedTemplate.id);
+        else void startFromPrompt();
       }}
       placeholder={translate("new.composerPlaceholder", $locale)}
       class="w-full rounded-md border border-plumage bg-obsidian-light px-3 py-2 text-[13px] text-cream"

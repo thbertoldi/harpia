@@ -11,6 +11,7 @@
   import PlanDagMiniMap from "$lib/components/PlanDagMiniMap.svelte";
   import ConversationalWorkspace from "$lib/components/thread/ConversationalWorkspace.svelte";
   import ThreadComposer from "$lib/components/thread/ThreadComposer.svelte";
+  import PlanProposalCard from "$lib/components/thread/PlanProposalCard.svelte";
   import HintBanner from "$lib/components/thread/HintBanner.svelte";
   import PlanThreadTopBar from "$lib/components/PlanThreadTopBar.svelte";
   import ScheduleDialog from "$lib/components/canvas/ScheduleDialog.svelte";
@@ -25,7 +26,7 @@
     type PlanActivityItem,
   } from "$lib/plans/activity";
   import { loadPlanExecutionDetail } from "$lib/plans/plan-execution-detail";
-  import { planClient } from "$lib/rpc";
+  import { planClient, threadClient } from "$lib/rpc";
   import { Expand } from "lucide-svelte";
 
   let { data } = $props();
@@ -38,6 +39,7 @@
   const routeConfigurationId = $derived(data.configurationId);
 
   let messages = $state<ChatMessage[]>([]);
+  let proposing = $state(false);
   let loadError = $state(false);
   let scheduleOpen = $state(false);
   // Server is the source of truth for configuration mutations performed by
@@ -58,6 +60,49 @@
   });
 
   const tenantId = $derived(getTenant()?.id ?? "");
+
+  // True when a PLAN_PROPOSED already follows the most recent USER_TEXT.
+  const hasProposalForLatestUser = $derived.by(() => {
+    let sawUser = false;
+    for (const m of messages) {
+      if (m.kind === "USER_TEXT") {
+        sawUser = true;
+        continue;
+      }
+      if (sawUser && m.kind === "PLAN_PROPOSED") return true;
+    }
+    return false;
+  });
+
+  const latestIsUnansweredUser = $derived.by(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].kind === "USER_TEXT") return !hasProposalForLatestUser;
+      if (messages[i].kind === "PLAN_PROPOSED") return false;
+    }
+    return false;
+  });
+
+  async function triggerProposal() {
+    if (proposing || !tenantId || !routeThreadId) return;
+    proposing = true;
+    try {
+      // Reads the thread's latest user message server-side and appends
+      // PLAN_PROPOSED, which arrives back via the existing watch stream.
+      await threadClient.proposePlan({ tenantId, threadId: routeThreadId });
+    } catch {
+      // best-effort; the user can retry by sending another message
+    } finally {
+      proposing = false;
+    }
+  }
+
+  // Auto-propose when a config-less thread has an unanswered opening message.
+  $effect(() => {
+    if (routeConfigurationId) return;
+    if (!latestIsUnansweredUser) return;
+    if (proposing) return;
+    void triggerProposal();
+  });
 
   const pricing: ExecutorPriceLookup = (id) =>
     data.executorCatalog?.get(id) ?? null;
@@ -270,10 +315,31 @@
 
 <div class="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-6">
   {#if !routeConfigurationId}
-    <div
-      class="rounded border border-plumage bg-obsidian-light px-4 py-3 text-sm text-crown-ash"
-    >
-      Tell Aiuna what you want to create, then a plan will appear here.
+    <div class="flex flex-col gap-3">
+      {#if messages.length === 0}
+        <div class="rounded border border-plumage bg-obsidian-light px-4 py-3 text-sm text-crown-ash">
+          Tell Aiuna what you want to create, then a plan will appear here.
+        </div>
+      {/if}
+      {#each messages as m (m.id)}
+        {#if m.kind === "PLAN_PROPOSED"}
+          <PlanProposalCard message={m} {tenantId} threadId={routeThreadId} />
+        {:else if m.kind === "USER_TEXT"}
+          <div
+            class="max-w-[85%] self-end rounded-lg border border-plumage bg-obsidian-light px-3 py-2 text-[13px] whitespace-pre-wrap text-cream"
+          >
+            {m.text}
+          </div>
+        {/if}
+      {/each}
+      {#if proposing}
+        <div class="text-[12px] text-crown-ash-dark">Thinking about a plan…</div>
+      {/if}
+      <ThreadComposer
+        {tenantId}
+        configurationId={routeThreadId}
+        onSent={triggerProposal}
+      />
     </div>
   {:else}
     {#if data.template && liveConfiguration}
