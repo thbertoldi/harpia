@@ -4,7 +4,7 @@
   import { resolve } from "$app/paths";
   import { getTenant } from "$lib/auth";
   import { locale, translate } from "$lib/i18n";
-  import { planClient } from "$lib/rpc";
+  import { planClient, threadClient } from "$lib/rpc";
   import { PlanConfigurationStatus } from "$lib/gen/harpia/plans/v1/plans_pb";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
   import TemplatePickerCard from "$lib/components/thread/TemplatePickerCard.svelte";
@@ -32,6 +32,14 @@
     creating = true;
     createError = null;
     try {
+      const threadResponse = await threadClient.createThread({
+        tenantId,
+        title: matchedTemplate?.name ?? "Untitled chat",
+        initialMessageText: composerText.trim(),
+      });
+      const threadId = threadResponse.thread?.id;
+      if (!threadId) throw new Error("createThread returned no id");
+
       const response = await planClient.createPlanConfiguration({
         tenantId,
         workspaceId: "",
@@ -42,10 +50,11 @@
         overseerBindings: [],
         behaviorPolicies: undefined,
         schedule: undefined,
+        threadId,
       });
       const configId = response.planConfiguration?.id;
       if (!configId) throw new Error("createPlanConfiguration returned no id");
-      await goto(resolve(`/plans/configurations/${configId}`));
+      await goto(resolve(`/chat/${threadId}`));
     } catch (e) {
       createError = e instanceof Error ? e.message : "Failed to create plan";
     } finally {

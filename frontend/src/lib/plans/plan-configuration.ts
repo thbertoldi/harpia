@@ -23,6 +23,7 @@ export interface PlanConfigurationSaveInput {
   overseerBindings?: OverseerBinding[];
   behaviorPolicies?: PlanBehaviorPolicies;
   schedule?: PlanSchedule;
+  threadId?: string;
 }
 
 export function workspaceIdForTenant(tenantId: string): string {
@@ -102,10 +103,15 @@ export async function savePlanConfigurationRecord({
   overseerBindings,
   behaviorPolicies,
   schedule,
+  threadId,
 }: PlanConfigurationSaveInput): Promise<PlanConfiguration> {
   const existing =
     existingConfiguration ??
     (await loadPlanConfigurationForTemplate(template.id, tenantId));
+
+  if (!existing?.id && !threadId) {
+    throw new Error("threadId is required when creating a plan configuration.");
+  }
 
   const nextStatus =
     status ?? existing?.status ?? PlanConfigurationStatus.DRAFT;
@@ -138,6 +144,7 @@ export async function savePlanConfigurationRecord({
         overseerBindings: nextOverseerBindings,
         behaviorPolicies: nextBehaviorPolicies,
         schedule: nextSchedule,
+        threadId: threadId ?? existing?.threadId ?? "",
       });
 
   if (!response.planConfiguration) {

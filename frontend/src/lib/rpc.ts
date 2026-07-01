@@ -1,6 +1,7 @@
 import { createClient } from "@connectrpc/connect";
 import { AgentService } from "$lib/gen/harpia/agents/v1/agents_pb";
 import { ArtifactService } from "$lib/gen/harpia/artifacts/v1/artifacts_pb";
+import { ThreadService } from "$lib/gen/harpia/chat/v1/chat_pb";
 import { ExecutorService } from "$lib/gen/harpia/executors/v1/executors_pb";
 import { FeedbackService } from "$lib/gen/harpia/feedback/v1/feedback_pb";
 import { IdentityService } from "$lib/gen/harpia/identity/v1/identity_pb";
@@ -17,6 +18,7 @@ export const artifactClient = createClient(ArtifactService, transport);
 export const planClient = createClient(PlanService, transport);
 export const executorClient = createClient(ExecutorService, transport);
 export const llmConfigClient = createClient(LLMConfigService, transport);
+export const threadClient = createClient(ThreadService, transport);
 
 export type {
   FeedbackRequest,
@@ -77,8 +79,18 @@ export {
   ElicitationTimeoutBehavior,
   ThreadMessageRole as ElicitationThreadMessageRole,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
-export type { ThreadMessage } from "$lib/gen/harpia/chat/v1/chat_pb";
+export type {
+  ThreadMessage,
+  Thread,
+  CreateThreadResponse,
+  GetThreadResponse,
+  ListThreadsResponse,
+  ListThreadMessagesResponse,
+  WatchThreadMessagesResponse,
+  AppendThreadMessageResponse,
+} from "$lib/gen/harpia/chat/v1/chat_pb";
 export {
   ThreadMessageRole as ProtoThreadMessageRole,
   ThreadMessageKind as ProtoThreadMessageKind,
+  ThreadStatus,
 } from "$lib/gen/harpia/chat/v1/chat_pb";

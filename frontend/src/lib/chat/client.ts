@@ -1,4 +1,4 @@
-import { planClient } from "$lib/rpc";
+import { threadClient } from "$lib/rpc";
 import {
   type ChatMessage,
   type ChatMessageKind,
@@ -10,16 +10,16 @@ import {
 
 export async function appendThreadMessage(
   tenantId: string,
-  configurationId: string,
+  threadId: string,
   role: ChatMessageRole,
   kind: ChatMessageKind,
   text: string,
   payloadJson = "{}",
   executionId = "",
 ): Promise<ChatMessage> {
-  const response = await planClient.appendPlanThreadMessage({
+  const response = await threadClient.appendThreadMessage({
     tenantId,
-    planConfigurationId: configurationId,
+    threadId,
     role: chatRoleToProto(role),
     kind: chatKindToProto(kind),
     text,
@@ -27,19 +27,19 @@ export async function appendThreadMessage(
     executionId,
   });
   if (!response.message) {
-    throw new Error("appendPlanThreadMessage returned no message");
+    throw new Error("appendThreadMessage returned no message");
   }
   return chatMessageFromProto(response.message);
 }
 
 export async function loadThreadMessages(
   tenantId: string,
-  configurationId: string,
+  threadId: string,
   pageSize = 100,
 ): Promise<ChatMessage[]> {
-  const response = await planClient.listPlanThreadMessages({
+  const response = await threadClient.listThreadMessages({
     tenantId,
-    planConfigurationId: configurationId,
+    threadId,
     pageSize,
     pageToken: "",
   });

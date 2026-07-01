@@ -1,4 +1,4 @@
-import { error, isHttpError } from "@sveltejs/kit";
+import { error, isHttpError, isRedirect, redirect } from "@sveltejs/kit";
 import type { PageLoad } from "./$types";
 import { planClient, executorClient } from "$lib/rpc";
 import { getTenant } from "$lib/auth";
@@ -65,6 +65,11 @@ export const load: PageLoad = async ({ params }) => {
     if (!config.planConfiguration) {
       throw error(404, "Plan configuration not found");
     }
+    // Path B: chat-first workspaces own their thread. Redirect legacy plan
+    // configuration URLs to the owning thread when one exists.
+    if (config.planConfiguration.threadId) {
+      throw redirect(307, `/chat/${config.planConfiguration.threadId}`);
+    }
     const template = await planClient.getPlanTemplate({
       planTemplateId: config.planConfiguration.planTemplateId,
     });
@@ -76,7 +81,7 @@ export const load: PageLoad = async ({ params }) => {
       executorCatalog,
     };
   } catch (err) {
-    if (isHttpError(err)) {
+    if (isHttpError(err) || isRedirect(err)) {
       throw err;
     }
     throw error(404, "Plan configuration not found");

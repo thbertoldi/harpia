@@ -1,4 +1,4 @@
-import { planClient } from "$lib/rpc";
+import { threadClient } from "$lib/rpc";
 import { type ChatMessage, chatMessageFromProto } from "./types";
 
 export interface WatchThreadOptions {
@@ -8,14 +8,14 @@ export interface WatchThreadOptions {
 
 export async function* watchThreadMessages(
   tenantId: string,
-  configurationId: string,
+  threadId: string,
   options: WatchThreadOptions = {},
 ): AsyncIterable<ChatMessage[]> {
   const sinceSeq = options.sinceSequenceNumber ?? 0n;
-  for await (const event of planClient.watchPlanThreadMessages(
+  for await (const event of threadClient.watchThreadMessages(
     {
       tenantId,
-      planConfigurationId: configurationId,
+      threadId,
       sinceSequenceNumber: sinceSeq,
     },
     { signal: options.signal },

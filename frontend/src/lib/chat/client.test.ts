@@ -1,25 +1,25 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-const planClientMock = vi.hoisted(() => ({
-  planClient: {
-    appendPlanThreadMessage: vi.fn(),
-    listPlanThreadMessages: vi.fn(),
+const threadClientMock = vi.hoisted(() => ({
+  threadClient: {
+    appendThreadMessage: vi.fn(),
+    listThreadMessages: vi.fn(),
   },
 }));
-vi.mock("$lib/rpc", () => planClientMock);
+vi.mock("$lib/rpc", () => threadClientMock);
 
 beforeEach(() => {
-  planClientMock.planClient.appendPlanThreadMessage.mockReset();
-  planClientMock.planClient.listPlanThreadMessages.mockReset();
+  threadClientMock.threadClient.appendThreadMessage.mockReset();
+  threadClientMock.threadClient.listThreadMessages.mockReset();
 });
 
 describe("appendThreadMessage", () => {
-  it("calls planClient.appendPlanThreadMessage with the proto enum values and returns the persisted message", async () => {
-    planClientMock.planClient.appendPlanThreadMessage.mockResolvedValueOnce({
+  it("calls threadClient.appendThreadMessage with the proto enum values and returns the persisted message", async () => {
+    threadClientMock.threadClient.appendThreadMessage.mockResolvedValueOnce({
       message: {
         id: "msg-1",
         tenantId: "tenant-1",
-        threadId: "config-1",
+        threadId: "thread-1",
         role: 1, // OVERSEER
         kind: 1, // USER_TEXT
         text: "remember to update news source",
@@ -31,7 +31,7 @@ describe("appendThreadMessage", () => {
     const { appendThreadMessage } = await import("./client");
     const got = await appendThreadMessage(
       "tenant-1",
-      "config-1",
+      "thread-1",
       "OVERSEER",
       "USER_TEXT",
       "remember to update news source",
@@ -42,13 +42,13 @@ describe("appendThreadMessage", () => {
     expect(got.role).toBe("OVERSEER");
     expect(got.kind).toBe("USER_TEXT");
     expect(
-      planClientMock.planClient.appendPlanThreadMessage,
+      threadClientMock.threadClient.appendThreadMessage,
     ).toHaveBeenCalledTimes(1);
     expect(
-      planClientMock.planClient.appendPlanThreadMessage,
+      threadClientMock.threadClient.appendThreadMessage,
     ).toHaveBeenCalledWith({
       tenantId: "tenant-1",
-      planConfigurationId: "config-1",
+      threadId: "thread-1",
       role: 1,
       kind: 1,
       text: "remember to update news source",
@@ -60,12 +60,12 @@ describe("appendThreadMessage", () => {
 
 describe("loadThreadMessages", () => {
   it("returns the message array from the RPC response", async () => {
-    planClientMock.planClient.listPlanThreadMessages.mockResolvedValueOnce({
+    threadClientMock.threadClient.listThreadMessages.mockResolvedValueOnce({
       messages: [
         {
           id: "msg-1",
           tenantId: "tenant-1",
-          threadId: "config-1",
+          threadId: "thread-1",
           role: 3, // SYSTEM
           kind: 3, // CONFIGURATION_SAVED
           text: "Configuration saved.",
@@ -75,7 +75,7 @@ describe("loadThreadMessages", () => {
       ],
     });
     const { loadThreadMessages } = await import("./client");
-    const got = await loadThreadMessages("tenant-1", "config-1");
+    const got = await loadThreadMessages("tenant-1", "thread-1");
     expect(got).toHaveLength(1);
     expect(got[0].kind).toBe("CONFIGURATION_SAVED");
     expect(got[0].role).toBe("SYSTEM");
