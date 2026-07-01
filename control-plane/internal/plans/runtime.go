@@ -30,6 +30,18 @@ func NewRuntimeRepository(planRepo *Repository, executors ExecutorLookup, chatSt
 	}
 }
 
+// resolveThreadID maps a plan configuration id to its owning thread id so
+// runtime chat messages land on threads.id (Path B). It falls back to the
+// configuration id when the thread cannot be resolved, matching pre-migration
+// behavior for partially migrated development databases.
+func (r *RuntimeRepository) resolveThreadID(ctx context.Context, tenantID, configID uuid.UUID) string {
+	threadID, err := r.plans.GetThreadIDForConfiguration(ctx, tenantID, configID)
+	if err != nil || threadID == uuid.Nil {
+		return configID.String()
+	}
+	return threadID.String()
+}
+
 func (r *RuntimeRepository) CreateScheduledExecution(ctx context.Context, tenantID, configID, executionID uuid.UUID) (workflow.PlanWorkflowInput, error) {
 	if r == nil || r.plans == nil {
 		return workflow.PlanWorkflowInput{}, fmt.Errorf("plan runtime repository is not configured")
@@ -111,7 +123,7 @@ func (r *RuntimeRepository) StartPlanExecution(ctx context.Context, tenantID, ex
 		configID, lookupErr := r.plans.GetPlanConfigurationIDForExecution(ctx, tenantID, executionID)
 		if lookupErr == nil {
 			_, _ = r.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
-				ThreadID:    configID.String(),
+				ThreadID:    r.resolveThreadID(ctx, tenantID, configID),
 				ExecutionID: &execID,
 				Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
 				Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_RUN_STARTED,
@@ -149,7 +161,7 @@ func (r *RuntimeRepository) CreateStepExecution(ctx context.Context, input workf
 		execID := executionID
 		configID, lookupErr := r.plans.GetPlanConfigurationIDForExecution(ctx, tenantID, executionID)
 		if lookupErr == nil {
-			threadID := configID.String()
+			threadID := r.resolveThreadID(ctx, tenantID, configID)
 			if !r.stepStartedChatMessageExists(ctx, tenantID, threadID, step.ID.String()) {
 				_, _ = r.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
 					ThreadID:    threadID,
@@ -194,7 +206,7 @@ func (r *RuntimeRepository) CompleteStepExecution(ctx context.Context, input wor
 			configID, lookupErr := r.plans.GetPlanConfigurationIDForExecution(ctx, tenantID, planExecutionID)
 			if lookupErr == nil {
 				_, _ = r.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
-					ThreadID:    configID.String(),
+					ThreadID:    r.resolveThreadID(ctx, tenantID, configID),
 					ExecutionID: &execID,
 					Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
 					Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_STEP_BOUND,
@@ -275,7 +287,7 @@ func (r *RuntimeRepository) persistElicitation(ctx context.Context, tenantID, st
 		configID, lookupErr := r.plans.GetPlanConfigurationIDForExecution(ctx, tenantID, executionID)
 		if lookupErr == nil {
 			_, _ = r.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
-				ThreadID:    configID.String(),
+				ThreadID:    r.resolveThreadID(ctx, tenantID, configID),
 				ExecutionID: &execID,
 				Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
 				Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_ELICITATION_RAISED,
@@ -348,7 +360,7 @@ func (r *RuntimeRepository) CreateApprovalRequest(ctx context.Context, input wor
 		configID, lookupErr := r.plans.GetPlanConfigurationIDForExecution(ctx, tenantID, executionID)
 		if lookupErr == nil {
 			_, _ = r.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
-				ThreadID:    configID.String(),
+				ThreadID:    r.resolveThreadID(ctx, tenantID, configID),
 				ExecutionID: &execID,
 				Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
 				Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_APPROVAL_RAISED,
@@ -418,7 +430,7 @@ func (r *RuntimeRepository) appendRunFinishedChatMessage(ctx context.Context, te
 		payload = chat.BuildRunCompletedPayload()
 	}
 	_, _ = r.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
-		ThreadID:    configID.String(),
+		ThreadID:    r.resolveThreadID(ctx, tenantID, configID),
 		ExecutionID: &execID,
 		Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
 		Kind:        kind,
