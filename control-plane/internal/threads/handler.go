@@ -14,6 +14,7 @@ import (
 	chatv1 "github.com/harpia/control-plane/gen/harpia/chat/v1"
 	"github.com/harpia/control-plane/gen/harpia/chat/v1/chatv1connect"
 	"github.com/harpia/control-plane/internal/chat"
+	"github.com/harpia/control-plane/internal/copilot"
 	"github.com/harpia/control-plane/internal/identity"
 )
 
@@ -32,15 +33,25 @@ type RepositoryAPI interface {
 	Archive(ctx context.Context, tenantID, threadID uuid.UUID) (*Thread, error)
 }
 
-type Handler struct {
-	repo RepositoryAPI
-	chat chat.Store
+// TemplateCatalog lists plan templates as router catalog entries. Implemented
+// by plans.CopilotCatalog.
+type TemplateCatalog interface {
+	ListTemplateSummaries(ctx context.Context) ([]copilot.TemplateSummary, error)
 }
 
-func NewHandler(repo RepositoryAPI, chatStore chat.Store) *Handler {
+type Handler struct {
+	repo       RepositoryAPI
+	chat       chat.Store
+	catalog    TemplateCatalog
+	classifier copilot.PlanClassifier
+}
+
+func NewHandler(repo RepositoryAPI, chatStore chat.Store, catalog TemplateCatalog, classifier copilot.PlanClassifier) *Handler {
 	return &Handler{
-		repo: repo,
-		chat: chatStore,
+		repo:       repo,
+		chat:       chatStore,
+		catalog:    catalog,
+		classifier: classifier,
 	}
 }
 
@@ -353,8 +364,81 @@ func mapRepositoryError(err error) error {
 	return connect.NewError(connect.CodeInternal, err)
 }
 
-// ProposePlan is implemented in Task 5. Stub keeps the generated
-// ThreadServiceHandler interface satisfied until then.
+const planProposalConfidenceThreshold = 0.6
+
+// ProposePlan classifies the thread's latest user message against the template
+// catalog and appends a PLAN_PROPOSED message. It always succeeds when a user
+// message exists, even if the router returns no candidates (empty proposal).
 func (h *Handler) ProposePlan(ctx context.Context, req *connect.Request[chatv1.ProposePlanRequest]) (*connect.Response[chatv1.ProposePlanResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("ProposePlan not implemented"))
+	tenantID, err := identity.RequireTenant(ctx, req.Msg.GetTenantId())
+	if err != nil {
+		return nil, err
+	}
+	threadID, err := parseRequiredUUID(req.Msg.GetThreadId(), "thread_id")
+	if err != nil {
+		return nil, err
+	}
+
+	// Find the latest USER_TEXT message in the thread.
+	msgs, err := h.chat.ListMessages(ctx, tenantID, threadID.String(), 0, 0)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	var latestUser *chatv1.ThreadMessage
+	for _, m := range msgs {
+		if m.GetKind() == chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_USER_TEXT {
+			latestUser = m
+		}
+	}
+	if latestUser == nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("no user message to propose from"))
+	}
+
+	// Load the catalog and classify. Both degrade to an empty proposal.
+	var summaries []copilot.TemplateSummary
+	if h.catalog != nil {
+		if s, catErr := h.catalog.ListTemplateSummaries(ctx); catErr == nil {
+			summaries = s
+		}
+	}
+	var candidates []copilot.Candidate
+	if h.classifier != nil && len(summaries) > 0 {
+		if c, clsErr := h.classifier.Classify(ctx, copilot.ClassifyInput{
+			TenantID:  tenantID,
+			Text:      latestUser.GetText(),
+			Templates: summaries,
+		}); clsErr == nil {
+			candidates = c
+		}
+	}
+
+	nameByID := map[string]string{}
+	keyByID := map[string]string{}
+	for _, s := range summaries {
+		nameByID[s.ID.String()] = s.Name
+		keyByID[s.ID.String()] = s.Key
+	}
+
+	payloadCandidates := make([]chat.PlanProposalCandidate, 0, len(candidates))
+	for _, c := range candidates {
+		payloadCandidates = append(payloadCandidates, chat.PlanProposalCandidate{
+			TemplateID:      c.TemplateID.String(),
+			TemplateKey:     keyByID[c.TemplateID.String()],
+			TemplateName:    nameByID[c.TemplateID.String()],
+			Confidence:      c.Confidence,
+			InputValuesJSON: c.InputValuesJSON,
+		})
+	}
+
+	msg, err := h.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
+		ThreadID:    threadID.String(),
+		Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_AGENT,
+		Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_PLAN_PROPOSED,
+		Text:        "Proposed a plan.",
+		PayloadJSON: chat.BuildPlanProposedPayload(latestUser.GetId(), payloadCandidates),
+	})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	return connect.NewResponse(&chatv1.ProposePlanResponse{Message: msg}), nil
 }

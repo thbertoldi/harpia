@@ -3,6 +3,7 @@ package threads
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 
 	chatv1 "github.com/harpia/control-plane/gen/harpia/chat/v1"
 	"github.com/harpia/control-plane/internal/chat"
+	"github.com/harpia/control-plane/internal/copilot"
 	"github.com/harpia/control-plane/internal/identity"
 )
 
@@ -118,7 +120,7 @@ func TestCreateThreadPersistsInitialMessage(t *testing.T) {
 	userID := uuid.New()
 	repo := &fakeThreadRepo{}
 	messages := &fakeMessageStore{}
-	handler := NewHandler(repo, messages)
+	handler := NewHandler(repo, messages, fakeCatalog{}, fakeClassifier{})
 	ctx := identity.WithRequestContext(context.Background(), identity.RequestContext{
 		TenantID: tenantID,
 		UserID:   userID.String(),
@@ -153,7 +155,7 @@ func TestCreateThreadPersistsInitialMessage(t *testing.T) {
 func TestCreateThreadWithInitialMessageRequiresChatStoreBeforeCreate(t *testing.T) {
 	tenantID := uuid.New()
 	repo := &fakeThreadRepo{}
-	handler := NewHandler(repo, nil)
+	handler := NewHandler(repo, nil, fakeCatalog{}, fakeClassifier{})
 
 	_, err := handler.CreateThread(requestContext(tenantID, uuid.New()), connect.NewRequest(&chatv1.CreateThreadRequest{
 		TenantId:           tenantID.String(),
@@ -181,7 +183,7 @@ func TestListThreadMessagesPaginationReturnsNextTokenOnlyWhenMoreRowsExist(t *te
 			{TenantId: tenantID.String(), ThreadId: threadID, SequenceNumber: 3, Text: "three"},
 		},
 	}
-	handler := NewHandler(&fakeThreadRepo{}, messages)
+	handler := NewHandler(&fakeThreadRepo{}, messages, fakeCatalog{}, fakeClassifier{})
 
 	resp, err := handler.ListThreadMessages(requestContext(tenantID, uuid.New()), connect.NewRequest(&chatv1.ListThreadMessagesRequest{
 		TenantId:  tenantID.String(),
@@ -209,7 +211,7 @@ func TestListThreadMessagesPaginationOmitsNextTokenForExactPage(t *testing.T) {
 			{TenantId: tenantID.String(), ThreadId: threadID, SequenceNumber: 2, Text: "two"},
 		},
 	}
-	handler := NewHandler(&fakeThreadRepo{}, messages)
+	handler := NewHandler(&fakeThreadRepo{}, messages, fakeCatalog{}, fakeClassifier{})
 
 	resp, err := handler.ListThreadMessages(requestContext(tenantID, uuid.New()), connect.NewRequest(&chatv1.ListThreadMessagesRequest{
 		TenantId: tenantID.String(),
@@ -230,7 +232,7 @@ func TestListThreadMessagesPaginationOmitsNextTokenForExactPage(t *testing.T) {
 func TestListThreadMessagesRejectsInvalidPageToken(t *testing.T) {
 	tenantID := uuid.New()
 	threadID := uuid.NewString()
-	handler := NewHandler(&fakeThreadRepo{}, &fakeMessageStore{})
+	handler := NewHandler(&fakeThreadRepo{}, &fakeMessageStore{}, fakeCatalog{}, fakeClassifier{})
 
 	for _, token := range []string{"not-a-number", "-1"} {
 		_, err := handler.ListThreadMessages(requestContext(tenantID, uuid.New()), connect.NewRequest(&chatv1.ListThreadMessagesRequest{
@@ -250,7 +252,7 @@ func TestListThreadMessagesRejectsInvalidPageToken(t *testing.T) {
 func TestAppendThreadMessageRejectsUnspecifiedRoleAndKind(t *testing.T) {
 	tenantID := uuid.New()
 	threadID := uuid.NewString()
-	handler := NewHandler(&fakeThreadRepo{}, &fakeMessageStore{})
+	handler := NewHandler(&fakeThreadRepo{}, &fakeMessageStore{}, fakeCatalog{}, fakeClassifier{})
 
 	cases := []struct {
 		name string
@@ -292,7 +294,7 @@ func TestAppendThreadMessageSetsAuthorUserID(t *testing.T) {
 	userID := uuid.New()
 	threadID := uuid.NewString()
 	messages := &fakeMessageStore{}
-	handler := NewHandler(&fakeThreadRepo{}, messages)
+	handler := NewHandler(&fakeThreadRepo{}, messages, fakeCatalog{}, fakeClassifier{})
 
 	resp, err := handler.AppendThreadMessage(requestContext(tenantID, userID), connect.NewRequest(&chatv1.AppendThreadMessageRequest{
 		TenantId: tenantID.String(),
@@ -327,5 +329,100 @@ func TestMapRepositoryErrorMapsNoRowsToNotFound(t *testing.T) {
 	err = mapRepositoryError(errors.New("other"))
 	if got, want := connect.CodeOf(err), connect.CodeInternal; got != want {
 		t.Fatalf("other error code = %v, want %v", got, want)
+	}
+}
+
+type fakeCatalog struct {
+	summaries []copilot.TemplateSummary
+}
+
+func (f fakeCatalog) ListTemplateSummaries(ctx context.Context) ([]copilot.TemplateSummary, error) {
+	return f.summaries, nil
+}
+
+type fakeClassifier struct {
+	candidates []copilot.Candidate
+}
+
+func (f fakeClassifier) Classify(ctx context.Context, in copilot.ClassifyInput) ([]copilot.Candidate, error) {
+	return f.candidates, nil
+}
+
+func TestProposePlanEmitsPlanProposed(t *testing.T) {
+	tenantID := uuid.New()
+	threadID := uuid.New()
+	tplID := uuid.New()
+	messages := &fakeMessageStore{}
+	// Seed a latest USER_TEXT in the thread.
+	_, _ = messages.AppendMessage(context.Background(), tenantID, chat.AppendInput{
+		ThreadID: threadID.String(),
+		Role:     chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_OVERSEER,
+		Kind:     chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_USER_TEXT,
+		Text:     "Create a LinkedIn post about retail",
+	})
+	catalog := fakeCatalog{summaries: []copilot.TemplateSummary{{ID: tplID, Key: "linkedin", Name: "LinkedIn Post"}}}
+	classifier := fakeClassifier{candidates: []copilot.Candidate{{TemplateID: tplID, Confidence: 0.9, InputValuesJSON: `{"theme":"retail"}`}}}
+	h := NewHandler(&fakeThreadRepo{}, messages, catalog, classifier)
+	ctx := identity.WithRequestContext(context.Background(), identity.RequestContext{
+		UserID: uuid.NewString(), TenantID: tenantID, Roles: []string{"Overseer"},
+	})
+
+	resp, err := h.ProposePlan(ctx, connect.NewRequest(&chatv1.ProposePlanRequest{
+		TenantId: tenantID.String(), ThreadId: threadID.String(),
+	}))
+	if err != nil {
+		t.Fatalf("ProposePlan: %v", err)
+	}
+	if resp.Msg.Message.GetKind() != chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_PLAN_PROPOSED {
+		t.Fatalf("kind = %v", resp.Msg.Message.GetKind())
+	}
+	if !strings.Contains(resp.Msg.Message.GetPayloadJson(), "linkedin") {
+		t.Fatalf("payload = %s", resp.Msg.Message.GetPayloadJson())
+	}
+	if !strings.Contains(resp.Msg.Message.GetPayloadJson(), "retail") {
+		t.Fatalf("payload missing inferred inputs: %s", resp.Msg.Message.GetPayloadJson())
+	}
+}
+
+func TestProposePlanRequiresUserMessage(t *testing.T) {
+	tenantID := uuid.New()
+	threadID := uuid.New()
+	h := NewHandler(&fakeThreadRepo{}, &fakeMessageStore{}, fakeCatalog{}, fakeClassifier{})
+	ctx := identity.WithRequestContext(context.Background(), identity.RequestContext{
+		UserID: uuid.NewString(), TenantID: tenantID, Roles: []string{"Overseer"},
+	})
+	_, err := h.ProposePlan(ctx, connect.NewRequest(&chatv1.ProposePlanRequest{
+		TenantId: tenantID.String(), ThreadId: threadID.String(),
+	}))
+	if err == nil {
+		t.Fatal("expected error when no user message exists")
+	}
+	if connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Fatalf("code = %v, want FailedPrecondition", connect.CodeOf(err))
+	}
+}
+
+func TestProposePlanEmptyCandidatesStillEmits(t *testing.T) {
+	tenantID := uuid.New()
+	threadID := uuid.New()
+	messages := &fakeMessageStore{}
+	_, _ = messages.AppendMessage(context.Background(), tenantID, chat.AppendInput{
+		ThreadID: threadID.String(),
+		Role:     chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_OVERSEER,
+		Kind:     chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_USER_TEXT,
+		Text:     "something off-catalog",
+	})
+	h := NewHandler(&fakeThreadRepo{}, messages, fakeCatalog{}, fakeClassifier{candidates: nil})
+	ctx := identity.WithRequestContext(context.Background(), identity.RequestContext{
+		UserID: uuid.NewString(), TenantID: tenantID, Roles: []string{"Overseer"},
+	})
+	resp, err := h.ProposePlan(ctx, connect.NewRequest(&chatv1.ProposePlanRequest{
+		TenantId: tenantID.String(), ThreadId: threadID.String(),
+	}))
+	if err != nil {
+		t.Fatalf("ProposePlan: %v", err)
+	}
+	if resp.Msg.Message.GetKind() != chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_PLAN_PROPOSED {
+		t.Fatalf("kind = %v", resp.Msg.Message.GetKind())
 	}
 }

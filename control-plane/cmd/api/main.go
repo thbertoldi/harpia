@@ -31,6 +31,7 @@ import (
 	"github.com/harpia/control-plane/internal/cache"
 	"github.com/harpia/control-plane/internal/chat"
 	"github.com/harpia/control-plane/internal/config"
+	"github.com/harpia/control-plane/internal/copilot"
 	"github.com/harpia/control-plane/internal/database"
 	"github.com/harpia/control-plane/internal/executors"
 	"github.com/harpia/control-plane/internal/executors/bootstrap"
@@ -228,7 +229,6 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	executorRepo := executors.NewRepository(pool)
 	chatStore := chat.NewPostgresStore(pool)
 	threadRepo := threadsvc.NewRepository(pool)
-	threadHandler := threadsvc.NewHandler(threadRepo, chatStore)
 
 	cacheResources := setupAPICache(ctx, cfg.ValkeyURL, logger)
 	if cacheResources.client != nil {
@@ -297,6 +297,12 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 		llm_config.NewEnvPlatformKeyStore(),
 		llm_config.BlockedProvidersFromEnv(),
 	)
+	planProposalProvider := os.Getenv("HARPIA_LLM_PROPOSAL_PROVIDER")
+	if planProposalProvider == "" {
+		planProposalProvider = "deepseek"
+	}
+	planClassifier := copilot.NewLLMClassifier(llmResolver, planProposalProvider, nil)
+	threadHandler := threadsvc.NewHandler(threadRepo, chatStore, plans.NewCopilotCatalog(planRepo), planClassifier)
 	llmHandler, err := llm_config.NewHandler(llm_config.HandlerOptions{
 		Repo:     llmRepo,
 		Keyring:  llmKeyring,
