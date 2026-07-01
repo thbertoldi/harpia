@@ -799,5 +799,13 @@
   "sidebar.yourPlans.seeAll": "See all",
   "sidebar.yourPlans.status.draft": "Draft",
   "sidebar.yourPlans.status.runnable": "Runnable",
-  "sidebar.yourPlans.status.scheduled": "Scheduled"
+  "sidebar.yourPlans.status.scheduled": "Scheduled",
+  "plans.inputs.theme.label": "Theme",
+  "plans.inputs.language.label": "Language",
+  "plans.inputs.tone.label": "Tone",
+  "plans.inputs.audience.label": "Audience",
+  "plans.inputs.topics_to_avoid.label": "Topics to avoid",
+  "plans.inputs.source_group.label": "Source group",
+  "plans.inputs.date_range.label": "Date range",
+  "plans.inputs.approval_mode.label": "Approval mode"
 }

@@ -5,23 +5,23 @@ export interface DateRangeValue {
   endDate: string;
 }
 
-// genericInputInitialValues builds a flat string map for a template's inputs.
-// Priority per key: extracted value > default_value_json > "".
+// genericInputInitialValues builds a value map for a template's inputs.
+// Priority per key: extracted value > default_value_json > "" (or empty object for DATE_RANGE).
 export function genericInputInitialValues(
   params: TemplateInputParameter[],
   extracted: Record<string, unknown>,
-): Record<string, string> {
-  const out: Record<string, string> = {};
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
   for (const p of params) {
     if (p.key in extracted && extracted[p.key] != null) {
-      out[p.key] = String(extracted[p.key]);
+      out[p.key] = extracted[p.key];
       continue;
     }
-    let fallback = "";
+    let fallback: unknown = "";
     if (p.defaultValueJson?.trim()) {
       try {
         const parsed = JSON.parse(p.defaultValueJson);
-        fallback = parsed == null ? "" : String(parsed);
+        fallback = parsed ?? "";
       } catch {
         fallback = "";
       }
@@ -31,10 +31,10 @@ export function genericInputInitialValues(
   return out;
 }
 
-// genericParameterValuesJson serializes the form's flat values to the
+// genericParameterValuesJson serializes the form's values to the
 // parameter_values_json string CreatePlanConfiguration expects.
 export function genericParameterValuesJson(
-  values: Record<string, string>,
+  values: Record<string, unknown>,
 ): string {
   return JSON.stringify(values);
 }

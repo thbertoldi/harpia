@@ -37,12 +37,30 @@ describe("genericInputInitialValues", () => {
     expect(got.language).toBe("en-US");
     expect(got.tone).toBe("");
   });
+
+  it("preserves date range objects from extracted values", () => {
+    const params = [
+      param("date_range", TemplateInputParameterType.DATE_RANGE),
+    ];
+    const dateRange = { startDate: "2026-01-01", endDate: "2026-12-31" };
+    const got = genericInputInitialValues(params, { date_range: dateRange });
+    expect(got.date_range).toEqual(dateRange);
+  });
 });
 
 describe("genericParameterValuesJson", () => {
   it("serializes a flat values object", () => {
     const json = genericParameterValuesJson({ theme: "retail", tone: "formal" });
     expect(JSON.parse(json)).toEqual({ theme: "retail", tone: "formal" });
+  });
+
+  it("serializes values with date range objects", () => {
+    const values = {
+      theme: "retail",
+      date_range: { startDate: "2026-01-01", endDate: "2026-12-31" },
+    };
+    const json = genericParameterValuesJson(values);
+    expect(JSON.parse(json)).toEqual(values);
   });
 });
 

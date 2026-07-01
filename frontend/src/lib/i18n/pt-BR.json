@@ -799,5 +799,13 @@
   "sidebar.yourPlans.seeAll": "Ver todos",
   "sidebar.yourPlans.status.draft": "Rascunho",
   "sidebar.yourPlans.status.runnable": "Executável",
-  "sidebar.yourPlans.status.scheduled": "Agendado"
+  "sidebar.yourPlans.status.scheduled": "Agendado",
+  "plans.inputs.theme.label": "Tema",
+  "plans.inputs.language.label": "Idioma",
+  "plans.inputs.tone.label": "Tom",
+  "plans.inputs.audience.label": "Público-alvo",
+  "plans.inputs.topics_to_avoid.label": "Tópicos a evitar",
+  "plans.inputs.source_group.label": "Grupo de fontes",
+  "plans.inputs.date_range.label": "Período",
+  "plans.inputs.approval_mode.label": "Modo de aprovação"
 }

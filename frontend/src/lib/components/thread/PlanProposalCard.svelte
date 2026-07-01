@@ -53,7 +53,7 @@
   const active = $derived(selected ?? autoSelected);
 
   let template = $state<PlanTemplate | null>(null);
-  let values = $state<Record<string, string>>({});
+  let values = $state<Record<string, unknown>>({});
   let loading = $state(false);
   let creating = $state(false);
   let errorMsg = $state<string | null>(null);
@@ -149,6 +149,7 @@
       <TemplateInputsForm
         params={template.inputParameters}
         bind:values
+        tenantId={tenantId}
       />
       <button
         class="mt-3 rounded bg-talon-gold px-3 py-1 text-[12px] font-medium text-obsidian disabled:opacity-50"
