@@ -40,16 +40,16 @@ SQL-seeded template onto this path. **Target = C, a catalog service** (runtime a
 executors; otherwise we can only recombine these four.
 **Next:** OpenSpec change to implement B (schema + seeder + migrate existing template), then the template library.
 
-### 💡 RSS feed presets = curated ExecutorInstallation configs
+### ✅ RSS feed presets = curated ExecutorInstallation configs → shipped
 **Taxonomy:** IntegrationExecutor, ExecutorInstallation, SlotBinding.
-"RSS presets" are **not** a template or artifact concern — feed URLs live in an
-**ExecutorInstallation** config. So a preset = a curated installation config (a named set of
-feed URLs) surfaced during slot binding in chat.
-**Suggested sets (verify each URL):** Tech/startup (TechCrunch, The Verge, Ars Technica, HN),
-Business (HBR, MIT Sloan, Reuters Business), Marketing/creator (Social Media Today, CMI),
-Brazil/pt-BR (InfoMoney, Exame, Tecnoblog, Canaltech, Startupi).
-**Next:** OpenSpec change once the authoring/seed mechanism (above) is decided.
-**Links:** content-track backlog #5.
+Feed URLs live in an **ExecutorInstallation** config, not in templates/artifacts. Shipped as
+seeded named `rss-news-feed` installations (`EnsureTenantRSSPresetInstallations`), 4 groups
+(Tech, Business, Marketing, Brazil/pt-BR), each URL verified live; HBR/Reuters/CMI dropped
+(discontinued RSS) — see design.md. **Links:** `openspec/changes/archive/2026-07-01-plan-template-authoring`.
+
+### ✅ First expanded template: news-digest-draft → shipped
+Proved the multi-template declarative path (fetch-news → write-draft → TextDraft, review-only).
+A richer library is **blocked on new ExecutorSKUs** (blog/email/X integrations don't exist yet).
 
 ## UX
 
@@ -57,6 +57,7 @@ _(chat-first UX follow-ups tracked in `docs/superpowers/specs/2026-07-01-chat-fi
 
 ## Follow-ups / smaller
 
+- Add a test that validates the **real embedded template YAML** (seeder tests currently only use synthetic YAML → a typo ships and fails only at API boot).
 - Filter the integration selector to the param's required integration type (once >1 integration exists).
 - Wire the classifier to tenant LLM budget controls before heavy production use.
 - Generalize `BindingMatrixCard`'s input form to reuse `TemplateInputsForm`.
