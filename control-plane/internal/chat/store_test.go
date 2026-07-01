@@ -23,7 +23,7 @@ func TestAppendInputZeroValueIsValid(t *testing.T) {
 	authorID := uuid.New()
 	execID := uuid.New()
 	in := AppendInput{
-		ThreadID:     "plan-config-uuid",
+		ThreadID:     uuid.New().String(),
 		Role:         chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_OVERSEER,
 		Kind:         chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_USER_TEXT,
 		Text:         "hello",

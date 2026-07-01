@@ -21,7 +21,7 @@ type Store interface {
 	// AppendMessage writes one ThreadMessage and returns the persisted row
 	// (with assigned ID and sequence_number).
 	AppendMessage(ctx context.Context, tenantID uuid.UUID, input AppendInput) (*chatv1.ThreadMessage, error)
-	// ListMessages returns messages for thread_id with sequence_number >
+	// ListMessages returns messages keyed by threads.id with sequence_number >
 	// sinceSeq, ordered ascending, limited to `limit` rows. limit <= 0 means
 	// no limit.
 	ListMessages(ctx context.Context, tenantID uuid.UUID, threadID string, sinceSeq int64, limit int) ([]*chatv1.ThreadMessage, error)
