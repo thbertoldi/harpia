@@ -18,6 +18,7 @@ import (
 	"github.com/harpia/control-plane/gen/harpia/agents/v1/agentsv1connect"
 	"github.com/harpia/control-plane/gen/harpia/artifacts/v1/artifactsv1connect"
 	"github.com/harpia/control-plane/gen/harpia/budget/v1/budgetv1connect"
+	"github.com/harpia/control-plane/gen/harpia/chat/v1/chatv1connect"
 	"github.com/harpia/control-plane/gen/harpia/executors/v1/executorsv1connect"
 	"github.com/harpia/control-plane/gen/harpia/feedback/v1/feedbackv1connect"
 	"github.com/harpia/control-plane/gen/harpia/identity/v1/identityv1connect"
@@ -42,6 +43,7 @@ import (
 	"github.com/harpia/control-plane/internal/server"
 	"github.com/harpia/control-plane/internal/storage"
 	"github.com/harpia/control-plane/internal/tasks"
+	threadsvc "github.com/harpia/control-plane/internal/threads"
 	"github.com/harpia/control-plane/internal/workflow"
 )
 
@@ -225,6 +227,8 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	agentRepo := agents.NewRepository(pool)
 	executorRepo := executors.NewRepository(pool)
 	chatStore := chat.NewPostgresStore(pool)
+	threadRepo := threadsvc.NewRepository(pool)
+	threadHandler := threadsvc.NewHandler(threadRepo, chatStore)
 
 	cacheResources := setupAPICache(ctx, cfg.ValkeyURL, logger)
 	if cacheResources.client != nil {
@@ -344,6 +348,7 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	executorsPath, executorsHandler := executorsv1connect.NewExecutorServiceHandler(executorHandler, requestContext)
 	tasksPath, tasksHandler := tasksv1connect.NewTaskServiceHandler(taskHandler, requestContext)
 	plansPath, plansHandler := plansv1connect.NewPlanServiceHandler(planHandler, requestContext)
+	threadsPath, threadsHandler := chatv1connect.NewThreadServiceHandler(threadHandler, requestContext)
 	artifactsPath, artifactsHandler := artifactsv1connect.NewArtifactServiceHandler(artifactHandler, requestContext)
 	identityPath, identityHandler := identityv1connect.NewIdentityServiceHandler(identity.NewIdentityHandler(), requestContext)
 	feedbackPath, feedbackHandler := feedbackv1connect.NewFeedbackServiceHandler(feedback.NewFeedbackHandler(), requestContext)
@@ -379,6 +384,7 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	mux.Handle(executorsPath, executorsHandler)
 	mux.Handle(tasksPath, tasksHandler)
 	mux.Handle(plansPath, plansHandler)
+	mux.Handle(threadsPath, threadsHandler)
 	mux.Handle(artifactsPath, artifactsHandler)
 	mux.Handle(identityPath, identityHandler)
 	mux.Handle(feedbackPath, feedbackHandler)
