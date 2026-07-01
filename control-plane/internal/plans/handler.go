@@ -328,6 +328,18 @@ func (h *PlanHandler) CreatePlanConfiguration(ctx context.Context, req *connect.
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
+	// Path B: announce that a plan was attached to the owning thread, before the
+	// assistant seeds the binding-matrix prompt.
+	if h.chat != nil && created.ThreadID != uuid.Nil {
+		_, _ = h.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
+			ThreadID:    created.ThreadID.String(),
+			Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
+			Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_PLAN_ATTACHED,
+			Text:        "Plan attached.",
+			PayloadJSON: chat.BuildPlanAttachedPayload(created.ID.String(), created.PlanTemplateID.String()),
+		})
+	}
+
 	if h.assistant != nil {
 		if err := h.assistant.SeedThread(ctx, tenantID, created.ID); err != nil {
 			_ = err
