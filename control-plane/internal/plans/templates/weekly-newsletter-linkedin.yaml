@@ -1,0 +1,134 @@
+key: weekly-newsletter-linkedin
+name: Weekly Newsletter (LinkedIn)
+description: Fetch news, write a draft, adapt for LinkedIn, and publish.
+vertical: creator-economy
+version: 1
+steps:
+  - key: fetch-news
+    title: Fetch News
+    description: Collect curated articles for the configured date range.
+    input_artifact_type: harpia.artifacts.v1.DateRange
+    output_artifact_type: harpia.artifacts.v1.NewsList
+    executor_requirement:
+      executor_kind: 2
+      connection_type: rss_feed
+    default_executor_sku_key: rss-news-feed
+  - key: write-draft
+    title: Write Draft
+    description: Synthesize a platform-neutral newsletter draft.
+    input_artifact_type: harpia.artifacts.v1.NewsList
+    output_artifact_type: harpia.artifacts.v1.TextDraft
+    executor_requirement:
+      executor_kind: 1
+    default_executor_sku_key: newsletter-writer-senior
+  - key: adapt-for-linkedin
+    title: Adapt for LinkedIn
+    description: Transform the draft into a LinkedIn-specific post.
+    input_artifact_type: harpia.artifacts.v1.TextDraft
+    output_artifact_type: harpia.artifacts.v1.LinkedInPostDraft
+    executor_requirement:
+      executor_kind: 1
+    default_executor_sku_key: linkedin-voice-senior
+  - key: publish-linkedin
+    title: Publish LinkedIn
+    description: Publish the adapted post to LinkedIn.
+    input_artifact_type: harpia.artifacts.v1.LinkedInPostDraft
+    output_artifact_type: harpia.artifacts.v1.PublishConfirmation
+    executor_requirement:
+      executor_kind: 2
+      connection_type: oauth_linkedin
+    default_executor_sku_key: linkedin-publish
+edges:
+  - from_step_key: fetch-news
+    to_step_key: write-draft
+  - from_step_key: write-draft
+    to_step_key: adapt-for-linkedin
+  - from_step_key: adapt-for-linkedin
+    to_step_key: publish-linkedin
+input_parameters:
+  - key: theme
+    label: Theme
+    description: Main subject for the content.
+    type: TEMPLATE_INPUT_PARAMETER_TYPE_TEXT
+    required: true
+    defaultValueJson: '"sports"'
+    runtimeMappings:
+      - target: TEMPLATE_INPUT_RUNTIME_TARGET_SEED_ARTIFACT
+        stepKey: write-draft
+        inputName: harpia.internal.ContentPreferences
+        jsonPath: $.topic
+  - key: language
+    label: Language
+    description: Language for generated drafts.
+    type: TEMPLATE_INPUT_PARAMETER_TYPE_LANGUAGE
+    required: true
+    defaultValueJson: '"pt-BR"'
+    optionsJson: '[{"value":"pt-BR","label":"Portuguese"},{"value":"en-US","label":"English"},{"value":"es","label":"Spanish"}]'
+    runtimeMappings:
+      - target: TEMPLATE_INPUT_RUNTIME_TARGET_SEED_ARTIFACT
+        stepKey: write-draft
+        inputName: harpia.internal.ContentPreferences
+        jsonPath: $.language
+  - key: tone
+    label: Tone
+    description: Voice used by the writer.
+    type: TEMPLATE_INPUT_PARAMETER_TYPE_SELECT
+    required: true
+    defaultValueJson: '"analytical, concise, and practical"'
+    optionsJson: '[{"value":"analytical, concise, and practical","label":"Analytical"},{"value":"friendly and clear","label":"Friendly"},{"value":"executive and direct","label":"Executive"}]'
+    runtimeMappings:
+      - target: TEMPLATE_INPUT_RUNTIME_TARGET_SEED_ARTIFACT
+        stepKey: write-draft
+        inputName: harpia.internal.ContentPreferences
+        jsonPath: $.tone
+  - key: audience
+    label: Audience
+    description: Who the post should speak to.
+    type: TEMPLATE_INPUT_PARAMETER_TYPE_TEXT
+    required: false
+    defaultValueJson: '""'
+    runtimeMappings:
+      - target: TEMPLATE_INPUT_RUNTIME_TARGET_SEED_ARTIFACT
+        stepKey: write-draft
+        inputName: harpia.internal.ContentPreferences
+        jsonPath: $.audience
+  - key: topics_to_avoid
+    label: Topics to avoid
+    description: Comma-separated topics the writer should avoid.
+    type: TEMPLATE_INPUT_PARAMETER_TYPE_TEXTAREA
+    required: false
+    defaultValueJson: '""'
+    runtimeMappings:
+      - target: TEMPLATE_INPUT_RUNTIME_TARGET_SEED_ARTIFACT
+        stepKey: write-draft
+        inputName: harpia.internal.ContentPreferences
+        jsonPath: $.topics_to_avoid
+  - key: source_group
+    label: Source group
+    description: RSS feed group to use for source articles.
+    type: TEMPLATE_INPUT_PARAMETER_TYPE_INTEGRATION_SELECTOR
+    required: true
+    defaultValueJson: '""'
+    runtimeMappings:
+      - target: TEMPLATE_INPUT_RUNTIME_TARGET_SLOT_BINDING
+        stepKey: fetch-news
+  - key: date_range
+    label: Date range
+    description: Article publication window.
+    type: TEMPLATE_INPUT_PARAMETER_TYPE_DATE_RANGE
+    required: true
+    defaultValueJson: '{"preset":"last_7_days"}'
+    runtimeMappings:
+      - target: TEMPLATE_INPUT_RUNTIME_TARGET_SEED_ARTIFACT
+        stepKey: fetch-news
+        inputName: date_range
+  - key: approval_mode
+    label: Approval mode
+    description: Whether publishing requires approval.
+    type: TEMPLATE_INPUT_PARAMETER_TYPE_SELECT
+    required: true
+    defaultValueJson: '"require_approval"'
+    optionsJson: '[{"value":"require_approval","label":"Require approval"},{"value":"auto_publish","label":"Auto publish"}]'
+    runtimeMappings:
+      - target: TEMPLATE_INPUT_RUNTIME_TARGET_BEHAVIOR_POLICY
+        policyKey: publish_approval_mode

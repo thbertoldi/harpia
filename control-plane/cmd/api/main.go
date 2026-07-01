@@ -212,8 +212,14 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	if err := executors.EnsureCatalog(ctx, pool); err != nil {
 		fatal("seed executor catalog failed", "error", err)
 	}
+	if err := plans.EnsurePlanTemplates(ctx, pool); err != nil {
+		fatal("seed plan templates failed", "error", err)
+	}
 	if err := executors.EnsureDevEntitlements(ctx, pool, tenantID); err != nil {
 		fatal("seed dev executor entitlements failed", "error", err)
+	}
+	if err := executors.EnsureTenantRSSPresetInstallations(ctx, pool, tenantID); err != nil {
+		fatal("seed rss preset installations failed", "error", err)
 	}
 	if err := agents.EnsureAgentTypesForTenant(ctx, pool, tenantID); err != nil {
 		fatal("seed agent types failed", "error", err)

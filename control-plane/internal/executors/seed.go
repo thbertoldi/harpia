@@ -4,8 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
+	"github.com/harpia/control-plane/internal/database"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -17,6 +20,11 @@ type CatalogSeed struct {
 	PriceCents    int64
 	Currency      string
 	Compatibility CompatibilityMetadata
+}
+
+type RSSPresetSeed struct {
+	Name  string
+	Feeds []string
 }
 
 var DefaultCatalogSeeds = []CatalogSeed{
@@ -76,6 +84,40 @@ var DefaultCatalogSeeds = []CatalogSeed{
 	},
 }
 
+var DefaultRSSPresetSeeds = []RSSPresetSeed{
+	{
+		Name: "Tech/startup",
+		Feeds: []string{
+			"https://techcrunch.com/feed/",
+			"https://www.theverge.com/rss/index.xml",
+			"https://feeds.arstechnica.com/arstechnica/index",
+			"https://hnrss.org/frontpage",
+		},
+	},
+	{
+		Name: "Business",
+		Feeds: []string{
+			"https://sloanreview.mit.edu/feed/",
+		},
+	},
+	{
+		Name: "Marketing/creator",
+		Feeds: []string{
+			"https://www.socialmediatoday.com/feeds/news/",
+		},
+	},
+	{
+		Name: "Brazil/pt-BR",
+		Feeds: []string{
+			"https://www.infomoney.com.br/feed/",
+			"https://exame.com/feed/",
+			"https://tecnoblog.net/feed/",
+			"https://canaltech.com.br/rss/",
+			"https://startupi.com.br/feed/",
+		},
+	},
+}
+
 func EnsureCatalog(ctx context.Context, pool *pgxpool.Pool) error {
 	repo := NewRepository(pool)
 	for _, seed := range DefaultCatalogSeeds {
@@ -89,6 +131,84 @@ func EnsureCatalog(ctx context.Context, pool *pgxpool.Pool) error {
 			Compatibility: seed.Compatibility,
 		}); err != nil {
 			return fmt.Errorf("seed executor sku %q: %w", seed.Key, err)
+		}
+	}
+	return nil
+}
+
+func EnsureTenantRSSPresetInstallations(ctx context.Context, pool *pgxpool.Pool, tenantID uuid.UUID) error {
+	return database.WithTenant(ctx, pool, tenantID, func(q database.Querier) error {
+		return ensureTenantRSSPresetInstallations(ctx, q, tenantID, DefaultRSSPresetSeeds)
+	})
+}
+
+func ensureTenantRSSPresetInstallations(ctx context.Context, q database.Querier, tenantID uuid.UUID, presets []RSSPresetSeed) error {
+	if tenantID == uuid.Nil {
+		return fmt.Errorf("tenant id is required")
+	}
+	if _, err := q.Exec(ctx, "SELECT set_config('harpia.tenant_id', $1, true)", tenantID.String()); err != nil {
+		return fmt.Errorf("set tenant context: %w", err)
+	}
+
+	var skuID uuid.UUID
+	if err := q.QueryRow(ctx, `SELECT id FROM executor_skus WHERE key = $1`, SKURSSNewsFeed).Scan(&skuID); err != nil {
+		return fmt.Errorf("load rss executor sku: %w", err)
+	}
+
+	for _, preset := range presets {
+		displayName := "RSS Preset: " + strings.TrimSpace(preset.Name)
+		if displayName == "RSS Preset: " {
+			return fmt.Errorf("rss preset name is required")
+		}
+		configJSON, err := json.Marshal(struct {
+			Feeds []string `json:"feeds"`
+		}{Feeds: preset.Feeds})
+		if err != nil {
+			return fmt.Errorf("marshal rss preset %q config: %w", preset.Name, err)
+		}
+
+		var installationID uuid.UUID
+		err = q.QueryRow(ctx, `
+			SELECT id
+			FROM executor_installations
+			WHERE tenant_id = $1 AND display_name = $2
+			ORDER BY created_at ASC, id ASC
+			LIMIT 1
+		`, tenantID, displayName).Scan(&installationID)
+		switch {
+		case err == nil:
+			if _, err := q.Exec(ctx, `
+				UPDATE executor_installations
+				SET executor_sku_id = $3,
+				    kind = $4,
+				    enabled = true,
+				    connection_status = 'connected',
+				    config_json = $5,
+				    manifest_id = NULL,
+				    manifest_version = NULL,
+				    updated_at = now()
+				WHERE tenant_id = $1 AND id = $2
+			`, tenantID, installationID, skuID, KindIntegration, configJSON); err != nil {
+				return fmt.Errorf("update rss preset %q: %w", preset.Name, err)
+			}
+			if _, err := q.Exec(ctx, `
+				DELETE FROM executor_installations
+				WHERE tenant_id = $1 AND display_name = $2 AND id <> $3
+			`, tenantID, displayName, installationID); err != nil {
+				return fmt.Errorf("remove duplicate rss preset %q: %w", preset.Name, err)
+			}
+		case err == pgx.ErrNoRows:
+			if _, err := q.Exec(ctx, `
+				INSERT INTO executor_installations (
+					tenant_id, executor_sku_id, kind, display_name, enabled,
+					connection_status, config_json
+				)
+				VALUES ($1, $2, $3, $4, true, 'connected', $5)
+			`, tenantID, skuID, KindIntegration, displayName, configJSON); err != nil {
+				return fmt.Errorf("create rss preset %q: %w", preset.Name, err)
+			}
+		default:
+			return fmt.Errorf("load rss preset %q: %w", preset.Name, err)
 		}
 	}
 	return nil
