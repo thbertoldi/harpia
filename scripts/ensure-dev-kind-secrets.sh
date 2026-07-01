@@ -49,6 +49,11 @@ GARAGE_ACCESS_KEY="${HARPIA_DEV_GARAGE_ACCESS_KEY:-GKa1b2c3d4e5f6a7b8c9d0e1f2}"
 GARAGE_SECRET_KEY="${HARPIA_DEV_GARAGE_SECRET_KEY:-b1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5d6}"
 LLM_KEK_V1_B64="${HARPIA_DEV_LLM_KEK_V1_B64:-$(random_b64 32)}"
 LLM_KEK_ACTIVE="${HARPIA_DEV_LLM_KEK_ACTIVE:-v1}"
+# Platform LLM provider key for the plan classifier (control-plane). Supply your
+# own in deploy/dev/kind/secrets.local.env as HARPIA_DEV_DEEPSEEK_API_KEY=sk-...
+# Empty is allowed: the classifier degrades to an empty proposal without it.
+# To rotate: `kubectl delete secret harpia-llm-platform-keys` then re-run dev.
+DEEPSEEK_API_KEY_VALUE="${HARPIA_DEV_DEEPSEEK_API_KEY:-}"
 
 if ! command -v kubectl >/dev/null 2>&1; then
   echo "ERROR: kubectl is required to create dev kind Secrets." >&2
@@ -106,6 +111,10 @@ ensure_secret() {
         --from-literal=v1_b64="$LLM_KEK_V1_B64" \
         --from-literal=active="$LLM_KEK_ACTIVE" >/dev/null
       ;;
+    harpia-llm-platform-keys)
+      kubectl -n "$NAMESPACE" create secret generic "$name" \
+        --from-literal=deepseek_api_key="$DEEPSEEK_API_KEY_VALUE" >/dev/null
+      ;;
     *)
       echo "ERROR: unknown Secret ${name}" >&2
       exit 1
@@ -119,3 +128,5 @@ ensure_secret postgres-credentials username password
 ensure_secret zitadel-masterkey masterkey
 ensure_secret garage-credentials accessKey secretKey
 ensure_secret harpia-llm-kek v1_b64 active
+# No required-key enforcement: an empty deepseek key is valid (classifier degrades).
+ensure_secret harpia-llm-platform-keys

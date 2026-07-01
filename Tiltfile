@@ -6,6 +6,11 @@
 
 local('./scripts/ensure-dev-kind-secrets.sh')
 
+# Fix the kind node's flaky DNS before any pod pulls an image or makes an
+# external call (e.g. the plan classifier -> api.deepseek.com). Runs
+# synchronously during Tiltfile evaluation, before resources start. Idempotent.
+local('./scripts/fix-kind-dns.sh')
+
 # ---- Application Images (built by Tilt with live reload) ----
 docker_build(
     'harpia-api',
@@ -153,6 +158,23 @@ local_resource(
     labels=['infra'],
 )
 
+# Apply the AIUNA Zitadel branding on every `tilt up`. The zitadel-init Job also
+# applies it, but Jobs don't re-run once Complete, so a cluster initialized
+# before branding existed would keep the default theme. This idempotent
+# re-apply guarantees the AIUNA login theme. Needs the localhost:8085
+# port-forward and a registered instance.
+local_resource(
+    'zitadel-branding',
+    cmd='./scripts/apply-zitadel-branding.sh',
+    resource_deps=['zitadel-register-client', 'zitadel-port-forward'],
+    trigger_mode=TRIGGER_MODE_AUTO,
+    deps=[
+        './scripts/apply-zitadel-branding.sh',
+        'deploy/dev/kind/zitadel-branding/apply-branding.sh',
+    ],
+    labels=['infra'],
+)
+
 local_resource(
     'frontend-install',
     cmd='cd frontend && bun install --frozen-lockfile',
@@ -165,7 +187,9 @@ local_resource(
 # the OIDC/FGA sync resources write frontend/.env.local.
 local_resource(
     'vite',
-    serve_cmd='cd frontend && bun run dev --host',
+    # PUBLIC_DEV_LOGIN_ENABLED gates the dev-login persona buttons (auth.ts).
+    # Set here (not in .env, which is gitignored) so `mise run dev` shows them.
+    serve_cmd='cd frontend && PUBLIC_DEV_LOGIN_ENABLED=true bun run dev --host',
     resource_deps=[
         'frontend-install',
         'oidc-sync',

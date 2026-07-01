@@ -72,6 +72,14 @@ spec:
                 secretKeyRef:
                   name: harpia-llm-kek
                   key: active
+            # Platform DeepSeek key for the plan classifier (control-plane).
+            # Empty unless set via HARPIA_DEV_DEEPSEEK_API_KEY in
+            # deploy/dev/kind/secrets.local.env; classifier degrades if empty.
+            - name: HARPIA_PLATFORM_DEEPSEEK_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: harpia-llm-platform-keys
+                  key: deepseek_api_key
           readinessProbe:
             httpGet:
               path: /api/v1/health
