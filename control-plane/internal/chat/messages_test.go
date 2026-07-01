@@ -152,3 +152,58 @@ func TestBuildScheduleSetPayload(t *testing.T) {
 		t.Fatalf("got %s, want %s", got, want)
 	}
 }
+
+func TestBuildPlanProposedPayload(t *testing.T) {
+	got := BuildPlanProposedPayload("msg-1", []PlanProposalCandidate{
+		{TemplateID: "tpl-1", TemplateKey: "linkedin", TemplateName: "LinkedIn Post", Confidence: 0.9, InputValuesJSON: `{"theme":"retail"}`},
+	})
+	var decoded struct {
+		SourceMessageID string `json:"source_message_id"`
+		Candidates      []struct {
+			TemplateID      string  `json:"template_id"`
+			TemplateKey     string  `json:"template_key"`
+			TemplateName    string  `json:"template_name"`
+			Confidence      float64 `json:"confidence"`
+			InputValuesJSON string  `json:"input_values_json"`
+		} `json:"candidates"`
+	}
+	if err := json.Unmarshal([]byte(got), &decoded); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if decoded.SourceMessageID != "msg-1" {
+		t.Fatalf("source_message_id = %q", decoded.SourceMessageID)
+	}
+	if len(decoded.Candidates) != 1 || decoded.Candidates[0].TemplateKey != "linkedin" {
+		t.Fatalf("candidates = %+v", decoded.Candidates)
+	}
+	if decoded.Candidates[0].InputValuesJSON != `{"theme":"retail"}` {
+		t.Fatalf("input_values_json = %q", decoded.Candidates[0].InputValuesJSON)
+	}
+}
+
+func TestBuildPlanProposedPayloadEmptyCandidates(t *testing.T) {
+	got := BuildPlanProposedPayload("msg-1", nil)
+	var decoded struct {
+		Candidates []any `json:"candidates"`
+	}
+	if err := json.Unmarshal([]byte(got), &decoded); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if len(decoded.Candidates) != 0 {
+		t.Fatalf("expected empty candidates, got %+v", decoded.Candidates)
+	}
+}
+
+func TestBuildPlanAttachedPayload(t *testing.T) {
+	got := BuildPlanAttachedPayload("cfg-1", "tpl-1")
+	var decoded struct {
+		PlanConfigurationID string `json:"plan_configuration_id"`
+		TemplateID          string `json:"template_id"`
+	}
+	if err := json.Unmarshal([]byte(got), &decoded); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if decoded.PlanConfigurationID != "cfg-1" || decoded.TemplateID != "tpl-1" {
+		t.Fatalf("decoded = %+v", decoded)
+	}
+}

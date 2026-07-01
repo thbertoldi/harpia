@@ -235,3 +235,38 @@ func BuildAssistantLandingPayload(actions []AssistantAction) string {
 	}
 	return mustEncodeJSON(assistantLandingPayload{State: "landing", Actions: actions})
 }
+
+// PlanProposalCandidate is one template the router proposes for a thread's
+// latest user message, with inferred input values.
+type PlanProposalCandidate struct {
+	TemplateID      string  `json:"template_id"`
+	TemplateKey     string  `json:"template_key"`
+	TemplateName    string  `json:"template_name"`
+	Confidence      float64 `json:"confidence"`
+	InputValuesJSON string  `json:"input_values_json"`
+}
+
+type planProposedPayload struct {
+	SourceMessageID string                  `json:"source_message_id"`
+	Candidates      []PlanProposalCandidate `json:"candidates"`
+}
+
+// BuildPlanProposedPayload returns the JSON payload for a PLAN_PROPOSED message.
+// candidates may be empty when the router found no confident match.
+func BuildPlanProposedPayload(sourceMessageID string, candidates []PlanProposalCandidate) string {
+	if candidates == nil {
+		candidates = []PlanProposalCandidate{}
+	}
+	return mustEncodeJSON(planProposedPayload{SourceMessageID: sourceMessageID, Candidates: candidates})
+}
+
+type planAttachedPayload struct {
+	PlanConfigurationID string `json:"plan_configuration_id"`
+	TemplateID          string `json:"template_id"`
+}
+
+// BuildPlanAttachedPayload returns the JSON payload for a PLAN_ATTACHED message,
+// emitted when a plan is created from a thread.
+func BuildPlanAttachedPayload(planConfigurationID, templateID string) string {
+	return mustEncodeJSON(planAttachedPayload{PlanConfigurationID: planConfigurationID, TemplateID: templateID})
+}
