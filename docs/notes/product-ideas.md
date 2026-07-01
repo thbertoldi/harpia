@@ -29,17 +29,16 @@ each its own OpenSpec change. Likely a multi-change epic.
 
 ## Content
 
-### 🔬 Are PlanTemplates content or coded modules?
+### ✅ Are PlanTemplates content or coded modules? → decided (ADR-015)
 **Taxonomy:** PlanTemplate, PlanStep.
-Templates today are hand-authored **SQL migrations** (`database/migrations/000004,000011,000013`).
-That contradicts the positioning that the **plan catalog is content, not coded modules**.
-**Decision needed (→ ADR):** accept SQL migrations as the interim authoring path, or design a
-content/authoring path for PlanTemplates (data-driven seed, authoring UI, or catalog service)
-before we scale the catalog.
+**Decision:** MVP = **B, declarative YAML seed files** (engineer-authored, `go:embed` +
+idempotent `EnsurePlanTemplates` seeder with load-time validation); migrate the existing
+SQL-seeded template onto this path. **Target = C, a catalog service** (runtime authoring UI +
+Áreas RBAC), deferred. See **[ADR-015](../adr/ADR-015-plan-template-authoring.md)**.
 **Constraint:** only 4 ExecutorSKUs exist today (`rss-news-feed`, `linkedin-publish`,
 `newsletter-writer-senior`, `linkedin-voice-senior`) — new *distinct* templates need new
 executors; otherwise we can only recombine these four.
-**Blocks:** authoring "a library of templates" (content-track backlog #4).
+**Next:** OpenSpec change to implement B (schema + seeder + migrate existing template), then the template library.
 
 ### 💡 RSS feed presets = curated ExecutorInstallation configs
 **Taxonomy:** IntegrationExecutor, ExecutorInstallation, SlotBinding.

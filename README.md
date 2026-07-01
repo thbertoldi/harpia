@@ -48,6 +48,7 @@ See [ADR-006](docs/adr/ADR-006-domain-driven-design.md).
 | [ADR-012](docs/adr/ADR-012-plan-centric-task-model.md) | Plan-centric task model (templates, steps, executors) |
 | [ADR-013](docs/adr/ADR-013-connectrpc-python-adoption.md) | ConnectRPC Python adoption (`agent-runtime/`) |
 | [ADR-014](docs/adr/ADR-014-agent-memory-boundary.md) | Agent memory boundary |
+| [ADR-015](docs/adr/ADR-015-plan-template-authoring.md) | PlanTemplate authoring model (declarative seed → catalog service) |
 
 Workflow guide: [docs/WORKFLOW.md](docs/WORKFLOW.md)
 
