@@ -1599,7 +1599,7 @@ git commit -m "feat: mount thread service"
 - Modify: `frontend/src/routes/plans/configurations/[configurationId]/+page.ts`
 - Modify: `frontend/src/routes/new/+page.svelte`
 
-- [ ] **Step 1: Update RPC exports**
+- [x] **Step 1: Update RPC exports**
 
 In `frontend/src/lib/rpc.ts`, add:
 
@@ -1628,7 +1628,7 @@ export type {
 export { ThreadStatus } from "$lib/gen/harpia/chat/v1/chat_pb";
 ```
 
-- [ ] **Step 2: Update chat client helpers**
+- [x] **Step 2: Update chat client helpers**
 
 In `frontend/src/lib/chat/client.ts`, replace `planClient` with `threadClient`
 and use `threadId` naming:
@@ -1679,7 +1679,7 @@ export async function loadThreadMessages(
 }
 ```
 
-- [ ] **Step 3: Update watch helper**
+- [x] **Step 3: Update watch helper**
 
 In `frontend/src/lib/chat/watch.ts`, replace
 `planClient.watchPlanThreadMessages` with:
@@ -1697,7 +1697,7 @@ for await (const event of threadClient.watchThreadMessages(
 }
 ```
 
-- [ ] **Step 4: Add `/chat/[threadId]` loader**
+- [x] **Step 4: Add `/chat/[threadId]` loader**
 
 Create `frontend/src/routes/chat/[threadId]/+page.ts`:
 
@@ -1773,7 +1773,7 @@ export const load: PageLoad = async ({ params }) => {
 };
 ```
 
-- [ ] **Step 5: Add `/chat/[threadId]` page**
+- [x] **Step 5: Add `/chat/[threadId]` page**
 
 Create `frontend/src/routes/chat/[threadId]/+page.svelte` from the current
 `frontend/src/routes/plans/configurations/[configurationId]/+page.svelte`
@@ -1807,7 +1807,7 @@ that empty-state block. Those sections render only when `routeConfigurationId`
 is non-empty because their existing data dependencies remain plan-scoped in this
 foundation slice.
 
-- [ ] **Step 6: Redirect old plan configuration route**
+- [x] **Step 6: Redirect old plan configuration route**
 
 In `frontend/src/routes/plans/configurations/[configurationId]/+page.ts`, after
 loading the configuration, redirect when `threadId` exists:
@@ -1821,7 +1821,7 @@ if (config.planConfiguration.threadId) {
 If the configuration has no `threadId`, keep the existing loader behavior so old
 or partially migrated environments still render.
 
-- [ ] **Step 7: Update `/new` template flow**
+- [x] **Step 7: Update `/new` template flow**
 
 In `frontend/src/routes/new/+page.svelte`, import `threadClient` from
 `$lib/rpc`. Before `createPlanConfiguration`, create a thread:
@@ -1859,7 +1859,7 @@ Route to the thread:
 await goto(resolve(`/chat/${threadId}`));
 ```
 
-- [ ] **Step 8: Update shared plan configuration helper**
+- [x] **Step 8: Update shared plan configuration helper**
 
 In `frontend/src/lib/plans/plan-configuration.ts`, add `threadId` to
 `PlanConfigurationSaveInput`:
@@ -1888,7 +1888,7 @@ Pass the id to create:
 threadId: threadId ?? existing?.threadId ?? "",
 ```
 
-- [ ] **Step 9: Run focused frontend checks**
+- [x] **Step 9: Run focused frontend checks**
 
 Run:
 
@@ -1898,7 +1898,7 @@ cd /home/thbertoldi/harpia/frontend && bun test src/lib/chat/client.test.ts
 
 Expected: chat client tests pass.
 
-- [ ] **Step 10: Commit frontend thread route**
+- [x] **Step 10: Commit frontend thread route**
 
 Run:
 
