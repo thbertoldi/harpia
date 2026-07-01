@@ -1914,7 +1914,7 @@ git commit -m "feat: add thread-first chat route"
 - Modify: `control-plane/internal/plans/runtime.go`
 - Modify: `control-plane/internal/plans/runtime_test.go`
 
-- [ ] **Step 1: Add runtime test expectation**
+- [x] **Step 1: Add runtime test expectation**
 
 In `control-plane/internal/plans/runtime_test.go`, add or update a fake
 configuration with both ids:
@@ -1939,7 +1939,7 @@ for _, input := range chatStore.appended {
 }
 ```
 
-- [ ] **Step 2: Run failing runtime test**
+- [x] **Step 2: Run failing runtime test**
 
 Run:
 
@@ -1949,7 +1949,7 @@ cd /home/thbertoldi/harpia/control-plane && go test ./internal/plans -run Runtim
 
 Expected: fails where runtime still appends to plan configuration id.
 
-- [ ] **Step 3: Use configuration thread id in runtime**
+- [x] **Step 3: Use configuration thread id in runtime**
 
 In `control-plane/internal/plans/runtime.go`, replace `config.ID.String()` chat
 append thread ids with:
@@ -1964,7 +1964,7 @@ if config.ThreadID == uuid.Nil {
 Use `threadID` for `chat.AppendInput.ThreadID`. Keep the fallback only to avoid
 panics in tests or partially migrated development databases.
 
-- [ ] **Step 4: Run runtime tests**
+- [x] **Step 4: Run runtime tests**
 
 Run:
 
@@ -1974,7 +1974,7 @@ cd /home/thbertoldi/harpia/control-plane && go test ./internal/plans -run Runtim
 
 Expected: tests pass.
 
-- [ ] **Step 5: Commit runtime thread emission**
+- [x] **Step 5: Commit runtime thread emission**
 
 Run:
 
