@@ -1989,7 +1989,7 @@ git commit -m "feat: emit plan runtime messages to threads"
 **Files:**
 - Create: `docs/superpowers/plans/2026-06-30-path-b-chat-thread-foundation.verification.md`
 
-- [ ] **Step 1: Run backend checks**
+- [x] **Step 1: Run backend checks**
 
 Run:
 
@@ -1999,7 +1999,7 @@ cd /home/thbertoldi/harpia/control-plane && go test ./internal/threads ./interna
 
 Expected: all listed packages pass.
 
-- [ ] **Step 2: Run proto checks**
+- [x] **Step 2: Run proto checks**
 
 Run:
 
@@ -2009,7 +2009,7 @@ cd /home/thbertoldi/harpia/proto && buf lint
 
 Expected: exits 0.
 
-- [ ] **Step 3: Run frontend focused checks**
+- [x] **Step 3: Run frontend focused checks**
 
 Run:
 
@@ -2019,7 +2019,7 @@ cd /home/thbertoldi/harpia/frontend && bun test src/lib/chat/client.test.ts
 
 Expected: exits 0.
 
-- [ ] **Step 4: Run frontend type check**
+- [x] **Step 4: Run frontend type check**
 
 Run:
 
@@ -2030,7 +2030,7 @@ cd /home/thbertoldi/harpia/frontend && bun run check
 Expected: if baseline check failures remain, record exact failing files and
 confirm none are introduced by this plan's modified files.
 
-- [ ] **Step 5: Write verification note**
+- [x] **Step 5: Write verification note**
 
 Create `docs/superpowers/plans/2026-06-30-path-b-chat-thread-foundation.verification.md`:
 
@@ -2064,7 +2064,7 @@ Create `docs/superpowers/plans/2026-06-30-path-b-chat-thread-foundation.verifica
 - Thread messages stream through `ThreadService`.
 ```
 
-- [ ] **Step 6: Commit verification note**
+- [x] **Step 6: Commit verification note**
 
 Run:
 
