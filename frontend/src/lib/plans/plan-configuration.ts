@@ -24,6 +24,7 @@ export interface PlanConfigurationSaveInput {
   behaviorPolicies?: PlanBehaviorPolicies;
   schedule?: PlanSchedule;
   threadId?: string;
+  parameterValuesJson?: string;
 }
 
 export function workspaceIdForTenant(tenantId: string): string {
@@ -104,6 +105,7 @@ export async function savePlanConfigurationRecord({
   behaviorPolicies,
   schedule,
   threadId,
+  parameterValuesJson,
 }: PlanConfigurationSaveInput): Promise<PlanConfiguration> {
   const existing =
     existingConfiguration ??
@@ -122,6 +124,8 @@ export async function savePlanConfigurationRecord({
   const nextBehaviorPolicies =
     behaviorPolicies ?? existing?.behaviorPolicies ?? undefined;
   const nextSchedule = schedule ?? existing?.schedule ?? undefined;
+  const nextParameterValuesJson =
+    parameterValuesJson ?? existing?.parameterValuesJson ?? "";
 
   const response = existing?.id
     ? await planClient.updatePlanConfiguration({
@@ -133,6 +137,7 @@ export async function savePlanConfigurationRecord({
         overseerBindings: nextOverseerBindings,
         behaviorPolicies: nextBehaviorPolicies,
         schedule: nextSchedule,
+        parameterValuesJson: nextParameterValuesJson,
       })
     : await planClient.createPlanConfiguration({
         tenantId,
@@ -145,6 +150,7 @@ export async function savePlanConfigurationRecord({
         behaviorPolicies: nextBehaviorPolicies,
         schedule: nextSchedule,
         threadId: threadId ?? existing?.threadId ?? "",
+        parameterValuesJson: nextParameterValuesJson,
       });
 
   if (!response.planConfiguration) {
