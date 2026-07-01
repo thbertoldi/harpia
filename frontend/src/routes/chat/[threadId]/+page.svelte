@@ -61,36 +61,34 @@
 
   const tenantId = $derived(getTenant()?.id ?? "");
 
-  // True when a PLAN_PROPOSED already follows the most recent USER_TEXT.
-  const hasProposalForLatestUser = $derived.by(() => {
-    let sawUser = false;
-    for (const m of messages) {
-      if (m.kind === "USER_TEXT") {
-        sawUser = true;
-        continue;
-      }
-      if (sawUser && m.kind === "PLAN_PROPOSED") return true;
+  // Id of the most recent USER_TEXT that has no PLAN_PROPOSED after it, else
+  // null. This is the message a proposal would answer.
+  const unansweredUserMessageId = $derived.by<string | null>(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].kind === "PLAN_PROPOSED") return null;
+      if (messages[i].kind === "USER_TEXT") return messages[i].id;
     }
-    return false;
+    return null;
   });
 
-  const latestIsUnansweredUser = $derived.by(() => {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].kind === "USER_TEXT") return !hasProposalForLatestUser;
-      if (messages[i].kind === "PLAN_PROPOSED") return false;
-    }
-    return false;
-  });
+  // Guards against re-proposing for the same source message during the window
+  // between proposePlan resolving and the PLAN_PROPOSED arriving via the watch
+  // stream (which would otherwise fire a duplicate proposal + LLM call).
+  let lastProposedSourceId = $state<string | null>(null);
 
   async function triggerProposal() {
-    if (proposing || !tenantId || !routeThreadId) return;
+    if (proposing || routeConfigurationId || !tenantId || !routeThreadId) return;
+    const sourceId = unansweredUserMessageId;
+    if (!sourceId || sourceId === lastProposedSourceId) return;
     proposing = true;
+    lastProposedSourceId = sourceId;
     try {
       // Reads the thread's latest user message server-side and appends
       // PLAN_PROPOSED, which arrives back via the existing watch stream.
       await threadClient.proposePlan({ tenantId, threadId: routeThreadId });
     } catch {
-      // best-effort; the user can retry by sending another message
+      // Allow a retry (next send or effect run) if the proposal failed.
+      lastProposedSourceId = null;
     } finally {
       proposing = false;
     }
@@ -99,8 +97,7 @@
   // Auto-propose when a config-less thread has an unanswered opening message.
   $effect(() => {
     if (routeConfigurationId) return;
-    if (!latestIsUnansweredUser) return;
-    if (proposing) return;
+    if (!unansweredUserMessageId) return;
     void triggerProposal();
   });
 
