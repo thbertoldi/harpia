@@ -53,6 +53,9 @@ const (
 	// ThreadServiceAppendThreadMessageProcedure is the fully-qualified name of the ThreadService's
 	// AppendThreadMessage RPC.
 	ThreadServiceAppendThreadMessageProcedure = "/harpia.chat.v1.ThreadService/AppendThreadMessage"
+	// ThreadServiceProposePlanProcedure is the fully-qualified name of the ThreadService's ProposePlan
+	// RPC.
+	ThreadServiceProposePlanProcedure = "/harpia.chat.v1.ThreadService/ProposePlan"
 )
 
 // ThreadServiceClient is a client for the harpia.chat.v1.ThreadService service.
@@ -64,6 +67,7 @@ type ThreadServiceClient interface {
 	ListThreadMessages(context.Context, *connect.Request[v1.ListThreadMessagesRequest]) (*connect.Response[v1.ListThreadMessagesResponse], error)
 	WatchThreadMessages(context.Context, *connect.Request[v1.WatchThreadMessagesRequest]) (*connect.ServerStreamForClient[v1.WatchThreadMessagesResponse], error)
 	AppendThreadMessage(context.Context, *connect.Request[v1.AppendThreadMessageRequest]) (*connect.Response[v1.AppendThreadMessageResponse], error)
+	ProposePlan(context.Context, *connect.Request[v1.ProposePlanRequest]) (*connect.Response[v1.ProposePlanResponse], error)
 }
 
 // NewThreadServiceClient constructs a client for the harpia.chat.v1.ThreadService service. By
@@ -119,6 +123,12 @@ func NewThreadServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(threadServiceMethods.ByName("AppendThreadMessage")),
 			connect.WithClientOptions(opts...),
 		),
+		proposePlan: connect.NewClient[v1.ProposePlanRequest, v1.ProposePlanResponse](
+			httpClient,
+			baseURL+ThreadServiceProposePlanProcedure,
+			connect.WithSchema(threadServiceMethods.ByName("ProposePlan")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -131,6 +141,7 @@ type threadServiceClient struct {
 	listThreadMessages  *connect.Client[v1.ListThreadMessagesRequest, v1.ListThreadMessagesResponse]
 	watchThreadMessages *connect.Client[v1.WatchThreadMessagesRequest, v1.WatchThreadMessagesResponse]
 	appendThreadMessage *connect.Client[v1.AppendThreadMessageRequest, v1.AppendThreadMessageResponse]
+	proposePlan         *connect.Client[v1.ProposePlanRequest, v1.ProposePlanResponse]
 }
 
 // CreateThread calls harpia.chat.v1.ThreadService.CreateThread.
@@ -168,6 +179,11 @@ func (c *threadServiceClient) AppendThreadMessage(ctx context.Context, req *conn
 	return c.appendThreadMessage.CallUnary(ctx, req)
 }
 
+// ProposePlan calls harpia.chat.v1.ThreadService.ProposePlan.
+func (c *threadServiceClient) ProposePlan(ctx context.Context, req *connect.Request[v1.ProposePlanRequest]) (*connect.Response[v1.ProposePlanResponse], error) {
+	return c.proposePlan.CallUnary(ctx, req)
+}
+
 // ThreadServiceHandler is an implementation of the harpia.chat.v1.ThreadService service.
 type ThreadServiceHandler interface {
 	CreateThread(context.Context, *connect.Request[v1.CreateThreadRequest]) (*connect.Response[v1.CreateThreadResponse], error)
@@ -177,6 +193,7 @@ type ThreadServiceHandler interface {
 	ListThreadMessages(context.Context, *connect.Request[v1.ListThreadMessagesRequest]) (*connect.Response[v1.ListThreadMessagesResponse], error)
 	WatchThreadMessages(context.Context, *connect.Request[v1.WatchThreadMessagesRequest], *connect.ServerStream[v1.WatchThreadMessagesResponse]) error
 	AppendThreadMessage(context.Context, *connect.Request[v1.AppendThreadMessageRequest]) (*connect.Response[v1.AppendThreadMessageResponse], error)
+	ProposePlan(context.Context, *connect.Request[v1.ProposePlanRequest]) (*connect.Response[v1.ProposePlanResponse], error)
 }
 
 // NewThreadServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -228,6 +245,12 @@ func NewThreadServiceHandler(svc ThreadServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(threadServiceMethods.ByName("AppendThreadMessage")),
 		connect.WithHandlerOptions(opts...),
 	)
+	threadServiceProposePlanHandler := connect.NewUnaryHandler(
+		ThreadServiceProposePlanProcedure,
+		svc.ProposePlan,
+		connect.WithSchema(threadServiceMethods.ByName("ProposePlan")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/harpia.chat.v1.ThreadService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ThreadServiceCreateThreadProcedure:
@@ -244,6 +267,8 @@ func NewThreadServiceHandler(svc ThreadServiceHandler, opts ...connect.HandlerOp
 			threadServiceWatchThreadMessagesHandler.ServeHTTP(w, r)
 		case ThreadServiceAppendThreadMessageProcedure:
 			threadServiceAppendThreadMessageHandler.ServeHTTP(w, r)
+		case ThreadServiceProposePlanProcedure:
+			threadServiceProposePlanHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -279,4 +304,8 @@ func (UnimplementedThreadServiceHandler) WatchThreadMessages(context.Context, *c
 
 func (UnimplementedThreadServiceHandler) AppendThreadMessage(context.Context, *connect.Request[v1.AppendThreadMessageRequest]) (*connect.Response[v1.AppendThreadMessageResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("harpia.chat.v1.ThreadService.AppendThreadMessage is not implemented"))
+}
+
+func (UnimplementedThreadServiceHandler) ProposePlan(context.Context, *connect.Request[v1.ProposePlanRequest]) (*connect.Response[v1.ProposePlanResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("harpia.chat.v1.ThreadService.ProposePlan is not implemented"))
 }

@@ -39,6 +39,9 @@ class ThreadService(Protocol):
     async def append_thread_message(self, request: harpia_dot_chat_dot_v1_dot_chat__pb2.AppendThreadMessageRequest, ctx: RequestContext) -> harpia_dot_chat_dot_v1_dot_chat__pb2.AppendThreadMessageResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def propose_plan(self, request: harpia_dot_chat_dot_v1_dot_chat__pb2.ProposePlanRequest, ctx: RequestContext) -> harpia_dot_chat_dot_v1_dot_chat__pb2.ProposePlanResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
 
 class ThreadServiceASGIApplication(ConnectASGIApplication[ThreadService]):
     def __init__(self, service: ThreadService | AsyncGenerator[ThreadService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
@@ -114,6 +117,16 @@ class ThreadServiceASGIApplication(ConnectASGIApplication[ThreadService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.append_thread_message,
+                ),
+                "/harpia.chat.v1.ThreadService/ProposePlan": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ProposePlan",
+                        service_name="harpia.chat.v1.ThreadService",
+                        input=harpia_dot_chat_dot_v1_dot_chat__pb2.ProposePlanRequest,
+                        output=harpia_dot_chat_dot_v1_dot_chat__pb2.ProposePlanResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.propose_plan,
                 ),
             },
             interceptors=interceptors,
@@ -269,6 +282,26 @@ class ThreadServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def propose_plan(
+        self,
+        request: harpia_dot_chat_dot_v1_dot_chat__pb2.ProposePlanRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_chat_dot_v1_dot_chat__pb2.ProposePlanResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ProposePlan",
+                service_name="harpia.chat.v1.ThreadService",
+                input=harpia_dot_chat_dot_v1_dot_chat__pb2.ProposePlanRequest,
+                output=harpia_dot_chat_dot_v1_dot_chat__pb2.ProposePlanResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 
 
 
@@ -287,6 +320,8 @@ class ThreadServiceSync(Protocol):
     def watch_thread_messages(self, request: harpia_dot_chat_dot_v1_dot_chat__pb2.WatchThreadMessagesRequest, ctx: RequestContext) -> Iterator[harpia_dot_chat_dot_v1_dot_chat__pb2.WatchThreadMessagesResponse]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def append_thread_message(self, request: harpia_dot_chat_dot_v1_dot_chat__pb2.AppendThreadMessageRequest, ctx: RequestContext) -> harpia_dot_chat_dot_v1_dot_chat__pb2.AppendThreadMessageResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def propose_plan(self, request: harpia_dot_chat_dot_v1_dot_chat__pb2.ProposePlanRequest, ctx: RequestContext) -> harpia_dot_chat_dot_v1_dot_chat__pb2.ProposePlanResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -363,6 +398,16 @@ class ThreadServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.append_thread_message,
+                ),
+                "/harpia.chat.v1.ThreadService/ProposePlan": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ProposePlan",
+                        service_name="harpia.chat.v1.ThreadService",
+                        input=harpia_dot_chat_dot_v1_dot_chat__pb2.ProposePlanRequest,
+                        output=harpia_dot_chat_dot_v1_dot_chat__pb2.ProposePlanResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.propose_plan,
                 ),
             },
             interceptors=interceptors,
@@ -512,6 +557,26 @@ class ThreadServiceClientSync(ConnectClientSync):
                 service_name="harpia.chat.v1.ThreadService",
                 input=harpia_dot_chat_dot_v1_dot_chat__pb2.AppendThreadMessageRequest,
                 output=harpia_dot_chat_dot_v1_dot_chat__pb2.AppendThreadMessageResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def propose_plan(
+        self,
+        request: harpia_dot_chat_dot_v1_dot_chat__pb2.ProposePlanRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_chat_dot_v1_dot_chat__pb2.ProposePlanResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ProposePlan",
+                service_name="harpia.chat.v1.ThreadService",
+                input=harpia_dot_chat_dot_v1_dot_chat__pb2.ProposePlanRequest,
+                output=harpia_dot_chat_dot_v1_dot_chat__pb2.ProposePlanResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

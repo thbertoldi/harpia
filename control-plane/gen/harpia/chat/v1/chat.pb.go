@@ -1270,6 +1270,104 @@ func (x *AppendThreadMessageResponse) GetMessage() *ThreadMessage {
 	return nil
 }
 
+type ProposePlanRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ThreadId      string                 `protobuf:"bytes,2,opt,name=thread_id,json=threadId,proto3" json:"thread_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProposePlanRequest) Reset() {
+	*x = ProposePlanRequest{}
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProposePlanRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProposePlanRequest) ProtoMessage() {}
+
+func (x *ProposePlanRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProposePlanRequest.ProtoReflect.Descriptor instead.
+func (*ProposePlanRequest) Descriptor() ([]byte, []int) {
+	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *ProposePlanRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *ProposePlanRequest) GetThreadId() string {
+	if x != nil {
+		return x.ThreadId
+	}
+	return ""
+}
+
+type ProposePlanResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The appended PLAN_PROPOSED message (empty candidates when the router
+	// could not confidently match a template).
+	Message       *ThreadMessage `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProposePlanResponse) Reset() {
+	*x = ProposePlanResponse{}
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProposePlanResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProposePlanResponse) ProtoMessage() {}
+
+func (x *ProposePlanResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProposePlanResponse.ProtoReflect.Descriptor instead.
+func (*ProposePlanResponse) Descriptor() ([]byte, []int) {
+	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *ProposePlanResponse) GetMessage() *ThreadMessage {
+	if x != nil {
+		return x.Message
+	}
+	return nil
+}
+
 var File_harpia_chat_v1_chat_proto protoreflect.FileDescriptor
 
 const file_harpia_chat_v1_chat_proto_rawDesc = "" +
@@ -1353,6 +1451,11 @@ const file_harpia_chat_v1_chat_proto_rawDesc = "" +
 	"\fpayload_json\x18\x06 \x01(\tR\vpayloadJson\x12!\n" +
 	"\fexecution_id\x18\a \x01(\tR\vexecutionId\"V\n" +
 	"\x1bAppendThreadMessageResponse\x127\n" +
+	"\amessage\x18\x01 \x01(\v2\x1d.harpia.chat.v1.ThreadMessageR\amessage\"N\n" +
+	"\x12ProposePlanRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1b\n" +
+	"\tthread_id\x18\x02 \x01(\tR\bthreadId\"N\n" +
+	"\x13ProposePlanResponse\x127\n" +
 	"\amessage\x18\x01 \x01(\v2\x1d.harpia.chat.v1.ThreadMessageR\amessage*\xbc\x01\n" +
 	"\fThreadStatus\x12\x1d\n" +
 	"\x19THREAD_STATUS_UNSPECIFIED\x10\x00\x12\x16\n" +
@@ -1393,7 +1496,7 @@ const file_harpia_chat_v1_chat_proto_rawDesc = "" +
 	"$THREAD_MESSAGE_KIND_ARTIFACT_CREATED\x10\x16\x12(\n" +
 	"$THREAD_MESSAGE_KIND_ARTIFACT_UPDATED\x10\x17\x12$\n" +
 	" THREAD_MESSAGE_KIND_ERROR_RAISED\x10\x18\x12'\n" +
-	"#THREAD_MESSAGE_KIND_ERROR_RECOVERED\x10\x192\xc3\x05\n" +
+	"#THREAD_MESSAGE_KIND_ERROR_RECOVERED\x10\x192\x9b\x06\n" +
 	"\rThreadService\x12Y\n" +
 	"\fCreateThread\x12#.harpia.chat.v1.CreateThreadRequest\x1a$.harpia.chat.v1.CreateThreadResponse\x12P\n" +
 	"\tGetThread\x12 .harpia.chat.v1.GetThreadRequest\x1a!.harpia.chat.v1.GetThreadResponse\x12X\n" +
@@ -1401,7 +1504,8 @@ const file_harpia_chat_v1_chat_proto_rawDesc = "" +
 	"\rArchiveThread\x12$.harpia.chat.v1.ArchiveThreadRequest\x1a%.harpia.chat.v1.ArchiveThreadResponse\x12k\n" +
 	"\x12ListThreadMessages\x12).harpia.chat.v1.ListThreadMessagesRequest\x1a*.harpia.chat.v1.ListThreadMessagesResponse\x12p\n" +
 	"\x13WatchThreadMessages\x12*.harpia.chat.v1.WatchThreadMessagesRequest\x1a+.harpia.chat.v1.WatchThreadMessagesResponse0\x01\x12n\n" +
-	"\x13AppendThreadMessage\x12*.harpia.chat.v1.AppendThreadMessageRequest\x1a+.harpia.chat.v1.AppendThreadMessageResponseB\xb4\x01\n" +
+	"\x13AppendThreadMessage\x12*.harpia.chat.v1.AppendThreadMessageRequest\x1a+.harpia.chat.v1.AppendThreadMessageResponse\x12V\n" +
+	"\vProposePlan\x12\".harpia.chat.v1.ProposePlanRequest\x1a#.harpia.chat.v1.ProposePlanResponseB\xb4\x01\n" +
 	"\x12com.harpia.chat.v1B\tChatProtoP\x01Z9github.com/harpia/control-plane/gen/harpia/chat/v1;chatv1\xa2\x02\x03HCX\xaa\x02\x0eHarpia.Chat.V1\xca\x02\x0eHarpia\\Chat\\V1\xe2\x02\x1aHarpia\\Chat\\V1\\GPBMetadata\xea\x02\x10Harpia::Chat::V1b\x06proto3"
 
 var (
@@ -1417,7 +1521,7 @@ func file_harpia_chat_v1_chat_proto_rawDescGZIP() []byte {
 }
 
 var file_harpia_chat_v1_chat_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_harpia_chat_v1_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_harpia_chat_v1_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_harpia_chat_v1_chat_proto_goTypes = []any{
 	(ThreadStatus)(0),                   // 0: harpia.chat.v1.ThreadStatus
 	(ThreadMessageRole)(0),              // 1: harpia.chat.v1.ThreadMessageRole
@@ -1438,16 +1542,18 @@ var file_harpia_chat_v1_chat_proto_goTypes = []any{
 	(*WatchThreadMessagesResponse)(nil), // 16: harpia.chat.v1.WatchThreadMessagesResponse
 	(*AppendThreadMessageRequest)(nil),  // 17: harpia.chat.v1.AppendThreadMessageRequest
 	(*AppendThreadMessageResponse)(nil), // 18: harpia.chat.v1.AppendThreadMessageResponse
-	(*timestamppb.Timestamp)(nil),       // 19: google.protobuf.Timestamp
+	(*ProposePlanRequest)(nil),          // 19: harpia.chat.v1.ProposePlanRequest
+	(*ProposePlanResponse)(nil),         // 20: harpia.chat.v1.ProposePlanResponse
+	(*timestamppb.Timestamp)(nil),       // 21: google.protobuf.Timestamp
 }
 var file_harpia_chat_v1_chat_proto_depIdxs = []int32{
 	0,  // 0: harpia.chat.v1.Thread.status:type_name -> harpia.chat.v1.ThreadStatus
-	19, // 1: harpia.chat.v1.Thread.archived_at:type_name -> google.protobuf.Timestamp
-	19, // 2: harpia.chat.v1.Thread.created_at:type_name -> google.protobuf.Timestamp
-	19, // 3: harpia.chat.v1.Thread.updated_at:type_name -> google.protobuf.Timestamp
+	21, // 1: harpia.chat.v1.Thread.archived_at:type_name -> google.protobuf.Timestamp
+	21, // 2: harpia.chat.v1.Thread.created_at:type_name -> google.protobuf.Timestamp
+	21, // 3: harpia.chat.v1.Thread.updated_at:type_name -> google.protobuf.Timestamp
 	1,  // 4: harpia.chat.v1.ThreadMessage.role:type_name -> harpia.chat.v1.ThreadMessageRole
 	2,  // 5: harpia.chat.v1.ThreadMessage.kind:type_name -> harpia.chat.v1.ThreadMessageKind
-	19, // 6: harpia.chat.v1.ThreadMessage.created_at:type_name -> google.protobuf.Timestamp
+	21, // 6: harpia.chat.v1.ThreadMessage.created_at:type_name -> google.protobuf.Timestamp
 	3,  // 7: harpia.chat.v1.CreateThreadResponse.thread:type_name -> harpia.chat.v1.Thread
 	4,  // 8: harpia.chat.v1.CreateThreadResponse.initial_message:type_name -> harpia.chat.v1.ThreadMessage
 	3,  // 9: harpia.chat.v1.GetThreadResponse.thread:type_name -> harpia.chat.v1.Thread
@@ -1459,25 +1565,28 @@ var file_harpia_chat_v1_chat_proto_depIdxs = []int32{
 	1,  // 15: harpia.chat.v1.AppendThreadMessageRequest.role:type_name -> harpia.chat.v1.ThreadMessageRole
 	2,  // 16: harpia.chat.v1.AppendThreadMessageRequest.kind:type_name -> harpia.chat.v1.ThreadMessageKind
 	4,  // 17: harpia.chat.v1.AppendThreadMessageResponse.message:type_name -> harpia.chat.v1.ThreadMessage
-	5,  // 18: harpia.chat.v1.ThreadService.CreateThread:input_type -> harpia.chat.v1.CreateThreadRequest
-	7,  // 19: harpia.chat.v1.ThreadService.GetThread:input_type -> harpia.chat.v1.GetThreadRequest
-	9,  // 20: harpia.chat.v1.ThreadService.ListThreads:input_type -> harpia.chat.v1.ListThreadsRequest
-	11, // 21: harpia.chat.v1.ThreadService.ArchiveThread:input_type -> harpia.chat.v1.ArchiveThreadRequest
-	13, // 22: harpia.chat.v1.ThreadService.ListThreadMessages:input_type -> harpia.chat.v1.ListThreadMessagesRequest
-	15, // 23: harpia.chat.v1.ThreadService.WatchThreadMessages:input_type -> harpia.chat.v1.WatchThreadMessagesRequest
-	17, // 24: harpia.chat.v1.ThreadService.AppendThreadMessage:input_type -> harpia.chat.v1.AppendThreadMessageRequest
-	6,  // 25: harpia.chat.v1.ThreadService.CreateThread:output_type -> harpia.chat.v1.CreateThreadResponse
-	8,  // 26: harpia.chat.v1.ThreadService.GetThread:output_type -> harpia.chat.v1.GetThreadResponse
-	10, // 27: harpia.chat.v1.ThreadService.ListThreads:output_type -> harpia.chat.v1.ListThreadsResponse
-	12, // 28: harpia.chat.v1.ThreadService.ArchiveThread:output_type -> harpia.chat.v1.ArchiveThreadResponse
-	14, // 29: harpia.chat.v1.ThreadService.ListThreadMessages:output_type -> harpia.chat.v1.ListThreadMessagesResponse
-	16, // 30: harpia.chat.v1.ThreadService.WatchThreadMessages:output_type -> harpia.chat.v1.WatchThreadMessagesResponse
-	18, // 31: harpia.chat.v1.ThreadService.AppendThreadMessage:output_type -> harpia.chat.v1.AppendThreadMessageResponse
-	25, // [25:32] is the sub-list for method output_type
-	18, // [18:25] is the sub-list for method input_type
-	18, // [18:18] is the sub-list for extension type_name
-	18, // [18:18] is the sub-list for extension extendee
-	0,  // [0:18] is the sub-list for field type_name
+	4,  // 18: harpia.chat.v1.ProposePlanResponse.message:type_name -> harpia.chat.v1.ThreadMessage
+	5,  // 19: harpia.chat.v1.ThreadService.CreateThread:input_type -> harpia.chat.v1.CreateThreadRequest
+	7,  // 20: harpia.chat.v1.ThreadService.GetThread:input_type -> harpia.chat.v1.GetThreadRequest
+	9,  // 21: harpia.chat.v1.ThreadService.ListThreads:input_type -> harpia.chat.v1.ListThreadsRequest
+	11, // 22: harpia.chat.v1.ThreadService.ArchiveThread:input_type -> harpia.chat.v1.ArchiveThreadRequest
+	13, // 23: harpia.chat.v1.ThreadService.ListThreadMessages:input_type -> harpia.chat.v1.ListThreadMessagesRequest
+	15, // 24: harpia.chat.v1.ThreadService.WatchThreadMessages:input_type -> harpia.chat.v1.WatchThreadMessagesRequest
+	17, // 25: harpia.chat.v1.ThreadService.AppendThreadMessage:input_type -> harpia.chat.v1.AppendThreadMessageRequest
+	19, // 26: harpia.chat.v1.ThreadService.ProposePlan:input_type -> harpia.chat.v1.ProposePlanRequest
+	6,  // 27: harpia.chat.v1.ThreadService.CreateThread:output_type -> harpia.chat.v1.CreateThreadResponse
+	8,  // 28: harpia.chat.v1.ThreadService.GetThread:output_type -> harpia.chat.v1.GetThreadResponse
+	10, // 29: harpia.chat.v1.ThreadService.ListThreads:output_type -> harpia.chat.v1.ListThreadsResponse
+	12, // 30: harpia.chat.v1.ThreadService.ArchiveThread:output_type -> harpia.chat.v1.ArchiveThreadResponse
+	14, // 31: harpia.chat.v1.ThreadService.ListThreadMessages:output_type -> harpia.chat.v1.ListThreadMessagesResponse
+	16, // 32: harpia.chat.v1.ThreadService.WatchThreadMessages:output_type -> harpia.chat.v1.WatchThreadMessagesResponse
+	18, // 33: harpia.chat.v1.ThreadService.AppendThreadMessage:output_type -> harpia.chat.v1.AppendThreadMessageResponse
+	20, // 34: harpia.chat.v1.ThreadService.ProposePlan:output_type -> harpia.chat.v1.ProposePlanResponse
+	27, // [27:35] is the sub-list for method output_type
+	19, // [19:27] is the sub-list for method input_type
+	19, // [19:19] is the sub-list for extension type_name
+	19, // [19:19] is the sub-list for extension extendee
+	0,  // [0:19] is the sub-list for field type_name
 }
 
 func init() { file_harpia_chat_v1_chat_proto_init() }
@@ -1492,7 +1601,7 @@ func file_harpia_chat_v1_chat_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_harpia_chat_v1_chat_proto_rawDesc), len(file_harpia_chat_v1_chat_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   16,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

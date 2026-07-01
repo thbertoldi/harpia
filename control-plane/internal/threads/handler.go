@@ -352,3 +352,9 @@ func mapRepositoryError(err error) error {
 	}
 	return connect.NewError(connect.CodeInternal, err)
 }
+
+// ProposePlan is implemented in Task 5. Stub keeps the generated
+// ThreadServiceHandler interface satisfied until then.
+func (h *Handler) ProposePlan(ctx context.Context, req *connect.Request[chatv1.ProposePlanRequest]) (*connect.Response[chatv1.ProposePlanResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("ProposePlan not implemented"))
+}
