@@ -58,8 +58,17 @@ func (f *fakeChatStore) ListMessages(ctx context.Context, tenantID uuid.UUID, th
 func TestAppendPlanThreadMessage_PersistsOverseerText(t *testing.T) {
 	tenantID := uuid.New()
 	configID := uuid.New()
+	threadID := uuid.New()
 	store := &fakeChatStore{}
-	h := &PlanHandler{chat: store}
+	h := &PlanHandler{
+		chat: store,
+		resolveThreadIDForPlanConfiguration: func(ctx context.Context, tenantID uuid.UUID, planConfigurationID uuid.UUID) (uuid.UUID, error) {
+			if planConfigurationID != configID {
+				t.Fatalf("planConfigurationID = %s, want %s", planConfigurationID, configID)
+			}
+			return threadID, nil
+		},
+	}
 
 	ctx := identity.WithRequestContext(context.Background(), identity.RequestContext{
 		UserID:   uuid.New().String(),
@@ -81,8 +90,8 @@ func TestAppendPlanThreadMessage_PersistsOverseerText(t *testing.T) {
 	if got, want := len(store.appended), 1; got != want {
 		t.Fatalf("store.AppendMessage call count = %d, want %d", got, want)
 	}
-	if got := store.appended[0].ThreadID; got != configID.String() {
-		t.Fatalf("ThreadID = %q, want %q", got, configID.String())
+	if got := store.appended[0].ThreadID; got != threadID.String() {
+		t.Fatalf("ThreadID = %q, want %q", got, threadID.String())
 	}
 	if resp.Msg.Message.SequenceNumber != 1 {
 		t.Fatalf("response sequence_number = %d, want 1", resp.Msg.Message.SequenceNumber)

@@ -59,6 +59,7 @@ type PlanConfiguration struct {
 	BehaviorPolicies    json.RawMessage
 	Schedule            json.RawMessage
 	ParameterValues     json.RawMessage
+	ThreadID            uuid.UUID
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
 }
@@ -262,16 +263,28 @@ func (r *Repository) CreateConfiguration(ctx context.Context, config *PlanConfig
 			`INSERT INTO plan_configurations (
 				tenant_id, workspace_id, plan_template_id, plan_template_version, status,
 				seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
-				parameter_values
-			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+				parameter_values, thread_id
+			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 			RETURNING id, tenant_id, workspace_id, plan_template_id, plan_template_version, status,
 			          seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
-			          parameter_values, created_at, updated_at`,
+			          parameter_values, thread_id, created_at, updated_at`,
 			config.TenantID, config.WorkspaceID, config.PlanTemplateID, config.PlanTemplateVersion,
 			config.Status, config.SeedArtifacts, config.SlotBindings, config.OverseerBindings,
-			config.BehaviorPolicies, config.Schedule, config.ParameterValues,
+			config.BehaviorPolicies, config.Schedule, config.ParameterValues, config.ThreadID,
 		)
-		return scanConfiguration(row, &created)
+		if err := scanConfiguration(row, &created); err != nil {
+			return err
+		}
+		if created.ThreadID != uuid.Nil {
+			if _, err := q.Exec(ctx, `
+				UPDATE threads
+				SET active_plan_configuration_id = $1, updated_at = now()
+				WHERE tenant_id = $2 AND id = $3
+			`, created.ID, created.TenantID, created.ThreadID); err != nil {
+				return fmt.Errorf("attach plan configuration to thread: %w", err)
+			}
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, err
@@ -285,7 +298,7 @@ func (r *Repository) GetConfiguration(ctx context.Context, tenantID, configID uu
 		row := q.QueryRow(ctx,
 			`SELECT id, tenant_id, workspace_id, plan_template_id, plan_template_version, status,
 			        seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
-			        parameter_values, created_at, updated_at
+			        parameter_values, thread_id, created_at, updated_at
 			 FROM plan_configurations
 			 WHERE id = $1 AND tenant_id = $2`,
 			configID, tenantID,
@@ -314,7 +327,7 @@ func (r *Repository) UpdateConfiguration(ctx context.Context, config *PlanConfig
 			 WHERE id = $8 AND tenant_id = $9
 			 RETURNING id, tenant_id, workspace_id, plan_template_id, plan_template_version, status,
 			           seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
-			           parameter_values, created_at, updated_at`,
+			           parameter_values, thread_id, created_at, updated_at`,
 			config.Status, config.SeedArtifacts, config.SlotBindings, config.OverseerBindings,
 			config.BehaviorPolicies, config.Schedule, config.ParameterValues, config.ID, config.TenantID,
 		)
@@ -356,7 +369,7 @@ func (r *Repository) ListConfigurations(ctx context.Context, tenantID uuid.UUID,
 			rows, err = q.Query(ctx,
 				`SELECT id, tenant_id, workspace_id, plan_template_id, plan_template_version, status,
 				        seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
-				        parameter_values, created_at, updated_at
+				        parameter_values, thread_id, created_at, updated_at
 				 FROM plan_configurations
 				 WHERE tenant_id = $1 AND workspace_id = $2 AND status = $3
 				 ORDER BY created_at DESC
@@ -367,7 +380,7 @@ func (r *Repository) ListConfigurations(ctx context.Context, tenantID uuid.UUID,
 			rows, err = q.Query(ctx,
 				`SELECT id, tenant_id, workspace_id, plan_template_id, plan_template_version, status,
 				        seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
-				        parameter_values, created_at, updated_at
+				        parameter_values, thread_id, created_at, updated_at
 				 FROM plan_configurations
 				 WHERE tenant_id = $1 AND workspace_id = $2
 				 ORDER BY created_at DESC
@@ -378,7 +391,7 @@ func (r *Repository) ListConfigurations(ctx context.Context, tenantID uuid.UUID,
 			rows, err = q.Query(ctx,
 				`SELECT id, tenant_id, workspace_id, plan_template_id, plan_template_version, status,
 				        seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
-				        parameter_values, created_at, updated_at
+				        parameter_values, thread_id, created_at, updated_at
 				 FROM plan_configurations
 				 WHERE tenant_id = $1 AND status = $2
 				 ORDER BY created_at DESC
@@ -389,7 +402,7 @@ func (r *Repository) ListConfigurations(ctx context.Context, tenantID uuid.UUID,
 			rows, err = q.Query(ctx,
 				`SELECT id, tenant_id, workspace_id, plan_template_id, plan_template_version, status,
 				        seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
-				        parameter_values, created_at, updated_at
+				        parameter_values, thread_id, created_at, updated_at
 				 FROM plan_configurations
 				 WHERE tenant_id = $1
 				 ORDER BY created_at DESC
@@ -408,7 +421,7 @@ func (r *Repository) ListConfigurations(ctx context.Context, tenantID uuid.UUID,
 				&config.ID, &config.TenantID, &config.WorkspaceID, &config.PlanTemplateID,
 				&config.PlanTemplateVersion, &config.Status, &config.SeedArtifacts,
 				&config.SlotBindings, &config.OverseerBindings, &config.BehaviorPolicies,
-				&config.Schedule, &config.ParameterValues, &config.CreatedAt, &config.UpdatedAt,
+				&config.Schedule, &config.ParameterValues, &config.ThreadID, &config.CreatedAt, &config.UpdatedAt,
 			); err != nil {
 				return fmt.Errorf("scan plan configuration: %w", err)
 			}
@@ -542,6 +555,24 @@ func (r *Repository) GetExecution(ctx context.Context, tenantID, executionID uui
 		return nil, fmt.Errorf("get plan execution: %w", err)
 	}
 	return &execution, nil
+}
+
+// GetThreadIDForConfiguration resolves a plan_configuration_id to its owning
+// thread_id. Used by the Path B compatibility bridge so legacy plan-thread RPCs
+// persist to threads.id.
+func (r *Repository) GetThreadIDForConfiguration(ctx context.Context, tenantID, configID uuid.UUID) (uuid.UUID, error) {
+	var threadID uuid.UUID
+	err := database.WithTenant(ctx, r.pool, tenantID, func(q database.Querier) error {
+		return q.QueryRow(ctx, `
+			SELECT thread_id
+			FROM plan_configurations
+			WHERE tenant_id = $1 AND id = $2
+		`, tenantID, configID).Scan(&threadID)
+	})
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("get thread id for plan configuration: %w", err)
+	}
+	return threadID, nil
 }
 
 // GetPlanConfigurationIDForExecution returns the plan_configuration_id for a given plan_execution_id.
@@ -958,7 +989,7 @@ func scanConfiguration(row pgx.Row, config *PlanConfiguration) error {
 		&config.ID, &config.TenantID, &config.WorkspaceID, &config.PlanTemplateID,
 		&config.PlanTemplateVersion, &config.Status, &config.SeedArtifacts,
 		&config.SlotBindings, &config.OverseerBindings, &config.BehaviorPolicies,
-		&config.Schedule, &config.ParameterValues, &config.CreatedAt, &config.UpdatedAt,
+		&config.Schedule, &config.ParameterValues, &config.ThreadID, &config.CreatedAt, &config.UpdatedAt,
 	)
 }
 

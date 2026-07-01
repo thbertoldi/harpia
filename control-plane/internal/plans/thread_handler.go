@@ -29,6 +29,26 @@ func newWatchTicker(d time.Duration) *watchTicker {
 	return &watchTicker{t: time.NewTicker(d)}
 }
 
+// resolvePlanThreadID maps a legacy plan_configuration_id to its owning
+// threads.id. It returns connect-coded errors so callers can return the result
+// directly: InvalidArgument for a malformed id, NotFound when the configuration
+// has no resolvable thread. When no resolver is configured (in-memory tests) it
+// falls back to the parsed configuration id.
+func (h *PlanHandler) resolvePlanThreadID(ctx context.Context, tenantID uuid.UUID, configID string) (uuid.UUID, error) {
+	parsed, err := uuid.Parse(strings.TrimSpace(configID))
+	if err != nil {
+		return uuid.Nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	if h.resolveThreadIDForPlanConfiguration == nil {
+		return parsed, nil
+	}
+	threadID, err := h.resolveThreadIDForPlanConfiguration(ctx, tenantID, parsed)
+	if err != nil {
+		return uuid.Nil, connect.NewError(connect.CodeNotFound, err)
+	}
+	return threadID, nil
+}
+
 func (h *PlanHandler) ListPlanThreadMessages(
 	ctx context.Context,
 	req *connect.Request[plansv1.ListPlanThreadMessagesRequest],
@@ -56,8 +76,12 @@ func (h *PlanHandler) ListPlanThreadMessages(
 		}
 		sinceSeq = parsed
 	}
+	threadID, err := h.resolvePlanThreadID(ctx, tenantID, configID)
+	if err != nil {
+		return nil, err
+	}
 	fetchLimit := limit + 1
-	msgs, err := h.chat.ListMessages(ctx, tenantID, configID, sinceSeq, fetchLimit)
+	msgs, err := h.chat.ListMessages(ctx, tenantID, threadID.String(), sinceSeq, fetchLimit)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -93,8 +117,12 @@ func (h *PlanHandler) AppendPlanThreadMessage(
 	if h.chat == nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("chat store is unavailable"))
 	}
+	threadID, err := h.resolvePlanThreadID(ctx, tenantID, configID)
+	if err != nil {
+		return nil, err
+	}
 	input := chat.AppendInput{
-		ThreadID:    configID,
+		ThreadID:    threadID.String(),
 		Role:        req.Msg.GetRole(),
 		Kind:        req.Msg.GetKind(),
 		Text:        req.Msg.GetText(),
@@ -144,10 +172,14 @@ func (h *PlanHandler) WatchPlanThreadMessages(
 	if h.chat == nil {
 		return connect.NewError(connect.CodeFailedPrecondition, errors.New("chat store is unavailable"))
 	}
+	threadID, err := h.resolvePlanThreadID(ctx, tenantID, configID)
+	if err != nil {
+		return err
+	}
 
 	sinceSeq := req.Msg.GetSinceSequenceNumber()
 	// Initial flush: send everything since the resume point.
-	initial, err := h.chat.ListMessages(ctx, tenantID, configID, sinceSeq, 0)
+	initial, err := h.chat.ListMessages(ctx, tenantID, threadID.String(), sinceSeq, 0)
 	if err != nil {
 		return connect.NewError(connect.CodeInternal, err)
 	}
@@ -166,7 +198,7 @@ func (h *PlanHandler) WatchPlanThreadMessages(
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C():
-			next, err := h.chat.ListMessages(ctx, tenantID, configID, sinceSeq, 0)
+			next, err := h.chat.ListMessages(ctx, tenantID, threadID.String(), sinceSeq, 0)
 			if err != nil {
 				return connect.NewError(connect.CodeInternal, err)
 			}

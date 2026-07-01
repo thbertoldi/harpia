@@ -168,6 +168,10 @@ type PlanHandler struct {
 	signaler         PlanElicitationSignaler
 	approvals        ApprovalStore
 	approvalSignaler PlanApprovalSignaler
+
+	// resolveThreadIDForPlanConfiguration bridges legacy plan-thread RPCs to the
+	// owning threads.id during the Path B migration.
+	resolveThreadIDForPlanConfiguration func(ctx context.Context, tenantID, planConfigurationID uuid.UUID) (uuid.UUID, error)
 }
 
 type PlanWorkflowStarter interface {
@@ -201,6 +205,7 @@ func NewPlanHandler(repo *Repository, executors ExecutorLookup, schedule *Schedu
 		elicitations:    repo,
 		approvals:       repo,
 	}
+	handler.resolveThreadIDForPlanConfiguration = repo.GetThreadIDForConfiguration
 	if signaler, ok := starter.(PlanElicitationSignaler); ok {
 		handler.signaler = signaler
 	}
@@ -287,6 +292,11 @@ func (h *PlanHandler) CreatePlanConfiguration(ctx context.Context, req *connect.
 		return nil, err
 	}
 
+	threadID, err := uuid.Parse(strings.TrimSpace(req.Msg.GetThreadId()))
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("thread_id is required"))
+	}
+
 	templateID, err := uuid.Parse(req.Msg.PlanTemplateId)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
@@ -307,6 +317,7 @@ func (h *PlanHandler) CreatePlanConfiguration(ctx context.Context, req *connect.
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
+	config.ThreadID = threadID
 
 	created, err := h.repo.CreateConfiguration(ctx, config)
 	if err != nil {
@@ -952,6 +963,9 @@ func configurationToProto(c *PlanConfiguration) *plansv1.PlanConfiguration {
 	}
 	if c.WorkspaceID.Valid {
 		config.WorkspaceId = c.WorkspaceID.UUID.String()
+	}
+	if c.ThreadID != uuid.Nil {
+		config.ThreadId = c.ThreadID.String()
 	}
 	parameterValues, err := normalizeParameterValuesJSON(string(c.ParameterValues))
 	if err != nil {
