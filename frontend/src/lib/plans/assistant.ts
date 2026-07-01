@@ -89,6 +89,74 @@ export async function editBinding(args: {
   return response.planConfiguration;
 }
 
+export async function selectBindingOption(args: {
+  tenantId: string;
+  configurationId: string;
+  promptMessageId: string;
+  existingConfiguration: PlanConfiguration;
+  template: PlanTemplate;
+  stepKey: string;
+  optionId: string;
+  value: string;
+  label: string;
+}): Promise<PlanConfiguration> {
+  const previousInstallationId =
+    args.existingConfiguration.slotBindings.find(
+      (binding) => binding.stepKey === args.stepKey,
+    )?.executorInstallationId ?? "";
+
+  await selectChip({
+    tenantId: args.tenantId,
+    configurationId: args.configurationId,
+    promptMessageId: args.promptMessageId,
+    optionId: args.optionId,
+    value: args.value,
+    label: args.label,
+  });
+
+  const next = await editBinding({
+    tenantId: args.tenantId,
+    configurationId: args.configurationId,
+    existingConfiguration: args.existingConfiguration,
+    template: args.template,
+    stepKey: args.stepKey,
+    newInstallationId: args.value,
+  });
+
+  await appendStepRebound({
+    tenantId: args.tenantId,
+    configurationId: args.configurationId,
+    stepKey: args.stepKey,
+    previousInstallationId,
+    newInstallationId: args.value,
+    label: args.label,
+  });
+
+  return next;
+}
+
+export async function appendStepRebound(args: {
+  tenantId: string;
+  configurationId: string;
+  stepKey: string;
+  previousInstallationId: string;
+  newInstallationId: string;
+  label: string;
+}): Promise<void> {
+  await appendThreadMessage(
+    args.tenantId,
+    args.configurationId,
+    "SYSTEM",
+    "STEP_REBOUND",
+    args.label,
+    JSON.stringify({
+      step_key: args.stepKey,
+      previous_executor_installation_id: args.previousInstallationId,
+      new_executor_installation_id: args.newInstallationId,
+    }),
+  );
+}
+
 export async function applyLinkedInSuggestion(args: {
   tenantId: string;
   configurationId: string;

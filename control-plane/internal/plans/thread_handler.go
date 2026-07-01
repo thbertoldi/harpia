@@ -145,7 +145,7 @@ func (h *PlanHandler) AppendPlanThreadMessage(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
-	if req.Msg.GetKind() == chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_USER_SELECTION && h.assistant != nil {
+	if req.Msg.GetKind() == chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_STEP_REBOUND && h.assistant != nil {
 		parsedConfigID, parseErr := uuid.Parse(configID)
 		if parseErr == nil {
 			_ = h.assistant.NextTurn(ctx, tenantID, parsedConfigID)

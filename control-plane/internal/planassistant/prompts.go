@@ -42,6 +42,9 @@ func BuildPrompt(state AssistantState, in PromptInput) (text, payload string) {
 		return "Pick a template to start.",
 			chat.BuildAssistantPromptPayload(string(state.Kind), "", nil)
 
+	case StateBindingStep:
+		return buildBindingStepPrompt(state, in)
+
 	case StateBindingMatrix:
 		return buildMatrixPrompt(in)
 
@@ -52,11 +55,47 @@ func BuildPrompt(state AssistantState, in PromptInput) (text, payload string) {
 }
 
 func buildMatrixPrompt(in PromptInput) (string, string) {
+	user := currentUserLabel(in)
+	rows := matrixRows(in, user)
+	text := fmt.Sprintf("Here's the plan. Pick an executor for each task — overseer defaults to %s.", user)
+	payload := chat.BuildAssistantMatrixPayload(rows, policiesSet(in.Config.GetBehaviorPolicies()))
+	return text, payload
+}
+
+func buildBindingStepPrompt(state AssistantState, in PromptInput) (string, string) {
+	user := currentUserLabel(in)
+	rows := matrixRows(in, user)
+	var focusedTitle string
+	var focusedOptions []chat.AssistantOption
+	for _, row := range rows {
+		if row.StepKey == state.StepKey {
+			focusedTitle = row.StepTitle
+			focusedOptions = row.Options
+			break
+		}
+	}
+	if focusedTitle == "" {
+		focusedTitle = state.StepKey
+	}
+	text := fmt.Sprintf("Who should handle %s?", focusedTitle)
+	payload := chat.BuildAssistantBindingStepPayload(
+		state.StepKey,
+		focusedOptions,
+		rows,
+		policiesSet(in.Config.GetBehaviorPolicies()),
+	)
+	return text, payload
+}
+
+func currentUserLabel(in PromptInput) string {
 	user := in.CurrentUserLabel
 	if user == "" {
 		user = "You"
 	}
+	return user
+}
 
+func matrixRows(in PromptInput, user string) []chat.AssistantMatrixRow {
 	bindings := map[string]string{}
 	for _, sb := range in.Config.GetSlotBindings() {
 		if sb.GetExecutorInstallationId() != "" {
@@ -90,10 +129,7 @@ func buildMatrixPrompt(in PromptInput) (string, string) {
 			CurrentOverseerLabel: overseerLabel,
 		})
 	}
-
-	text := fmt.Sprintf("Here's the plan. Pick an executor for each task — overseer defaults to %s.", user)
-	payload := chat.BuildAssistantMatrixPayload(rows, policiesSet(in.Config.GetBehaviorPolicies()))
-	return text, payload
+	return rows
 }
 
 func buildLandingPrompt() (string, string) {

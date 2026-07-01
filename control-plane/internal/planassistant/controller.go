@@ -19,10 +19,9 @@ type ExecutorCatalog interface {
 }
 
 // ConfigurationStore reads PlanConfigurations from the controller's
-// perspective. M6 (spec §2.1): the matrix card mutates bindings/overseer/
-// policies/status directly via the plans handler's UpdatePlanConfiguration —
-// the controller no longer applies selections, it only reads current state
-// and emits the matching prompt.
+// perspective. The card mutates bindings/overseer/policies/status directly
+// via the plans handler's UpdatePlanConfiguration — the controller reads
+// current state and emits the matching prompt.
 type ConfigurationStore interface {
 	GetConfiguration(ctx context.Context, tenantID, configID uuid.UUID) (*plansv1.PlanConfiguration, error)
 }
@@ -41,9 +40,8 @@ type Controller struct {
 	Templates TemplateStore
 }
 
-// SeedThread is called once when a PlanConfiguration is first created.
-// It writes CONFIGURATION_STARTED followed by the first ASSISTANT_PROMPT
-// (the BINDING_MATRIX card).
+// SeedThread is called once when a PlanConfiguration is first created. It
+// writes CONFIGURATION_STARTED followed by the first ASSISTANT_PROMPT.
 func (c *Controller) SeedThread(ctx context.Context, tenantID, configID uuid.UUID) error {
 	cfg, err := c.Configs.GetConfiguration(ctx, tenantID, configID)
 	if err != nil {
@@ -64,9 +62,7 @@ func (c *Controller) SeedThread(ctx context.Context, tenantID, configID uuid.UUI
 	return c.emitCurrentPrompt(ctx, tenantID, cfg)
 }
 
-// NextTurn is called after the configuration changes — either when the matrix
-// card mutates a binding (refresh the matrix prompt) or when the Save button
-// promotes status past DRAFT (emit the LandingCard). It re-derives the state
+// NextTurn is called after the configuration changes. It re-derives the state
 // from the current configuration and emits the matching prompt.
 //
 // Idempotent: emitting the same matrix payload twice is suppressed, and the
@@ -105,7 +101,7 @@ func (c *Controller) emitCurrentPrompt(ctx context.Context, tenantID uuid.UUID, 
 	}
 
 	in := PromptInput{Template: tpl, Config: cfg}
-	if state.Kind == StateBindingMatrix {
+	if state.Kind == StateBindingStep || state.Kind == StateBindingMatrix {
 		byStep := make(map[string][]ExecutorOption, len(tpl.GetSteps()))
 		for _, step := range tpl.GetSteps() {
 			cands, err := c.Catalog.CandidatesForStep(ctx, tenantID, tpl, step.GetKey())
@@ -119,9 +115,9 @@ func (c *Controller) emitCurrentPrompt(ctx context.Context, tenantID uuid.UUID, 
 
 	text, payload := BuildPrompt(state, in)
 
-	// Suppress a duplicate matrix prompt — NextTurn fires on every binding
-	// change, but we only want a fresh prompt when the rendered payload
-	// actually differs from the most recent assistant prompt.
+	// Suppress duplicate prompts. NextTurn can fire on incremental edits, but
+	// we only want a fresh prompt when the rendered payload actually differs
+	// from the most recent assistant prompt.
 	if dup, err := c.isDuplicateAssistantPrompt(ctx, tenantID, cfg.GetId(), payload); err != nil {
 		return err
 	} else if dup {

@@ -1,0 +1,342 @@
+<script lang="ts">
+  import { ChevronDown, ChevronUp, Pencil } from "lucide-svelte";
+  import { fade } from "svelte/transition";
+  import type { ChatMessage } from "$lib/chat/types";
+  import { locale, translate } from "$lib/i18n";
+  import { appendStepRebound, editBinding, selectBindingOption } from "$lib/plans/assistant";
+  import {
+    hydrateMatrixPayload,
+    parseBindingStepPayload,
+    type BindingStepPayload,
+    type MatrixOption,
+    type MatrixRow,
+  } from "$lib/plans/matrix";
+  import { chipFlash } from "$lib/motion/transitions";
+  import { planClient } from "$lib/rpc";
+  import type {
+    PlanConfiguration,
+    PlanTemplate,
+  } from "$lib/gen/harpia/plans/v1/plans_pb";
+
+  interface Props {
+    message: ChatMessage;
+    configurationId: string;
+    tenantId: string;
+    isLive?: boolean;
+    isAnswered?: boolean;
+  }
+
+  let {
+    message,
+    configurationId,
+    tenantId,
+    isLive = false,
+    isAnswered = false,
+  }: Props = $props();
+
+  function parsePayloadSafe(json: string): BindingStepPayload | null {
+    try {
+      return parseBindingStepPayload(json);
+    } catch {
+      return null;
+    }
+  }
+
+  let payload = $state<BindingStepPayload | null>(null);
+  let configuration = $state<PlanConfiguration | null>(null);
+  let template = $state<PlanTemplate | null>(null);
+  let savingRowKey = $state<string | null>(null);
+  let saveError = $state(false);
+  let editAllOpen = $state(false);
+  let editingAnswered = $state(false);
+  let submitted = $state(false);
+
+  $effect(() => {
+    payload = parsePayloadSafe(message.payloadJson);
+  });
+
+  $effect(() => {
+    if (!tenantId || !configurationId) return;
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const cfgRes = await planClient.getPlanConfiguration(
+          { tenantId, planConfigurationId: configurationId },
+          { signal: controller.signal },
+        );
+        if (controller.signal.aborted || !cfgRes.planConfiguration) return;
+        configuration = cfgRes.planConfiguration;
+        if (payload) {
+          payload = hydrateMatrixPayload(payload, {
+            slotBindings: cfgRes.planConfiguration.slotBindings,
+            policiesSet: !!cfgRes.planConfiguration.behaviorPolicies,
+          });
+        }
+        const tplRes = await planClient.getPlanTemplate(
+          { planTemplateId: cfgRes.planConfiguration.planTemplateId },
+          { signal: controller.signal },
+        );
+        if (controller.signal.aborted) return;
+        template = tplRes.planTemplate ?? null;
+      } catch {
+        saveError = true;
+      }
+    })();
+    return () => controller.abort();
+  });
+
+  const rows = $derived(payload?.rows ?? []);
+  const focusedRow = $derived(
+    rows.find((row) => row.step_key === payload?.step_key) ?? null,
+  );
+  const boundCount = $derived(
+    rows.filter((row) => row.current_executor_id !== "").length,
+  );
+  const showChips = $derived(
+    (isLive || editingAnswered) && !submitted && !!focusedRow,
+  );
+
+  function selectedOption(row: MatrixRow): MatrixOption | undefined {
+    return row.options.find((option) => option.id === row.current_executor_id);
+  }
+
+  function optionText(option?: MatrixOption): string {
+    if (!option) return "";
+    return option.sublabel ? `${option.label} · ${option.sublabel}` : option.label;
+  }
+
+  function reflectBinding(stepKey: string, installationId: string) {
+    if (!payload) return;
+    payload = {
+      ...payload,
+      rows: payload.rows.map((row) =>
+        row.step_key === stepKey
+          ? { ...row, current_executor_id: installationId }
+          : row,
+      ),
+    };
+  }
+
+  async function onPickFocused(option: MatrixOption) {
+    if (!payload || !focusedRow || !configuration || !template) return;
+    if (savingRowKey || option.id === focusedRow.current_executor_id) return;
+    savingRowKey = focusedRow.step_key;
+    saveError = false;
+    try {
+      const next = await selectBindingOption({
+        tenantId,
+        configurationId,
+        promptMessageId: message.id,
+        existingConfiguration: configuration,
+        template,
+        stepKey: focusedRow.step_key,
+        optionId: option.id,
+        value: option.value || option.id,
+        label: option.label,
+      });
+      configuration = next;
+      reflectBinding(focusedRow.step_key, option.id);
+      submitted = true;
+      editingAnswered = false;
+    } catch {
+      saveError = true;
+    } finally {
+      savingRowKey = null;
+    }
+  }
+
+  async function onPickMatrix(row: MatrixRow, optionId: string) {
+    if (!optionId || optionId === row.current_executor_id) return;
+    if (!configuration || !template) return;
+    const option = row.options.find((candidate) => candidate.id === optionId);
+    savingRowKey = row.step_key;
+    saveError = false;
+    try {
+      const previous = row.current_executor_id;
+      const next = await editBinding({
+        tenantId,
+        configurationId,
+        existingConfiguration: configuration,
+        template,
+        stepKey: row.step_key,
+        newInstallationId: optionId,
+      });
+      configuration = next;
+      reflectBinding(row.step_key, optionId);
+      await appendStepRebound({
+        tenantId,
+        configurationId,
+        stepKey: row.step_key,
+        previousInstallationId: previous,
+        newInstallationId: optionId,
+        label: option?.label ?? optionId,
+      });
+    } catch {
+      saveError = true;
+    } finally {
+      savingRowKey = null;
+    }
+  }
+
+  function toggleAnsweredEdit() {
+    editingAnswered = !editingAnswered;
+    if (editingAnswered) submitted = false;
+  }
+</script>
+
+<div
+  id={`m-${message.id}`}
+  class="rounded-lg border border-plumage bg-obsidian-light px-4 py-3 {isLive
+    ? 'ring-1 ring-talon-gold'
+    : ''}"
+>
+  {#if !payload || !focusedRow}
+    <p class="text-[13px] text-cream">{message.text}</p>
+  {:else}
+    <div class="flex items-start justify-between gap-3">
+      <div class="min-w-0">
+        <p class="font-body text-[13px] text-cream">{message.text}</p>
+        <div
+          class="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-crown-ash"
+        >
+          <span
+            class="rounded border border-plumage bg-surface-hover px-2 py-1 font-mono text-[10px] text-crown-ash"
+          >
+            {focusedRow.contracts.input || "—"} → {focusedRow.contracts.output ||
+              "—"}
+          </span>
+          <span>
+            {translate("assistant.bindingStep.progress", $locale, {
+              bound: boundCount,
+              total: rows.length,
+            })}
+          </span>
+        </div>
+      </div>
+      {#if isAnswered && !isLive}
+        <button
+          type="button"
+          class="cursor-pointer rounded p-1 text-crown-ash hover:text-talon-gold"
+          onclick={toggleAnsweredEdit}
+          aria-label={translate("assistant.edit", $locale)}
+        >
+          <Pencil class="size-3.5" />
+        </button>
+      {/if}
+    </div>
+
+    {#if selectedOption(focusedRow) && !showChips}
+      <p class="mt-3 text-[12px] text-crown-ash">
+        {translate("assistant.bindingStep.selected", $locale, {
+          executor: optionText(selectedOption(focusedRow)),
+        })}
+      </p>
+    {/if}
+
+    {#if showChips}
+      <div class="mt-3 flex flex-wrap gap-2">
+        {#each payload.options as opt (opt.id)}
+          <button
+            type="button"
+            in:chipFlash
+            disabled={savingRowKey !== null || !configuration || !template}
+            onclick={() => onPickFocused(opt)}
+            class="cursor-pointer rounded-md border border-plumage bg-obsidian px-3 py-2 text-left text-[12px] text-cream hover:border-talon-gold hover:text-talon-gold disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <span class="font-medium">{opt.label}</span>
+            {#if opt.sublabel}
+              <span class="ml-2 text-[10px] text-crown-ash-dark">
+                {opt.sublabel}
+              </span>
+            {/if}
+          </button>
+        {/each}
+        {#if payload.options.length === 0}
+          <p class="text-[12px] text-crown-ash">
+            {translate("assistant.bindingStep.noOptions", $locale)}
+          </p>
+        {/if}
+      </div>
+    {/if}
+
+    <div class="mt-3 border-t border-plumage/70 pt-3">
+      <button
+        type="button"
+        class="flex cursor-pointer items-center gap-1.5 text-[12px] font-medium text-crown-ash hover:text-talon-gold"
+        onclick={() => (editAllOpen = !editAllOpen)}
+        aria-expanded={editAllOpen}
+      >
+        {#if editAllOpen}
+          <ChevronUp class="size-3.5" />
+          {translate("assistant.bindingStep.hideAll", $locale)}
+        {:else}
+          <ChevronDown class="size-3.5" />
+          {translate("assistant.bindingStep.editAll", $locale)}
+        {/if}
+      </button>
+
+      {#if editAllOpen}
+        <div transition:fade class="mt-3 overflow-x-auto">
+          <table class="w-full min-w-[560px] border-collapse text-left">
+            <thead>
+              <tr class="border-b border-plumage text-[10px] text-crown-ash-dark uppercase">
+                <th class="py-2 pr-3 font-semibold">
+                  {translate("assistant.bindingStep.step", $locale)}
+                </th>
+                <th class="py-2 pr-3 font-semibold">
+                  {translate("assistant.bindingStep.executor", $locale)}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each rows as row (row.step_key)}
+                <tr class="border-b border-obsidian-light">
+                  <td class="py-2 pr-3 align-top">
+                    <p class="text-[12px] font-medium text-cream">
+                      {row.step_title}
+                    </p>
+                    <p class="mt-0.5 font-mono text-[10px] text-crown-ash-dark">
+                      {row.contracts.input || "—"} → {row.contracts.output ||
+                        "—"}
+                    </p>
+                  </td>
+                  <td class="py-2 pr-3 align-top">
+                    <select
+                      value={row.current_executor_id}
+                      disabled={savingRowKey !== null || !configuration || !template}
+                      onchange={(event) =>
+                        onPickMatrix(
+                          row,
+                          (event.currentTarget as HTMLSelectElement).value,
+                        )}
+                      aria-label={translate(
+                        "assistant.bindingMatrix.pickExecutor",
+                        $locale,
+                      )}
+                      class="w-full cursor-pointer rounded-md border border-plumage bg-surface-hover px-3 py-2 text-[12px] text-cream outline-none hover:border-talon-gold focus:border-talon-gold disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <option value="" disabled>
+                        {translate("assistant.bindingMatrix.pickExecutor", $locale)}
+                      </option>
+                      {#each row.options as option (option.id)}
+                        <option value={option.id}>
+                          {optionText(option)}
+                        </option>
+                      {/each}
+                    </select>
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+      {/if}
+    </div>
+  {/if}
+
+  {#if saveError}
+    <p transition:fade class="mt-2 text-[11px] text-red-400">
+      {translate("thread.saveError", $locale)}
+    </p>
+  {/if}
+</div>

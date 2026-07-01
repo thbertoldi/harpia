@@ -38,10 +38,12 @@ func (f *fakeConfigs) GetConfiguration(_ context.Context, _, _ uuid.UUID) (*plan
 	return f.cur, nil
 }
 
-type fakeCatalog struct{}
+type fakeCatalog struct {
+	byStep map[string][]planassistant.ExecutorOption
+}
 
-func (fakeCatalog) CandidatesForStep(_ context.Context, _ uuid.UUID, _ *plansv1.PlanTemplate, _ string) ([]planassistant.ExecutorOption, error) {
-	return nil, nil
+func (f fakeCatalog) CandidatesForStep(_ context.Context, _ uuid.UUID, _ *plansv1.PlanTemplate, stepKey string) ([]planassistant.ExecutorOption, error) {
+	return f.byStep[stepKey], nil
 }
 
 type fakeTemplates struct{ tpl *plansv1.PlanTemplate }
@@ -59,7 +61,16 @@ func newController(chatStore chat.Store, cfg *plansv1.PlanConfiguration, tpl *pl
 	}
 }
 
-func TestSeedThread_EmitsConfigurationStartedThenMatrix(t *testing.T) {
+func newControllerWithCatalog(chatStore chat.Store, cfg *plansv1.PlanConfiguration, tpl *plansv1.PlanTemplate, catalog fakeCatalog) *planassistant.Controller {
+	return &planassistant.Controller{
+		Chat:      chatStore,
+		Catalog:   catalog,
+		Configs:   &fakeConfigs{cur: cfg},
+		Templates: &fakeTemplates{tpl: tpl},
+	}
+}
+
+func TestSeedThread_EmitsConfigurationStartedThenBindingStep(t *testing.T) {
 	chatStore := &fakeChat{}
 	tpl := mkTemplate("draft")
 	tpl.Id = testTemplateUUID
@@ -81,30 +92,66 @@ func TestSeedThread_EmitsConfigurationStartedThenMatrix(t *testing.T) {
 	if chatStore.appended[1].Kind != chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_ASSISTANT_PROMPT {
 		t.Fatalf("second message kind: %v", chatStore.appended[1].Kind)
 	}
-	if !strings.Contains(chatStore.appended[1].PayloadJSON, `"state":"BINDING_MATRIX"`) {
-		t.Fatalf("first prompt should be the matrix: %s", chatStore.appended[1].PayloadJSON)
+	if !strings.Contains(chatStore.appended[1].PayloadJSON, `"state":"BINDING_STEP"`) {
+		t.Fatalf("first prompt should be the focused binding step: %s", chatStore.appended[1].PayloadJSON)
 	}
 }
 
-func TestNextTurn_EmitsMatrixWhileDraft(t *testing.T) {
+func TestNextTurn_AdvancesThroughUnboundStepsThenMatrix(t *testing.T) {
 	chatStore := &fakeChat{}
-	tpl := mkTemplate("draft", "publish")
+	tpl := mkTemplate("fetch-news", "write-draft")
 	tpl.Id = testTemplateUUID
 	cfg := &plansv1.PlanConfiguration{
 		Id:             uuid.NewString(),
 		PlanTemplateId: testTemplateUUID,
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
-		SlotBindings:   []*plansv1.SlotBinding{{StepKey: "draft", ExecutorInstallationId: "inst"}},
 	}
-	c := newController(chatStore, cfg, tpl)
+	configs := &fakeConfigs{cur: cfg}
+	c := &planassistant.Controller{
+		Chat: chatStore,
+		Catalog: fakeCatalog{byStep: map[string][]planassistant.ExecutorOption{
+			"fetch-news":  {{StepKey: "fetch-news", InstallationID: "rss-tech", DisplayName: "Tech RSS", SkuKey: "rss-news-feed"}},
+			"write-draft": {{StepKey: "write-draft", InstallationID: "writer", DisplayName: "Writer", SkuKey: "newsletter-writer-senior"}},
+		}},
+		Configs:   configs,
+		Templates: &fakeTemplates{tpl: tpl},
+	}
 	if err := c.NextTurn(context.Background(), uuid.New(), uuid.New()); err != nil {
 		t.Fatal(err)
 	}
-	if len(chatStore.appended) != 1 {
-		t.Fatalf("expected 1 matrix prompt, got %d", len(chatStore.appended))
+	if !strings.Contains(chatStore.appended[0].PayloadJSON, `"state":"BINDING_STEP"`) ||
+		!strings.Contains(chatStore.appended[0].PayloadJSON, `"step_key":"fetch-news"`) {
+		t.Fatalf("expected fetch-news binding step, got %s", chatStore.appended[0].PayloadJSON)
 	}
-	if !strings.Contains(chatStore.appended[0].PayloadJSON, `"state":"BINDING_MATRIX"`) {
-		t.Fatalf("expected matrix payload, got %s", chatStore.appended[0].PayloadJSON)
+
+	configs.cur = &plansv1.PlanConfiguration{
+		Id:             cfg.Id,
+		PlanTemplateId: testTemplateUUID,
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+		SlotBindings:   []*plansv1.SlotBinding{{StepKey: "fetch-news", ExecutorInstallationId: "rss-tech"}},
+	}
+	if err := c.NextTurn(context.Background(), uuid.New(), uuid.New()); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(chatStore.appended[1].PayloadJSON, `"state":"BINDING_STEP"`) ||
+		!strings.Contains(chatStore.appended[1].PayloadJSON, `"step_key":"write-draft"`) {
+		t.Fatalf("expected write-draft binding step, got %s", chatStore.appended[1].PayloadJSON)
+	}
+
+	configs.cur = &plansv1.PlanConfiguration{
+		Id:             cfg.Id,
+		PlanTemplateId: testTemplateUUID,
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+		SlotBindings: []*plansv1.SlotBinding{
+			{StepKey: "fetch-news", ExecutorInstallationId: "rss-tech"},
+			{StepKey: "write-draft", ExecutorInstallationId: "writer"},
+		},
+	}
+	if err := c.NextTurn(context.Background(), uuid.New(), uuid.New()); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(chatStore.appended[2].PayloadJSON, `"state":"BINDING_MATRIX"`) {
+		t.Fatalf("expected review matrix after all steps are bound, got %s", chatStore.appended[2].PayloadJSON)
 	}
 }
 

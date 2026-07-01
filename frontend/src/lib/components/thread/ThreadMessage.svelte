@@ -7,6 +7,7 @@
   import ApprovalRefCard from "./ApprovalRefCard.svelte";
   import AssistantPromptCard from "./AssistantPromptCard.svelte";
   import BindingMatrixCard from "./BindingMatrixCard.svelte";
+  import ConversationalBindingCard from "./ConversationalBindingCard.svelte";
   import LandingCard from "./LandingCard.svelte";
 
   interface Props {
@@ -54,6 +55,14 @@
   </div>
 {:else if message.kind === "ASSISTANT_PROMPT" && promptState === "BINDING_MATRIX"}
   <BindingMatrixCard {message} {configurationId} {tenantId} />
+{:else if message.kind === "ASSISTANT_PROMPT" && promptState === "BINDING_STEP"}
+  <ConversationalBindingCard
+    {message}
+    {configurationId}
+    {tenantId}
+    {isAnswered}
+    {isLive}
+  />
 {:else if message.kind === "ASSISTANT_PROMPT" && promptState === "landing"}
   <LandingCard {message} {configurationId} {tenantId} />
 {:else if message.kind === "ASSISTANT_PROMPT"}

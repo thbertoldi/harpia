@@ -122,6 +122,14 @@ type assistantPromptPayload struct {
 	Options []AssistantOption `json:"options"`
 }
 
+type assistantBindingStepPayload struct {
+	State       string               `json:"state"`
+	StepKey     string               `json:"step_key"`
+	Options     []AssistantOption    `json:"options"`
+	PoliciesSet bool                 `json:"policies_set"`
+	Rows        []AssistantMatrixRow `json:"rows"`
+}
+
 type userSelectionPayload struct {
 	InResponseToMessageID string `json:"in_response_to_message_id"`
 	OptionID              string `json:"option_id"`
@@ -152,6 +160,25 @@ func BuildAssistantPromptPayload(state, stepKey string, options []AssistantOptio
 		options = []AssistantOption{}
 	}
 	return mustEncodeJSON(assistantPromptPayload{State: state, StepKey: stepKey, Options: options})
+}
+
+// BuildAssistantBindingStepPayload returns the JSON payload for a focused
+// conversational SlotBinding prompt. The focused options feed the chips; rows
+// feed the collapsible edit-all matrix fallback.
+func BuildAssistantBindingStepPayload(stepKey string, options []AssistantOption, rows []AssistantMatrixRow, policiesSet bool) string {
+	if options == nil {
+		options = []AssistantOption{}
+	}
+	if rows == nil {
+		rows = []AssistantMatrixRow{}
+	}
+	return mustEncodeJSON(assistantBindingStepPayload{
+		State:       "BINDING_STEP",
+		StepKey:     stepKey,
+		Options:     options,
+		PoliciesSet: policiesSet,
+		Rows:        rows,
+	})
 }
 
 // BuildUserSelectionPayload returns the JSON payload for a USER_SELECTION

@@ -3,7 +3,9 @@ import {
   computeRunCostBRL,
   hydrateMatrixPayload,
   isMatrixComplete,
+  parseBindingStepPayload,
   parseMatrixPayload,
+  type BindingStepPayload,
   type MatrixPayload,
   type MatrixRow,
 } from "./matrix";
@@ -100,6 +102,78 @@ describe("parseMatrixPayload", () => {
     expect(() =>
       parseMatrixPayload(JSON.stringify({ state: "BINDING_MATRIX", rows: {} })),
     ).toThrow(/rows is not an array/);
+  });
+});
+
+describe("parseBindingStepPayload", () => {
+  it("parses focused options and shared matrix rows", () => {
+    const json = JSON.stringify({
+      state: "BINDING_STEP",
+      step_key: "fetch-news",
+      options: [
+        { id: "rss-tech", label: "Tech RSS", value: "rss-tech" },
+        { id: "rss-br", label: "Brazil RSS", value: "rss-br" },
+      ],
+      policies_set: false,
+      rows: [
+        row({
+          step_key: "fetch-news",
+          current_executor_id: "",
+          options: [{ id: "rss-tech", label: "Tech RSS", value: "rss-tech" }],
+        }),
+        row({
+          step_key: "write-draft",
+          current_executor_id: "writer",
+          options: [{ id: "writer", label: "Writer", value: "writer" }],
+        }),
+      ],
+    });
+
+    const parsed = parseBindingStepPayload(json);
+
+    expect(parsed.state).toBe("BINDING_STEP");
+    expect(parsed.step_key).toBe("fetch-news");
+    expect(parsed.options.map((option) => option.id)).toEqual([
+      "rss-tech",
+      "rss-br",
+    ]);
+    expect(parsed.rows).toHaveLength(2);
+    expect(parsed.rows[1].current_executor_id).toBe("writer");
+  });
+
+  it("hydrates rows from saved SlotBindings", () => {
+    const payload: BindingStepPayload = {
+      state: "BINDING_STEP",
+      step_key: "fetch-news",
+      options: [{ id: "rss-tech", label: "Tech RSS", value: "rss-tech" }],
+      policies_set: false,
+      rows: [
+        row({ step_key: "fetch-news", current_executor_id: "" }),
+        row({ step_key: "write-draft", current_executor_id: "" }),
+      ],
+    };
+
+    const hydrated = hydrateMatrixPayload(payload, {
+      policiesSet: true,
+      slotBindings: [
+        { stepKey: "fetch-news", executorInstallationId: "rss-tech" },
+        { stepKey: "write-draft", executorInstallationId: "writer" },
+      ],
+    });
+
+    expect(hydrated.policies_set).toBe(true);
+    expect(hydrated.rows.map((r) => r.current_executor_id)).toEqual([
+      "rss-tech",
+      "writer",
+    ]);
+  });
+
+  it("throws on the wrong state", () => {
+    expect(() =>
+      parseBindingStepPayload(
+        JSON.stringify({ state: "BINDING_MATRIX", rows: [] }),
+      ),
+    ).toThrow(/BINDING_STEP/);
   });
 });
 

@@ -30,7 +30,7 @@ func TestDeriveState_AwaitingTemplate_WhenTemplateIdEmpty(t *testing.T) {
 	}
 }
 
-func TestDeriveState_BindingMatrix_WhenStepUnbound(t *testing.T) {
+func TestDeriveState_BindingStep_WhenStepUnbound(t *testing.T) {
 	cfg := &plansv1.PlanConfiguration{
 		PlanTemplateId: "tpl-1",
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
@@ -39,11 +39,11 @@ func TestDeriveState_BindingMatrix_WhenStepUnbound(t *testing.T) {
 		BehaviorPolicies: validPolicies(),
 	}
 	got := planassistant.DeriveState(mkTemplate("a", "b"), cfg, nil)
-	if got.Kind != planassistant.StateBindingMatrix {
-		t.Fatalf("got %+v, want BINDING_MATRIX", got)
+	if got.Kind != planassistant.StateBindingStep {
+		t.Fatalf("got %+v, want BINDING_STEP", got)
 	}
-	if got.StepKey != "" {
-		t.Fatalf("StepKey must be empty for BINDING_MATRIX, got %q", got.StepKey)
+	if got.StepKey != "b" {
+		t.Fatalf("StepKey = %q, want b", got.StepKey)
 	}
 }
 
@@ -60,7 +60,7 @@ func TestDeriveState_BindingMatrix_WhenPoliciesUnset(t *testing.T) {
 	}
 }
 
-func TestDeriveState_BindingMatrix_WhenStatusStillDraft(t *testing.T) {
+func TestDeriveState_BindingMatrix_WhenAllStepsBoundAndStatusStillDraft(t *testing.T) {
 	cfg := &plansv1.PlanConfiguration{
 		PlanTemplateId:   "tpl-1",
 		Status:           plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,

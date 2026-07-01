@@ -77,6 +77,68 @@ func TestBuildPrompt_BindingMatrix_RendersAllRows(t *testing.T) {
 	}
 }
 
+func TestBuildPrompt_BindingStep_RendersFocusedOptionsAndAllRows(t *testing.T) {
+	tpl := mkTemplate("fetch-news", "write-draft")
+	tpl.Steps[0].Title = "Fetch news"
+	tpl.Steps[0].InputArtifactTypeId = "NewsQuery"
+	tpl.Steps[0].OutputArtifactTypeId = "NewsItems"
+	price := 0.12
+	in := planassistant.PromptInput{
+		Template: tpl,
+		Config: &plansv1.PlanConfiguration{
+			PlanTemplateId: "tpl-1",
+			SlotBindings:   []*plansv1.SlotBinding{{StepKey: "write-draft", ExecutorInstallationId: "writer-1"}},
+		},
+		CandidatesByStep: map[string][]planassistant.ExecutorOption{
+			"fetch-news": {
+				{StepKey: "fetch-news", InstallationID: "rss-tech", DisplayName: "Tech RSS preset", SkuKey: "rss-news-feed", PriceBrl: &price},
+				{StepKey: "fetch-news", InstallationID: "rss-br", DisplayName: "Brazil RSS preset", SkuKey: "rss-news-feed"},
+			},
+			"write-draft": {{StepKey: "write-draft", InstallationID: "writer-1", DisplayName: "Senior Writer", SkuKey: "newsletter-writer-senior"}},
+		},
+		CurrentUserLabel: "Ana",
+	}
+	state := planassistant.AssistantState{Kind: planassistant.StateBindingStep, StepKey: "fetch-news"}
+	text, payload := planassistant.BuildPrompt(state, in)
+	if !strings.Contains(text, "fetch-news") && !strings.Contains(text, "Fetch news") {
+		t.Fatalf("text should mention the focused step, got %q", text)
+	}
+
+	var parsed struct {
+		State   string `json:"state"`
+		StepKey string `json:"step_key"`
+		Options []struct {
+			ID    string `json:"id"`
+			Label string `json:"label"`
+		} `json:"options"`
+		Rows []struct {
+			StepKey           string `json:"step_key"`
+			CurrentExecutorID string `json:"current_executor_id"`
+			Options           []struct {
+				ID string `json:"id"`
+			} `json:"options"`
+		} `json:"rows"`
+	}
+	if err := json.Unmarshal([]byte(payload), &parsed); err != nil {
+		t.Fatalf("payload not valid JSON: %v\n%s", err, payload)
+	}
+	if parsed.State != "BINDING_STEP" {
+		t.Fatalf("want state BINDING_STEP, got %q", parsed.State)
+	}
+	if parsed.StepKey != "fetch-news" {
+		t.Fatalf("step_key = %q, want fetch-news", parsed.StepKey)
+	}
+	if len(parsed.Options) != 2 || parsed.Options[0].ID != "rss-tech" {
+		t.Fatalf("focused options not populated from fetch-news candidates: %+v", parsed.Options)
+	}
+	if len(parsed.Rows) != 2 {
+		t.Fatalf("want all 2 rows, got %d", len(parsed.Rows))
+	}
+	if parsed.Rows[1].StepKey != "write-draft" || parsed.Rows[1].CurrentExecutorID != "writer-1" {
+		t.Fatalf("bound row not reflected in shared rows: %+v", parsed.Rows[1])
+	}
+}
+
 func TestBuildPrompt_Landing_HasThreeActions(t *testing.T) {
 	state := planassistant.AssistantState{Kind: planassistant.StateSaved}
 	in := planassistant.PromptInput{Config: &plansv1.PlanConfiguration{

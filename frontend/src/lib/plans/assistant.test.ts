@@ -8,7 +8,12 @@ const { appendThreadMessage, updatePlanConfiguration } = vi.hoisted(() => ({
 vi.mock("$lib/chat/client", () => ({ appendThreadMessage }));
 vi.mock("$lib/rpc", () => ({ planClient: { updatePlanConfiguration } }));
 
-import { selectChip, editBinding, applyLinkedInSuggestion } from "./assistant";
+import {
+  selectChip,
+  selectBindingOption,
+  editBinding,
+  applyLinkedInSuggestion,
+} from "./assistant";
 import {
   PlanConfigurationStatus,
   PublishApprovalMode,
@@ -202,5 +207,116 @@ describe("editBinding", () => {
       call.slotBindings.find((b: SlotBinding) => b.stepKey === "a")
         ?.executorInstallationId,
     ).toBe("inst-new");
+  });
+});
+
+describe("selectBindingOption", () => {
+  it("appends selection, persists SlotBinding silently, and emits STEP_REBOUND", async () => {
+    appendThreadMessage.mockResolvedValue({});
+    updatePlanConfiguration.mockResolvedValueOnce({
+      planConfiguration: {
+        id: "c",
+        status: PlanConfigurationStatus.DRAFT,
+        slotBindings: [
+          { stepKey: "fetch-news", executorInstallationId: "rss-tech" },
+        ],
+        overseerBindings: [],
+        seedArtifacts: [],
+      },
+    });
+    const config = {
+      id: "c",
+      status: PlanConfigurationStatus.DRAFT,
+      slotBindings: [],
+      overseerBindings: [],
+      behaviorPolicies: undefined,
+      schedule: undefined,
+      seedArtifacts: [],
+    } as unknown as PlanConfiguration;
+    const template = {
+      id: "tpl",
+      steps: [{ key: "fetch-news" }],
+    } as PlanTemplate;
+
+    const next = await selectBindingOption({
+      tenantId: "t",
+      configurationId: "c",
+      promptMessageId: "prompt-1",
+      existingConfiguration: config,
+      template,
+      stepKey: "fetch-news",
+      optionId: "rss-tech",
+      value: "rss-tech",
+      label: "Tech RSS",
+    });
+
+    expect(next.id).toBe("c");
+    expect(appendThreadMessage).toHaveBeenNthCalledWith(
+      1,
+      "t",
+      "c",
+      "OVERSEER",
+      "USER_SELECTION",
+      "Tech RSS",
+      expect.stringContaining("prompt-1"),
+    );
+    expect(updatePlanConfiguration).toHaveBeenCalledTimes(1);
+    expect(updatePlanConfiguration.mock.calls[0][0].announceSaved).toBeFalsy();
+    expect(
+      updatePlanConfiguration.mock.calls[0][0].slotBindings.find(
+        (binding: SlotBinding) => binding.stepKey === "fetch-news",
+      )?.executorInstallationId,
+    ).toBe("rss-tech");
+    expect(appendThreadMessage).toHaveBeenNthCalledWith(
+      2,
+      "t",
+      "c",
+      "SYSTEM",
+      "STEP_REBOUND",
+      "Tech RSS",
+      expect.stringContaining("\"new_executor_installation_id\":\"rss-tech\""),
+    );
+  });
+
+  it("records previous and new installation ids when rebinding", async () => {
+    appendThreadMessage.mockResolvedValue({});
+    updatePlanConfiguration.mockResolvedValueOnce({
+      planConfiguration: { id: "c" },
+    });
+    const config = {
+      id: "c",
+      status: PlanConfigurationStatus.DRAFT,
+      slotBindings: [
+        { stepKey: "fetch-news", executorInstallationId: "rss-old" },
+      ],
+      overseerBindings: [],
+      behaviorPolicies: undefined,
+      schedule: undefined,
+      seedArtifacts: [],
+    } as unknown as PlanConfiguration;
+    const template = {
+      id: "tpl",
+      steps: [{ key: "fetch-news" }],
+    } as PlanTemplate;
+
+    await selectBindingOption({
+      tenantId: "t",
+      configurationId: "c",
+      promptMessageId: "prompt-1",
+      existingConfiguration: config,
+      template,
+      stepKey: "fetch-news",
+      optionId: "rss-new",
+      value: "rss-new",
+      label: "Brazil RSS",
+    });
+
+    const reboundPayload = appendThreadMessage.mock.calls[1][5];
+    expect(reboundPayload).toContain(
+      "\"previous_executor_installation_id\":\"rss-old\"",
+    );
+    expect(reboundPayload).toContain(
+      "\"new_executor_installation_id\":\"rss-new\"",
+    );
   });
 });

@@ -40,6 +40,15 @@ export interface MatrixPayload {
   rows: MatrixRow[];
 }
 
+export interface BindingStepPayload {
+  state: "BINDING_STEP";
+  step_key: string;
+  options: MatrixOption[];
+  /** True once behavior policies have been set on the configuration. */
+  policies_set: boolean;
+  rows: MatrixRow[];
+}
+
 export interface MatrixHydrationInput {
   slotBindings: Array<{
     stepKey: string;
@@ -55,16 +64,7 @@ export interface MatrixHydrationInput {
  *   than `BINDING_MATRIX`.
  */
 export function parseMatrixPayload(json: string): MatrixPayload {
-  let raw: unknown;
-  try {
-    raw = JSON.parse(json);
-  } catch {
-    throw new Error("parseMatrixPayload: payload is not valid JSON");
-  }
-  if (typeof raw !== "object" || raw === null) {
-    throw new Error("parseMatrixPayload: payload is not an object");
-  }
-  const obj = raw as Record<string, unknown>;
+  const obj = parsePayloadObject(json, "parseMatrixPayload");
   if (obj.state !== "BINDING_MATRIX") {
     throw new Error(
       `parseMatrixPayload: expected state "BINDING_MATRIX", got ${JSON.stringify(obj.state)}`,
@@ -79,6 +79,42 @@ export function parseMatrixPayload(json: string): MatrixPayload {
     policies_set: obj.policies_set === true,
     rows,
   };
+}
+
+export function parseBindingStepPayload(json: string): BindingStepPayload {
+  const obj = parsePayloadObject(json, "parseBindingStepPayload");
+  if (obj.state !== "BINDING_STEP") {
+    throw new Error(
+      `parseBindingStepPayload: expected state "BINDING_STEP", got ${JSON.stringify(obj.state)}`,
+    );
+  }
+  if (!Array.isArray(obj.rows)) {
+    throw new Error("parseBindingStepPayload: rows is not an array");
+  }
+  const rawOptions = Array.isArray(obj.options) ? obj.options : [];
+  return {
+    state: "BINDING_STEP",
+    step_key: String(obj.step_key ?? ""),
+    options: rawOptions.map((o, i) => normalizeOption(o, -1, i)),
+    policies_set: obj.policies_set === true,
+    rows: obj.rows.map((r, i) => normalizeRow(r, i)),
+  };
+}
+
+function parsePayloadObject(
+  json: string,
+  caller: "parseMatrixPayload" | "parseBindingStepPayload",
+): Record<string, unknown> {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(json);
+  } catch {
+    throw new Error(`${caller}: payload is not valid JSON`);
+  }
+  if (typeof raw !== "object" || raw === null) {
+    throw new Error(`${caller}: payload is not an object`);
+  }
+  return raw as Record<string, unknown>;
 }
 
 function normalizeRow(raw: unknown, index: number): MatrixRow {
@@ -177,10 +213,10 @@ export function isMatrixComplete(payload: MatrixPayload): boolean {
   return payload.rows.every((row) => row.current_executor_id !== "");
 }
 
-export function hydrateMatrixPayload(
-  payload: MatrixPayload,
+export function hydrateMatrixPayload<T extends MatrixPayload | BindingStepPayload>(
+  payload: T,
   input: MatrixHydrationInput,
-): MatrixPayload {
+): T {
   const bindings = new Map(
     input.slotBindings.map((binding) => [
       binding.stepKey,
@@ -195,5 +231,5 @@ export function hydrateMatrixPayload(
       current_executor_id:
         bindings.get(row.step_key) ?? row.current_executor_id,
     })),
-  };
+  } as T;
 }
