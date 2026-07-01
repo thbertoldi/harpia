@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   genericInputInitialValues,
   genericParameterValuesJson,
+  selectOptions,
 } from "./template-inputs";
 import type { TemplateInputParameter } from "$lib/gen/harpia/plans/v1/plans_pb";
 import { TemplateInputParameterType } from "$lib/gen/harpia/plans/v1/plans_pb";
@@ -42,5 +43,34 @@ describe("genericParameterValuesJson", () => {
   it("serializes a flat values object", () => {
     const json = genericParameterValuesJson({ theme: "retail", tone: "formal" });
     expect(JSON.parse(json)).toEqual({ theme: "retail", tone: "formal" });
+  });
+});
+
+describe("selectOptions", () => {
+  it("parses {value,label} object arrays (real template shape)", () => {
+    const got = selectOptions(
+      '[{"value":"pt-BR","label":"Portuguese"},{"value":"en-US","label":"English"}]',
+    );
+    expect(got).toEqual([
+      { value: "pt-BR", label: "Portuguese" },
+      { value: "en-US", label: "English" },
+    ]);
+  });
+
+  it("parses plain string arrays", () => {
+    expect(selectOptions('["a","b"]')).toEqual([
+      { value: "a", label: "a" },
+      { value: "b", label: "b" },
+    ]);
+  });
+
+  it("drops empty and duplicate values so keyed each never collides", () => {
+    const got = selectOptions('[{"value":"x"},{"value":"x"},{"value":""}]');
+    expect(got).toEqual([{ value: "x", label: "x" }]);
+  });
+
+  it("returns [] on empty or invalid json", () => {
+    expect(selectOptions("")).toEqual([]);
+    expect(selectOptions("not json")).toEqual([]);
   });
 });

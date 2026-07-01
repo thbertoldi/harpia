@@ -36,8 +36,8 @@
           class="rounded border border-plumage bg-obsidian-light px-2 py-1 text-[12px] text-cream"
         >
           <option value="">—</option>
-          {#each selectOptions(p.optionsJson) as opt (opt)}
-            <option value={opt}>{opt}</option>
+          {#each selectOptions(p.optionsJson) as opt (opt.value)}
+            <option value={opt.value}>{opt.label}</option>
           {/each}
         </select>
       {:else}

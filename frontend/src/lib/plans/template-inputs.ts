@@ -39,13 +39,38 @@ export function genericParameterValuesJson(
   return JSON.stringify(values);
 }
 
-// selectOptions parses a template parameter's options_json (a JSON string array)
-// into option values; returns [] on any parse failure.
-export function selectOptions(optionsJson: string): string[] {
+export interface SelectOption {
+  value: string;
+  label: string;
+}
+
+// selectOptions parses a template parameter's options_json into {value,label}
+// pairs. Supports both shapes seen in templates: a plain string array
+// (["a","b"]) and an array of objects ([{"value":"a","label":"A"}]). Returns []
+// on any parse failure. Always returns distinct-valued options so keyed {#each}
+// blocks never collide.
+export function selectOptions(optionsJson: string): SelectOption[] {
   if (!optionsJson?.trim()) return [];
   try {
     const parsed = JSON.parse(optionsJson);
-    return Array.isArray(parsed) ? parsed.map((v) => String(v)) : [];
+    if (!Array.isArray(parsed)) return [];
+    const seen = new Set<string>();
+    const out: SelectOption[] = [];
+    for (const entry of parsed) {
+      let value: string;
+      let label: string;
+      if (entry && typeof entry === "object") {
+        value = String((entry as { value?: unknown }).value ?? "");
+        label = String((entry as { label?: unknown }).label ?? value);
+      } else {
+        value = String(entry);
+        label = value;
+      }
+      if (value === "" || seen.has(value)) continue;
+      seen.add(value);
+      out.push({ value, label });
+    }
+    return out;
   } catch {
     return [];
   }
