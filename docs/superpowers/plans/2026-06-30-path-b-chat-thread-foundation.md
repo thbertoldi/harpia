@@ -540,7 +540,7 @@ git commit -m "feat: add thread schema migration"
 - Modify: `control-plane/internal/chat/store.go`
 - Modify: `control-plane/internal/chat/store_test.go`
 
-- [ ] **Step 1: Add repository unit tests**
+- [x] **Step 1: Add repository unit tests**
 
 Create `control-plane/internal/threads/repository_test.go`:
 
@@ -579,7 +579,7 @@ func TestStatusFromStringRejectsUnknown(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run the failing test**
+- [x] **Step 2: Run the failing test**
 
 Run:
 
@@ -589,7 +589,7 @@ cd /home/thbertoldi/harpia/control-plane && go test ./internal/threads -run 'Tes
 
 Expected: fails because package/functions are not implemented.
 
-- [ ] **Step 3: Implement repository models and helpers**
+- [x] **Step 3: Implement repository models and helpers**
 
 Create `control-plane/internal/threads/repository.go` with:
 
@@ -839,7 +839,7 @@ func nullableUUIDArg(v uuid.NullUUID) any {
 }
 ```
 
-- [ ] **Step 4: Update chat store comments and test UUID usage**
+- [x] **Step 4: Update chat store comments and test UUID usage**
 
 In `control-plane/internal/chat/store.go`, replace comments that say
 `plan_configuration_id` with:
@@ -863,7 +863,7 @@ in := AppendInput{
 }
 ```
 
-- [ ] **Step 5: Run repository tests**
+- [x] **Step 5: Run repository tests**
 
 Run:
 
@@ -873,7 +873,7 @@ cd /home/thbertoldi/harpia/control-plane && go test ./internal/threads ./interna
 
 Expected: tests pass.
 
-- [ ] **Step 6: Commit thread repository**
+- [x] **Step 6: Commit thread repository**
 
 Run:
 
