@@ -69,20 +69,48 @@ func TestClassifyParsesCandidatesAndFiltersInputs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Classify: %v", err)
 	}
-	if len(got) != 1 {
-		t.Fatalf("candidates = %d, want 1", len(got))
+	if len(got.Candidates) != 1 {
+		t.Fatalf("candidates = %d, want 1", len(got.Candidates))
 	}
-	if got[0].TemplateID != templates()[0].ID {
-		t.Fatalf("template id = %s", got[0].TemplateID)
+	if got.Candidates[0].TemplateID != templates()[0].ID {
+		t.Fatalf("template id = %s", got.Candidates[0].TemplateID)
 	}
-	if got[0].Confidence != 0.92 {
-		t.Fatalf("confidence = %v", got[0].Confidence)
+	if got.Candidates[0].Confidence != 0.92 {
+		t.Fatalf("confidence = %v", got.Candidates[0].Confidence)
 	}
-	if strings.Contains(got[0].InputValuesJSON, "bogus") {
-		t.Fatalf("unknown input key not dropped: %s", got[0].InputValuesJSON)
+	if strings.Contains(got.Candidates[0].InputValuesJSON, "bogus") {
+		t.Fatalf("unknown input key not dropped: %s", got.Candidates[0].InputValuesJSON)
 	}
-	if !strings.Contains(got[0].InputValuesJSON, "retail") {
-		t.Fatalf("expected theme in inputs: %s", got[0].InputValuesJSON)
+	if !strings.Contains(got.Candidates[0].InputValuesJSON, "retail") {
+		t.Fatalf("expected theme in inputs: %s", got.Candidates[0].InputValuesJSON)
+	}
+}
+
+func TestClassifyParsesSummary(t *testing.T) {
+	content := `{"summary":"Criar um post sobre varejo","candidates":[{"template_key":"linkedin","confidence":0.9,"inputs":{"theme":"retail"}}]}`
+	body := `{"choices":[{"message":{"content":` + quote(content) + `}}]}`
+	c := NewLLMClassifier(okResolver(), "deepseek", fakeDoer{resp: jsonResponse(body)})
+
+	got, err := c.Classify(context.Background(), ClassifyInput{Text: "post sobre varejo", Templates: templates()})
+	if err != nil {
+		t.Fatalf("Classify: %v", err)
+	}
+	if got.Summary != "Criar um post sobre varejo" {
+		t.Fatalf("summary = %q", got.Summary)
+	}
+}
+
+func TestClassifyMissingSummaryYieldsEmpty(t *testing.T) {
+	content := `{"candidates":[{"template_key":"linkedin","confidence":0.9,"inputs":{"theme":"retail"}}]}`
+	body := `{"choices":[{"message":{"content":` + quote(content) + `}}]}`
+	c := NewLLMClassifier(okResolver(), "deepseek", fakeDoer{resp: jsonResponse(body)})
+
+	got, err := c.Classify(context.Background(), ClassifyInput{Text: "x", Templates: templates()})
+	if err != nil {
+		t.Fatalf("Classify: %v", err)
+	}
+	if got.Summary != "" {
+		t.Fatalf("summary = %q, want empty", got.Summary)
 	}
 }
 
@@ -102,8 +130,8 @@ func TestClassifyUsesProviderDefaultModelWhenCredentialModelEmpty(t *testing.T) 
 	if err != nil {
 		t.Fatalf("Classify: %v", err)
 	}
-	if len(got) != 1 {
-		t.Fatalf("expected 1 candidate with default model fallback, got %d", len(got))
+	if len(got.Candidates) != 1 {
+		t.Fatalf("expected 1 candidate with default model fallback, got %d", len(got.Candidates))
 	}
 }
 
@@ -115,8 +143,8 @@ func TestClassifyDropsUnknownTemplateKeys(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Classify: %v", err)
 	}
-	if len(got) != 0 {
-		t.Fatalf("expected unknown template dropped, got %+v", got)
+	if len(got.Candidates) != 0 {
+		t.Fatalf("expected unknown template dropped, got %+v", got.Candidates)
 	}
 }
 
@@ -126,8 +154,8 @@ func TestClassifyDegradesToEmptyOnResolverError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected graceful degradation, got err: %v", err)
 	}
-	if len(got) != 0 {
-		t.Fatalf("expected empty candidates, got %+v", got)
+	if len(got.Candidates) != 0 {
+		t.Fatalf("expected empty candidates, got %+v", got.Candidates)
 	}
 }
 
@@ -137,8 +165,8 @@ func TestClassifyDegradesToEmptyOnHTTPError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected graceful degradation, got err: %v", err)
 	}
-	if len(got) != 0 {
-		t.Fatalf("expected empty candidates, got %+v", got)
+	if len(got.Candidates) != 0 {
+		t.Fatalf("expected empty candidates, got %+v", got.Candidates)
 	}
 }
 

@@ -341,11 +341,11 @@ func (f fakeCatalog) ListTemplateSummaries(ctx context.Context) ([]copilot.Templ
 }
 
 type fakeClassifier struct {
-	candidates []copilot.Candidate
+	result copilot.ClassifyResult
 }
 
-func (f fakeClassifier) Classify(ctx context.Context, in copilot.ClassifyInput) ([]copilot.Candidate, error) {
-	return f.candidates, nil
+func (f fakeClassifier) Classify(ctx context.Context, in copilot.ClassifyInput) (copilot.ClassifyResult, error) {
+	return f.result, nil
 }
 
 func TestProposePlanEmitsPlanProposed(t *testing.T) {
@@ -361,7 +361,10 @@ func TestProposePlanEmitsPlanProposed(t *testing.T) {
 		Text:     "Create a LinkedIn post about retail",
 	})
 	catalog := fakeCatalog{summaries: []copilot.TemplateSummary{{ID: tplID, Key: "linkedin", Name: "LinkedIn Post"}}}
-	classifier := fakeClassifier{candidates: []copilot.Candidate{{TemplateID: tplID, Confidence: 0.9, InputValuesJSON: `{"theme":"retail"}`}}}
+	classifier := fakeClassifier{result: copilot.ClassifyResult{
+		Candidates: []copilot.Candidate{{TemplateID: tplID, Confidence: 0.9, InputValuesJSON: `{"theme":"retail"}`}},
+		Summary:    "Create a LinkedIn post about retail",
+	}}
 	h := NewHandler(&fakeThreadRepo{}, messages, catalog, classifier)
 	ctx := identity.WithRequestContext(context.Background(), identity.RequestContext{
 		UserID: uuid.NewString(), TenantID: tenantID, Roles: []string{"Overseer"},
@@ -381,6 +384,42 @@ func TestProposePlanEmitsPlanProposed(t *testing.T) {
 	}
 	if !strings.Contains(resp.Msg.Message.GetPayloadJson(), "retail") {
 		t.Fatalf("payload missing inferred inputs: %s", resp.Msg.Message.GetPayloadJson())
+	}
+	if !strings.Contains(resp.Msg.Message.GetPayloadJson(), "Create a LinkedIn post about retail") {
+		t.Fatalf("payload missing summary: %s", resp.Msg.Message.GetPayloadJson())
+	}
+}
+
+func TestProposePlanEmptySummaryOmittedGracefully(t *testing.T) {
+	tenantID := uuid.New()
+	threadID := uuid.New()
+	tplID := uuid.New()
+	messages := &fakeMessageStore{}
+	_, _ = messages.AppendMessage(context.Background(), tenantID, chat.AppendInput{
+		ThreadID: threadID.String(),
+		Role:     chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_OVERSEER,
+		Kind:     chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_USER_TEXT,
+		Text:     "Create a LinkedIn post",
+	})
+	catalog := fakeCatalog{summaries: []copilot.TemplateSummary{{ID: tplID, Key: "linkedin", Name: "LinkedIn Post"}}}
+	classifier := fakeClassifier{result: copilot.ClassifyResult{
+		Candidates: []copilot.Candidate{{TemplateID: tplID, Confidence: 0.9}},
+		Summary:    "",
+	}}
+	h := NewHandler(&fakeThreadRepo{}, messages, catalog, classifier)
+	ctx := identity.WithRequestContext(context.Background(), identity.RequestContext{
+		UserID: uuid.NewString(), TenantID: tenantID, Roles: []string{"Overseer"},
+	})
+
+	resp, err := h.ProposePlan(ctx, connect.NewRequest(&chatv1.ProposePlanRequest{
+		TenantId: tenantID.String(), ThreadId: threadID.String(),
+	}))
+	if err != nil {
+		t.Fatalf("ProposePlan: %v", err)
+	}
+	payload := resp.Msg.Message.GetPayloadJson()
+	if strings.Contains(payload, `"summary":"`) && !strings.Contains(payload, `"summary":""`) {
+		t.Fatalf("expected empty summary omitted or empty, got %s", payload)
 	}
 }
 
@@ -412,7 +451,7 @@ func TestProposePlanEmptyCandidatesStillEmits(t *testing.T) {
 		Kind:     chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_USER_TEXT,
 		Text:     "something off-catalog",
 	})
-	h := NewHandler(&fakeThreadRepo{}, messages, fakeCatalog{}, fakeClassifier{candidates: nil})
+	h := NewHandler(&fakeThreadRepo{}, messages, fakeCatalog{}, fakeClassifier{result: copilot.ClassifyResult{}})
 	ctx := identity.WithRequestContext(context.Background(), identity.RequestContext{
 		UserID: uuid.NewString(), TenantID: tenantID, Roles: []string{"Overseer"},
 	})

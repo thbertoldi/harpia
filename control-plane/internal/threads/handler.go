@@ -402,13 +402,15 @@ func (h *Handler) ProposePlan(ctx context.Context, req *connect.Request[chatv1.P
 		}
 	}
 	var candidates []copilot.Candidate
+	var summary string
 	if h.classifier != nil && len(summaries) > 0 {
-		if c, clsErr := h.classifier.Classify(ctx, copilot.ClassifyInput{
+		if result, clsErr := h.classifier.Classify(ctx, copilot.ClassifyInput{
 			TenantID:  tenantID,
 			Text:      latestUser.GetText(),
 			Templates: summaries,
 		}); clsErr == nil {
-			candidates = c
+			candidates = result.Candidates
+			summary = result.Summary
 		}
 	}
 
@@ -435,7 +437,7 @@ func (h *Handler) ProposePlan(ctx context.Context, req *connect.Request[chatv1.P
 		Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_AGENT,
 		Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_PLAN_PROPOSED,
 		Text:        "Proposed a plan.",
-		PayloadJSON: chat.BuildPlanProposedPayload(latestUser.GetId(), payloadCandidates),
+		PayloadJSON: chat.BuildPlanProposedPayload(latestUser.GetId(), summary, payloadCandidates),
 	})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)

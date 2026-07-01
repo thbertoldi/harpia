@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -86,6 +87,7 @@ type chatResponse struct {
 }
 
 type modelCandidates struct {
+	Summary    string `json:"summary"`
 	Candidates []struct {
 		TemplateKey string         `json:"template_key"`
 		Confidence  float64        `json:"confidence"`
@@ -93,16 +95,18 @@ type modelCandidates struct {
 	} `json:"candidates"`
 }
 
-// Classify returns ranked candidates, or an empty slice (nil error) on any soft
-// failure (no credential, HTTP error, unparseable response).
-func (c *LLMClassifier) Classify(ctx context.Context, in ClassifyInput) ([]Candidate, error) {
+// Classify returns ranked candidates and an optional summary, or an empty
+// result (nil error) on any soft failure (no credential, HTTP error,
+// unparseable response).
+func (c *LLMClassifier) Classify(ctx context.Context, in ClassifyInput) (ClassifyResult, error) {
+	empty := ClassifyResult{Candidates: []Candidate{}}
 	cred, err := c.resolver.Resolve(ctx, in.TenantID, c.provider, "")
 	if err != nil || cred == nil || cred.APIKey.IsEmpty() {
-		return []Candidate{}, nil
+		return empty, nil
 	}
 	baseURL, ok := providerBaseURLs[c.provider]
 	if !ok {
-		return []Candidate{}, nil
+		return empty, nil
 	}
 	model := cred.DefaultModel
 	if model == "" {
@@ -111,7 +115,7 @@ func (c *LLMClassifier) Classify(ctx context.Context, in ClassifyInput) ([]Candi
 		model = providerDefaultModels[c.provider]
 	}
 	if model == "" {
-		return []Candidate{}, nil
+		return empty, nil
 	}
 
 	reqBody := chatRequest{
@@ -125,36 +129,36 @@ func (c *LLMClassifier) Classify(ctx context.Context, in ClassifyInput) ([]Candi
 	reqBody.ResponseFormat.Type = "json_object"
 	raw, err := jsonMarshal(reqBody)
 	if err != nil {
-		return []Candidate{}, nil
+		return empty, nil
 	}
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/chat/completions", bytes.NewReader(raw))
 	if err != nil {
-		return []Candidate{}, nil
+		return empty, nil
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer "+cred.APIKey.Reveal())
 
 	resp, err := c.http.Do(httpReq)
 	if err != nil {
-		return []Candidate{}, nil
+		return empty, nil
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return []Candidate{}, nil
+		return empty, nil
 	}
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
-		return []Candidate{}, nil
+		return empty, nil
 	}
 
 	var parsed chatResponse
 	if err := json.Unmarshal(body, &parsed); err != nil || len(parsed.Choices) == 0 {
-		return []Candidate{}, nil
+		return empty, nil
 	}
 	var mc modelCandidates
 	if err := json.Unmarshal([]byte(parsed.Choices[0].Message.Content), &mc); err != nil {
-		return []Candidate{}, nil
+		return empty, nil
 	}
 
 	byKey := map[string]TemplateSummary{}
@@ -188,7 +192,7 @@ func (c *LLMClassifier) Classify(ctx context.Context, in ClassifyInput) ([]Candi
 			InputValuesJSON: string(inputsJSON),
 		})
 	}
-	return out, nil
+	return ClassifyResult{Candidates: out, Summary: strings.TrimSpace(mc.Summary)}, nil
 }
 
 func systemPrompt(templates []TemplateSummary) string {
@@ -217,11 +221,12 @@ func systemPrompt(templates []TemplateSummary) string {
 Template catalog (JSON): %s
 
 Respond ONLY with a JSON object of this exact shape:
-{"candidates":[{"template_key":"<key from catalog>","confidence":<0.0-1.0>,"inputs":{"<input key>":"<value>"}}]}
+{"summary":"<one-line restatement of the user's request in the same language as their message>","candidates":[{"template_key":"<key from catalog>","confidence":<0.0-1.0>,"inputs":{"<input key>":"<value>"}}]}
 
 Rules:
+- summary: one short sentence restating what the user wants, in the same language as their message. Omit or use "" if unclear.
 - Include at most 3 candidates, ranked by confidence (highest first).
 - Only use template_key values that appear in the catalog.
 - Only use input keys declared for that template. Omit inputs you cannot infer.
-- If nothing in the catalog fits, return {"candidates":[]}.`, string(catalogJSON))
+- If nothing in the catalog fits, return {"summary":"...","candidates":[]}.`, string(catalogJSON))
 }

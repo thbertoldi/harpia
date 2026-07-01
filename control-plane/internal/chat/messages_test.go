@@ -154,11 +154,12 @@ func TestBuildScheduleSetPayload(t *testing.T) {
 }
 
 func TestBuildPlanProposedPayload(t *testing.T) {
-	got := BuildPlanProposedPayload("msg-1", []PlanProposalCandidate{
+	got := BuildPlanProposedPayload("msg-1", "Create a LinkedIn post about retail", []PlanProposalCandidate{
 		{TemplateID: "tpl-1", TemplateKey: "linkedin", TemplateName: "LinkedIn Post", Confidence: 0.9, InputValuesJSON: `{"theme":"retail"}`},
 	})
 	var decoded struct {
 		SourceMessageID string `json:"source_message_id"`
+		Summary         string `json:"summary"`
 		Candidates      []struct {
 			TemplateID      string  `json:"template_id"`
 			TemplateKey     string  `json:"template_key"`
@@ -173,6 +174,9 @@ func TestBuildPlanProposedPayload(t *testing.T) {
 	if decoded.SourceMessageID != "msg-1" {
 		t.Fatalf("source_message_id = %q", decoded.SourceMessageID)
 	}
+	if decoded.Summary != "Create a LinkedIn post about retail" {
+		t.Fatalf("summary = %q", decoded.Summary)
+	}
 	if len(decoded.Candidates) != 1 || decoded.Candidates[0].TemplateKey != "linkedin" {
 		t.Fatalf("candidates = %+v", decoded.Candidates)
 	}
@@ -182,7 +186,7 @@ func TestBuildPlanProposedPayload(t *testing.T) {
 }
 
 func TestBuildPlanProposedPayloadEmptyCandidates(t *testing.T) {
-	got := BuildPlanProposedPayload("msg-1", nil)
+	got := BuildPlanProposedPayload("msg-1", "", nil)
 	var decoded struct {
 		Candidates []any `json:"candidates"`
 	}

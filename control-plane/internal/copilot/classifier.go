@@ -35,6 +35,13 @@ type Candidate struct {
 	InputValuesJSON string // JSON object keyed by input parameter key
 }
 
+// ClassifyResult is the router output: ranked candidates plus an optional
+// one-line restatement of the user's request (same language as the message).
+type ClassifyResult struct {
+	Candidates []Candidate
+	Summary    string
+}
+
 // ClassifyInput is the request to the router.
 type ClassifyInput struct {
 	TenantID  uuid.UUID
@@ -44,5 +51,5 @@ type ClassifyInput struct {
 
 // PlanClassifier maps a user message to ranked template candidates.
 type PlanClassifier interface {
-	Classify(ctx context.Context, in ClassifyInput) ([]Candidate, error)
+	Classify(ctx context.Context, in ClassifyInput) (ClassifyResult, error)
 }

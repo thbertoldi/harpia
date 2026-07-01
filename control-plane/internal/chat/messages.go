@@ -7,6 +7,7 @@ package chat
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -248,16 +249,21 @@ type PlanProposalCandidate struct {
 
 type planProposedPayload struct {
 	SourceMessageID string                  `json:"source_message_id"`
+	Summary         string                  `json:"summary,omitempty"`
 	Candidates      []PlanProposalCandidate `json:"candidates"`
 }
 
 // BuildPlanProposedPayload returns the JSON payload for a PLAN_PROPOSED message.
 // candidates may be empty when the router found no confident match.
-func BuildPlanProposedPayload(sourceMessageID string, candidates []PlanProposalCandidate) string {
+func BuildPlanProposedPayload(sourceMessageID, summary string, candidates []PlanProposalCandidate) string {
 	if candidates == nil {
 		candidates = []PlanProposalCandidate{}
 	}
-	return mustEncodeJSON(planProposedPayload{SourceMessageID: sourceMessageID, Candidates: candidates})
+	return mustEncodeJSON(planProposedPayload{
+		SourceMessageID: sourceMessageID,
+		Summary:         strings.TrimSpace(summary),
+		Candidates:      candidates,
+	})
 }
 
 type planAttachedPayload struct {
