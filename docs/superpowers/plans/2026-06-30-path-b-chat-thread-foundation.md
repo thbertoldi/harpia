@@ -391,7 +391,7 @@ git commit -m "feat: add thread service proto"
 - Create: `database/migrations/000014_threads.sql`
 - Modify: `database/migrations/atlas.sum`
 
-- [ ] **Step 1: Create the migration file**
+- [x] **Step 1: Create the migration file**
 
 Create `database/migrations/000014_threads.sql` with:
 
@@ -500,7 +500,7 @@ COMMENT ON COLUMN chat_messages.thread_id IS
     'Foreign key to threads.id.';
 ```
 
-- [ ] **Step 2: Regenerate Atlas hash**
+- [x] **Step 2: Regenerate Atlas hash**
 
 Run:
 
@@ -510,7 +510,7 @@ cd /home/thbertoldi/harpia && atlas migrate hash --dir file://database/migration
 
 Expected: `database/migrations/atlas.sum` changes and command exits 0.
 
-- [ ] **Step 3: Run schema lint by applying migrations to dev when available**
+- [x] **Step 3: Run schema lint by applying migrations to dev when available**
 
 Run:
 
@@ -522,7 +522,7 @@ Expected: migrations apply cleanly. If dev database is unavailable, record the
 connection failure in the task notes and continue only after `atlas migrate hash`
 has passed.
 
-- [ ] **Step 4: Commit migration**
+- [x] **Step 4: Commit migration**
 
 Run:
 
