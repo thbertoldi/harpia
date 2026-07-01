@@ -1535,7 +1535,7 @@ git commit -m "feat: bridge legacy plan threads to threads"
 **Files:**
 - Modify: `control-plane/cmd/api/main.go`
 
-- [ ] **Step 1: Add import**
+- [x] **Step 1: Add import**
 
 Add generated chat connect and internal threads imports:
 
@@ -1544,7 +1544,7 @@ chatv1connect "github.com/harpia/control-plane/gen/harpia/chat/v1/chatv1connect"
 threadsvc "github.com/harpia/control-plane/internal/threads"
 ```
 
-- [ ] **Step 2: Create repository and handler**
+- [x] **Step 2: Create repository and handler**
 
 After `chatStore := chat.NewPostgresStore(pool)`, add:
 
@@ -1553,7 +1553,7 @@ threadRepo := threadsvc.NewRepository(pool)
 threadHandler := threadsvc.NewHandler(threadRepo, chatStore)
 ```
 
-- [ ] **Step 3: Mount service**
+- [x] **Step 3: Mount service**
 
 After the existing generated service handlers are created, add:
 
@@ -1567,7 +1567,7 @@ After `mux.Handle(plansPath, plansHandler)`, add:
 mux.Handle(threadsPath, threadsHandler)
 ```
 
-- [ ] **Step 4: Run API package tests/build**
+- [x] **Step 4: Run API package tests/build**
 
 Run:
 
@@ -1577,7 +1577,7 @@ cd /home/thbertoldi/harpia/control-plane && go test ./cmd/api ./internal/threads
 
 Expected: tests pass.
 
-- [ ] **Step 5: Commit server wiring**
+- [x] **Step 5: Commit server wiring**
 
 Run:
 
