@@ -23,7 +23,15 @@ export type ChatMessageKind =
   | "ELICITATION_RAISED"
   | "ELICITATION_ANSWERED"
   | "APPROVAL_RAISED"
-  | "APPROVAL_DECIDED";
+  | "APPROVAL_DECIDED"
+  | "PLAN_PROPOSED"
+  | "PLAN_ATTACHED"
+  | "PLAN_UPDATED"
+  | "PLAN_RUN_REQUESTED"
+  | "ARTIFACT_CREATED"
+  | "ARTIFACT_UPDATED"
+  | "ERROR_RAISED"
+  | "ERROR_RECOVERED";
 
 export interface ChatMessage {
   id: string;
@@ -63,6 +71,14 @@ const KIND_FROM_PROTO: Record<number, ChatMessageKind> = {
   [ProtoThreadMessageKind.ELICITATION_ANSWERED]: "ELICITATION_ANSWERED",
   [ProtoThreadMessageKind.APPROVAL_RAISED]: "APPROVAL_RAISED",
   [ProtoThreadMessageKind.APPROVAL_DECIDED]: "APPROVAL_DECIDED",
+  [ProtoThreadMessageKind.PLAN_PROPOSED]: "PLAN_PROPOSED",
+  [ProtoThreadMessageKind.PLAN_ATTACHED]: "PLAN_ATTACHED",
+  [ProtoThreadMessageKind.PLAN_UPDATED]: "PLAN_UPDATED",
+  [ProtoThreadMessageKind.PLAN_RUN_REQUESTED]: "PLAN_RUN_REQUESTED",
+  [ProtoThreadMessageKind.ARTIFACT_CREATED]: "ARTIFACT_CREATED",
+  [ProtoThreadMessageKind.ARTIFACT_UPDATED]: "ARTIFACT_UPDATED",
+  [ProtoThreadMessageKind.ERROR_RAISED]: "ERROR_RAISED",
+  [ProtoThreadMessageKind.ERROR_RECOVERED]: "ERROR_RECOVERED",
 };
 
 const ROLE_TO_PROTO: Record<ChatMessageRole, ProtoThreadMessageRole> = {
@@ -89,6 +105,14 @@ const KIND_TO_PROTO: Record<ChatMessageKind, ProtoThreadMessageKind> = {
   ELICITATION_ANSWERED: ProtoThreadMessageKind.ELICITATION_ANSWERED,
   APPROVAL_RAISED: ProtoThreadMessageKind.APPROVAL_RAISED,
   APPROVAL_DECIDED: ProtoThreadMessageKind.APPROVAL_DECIDED,
+  PLAN_PROPOSED: ProtoThreadMessageKind.PLAN_PROPOSED,
+  PLAN_ATTACHED: ProtoThreadMessageKind.PLAN_ATTACHED,
+  PLAN_UPDATED: ProtoThreadMessageKind.PLAN_UPDATED,
+  PLAN_RUN_REQUESTED: ProtoThreadMessageKind.PLAN_RUN_REQUESTED,
+  ARTIFACT_CREATED: ProtoThreadMessageKind.ARTIFACT_CREATED,
+  ARTIFACT_UPDATED: ProtoThreadMessageKind.ARTIFACT_UPDATED,
+  ERROR_RAISED: ProtoThreadMessageKind.ERROR_RAISED,
+  ERROR_RECOVERED: ProtoThreadMessageKind.ERROR_RECOVERED,
 };
 
 export function chatMessageFromProto(p: ProtoThreadMessage): ChatMessage {
