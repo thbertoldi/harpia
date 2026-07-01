@@ -86,6 +86,27 @@ func TestClassifyParsesCandidatesAndFiltersInputs(t *testing.T) {
 	}
 }
 
+func TestClassifyUsesProviderDefaultModelWhenCredentialModelEmpty(t *testing.T) {
+	// Platform env-key credentials supply a key but no DefaultModel; the
+	// classifier must fall back to the per-provider default and still work.
+	resolver := fakeResolver{cred: &llm_config.ResolvedCredential{
+		Provider:     "deepseek",
+		DefaultModel: "",
+		APIKey:       secret.NewRedacted("sk-test"),
+	}}
+	content := `{"candidates":[{"template_key":"linkedin","confidence":0.9,"inputs":{"theme":"retail"}}]}`
+	body := `{"choices":[{"message":{"content":` + quote(content) + `}}]}`
+	c := NewLLMClassifier(resolver, "deepseek", fakeDoer{resp: jsonResponse(body)})
+
+	got, err := c.Classify(context.Background(), ClassifyInput{Text: "x", Templates: templates()})
+	if err != nil {
+		t.Fatalf("Classify: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("expected 1 candidate with default model fallback, got %d", len(got))
+	}
+}
+
 func TestClassifyDropsUnknownTemplateKeys(t *testing.T) {
 	content := `{"candidates":[{"template_key":"nope","confidence":0.9,"inputs":{}}]}`
 	body := `{"choices":[{"message":{"content":` + quote(content) + `}}]}`

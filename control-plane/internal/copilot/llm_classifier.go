@@ -32,6 +32,14 @@ var providerBaseURLs = map[string]string{
 	"openai":   "https://api.openai.com",
 }
 
+// providerDefaultModels is used when the resolved credential has no DefaultModel
+// (e.g. the platform env-key fallback, which supplies a key but no model). This
+// lets the classifier work with just HARPIA_PLATFORM_<PROVIDER>_API_KEY set.
+var providerDefaultModels = map[string]string{
+	"deepseek": "deepseek-chat",
+	"openai":   "gpt-4o-mini",
+}
+
 const classifyTimeout = 20 * time.Second
 
 // LLMClassifier is the production PlanClassifier. It calls the tenant's
@@ -97,6 +105,11 @@ func (c *LLMClassifier) Classify(ctx context.Context, in ClassifyInput) ([]Candi
 		return []Candidate{}, nil
 	}
 	model := cred.DefaultModel
+	if model == "" {
+		// Platform env-key credentials carry no model; fall back to a sane
+		// per-provider default so a bare HARPIA_PLATFORM_<PROVIDER>_API_KEY works.
+		model = providerDefaultModels[c.provider]
+	}
 	if model == "" {
 		return []Candidate{}, nil
 	}
