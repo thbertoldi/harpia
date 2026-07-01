@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   genericInputInitialValues,
   genericParameterValuesJson,
+  requiredInputsSatisfied,
   selectOptions,
 } from "./template-inputs";
 import type { TemplateInputParameter } from "$lib/gen/harpia/plans/v1/plans_pb";
@@ -11,6 +12,7 @@ function param(
   key: string,
   type: TemplateInputParameterType,
   defaultValueJson = "",
+  required = false,
 ): TemplateInputParameter {
   return {
     $typeName: "harpia.plans.v1.TemplateInputParameter",
@@ -18,7 +20,7 @@ function param(
     label: key,
     description: "",
     type,
-    required: false,
+    required,
     defaultValueJson,
     optionsJson: "",
     runtimeMappings: [],
@@ -45,6 +47,45 @@ describe("genericInputInitialValues", () => {
     const dateRange = { startDate: "2026-01-01", endDate: "2026-12-31" };
     const got = genericInputInitialValues(params, { date_range: dateRange });
     expect(got.date_range).toEqual(dateRange);
+  });
+});
+
+describe("requiredInputsSatisfied", () => {
+  it("returns true when every required param has a non-empty value", () => {
+    const params = [
+      param("theme", TemplateInputParameterType.TEXT, "", true),
+      param("tone", TemplateInputParameterType.TEXT),
+    ];
+    expect(
+      requiredInputsSatisfied(params, { theme: "retail", tone: "" }),
+    ).toBe(true);
+  });
+
+  it("returns false when a required param is missing or empty", () => {
+    const params = [
+      param("theme", TemplateInputParameterType.TEXT, "", true),
+      param("language", TemplateInputParameterType.LANGUAGE, "", true),
+    ];
+    expect(requiredInputsSatisfied(params, { theme: "retail" })).toBe(false);
+    expect(requiredInputsSatisfied(params, { theme: "", language: "en-US" })).toBe(
+      false,
+    );
+  });
+
+  it("requires both dates for required date ranges", () => {
+    const params = [
+      param("date_range", TemplateInputParameterType.DATE_RANGE, "", true),
+    ];
+    expect(
+      requiredInputsSatisfied(params, {
+        date_range: { startDate: "2026-01-01", endDate: "" },
+      }),
+    ).toBe(false);
+    expect(
+      requiredInputsSatisfied(params, {
+        date_range: { startDate: "2026-01-01", endDate: "2026-12-31" },
+      }),
+    ).toBe(true);
   });
 });
 

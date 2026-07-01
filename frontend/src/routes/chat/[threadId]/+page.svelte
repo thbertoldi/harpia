@@ -28,6 +28,11 @@
   import { loadPlanExecutionDetail } from "$lib/plans/plan-execution-detail";
   import { planClient, threadClient } from "$lib/rpc";
   import { Expand } from "lucide-svelte";
+  import { chatEnter } from "$lib/motion/transitions";
+
+  function chatEnterStaggered(node: HTMLElement, params: { delay?: number }) {
+    return { ...chatEnter(node), delay: params.delay ?? 0 };
+  }
 
   let { data } = $props();
 
@@ -315,14 +320,17 @@
     <div class="flex flex-col gap-3">
       {#if messages.length === 0}
         <div class="rounded border border-plumage bg-obsidian-light px-4 py-3 text-sm text-crown-ash">
-          Tell Aiuna what you want to create, then a plan will appear here.
+          {translate("thread.propose.homeHint", $locale)}
         </div>
       {/if}
-      {#each messages as m (m.id)}
+      {#each messages as m, i (m.id)}
         {#if m.kind === "PLAN_PROPOSED"}
-          <PlanProposalCard message={m} {tenantId} threadId={routeThreadId} />
+          <div in:chatEnterStaggered={{ delay: Math.min(i * 40, 200) }}>
+            <PlanProposalCard message={m} {tenantId} threadId={routeThreadId} />
+          </div>
         {:else if m.kind === "USER_TEXT"}
           <div
+            in:chatEnterStaggered={{ delay: Math.min(i * 40, 200) }}
             class="max-w-[85%] self-end rounded-lg border border-plumage bg-obsidian-light px-3 py-2 text-[13px] whitespace-pre-wrap text-cream"
           >
             {m.text}
@@ -330,7 +338,12 @@
         {/if}
       {/each}
       {#if proposing}
-        <div class="text-[12px] text-crown-ash-dark">Thinking about a plan…</div>
+        <div
+          class="thinking-indicator text-[12px] text-crown-ash-dark"
+          aria-live="polite"
+        >
+          {translate("thread.propose.thinking", $locale)}
+        </div>
       {/if}
       <ThreadComposer
         {tenantId}
@@ -421,6 +434,24 @@
     }
     100% {
       box-shadow: 0 0 0 8px rgba(212, 175, 55, 0);
+    }
+  }
+  .thinking-indicator {
+    animation: thinking-pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes thinking-pulse {
+    0%,
+    100% {
+      opacity: 0.45;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .thinking-indicator {
+      animation: none;
+      opacity: 0.75;
     }
   }
 </style>

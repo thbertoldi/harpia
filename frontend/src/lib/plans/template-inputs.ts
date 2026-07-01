@@ -1,4 +1,5 @@
 import type { TemplateInputParameter } from "$lib/gen/harpia/plans/v1/plans_pb";
+import { TemplateInputParameterType } from "$lib/gen/harpia/plans/v1/plans_pb";
 
 export interface DateRangeValue {
   startDate: string;
@@ -37,6 +38,36 @@ export function genericParameterValuesJson(
   values: Record<string, unknown>,
 ): string {
   return JSON.stringify(values);
+}
+
+function isNonEmptyRequiredValue(
+  value: unknown,
+  type: TemplateInputParameterType,
+): boolean {
+  if (value == null) return false;
+  if (typeof value === "string") return value.trim() !== "";
+  if (type === TemplateInputParameterType.DATE_RANGE) {
+    const range = value as DateRangeValue;
+    return Boolean(range.startDate?.trim() && range.endDate?.trim());
+  }
+  if (typeof value === "object" && !Array.isArray(value)) {
+    return Object.keys(value as object).length > 0;
+  }
+  return true;
+}
+
+/** True when every required parameter has a non-empty value. */
+export function requiredInputsSatisfied(
+  params: TemplateInputParameter[],
+  values: Record<string, unknown>,
+): boolean {
+  for (const param of params) {
+    if (!param.required) continue;
+    if (!isNonEmptyRequiredValue(values[param.key], param.type)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 export interface SelectOption {

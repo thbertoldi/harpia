@@ -133,3 +133,37 @@ export function saveCelebration(node: HTMLElement): TransitionConfig {
     },
   };
 }
+
+/** Svelte action: flash gold wash on click (130ms, same timing as chipFlash transition). */
+export function clickFlash(node: HTMLElement): { destroy: () => void } {
+  if (prefersReducedMotion()) return { destroy: () => {} };
+
+  function onClick() {
+    const startTime = performance.now();
+    const duration = 130;
+
+    function tick(now: number) {
+      const raw = Math.min(1, (now - startTime) / duration);
+      const t = cubicOut(raw);
+      const wash =
+        t < 50 / 130 ? 1 : Math.max(0, 1 - (t - 50 / 130) * (130 / 80));
+      node.style.backgroundColor = `rgba(200, 146, 15, ${wash * 0.35})`;
+
+      if (raw < 1) {
+        requestAnimationFrame(tick);
+      } else {
+        node.style.backgroundColor = "";
+      }
+    }
+
+    requestAnimationFrame(tick);
+  }
+
+  node.addEventListener("click", onClick);
+
+  return {
+    destroy() {
+      node.removeEventListener("click", onClick);
+    },
+  };
+}
