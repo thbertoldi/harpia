@@ -385,7 +385,8 @@ describe("editPolicyParameter", () => {
       ],
       behaviorPolicies: undefined,
       schedule: { cron: "0 9 * * 1", timezone: "America/Sao_Paulo" },
-      parameterValuesJson: '{"theme":"existing","approval_mode":"auto_publish"}',
+      parameterValuesJson:
+        '{"theme":"existing","approval_mode":"auto_publish"}',
     } as unknown as PlanConfiguration;
 
     await editPolicyParameter({
