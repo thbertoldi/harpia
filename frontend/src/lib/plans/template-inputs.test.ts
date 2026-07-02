@@ -42,9 +42,7 @@ describe("genericInputInitialValues", () => {
   });
 
   it("preserves date range objects from extracted values", () => {
-    const params = [
-      param("date_range", TemplateInputParameterType.DATE_RANGE),
-    ];
+    const params = [param("date_range", TemplateInputParameterType.DATE_RANGE)];
     const dateRange = { startDate: "2026-01-01", endDate: "2026-12-31" };
     const got = genericInputInitialValues(params, { date_range: dateRange });
     expect(got.date_range).toEqual(dateRange);
@@ -73,7 +71,9 @@ describe("resolveDateRangePreset", () => {
   });
 
   it("returns null for unknown presets", () => {
-    expect(resolveDateRangePreset("all_time", new Date("2026-07-01T12:00:00Z"))).toBeNull();
+    expect(
+      resolveDateRangePreset("all_time", new Date("2026-07-01T12:00:00Z")),
+    ).toBeNull();
   });
 });
 
@@ -83,9 +83,9 @@ describe("requiredInputsSatisfied", () => {
       param("theme", TemplateInputParameterType.TEXT, "", true),
       param("tone", TemplateInputParameterType.TEXT),
     ];
-    expect(
-      requiredInputsSatisfied(params, { theme: "retail", tone: "" }),
-    ).toBe(true);
+    expect(requiredInputsSatisfied(params, { theme: "retail", tone: "" })).toBe(
+      true,
+    );
   });
 
   it("returns false when a required param is missing or empty", () => {
@@ -94,9 +94,9 @@ describe("requiredInputsSatisfied", () => {
       param("language", TemplateInputParameterType.LANGUAGE, "", true),
     ];
     expect(requiredInputsSatisfied(params, { theme: "retail" })).toBe(false);
-    expect(requiredInputsSatisfied(params, { theme: "", language: "en-US" })).toBe(
-      false,
-    );
+    expect(
+      requiredInputsSatisfied(params, { theme: "", language: "en-US" }),
+    ).toBe(false);
   });
 
   it("treats a rolling date range preset as satisfied", () => {
@@ -104,7 +104,9 @@ describe("requiredInputsSatisfied", () => {
       param("date_range", TemplateInputParameterType.DATE_RANGE, "", true),
     ];
     expect(
-      requiredInputsSatisfied(params, { date_range: { preset: "last_7_days" } }),
+      requiredInputsSatisfied(params, {
+        date_range: { preset: "last_7_days" },
+      }),
     ).toBe(true);
   });
 
@@ -127,7 +129,10 @@ describe("requiredInputsSatisfied", () => {
 
 describe("genericParameterValuesJson", () => {
   it("serializes a flat values object", () => {
-    const json = genericParameterValuesJson({ theme: "retail", tone: "formal" });
+    const json = genericParameterValuesJson({
+      theme: "retail",
+      tone: "formal",
+    });
     expect(JSON.parse(json)).toEqual({ theme: "retail", tone: "formal" });
   });
 

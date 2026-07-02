@@ -53,7 +53,12 @@
   // Helper to get or initialize a DateRangeValue
   function getDateRange(key: string): DateRangeValue {
     const val = values[key];
-    if (val && typeof val === "object" && "startDate" in val && "endDate" in val) {
+    if (
+      val &&
+      typeof val === "object" &&
+      "startDate" in val &&
+      "endDate" in val
+    ) {
       return val as DateRangeValue;
     }
     return { startDate: "", endDate: "" };
@@ -89,7 +94,10 @@
 
   // Translate a select option's label via catalog i18n
   // (plans.inputs.<key>.option.<value>), falling back to the catalog label.
-  function translatedOption(p: TemplateInputParameter, opt: SelectOption): string {
+  function translatedOption(
+    p: TemplateInputParameter,
+    opt: SelectOption,
+  ): string {
     const key = `plans.inputs.${p.key}.option.${opt.value}`;
     const translated = translate(key, $locale);
     return translated === key ? opt.label : translated;
@@ -107,17 +115,19 @@
   function getStringList(key: string): string[] {
     const plural = values[`${key}s`];
     if (Array.isArray(plural)) {
-      return plural.filter((entry): entry is string => typeof entry === "string");
+      return plural.filter(
+        (entry): entry is string => typeof entry === "string",
+      );
     }
     const singular = values[key];
     return typeof singular === "string" && singular ? [singular] : [];
   }
 
   function toggleStringListValue(key: string, value: string): void {
-    const selected = new Set(getStringList(key));
-    if (selected.has(value)) selected.delete(value);
-    else selected.add(value);
-    const next = [...selected];
+    const selected = getStringList(key);
+    const next = selected.includes(value)
+      ? selected.filter((entry) => entry !== value)
+      : [...selected, value];
     values[`${key}s`] = next;
     values[key] = next[0] ?? "";
   }
@@ -146,7 +156,7 @@
   function translatedLabel(p: TemplateInputParameter): string {
     const key = `plans.inputs.${p.key}.label`;
     const translated = translate(key, $locale);
-    return translated === key ? (p.label || p.key) : translated;
+    return translated === key ? p.label || p.key : translated;
   }
 
   // Translated helper text for a field. Catalog descriptions are authored in
@@ -163,10 +173,14 @@
   {#each params as p (p.key)}
     <label class="flex flex-col gap-1 text-[12px] text-crown-ash">
       <span class="font-medium text-cream">
-        {translatedLabel(p)}{#if p.required}<span class="text-talon-gold"> *</span>{/if}
+        {translatedLabel(p)}{#if p.required}<span class="text-talon-gold">
+            *</span
+          >{/if}
       </span>
       {#if translatedDescription(p)}
-        <span class="text-[11px] text-crown-ash-dark">{translatedDescription(p)}</span>
+        <span class="text-[11px] text-crown-ash-dark"
+          >{translatedDescription(p)}</span
+        >
       {/if}
 
       {#if p.type === T.TEXTAREA}
@@ -209,13 +223,21 @@
             <input
               type="date"
               value={range.startDate}
-              oninput={(e) => setDateRange(p.key, { ...getDateRange(p.key), startDate: e.currentTarget.value })}
+              oninput={(e) =>
+                setDateRange(p.key, {
+                  ...getDateRange(p.key),
+                  startDate: e.currentTarget.value,
+                })}
               class="flex-1 rounded border border-plumage bg-obsidian-light px-2 py-1 text-[12px] text-cream"
             />
             <input
               type="date"
               value={range.endDate}
-              oninput={(e) => setDateRange(p.key, { ...getDateRange(p.key), endDate: e.currentTarget.value })}
+              oninput={(e) =>
+                setDateRange(p.key, {
+                  ...getDateRange(p.key),
+                  endDate: e.currentTarget.value,
+                })}
               class="flex-1 rounded border border-plumage bg-obsidian-light px-2 py-1 text-[12px] text-cream"
             />
           </div>
@@ -261,7 +283,9 @@
             class="rounded border border-plumage bg-obsidian-light px-2 py-1 text-[12px] text-cream"
           >
             {#if installations.length === 0}
-              <option value="" disabled>{translate("thread.propose.noIntegrations", $locale)}</option>
+              <option value="" disabled
+                >{translate("thread.propose.noIntegrations", $locale)}</option
+              >
             {:else}
               <option value="">—</option>
               {#each installations as inst (inst.id)}
@@ -282,7 +306,9 @@
             {#each chipValues(p.key) as chip (chip)}
               <button
                 type="button"
-                aria-label={translate("thread.propose.removeChip", $locale, { value: chip })}
+                aria-label={translate("thread.propose.removeChip", $locale, {
+                  value: chip,
+                })}
                 class="rounded-full border border-plumage px-2 py-0.5 text-[11px] text-crown-ash hover:border-talon-gold hover:text-cream"
                 onclick={() => removeChipValue(p.key, chip)}
               >

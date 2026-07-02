@@ -325,7 +325,9 @@
   {#if !routeConfigurationId}
     <div class="flex flex-col gap-3">
       {#if messages.length === 0}
-        <div class="rounded border border-plumage bg-obsidian-light px-4 py-3 text-sm text-crown-ash">
+        <div
+          class="rounded border border-plumage bg-obsidian-light px-4 py-3 text-sm text-crown-ash"
+        >
           {translate("thread.propose.homeHint", $locale)}
         </div>
       {/if}
@@ -374,9 +376,7 @@
           edges={data.template.edges}
         />
         <a
-          href={resolve(
-            `/plans/configurations/${routeConfigurationId}/canvas`,
-          )}
+          href={resolve(`/plans/configurations/${routeConfigurationId}/canvas`)}
           class="flex items-center gap-1 rounded border border-plumage bg-transparent px-2 py-1 text-[10px] text-crown-ash hover:border-talon-gold hover:text-talon-gold"
           aria-label={translate("canvas.expandLink", $locale)}
         >

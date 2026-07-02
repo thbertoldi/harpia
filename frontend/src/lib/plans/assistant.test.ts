@@ -146,7 +146,7 @@ describe("editBinding", () => {
       behaviorPolicies: undefined,
       schedule: undefined,
       seedArtifacts: [],
-      parameterValuesJson: "{\"theme\":\"existing\"}",
+      parameterValuesJson: '{"theme":"existing"}',
     } as unknown as PlanConfiguration;
     await editBinding({
       tenantId: "t",
@@ -250,7 +250,9 @@ describe("selectBindingOption", () => {
     );
     expect(updatePlanConfiguration).toHaveBeenCalledTimes(1);
     expect(updatePlanConfiguration.mock.calls[0][0].announceSaved).toBeFalsy();
-    expect(updatePlanConfiguration.mock.calls[0][0].slotBindings).toBeUndefined();
+    expect(
+      updatePlanConfiguration.mock.calls[0][0].slotBindings,
+    ).toBeUndefined();
     expect(
       JSON.parse(updatePlanConfiguration.mock.calls[0][0].parameterValuesJson),
     ).toMatchObject({ source_group: "rss-tech" });
@@ -261,7 +263,7 @@ describe("selectBindingOption", () => {
       "SYSTEM",
       "STEP_REBOUND",
       "Tech RSS",
-      expect.stringContaining("\"new_executor_installation_id\":\"rss-tech\""),
+      expect.stringContaining('"new_executor_installation_id":"rss-tech"'),
     );
   });
 
@@ -297,10 +299,10 @@ describe("selectBindingOption", () => {
 
     const reboundPayload = appendThreadMessage.mock.calls[1][5];
     expect(reboundPayload).toContain(
-      "\"previous_executor_installation_id\":\"rss-old\"",
+      '"previous_executor_installation_id":"rss-old"',
     );
     expect(reboundPayload).toContain(
-      "\"new_executor_installation_id\":\"rss-new\"",
+      '"new_executor_installation_id":"rss-new"',
     );
   });
 });
@@ -320,7 +322,7 @@ describe("editOverseerBinding", () => {
       behaviorPolicies: undefined,
       schedule: undefined,
       seedArtifacts: [],
-      parameterValuesJson: "{\"theme\":\"existing\"}",
+      parameterValuesJson: '{"theme":"existing"}',
     } as unknown as PlanConfiguration;
 
     await editOverseerBinding({
@@ -341,7 +343,7 @@ describe("editOverseerBinding", () => {
         (binding: OverseerBinding) => binding.stepKey === "write-draft",
       )?.overseerUserId,
     ).toBe("user-ana");
-    expect(call.parameterValuesJson).toBe("{\"theme\":\"existing\"}");
+    expect(call.parameterValuesJson).toBe('{"theme":"existing"}');
   });
 });
 
@@ -408,7 +410,7 @@ describe("selectOverseerOption", () => {
       "SYSTEM",
       "STEP_REBOUND",
       "Ana",
-      expect.stringContaining("\"new_overseer_user_id\":\"user-ana\""),
+      expect.stringContaining('"new_overseer_user_id":"user-ana"'),
     );
   });
 
@@ -441,9 +443,7 @@ describe("selectOverseerOption", () => {
     });
 
     const reboundPayload = appendThreadMessage.mock.calls[1][5];
-    expect(reboundPayload).toContain(
-      "\"previous_overseer_user_id\":\"user-old\"",
-    );
-    expect(reboundPayload).toContain("\"new_overseer_user_id\":\"user-new\"");
+    expect(reboundPayload).toContain('"previous_overseer_user_id":"user-old"');
+    expect(reboundPayload).toContain('"new_overseer_user_id":"user-new"');
   });
 });

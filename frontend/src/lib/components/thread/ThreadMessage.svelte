@@ -56,11 +56,7 @@
     {message.text || JSON.parse(message.payloadJson || "{}").value || "—"}
   </div>
 {:else if message.kind === "PLAN_PROPOSED"}
-  <PlanProposalCard
-    {message}
-    tenantId={tenantId}
-    threadId={message.threadId}
-  />
+  <PlanProposalCard {message} {tenantId} threadId={message.threadId} />
 {:else if message.kind === "ASSISTANT_PROMPT" && promptState === "BINDING_MATRIX"}
   <BindingMatrixCard {message} {configurationId} {tenantId} />
 {:else if message.kind === "ASSISTANT_PROMPT" && promptState === "BINDING_STEP"}

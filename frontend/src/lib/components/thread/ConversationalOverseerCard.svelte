@@ -40,16 +40,14 @@
     }
   }
 
-  let payload = $state<OverseerStepPayload | null>(null);
+  let payload = $derived<OverseerStepPayload | null>(
+    parsePayloadSafe(message.payloadJson),
+  );
   let configuration = $state<PlanConfiguration | null>(null);
   let saving = $state(false);
   let saveError = $state(false);
   let editingAnswered = $state(false);
   let submitted = $state(false);
-
-  $effect(() => {
-    payload = parsePayloadSafe(message.payloadJson);
-  });
 
   $effect(() => {
     if (!tenantId || !configurationId) return;
@@ -90,11 +88,6 @@
     (isLive || editingAnswered) && !submitted && !!focusedRow,
   );
 
-  function optionText(option?: MatrixOption): string {
-    if (!option) return "";
-    return option.sublabel ? `${option.label} · ${option.sublabel}` : option.label;
-  }
-
   function selectedOverseer(row: MatrixRow): string {
     const selected = payload?.options.find(
       (option) => option.value === row.current_overseer_id,
@@ -116,7 +109,11 @@
     };
   }
 
-  function reflectOverseer(stepKey: string, overseerUserId: string, label: string) {
+  function reflectOverseer(
+    stepKey: string,
+    overseerUserId: string,
+    label: string,
+  ) {
     if (!payload) return;
     payload = {
       ...payload,
@@ -150,7 +147,11 @@
         label: picked.label,
       });
       configuration = next;
-      reflectOverseer(focusedRow.step_key, picked.value || picked.id, picked.label);
+      reflectOverseer(
+        focusedRow.step_key,
+        picked.value || picked.id,
+        picked.label,
+      );
       submitted = true;
       editingAnswered = false;
     } catch {
@@ -184,8 +185,8 @@
           <span
             class="rounded border border-plumage bg-surface-hover px-2 py-1 font-mono text-[10px] text-crown-ash"
           >
-            {focusedRow.contracts.input || "—"} → {focusedRow.contracts.output ||
-              "—"}
+            {focusedRow.contracts.input || "—"} → {focusedRow.contracts
+              .output || "—"}
           </span>
           <span>
             {translate("assistant.overseerStep.progress", $locale, {
@@ -247,7 +248,9 @@
       </p>
       <div class="mt-2 grid gap-2">
         {#each requiredRows as row (row.step_key)}
-          <div class="grid grid-cols-[minmax(0,1fr)_minmax(120px,180px)] gap-3 text-[12px]">
+          <div
+            class="grid grid-cols-[minmax(0,1fr)_minmax(120px,180px)] gap-3 text-[12px]"
+          >
             <div class="min-w-0">
               <p class="truncate text-cream">{row.step_title}</p>
               <p class="font-mono text-[10px] text-crown-ash-dark">
@@ -255,7 +258,8 @@
               </p>
             </div>
             <p class="truncate text-crown-ash">
-              {selectedOverseer(row) || translate("assistant.overseerStep.unassigned", $locale)}
+              {selectedOverseer(row) ||
+                translate("assistant.overseerStep.unassigned", $locale)}
             </p>
           </div>
         {/each}

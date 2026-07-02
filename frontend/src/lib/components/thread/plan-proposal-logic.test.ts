@@ -14,7 +14,11 @@ import {
 describe("confirmSummaryLabel", () => {
   it("prefers the LLM summary when present", () => {
     expect(
-      confirmSummaryLabel("a LinkedIn post about retail", "LinkedIn Post", "linkedin"),
+      confirmSummaryLabel(
+        "a LinkedIn post about retail",
+        "LinkedIn Post",
+        "linkedin",
+      ),
     ).toBe("a LinkedIn post about retail");
   });
 

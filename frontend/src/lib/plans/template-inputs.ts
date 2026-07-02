@@ -184,7 +184,9 @@ export function parseParameterValuesJson(
   }
 }
 
-export function parameterValuesJson(values: LinkedInTemplateInputValues): string {
+export function parameterValuesJson(
+  values: LinkedInTemplateInputValues,
+): string {
   const sourceGroup =
     values.aggregateSourceGroupInstallationId.trim() ||
     values.sourceGroupInstallationIds.find((id) => id.trim())?.trim() ||

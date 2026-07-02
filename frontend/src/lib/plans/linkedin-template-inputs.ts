@@ -35,7 +35,9 @@ export function buildDefaultLinkedInInputValues(
   };
 }
 
-function isLanguage(value: unknown): value is LinkedInTemplateInputValues["language"] {
+function isLanguage(
+  value: unknown,
+): value is LinkedInTemplateInputValues["language"] {
   return value === "pt-BR" || value === "en-US" || value === "es";
 }
 

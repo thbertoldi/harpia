@@ -74,7 +74,10 @@
   );
 
   const autoSelected = $derived.by<PlanProposalCandidate | null>(() => {
-    if (candidates.length === 1 && candidates[0].confidence >= confidenceThreshold) {
+    if (
+      candidates.length === 1 &&
+      candidates[0].confidence >= confidenceThreshold
+    ) {
       return candidates[0];
     }
     return null;
@@ -113,7 +116,8 @@
     return createdActionIds(createdConfig.status);
   });
 
-  function stageTransition(_node: HTMLElement) {
+  function stageTransition(node: HTMLElement) {
+    void node;
     if (prefersReducedMotion()) {
       return { duration: 0, css: (t: number) => `opacity: ${t};` };
     }
@@ -179,13 +183,18 @@
     }
   }
 
-  function rememberSelection(kind: RefinementTurn["kind"], label: string, value: RefinementTurn["value"]) {
+  function rememberSelection(
+    kind: RefinementTurn["kind"],
+    label: string,
+    value: RefinementTurn["value"],
+  ) {
     refinementState = applyRefinementSelection(refinementState, {
       kind,
       label,
       value,
     });
-    const summary = refinementState.turns[refinementState.turns.length - 1]?.summary ?? "";
+    const summary =
+      refinementState.turns[refinementState.turns.length - 1]?.summary ?? "";
     void appendSelectionMessage(kind, label, value, summary);
   }
 
@@ -199,12 +208,14 @@
     );
   }
 
-  async function savePlan(cand: PlanProposalCandidate): Promise<PlanConfiguration | null> {
-    const { savePlanConfigurationRecord } = await import(
-      "$lib/plans/plan-configuration"
-    );
+  async function savePlan(): Promise<PlanConfiguration | null> {
+    const { savePlanConfigurationRecord } =
+      await import("$lib/plans/plan-configuration");
     if (!template) return null;
-    if (Array.isArray(values.source_groups) && values.source_groups.length > 1) {
+    if (
+      Array.isArray(values.source_groups) &&
+      values.source_groups.length > 1
+    ) {
       const aggregateId = await ensureAggregateRssInstallation({
         tenantId,
         selectedInstallationIds: values.source_groups.filter(
@@ -232,7 +243,7 @@
     errorMsg = null;
     showErrorShake = false;
     try {
-      const saved = await savePlan(cand);
+      const saved = await savePlan();
       if (!saved) return;
       const res = await planClient.getPlanConfiguration({
         tenantId,
@@ -282,8 +293,15 @@
   }
 
   async function onFormSubmit() {
-    const range = values.date_range as { startDate?: string; endDate?: string } | undefined;
-    if (active && typeof values.audience === "string" && range?.startDate && range.endDate) {
+    const range = values.date_range as
+      | { startDate?: string; endDate?: string }
+      | undefined;
+    if (
+      active &&
+      typeof values.audience === "string" &&
+      range?.startDate &&
+      range.endDate
+    ) {
       rememberSelection(
         "confirmation",
         translate("thread.propose.turn.confirmation", $locale),
@@ -292,7 +310,9 @@
           audience: values.audience,
           themes: typeof values.theme === "string" ? [values.theme] : [],
           sourceGroups:
-            typeof values.source_group === "string" ? [values.source_group] : [],
+            typeof values.source_group === "string"
+              ? [values.source_group]
+              : [],
           dateRange: { startDate: range.startDate, endDate: range.endDate },
         }),
       );
@@ -382,7 +402,9 @@
           use:clickFlash
           class="rounded-full border border-plumage px-3 py-1 text-[12px] text-cream hover:border-talon-gold"
           aria-label={c.template_id === bestCandidate?.template_id
-            ? translate("thread.propose.bestMatchAria", $locale, { plan: c.template_name || c.template_key })
+            ? translate("thread.propose.bestMatchAria", $locale, {
+                plan: c.template_name || c.template_key,
+              })
             : c.template_name || c.template_key}
           onclick={() => pickCandidate(c)}
         >
@@ -437,9 +459,12 @@
                 use:hoverCardLift
                 use:clickFlash
                 aria-label={isBest
-                  ? translate("thread.propose.bestMatchAria", $locale, { plan: c.template_name || c.template_key })
+                  ? translate("thread.propose.bestMatchAria", $locale, {
+                      plan: c.template_name || c.template_key,
+                    })
                   : c.template_name || c.template_key}
-                class="rounded-full border px-2.5 py-0.5 text-[11px] {c.template_id === active.template_id
+                class="rounded-full border px-2.5 py-0.5 text-[11px] {c.template_id ===
+                active.template_id
                   ? 'border-talon-gold text-cream'
                   : 'border-plumage text-crown-ash hover:border-talon-gold'}"
                 onclick={() => pickCandidate(c)}
@@ -567,7 +592,9 @@
 
   {#if errorMsg}
     {#if showErrorShake}
-      <p class="self-start text-[11px] text-red-400" in:errorShake>{errorMsg}</p>
+      <p class="self-start text-[11px] text-red-400" in:errorShake>
+        {errorMsg}
+      </p>
     {:else}
       <p class="self-start text-[11px] text-red-400">{errorMsg}</p>
     {/if}

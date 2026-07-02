@@ -209,6 +209,16 @@ function asRecord(value: unknown): Record<string, unknown> {
     : {};
 }
 
+function parseParameterValues(raw: unknown): Record<string, unknown> {
+  if (typeof raw !== "string" || raw.trim() === "") return {};
+  try {
+    const parsed = JSON.parse(raw);
+    return asRecord(parsed);
+  } catch {
+    return {};
+  }
+}
+
 async function installExecutorApiStub(page: Page) {
   const entitlements = [RSS_SKU, LINKEDIN_SKU].map((sku) => ({
     $typeName: "harpia.executors.v1.ExecutorEntitlement",
@@ -479,6 +489,63 @@ async function installPlanServiceStub(page: Page) {
     planConfigurationId,
   };
 
+  function materializeConfiguration(
+    request: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const params = parseParameterValues(request.parameterValuesJson);
+    const sourceGroup =
+      typeof params.source_group === "string" ? params.source_group : "";
+    const approvalMode =
+      params.approval_mode === "auto_publish"
+        ? PublishApprovalMode.AUTO_PUBLISH
+        : PublishApprovalMode.REQUIRE_APPROVAL;
+    const slotBindings = [
+      {
+        $typeName: "harpia.plans.v1.SlotBinding",
+        stepKey: "fetch-news",
+        executorKind: PlanExecutorKind.INTEGRATION,
+        executorSkuId: "sku-rss-news-feed",
+        executorInstallationId: sourceGroup || "inst-rss-news-feed-1",
+      },
+      {
+        $typeName: "harpia.plans.v1.SlotBinding",
+        stepKey: "write-draft",
+        executorKind: PlanExecutorKind.AGENT,
+        executorSkuId: "sku-newsletter-writer-senior",
+        executorInstallationId: "inst-newsletter-writer",
+      },
+      {
+        $typeName: "harpia.plans.v1.SlotBinding",
+        stepKey: "adapt-for-linkedin",
+        executorKind: PlanExecutorKind.AGENT,
+        executorSkuId: "sku-linkedin-voice-senior",
+        executorInstallationId: "inst-linkedin-voice",
+      },
+      {
+        $typeName: "harpia.plans.v1.SlotBinding",
+        stepKey: "publish-linkedin",
+        executorKind: PlanExecutorKind.INTEGRATION,
+        executorSkuId: "sku-linkedin-publish",
+        executorInstallationId: "inst-linkedin-publish-1",
+      },
+    ];
+
+    return {
+      parameterValuesJson:
+        typeof request.parameterValuesJson === "string"
+          ? request.parameterValuesJson
+          : "",
+      slotBindings,
+      behaviorPolicies: {
+        $typeName: "harpia.plans.v1.PlanBehaviorPolicies",
+        elicitationTimeoutBehavior:
+          ElicitationTimeoutBehavior.PAUSE_UNTIL_ANSWERED,
+        elicitationTimeoutHours: 48,
+        publishApprovalMode: approvalMode,
+      },
+    };
+  }
+
   const threadMessages: Record<string, unknown>[] = [
     threadMessage({
       id: "message-binding-matrix",
@@ -594,6 +661,7 @@ async function installPlanServiceStub(page: Page) {
     }
 
     if (method === "CreatePlanConfiguration") {
+      const materialized = materializeConfiguration(request);
       configuration = {
         ...configuration,
         planTemplateId:
@@ -604,17 +672,14 @@ async function installPlanServiceStub(page: Page) {
           typeof request.status === "number"
             ? request.status
             : PlanConfigurationStatus.DRAFT,
-        seedArtifacts: Array.isArray(request.seedArtifacts)
-          ? request.seedArtifacts
-          : [],
-        slotBindings: Array.isArray(request.slotBindings)
-          ? request.slotBindings
-          : [],
+        seedArtifacts: [],
+        slotBindings: materialized.slotBindings,
         overseerBindings: Array.isArray(request.overseerBindings)
           ? request.overseerBindings
           : [],
-        behaviorPolicies: asRecord(request).behaviorPolicies,
+        behaviorPolicies: materialized.behaviorPolicies,
         schedule: asRecord(request).schedule,
+        parameterValuesJson: materialized.parameterValuesJson,
         updatedAt: "2026-06-26T15:01:00Z",
       };
       await fulfillUnary(route, { planConfiguration: configuration });
@@ -627,23 +692,21 @@ async function installPlanServiceStub(page: Page) {
     }
 
     if (method === "UpdatePlanConfiguration") {
+      const materialized = materializeConfiguration(request);
       configuration = {
         ...configuration,
         status:
           typeof request.status === "number"
             ? request.status
             : configuration.status,
-        seedArtifacts: Array.isArray(request.seedArtifacts)
-          ? request.seedArtifacts
-          : [],
-        slotBindings: Array.isArray(request.slotBindings)
-          ? request.slotBindings
-          : [],
+        seedArtifacts: [],
+        slotBindings: materialized.slotBindings,
         overseerBindings: Array.isArray(request.overseerBindings)
           ? request.overseerBindings
           : [],
-        behaviorPolicies: request.behaviorPolicies,
+        behaviorPolicies: materialized.behaviorPolicies,
         schedule: request.schedule,
+        parameterValuesJson: materialized.parameterValuesJson,
         updatedAt: "2026-06-26T15:02:00Z",
       };
       await fulfillUnary(route, { planConfiguration: configuration });
@@ -736,6 +799,74 @@ async function installPlanServiceStub(page: Page) {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         message: `Unhandled PlanService method: ${method}`,
+      }),
+    });
+  });
+
+  await page.route("**/harpia.chat.v1.ThreadService/*", async (route) => {
+    const url = new URL(route.request().url());
+    const method = url.pathname.split("/").at(-1) ?? "";
+    const request = requestJSON(route);
+
+    if (method === "CreateThread") {
+      await fulfillUnary(route, {
+        thread: {
+          $typeName: "harpia.chat.v1.Thread",
+          id: "thread-linkedin-demo",
+          tenantId,
+          title:
+            typeof request.title === "string"
+              ? request.title
+              : "Weekly Newsletter (LinkedIn)",
+          status: 1,
+          createdAt: "2026-06-26T15:00:00Z",
+          updatedAt: "2026-06-26T15:00:00Z",
+        },
+      });
+      return;
+    }
+
+    if (method === "ListThreadMessages") {
+      await fulfillUnary(route, {
+        messages: threadMessages,
+        nextPageToken: "",
+      });
+      return;
+    }
+
+    if (method === "WatchThreadMessages") {
+      await fulfillStream(route, { messages: [] });
+      return;
+    }
+
+    if (method === "AppendThreadMessage") {
+      const message = threadMessage({
+        id: `message-${String(sequenceNumber + 1n)}`,
+        tenantId,
+        threadId:
+          typeof request.threadId === "string"
+            ? request.threadId
+            : planConfigurationId,
+        executionId:
+          typeof request.executionId === "string" ? request.executionId : "",
+        role: threadRoleFromRequest(request.role) ?? ThreadMessageRole.SYSTEM,
+        kind:
+          threadKindFromRequest(request.kind) ??
+          ThreadMessageKind.ASSISTANT_TEXT,
+        text: typeof request.text === "string" ? request.text : "",
+        payloadJson:
+          typeof request.payloadJson === "string" ? request.payloadJson : "{}",
+      });
+      threadMessages.push(message);
+      await fulfillUnary(route, { message });
+      return;
+    }
+
+    await route.fulfill({
+      status: 404,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        message: `Unhandled ThreadService method: ${method}`,
       }),
     });
   });
