@@ -7,7 +7,6 @@ import (
 
 	"google.golang.org/protobuf/encoding/protojson"
 
-	artifactsv1 "github.com/harpia/control-plane/gen/harpia/artifacts/v1"
 	"github.com/harpia/control-plane/internal/artifacts"
 	"github.com/harpia/control-plane/internal/executors/catalog"
 	"github.com/harpia/control-plane/internal/executors/runtime"
@@ -40,15 +39,15 @@ func (h *Handler) Execute(ctx context.Context, req runtime.IntegrationExecutionR
 	if err != nil {
 		return failedResult(err), nil
 	}
-	dateRange := &artifactsv1.DateRange{}
-	if err := protojson.Unmarshal(dateRangePayload, dateRange); err != nil {
-		return failedResult(fmt.Errorf("parse date range artifact: %w", err)), nil
+	startDate, endDate, err := parseDateRangePayload(dateRangePayload)
+	if err != nil {
+		return failedResult(err), nil
 	}
 	if err := artifacts.ValidatePayload(artifacts.TypeKeyDateRange, dateRangePayload); err != nil {
 		return failedResult(err), nil
 	}
 
-	newsList, err := FetchNewsList(ctx, h.feeds, config.Feeds, dateRange)
+	newsList, err := fetchNewsListInRange(ctx, h.feeds, config.Feeds, startDate, endDate)
 	if err != nil {
 		var feedErr *FeedFetchError
 		if errors.As(err, &feedErr) {

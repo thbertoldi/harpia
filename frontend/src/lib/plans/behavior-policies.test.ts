@@ -248,10 +248,13 @@ describe("behavior policies", () => {
         tenantId: "dev",
         planConfigurationId: CONFIGURATION_ID,
         status: PlanConfigurationStatus.RUNNABLE,
-        slotBindings: existing.slotBindings,
         overseerBindings: existing.overseerBindings,
+        parameterValuesJson: "",
       }),
     );
+    expect(
+      updatePlanConfiguration.mock.calls[0][0].slotBindings,
+    ).toBeUndefined();
     expect(result.source).toBe("api");
   });
 

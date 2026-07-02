@@ -253,10 +253,7 @@ export function isMatrixComplete(payload: MatrixPayload): boolean {
 
 export function hydrateMatrixPayload<
   T extends MatrixPayload | BindingStepPayload | OverseerStepPayload,
->(
-  payload: T,
-  input: MatrixHydrationInput,
-): T {
+>(payload: T, input: MatrixHydrationInput): T {
   const bindings = new Map(
     input.slotBindings.map((binding) => [
       binding.stepKey,
@@ -279,8 +276,7 @@ export function hydrateMatrixPayload<
       current_overseer_id:
         overseerBindings.get(row.step_key) ?? row.current_overseer_id,
       current_overseer_label:
-        overseerBindings.get(row.step_key) ??
-        row.current_overseer_label,
+        overseerBindings.get(row.step_key) ?? row.current_overseer_label,
     })),
   } as T;
 }

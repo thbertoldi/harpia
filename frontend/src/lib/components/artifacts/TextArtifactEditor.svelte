@@ -75,7 +75,7 @@
     </span>
     <input
       bind:value={draftTitle}
-      class="mt-1 w-full rounded-md border border-plumage bg-obsidian px-3 py-2 text-sm text-cream outline-none transition-colors focus:border-talon-gold"
+      class="mt-1 w-full rounded-md border border-plumage bg-obsidian px-3 py-2 text-sm text-cream transition-colors outline-none focus:border-talon-gold"
     />
   </label>
 
@@ -86,7 +86,7 @@
     <textarea
       bind:value={draftText}
       rows="12"
-      class="mt-1 w-full resize-y rounded-md border border-plumage bg-obsidian px-3 py-2 font-mono text-sm leading-relaxed text-cream outline-none transition-colors focus:border-talon-gold"
+      class="mt-1 w-full resize-y rounded-md border border-plumage bg-obsidian px-3 py-2 font-mono text-sm leading-relaxed text-cream transition-colors outline-none focus:border-talon-gold"
     ></textarea>
   </label>
 

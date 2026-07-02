@@ -12,6 +12,7 @@ import (
 	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
 	"github.com/harpia/control-plane/internal/executors"
 	"github.com/harpia/control-plane/internal/workflow"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 const executionSnapshotSchemaVersion = 1
@@ -74,13 +75,48 @@ func buildPlanExecutionSnapshot(
 		installationSnapshots[step.Key] = executorInstallationToSnapshot(installation, sku)
 	}
 
+	configuration := configurationToProto(config)
+	resolveDateRangePresetSeeds(configuration, now)
+
 	return workflow.PlanExecutionSnapshot{
 		SchemaVersion:         executionSnapshotSchemaVersion,
-		Configuration:         configurationToProto(config),
+		Configuration:         configuration,
 		Template:              templateToProto(template),
 		ExecutorInstallations: installationSnapshots,
 		SnapshotAt:            now.UTC().Format(time.RFC3339),
 	}, nil
+}
+
+func resolveDateRangePresetSeeds(config *plansv1.PlanConfiguration, now time.Time) {
+	if config == nil {
+		return
+	}
+	for _, seed := range config.GetSeedArtifacts() {
+		if seed == nil {
+			continue
+		}
+		if strings.TrimSpace(seed.GetLiteralJson()) == "" {
+			continue
+		}
+		var payload struct {
+			Preset string `json:"preset"`
+		}
+		if err := json.Unmarshal([]byte(seed.GetLiteralJson()), &payload); err != nil {
+			continue
+		}
+		if strings.TrimSpace(payload.Preset) == "" {
+			continue
+		}
+		dateRange, ok := ResolveDateRangePreset(payload.Preset, now)
+		if !ok {
+			continue
+		}
+		raw, err := protojson.MarshalOptions{UseProtoNames: false}.Marshal(dateRange)
+		if err != nil {
+			continue
+		}
+		seed.LiteralJson = string(raw)
+	}
 }
 
 func marshalPlanExecutionSnapshot(snapshot workflow.PlanExecutionSnapshot) (json.RawMessage, error) {

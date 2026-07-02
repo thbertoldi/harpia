@@ -3,7 +3,11 @@
   import { fade } from "svelte/transition";
   import type { ChatMessage } from "$lib/chat/types";
   import { locale, translate } from "$lib/i18n";
-  import { appendStepRebound, editBinding, selectBindingOption } from "$lib/plans/assistant";
+  import {
+    appendStepRebound,
+    editBinding,
+    selectBindingOption,
+  } from "$lib/plans/assistant";
   import {
     hydrateMatrixPayload,
     parseBindingStepPayload,
@@ -42,7 +46,9 @@
     }
   }
 
-  let payload = $state<BindingStepPayload | null>(null);
+  let payload = $derived<BindingStepPayload | null>(
+    parsePayloadSafe(message.payloadJson),
+  );
   let configuration = $state<PlanConfiguration | null>(null);
   let template = $state<PlanTemplate | null>(null);
   let savingRowKey = $state<string | null>(null);
@@ -50,10 +56,6 @@
   let editAllOpen = $state(false);
   let editingAnswered = $state(false);
   let submitted = $state(false);
-
-  $effect(() => {
-    payload = parsePayloadSafe(message.payloadJson);
-  });
 
   $effect(() => {
     if (!tenantId || !configurationId) return;
@@ -103,7 +105,9 @@
 
   function optionText(option?: MatrixOption): string {
     if (!option) return "";
-    return option.sublabel ? `${option.label} · ${option.sublabel}` : option.label;
+    return option.sublabel
+      ? `${option.label} · ${option.sublabel}`
+      : option.label;
   }
 
   function reflectBinding(stepKey: string, installationId: string) {
@@ -203,8 +207,8 @@
           <span
             class="rounded border border-plumage bg-surface-hover px-2 py-1 font-mono text-[10px] text-crown-ash"
           >
-            {focusedRow.contracts.input || "—"} → {focusedRow.contracts.output ||
-              "—"}
+            {focusedRow.contracts.input || "—"} → {focusedRow.contracts
+              .output || "—"}
           </span>
           <span>
             {translate("assistant.bindingStep.progress", $locale, {
@@ -280,7 +284,9 @@
         <div transition:fade class="mt-3 overflow-x-auto">
           <table class="w-full min-w-[560px] border-collapse text-left">
             <thead>
-              <tr class="border-b border-plumage text-[10px] text-crown-ash-dark uppercase">
+              <tr
+                class="border-b border-plumage text-[10px] text-crown-ash-dark uppercase"
+              >
                 <th class="py-2 pr-3 font-semibold">
                   {translate("assistant.bindingStep.step", $locale)}
                 </th>
@@ -304,7 +310,9 @@
                   <td class="py-2 pr-3 align-top">
                     <select
                       value={row.current_executor_id}
-                      disabled={savingRowKey !== null || !configuration || !template}
+                      disabled={savingRowKey !== null ||
+                        !configuration ||
+                        !template}
                       onchange={(event) =>
                         onPickMatrix(
                           row,
@@ -317,7 +325,10 @@
                       class="w-full cursor-pointer rounded-md border border-plumage bg-surface-hover px-3 py-2 text-[12px] text-cream outline-none hover:border-talon-gold focus:border-talon-gold disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <option value="" disabled>
-                        {translate("assistant.bindingMatrix.pickExecutor", $locale)}
+                        {translate(
+                          "assistant.bindingMatrix.pickExecutor",
+                          $locale,
+                        )}
                       </option>
                       {#each row.options as option (option.id)}
                         <option value={option.id}>

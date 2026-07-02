@@ -214,8 +214,72 @@ func (v *BindingValidator) ValidateConfigurationForExecution(
 			return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid stored slot bindings: %w", err))
 		}
 	}
+	var seedArtifacts []*plansv1.SeedArtifactBinding
+	if len(config.SeedArtifacts) > 0 {
+		if err := json.Unmarshal(config.SeedArtifacts, &seedArtifacts); err != nil {
+			return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid stored seed artifacts: %w", err))
+		}
+	}
+	if err := validateRootSeedReadiness(template, seedArtifacts); err != nil {
+		return err
+	}
 
 	return v.ValidateSlotBindings(ctx, tenantID, template, plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE, slotBindings)
+}
+
+func validateRootSeedReadiness(template *PlanTemplate, seedArtifacts []*plansv1.SeedArtifactBinding) error {
+	if template == nil {
+		return connect.NewError(connect.CodeInvalidArgument, errors.New("plan template is required"))
+	}
+	hasUpstream := make(map[string]bool, len(template.Steps))
+	for _, edge := range template.Edges {
+		to := strings.TrimSpace(edge.ToStepKey)
+		if to != "" {
+			hasUpstream[to] = true
+		}
+	}
+	seedsByStep := make(map[string][]*plansv1.SeedArtifactBinding, len(seedArtifacts))
+	for _, seed := range seedArtifacts {
+		if seed == nil {
+			continue
+		}
+		stepKey := strings.TrimSpace(seed.GetStepKey())
+		if stepKey == "" {
+			continue
+		}
+		seedsByStep[stepKey] = append(seedsByStep[stepKey], seed)
+	}
+	for _, step := range template.Steps {
+		stepKey := strings.TrimSpace(step.Key)
+		inputType := strings.TrimSpace(step.InputArtifactTypeID)
+		if stepKey == "" || inputType == "" || hasUpstream[stepKey] {
+			continue
+		}
+		if !hasSeedForRootInput(seedsByStep[stepKey], inputType) {
+			return bindingError(stepKey, "", "", connect.CodeFailedPrecondition, fmt.Sprintf("seed artifact is required for input artifact type %q", inputType))
+		}
+	}
+	return nil
+}
+
+func hasSeedForRootInput(seeds []*plansv1.SeedArtifactBinding, inputType string) bool {
+	for _, seed := range seeds {
+		if seed == nil {
+			continue
+		}
+		if strings.TrimSpace(seed.GetArtifactId()) == "" && strings.TrimSpace(seed.GetLiteralJson()) == "" {
+			continue
+		}
+		inputName := strings.TrimSpace(seed.GetInputName())
+		if strings.HasPrefix(inputName, "harpia.internal.") {
+			continue
+		}
+		if inputName == "" || inputName == inputType {
+			return true
+		}
+		return true
+	}
+	return false
 }
 
 func planStepExecutorKind(step PlanStep) plansv1.ExecutorKind {

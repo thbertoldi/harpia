@@ -188,15 +188,21 @@ describe("config summary", () => {
       ],
     });
 
-    expect(buildPlanSummary(WEEKLY_NEWSLETTER_TEMPLATE, configuration)).toEqual({
-      id: "config-weekly-newsletter",
-      templateName: WEEKLY_NEWSLETTER_TEMPLATE.name,
-      intent: "AI",
-      status: PlanConfigurationStatus.RUNNABLE,
-      executorBindings: [{ stepKey: "fetch-news", installationId: "rss-aggregate" }],
-      overseerBindings: [{ stepKey: "write-draft", overseerUserId: "overseer-1" }],
-      sourceGroups: ["rss-tech", "rss-business"],
-      audience: "founders",
-    });
+    expect(buildPlanSummary(WEEKLY_NEWSLETTER_TEMPLATE, configuration)).toEqual(
+      {
+        id: "config-weekly-newsletter",
+        templateName: WEEKLY_NEWSLETTER_TEMPLATE.name,
+        intent: "AI",
+        status: PlanConfigurationStatus.RUNNABLE,
+        executorBindings: [
+          { stepKey: "fetch-news", installationId: "rss-aggregate" },
+        ],
+        overseerBindings: [
+          { stepKey: "write-draft", overseerUserId: "overseer-1" },
+        ],
+        sourceGroups: ["rss-tech", "rss-business"],
+        audience: "founders",
+      },
+    );
   });
 });

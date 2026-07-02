@@ -13,16 +13,14 @@
   let { data } = $props();
 
   const title = $derived(artifactTitle(data.artifact));
-  const selectedVersionId = $derived(page.url.searchParams.get("version") ?? "");
+  const selectedVersionId = $derived(
+    page.url.searchParams.get("version") ?? "",
+  );
   const editRequested = $derived(page.url.searchParams.get("edit") === "1");
 
   function formatTimestamp(value: string): string {
     if (!value) return translate("common.emDash", $locale);
     return formatLocaleDateTime(value, $locale);
-  }
-
-  function versionHref(versionId: string): string {
-    return resolve(`/artifacts/${data.artifact.id}?version=${versionId}`);
   }
 </script>
 
@@ -96,7 +94,9 @@
 
   <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
     <main class="min-w-0 space-y-5">
-      <section class="rounded-lg border border-plumage bg-obsidian-light/20 p-4">
+      <section
+        class="rounded-lg border border-plumage bg-obsidian-light/20 p-4"
+      >
         <div class="mb-3 flex items-center justify-between gap-3">
           <h2 class="font-heading text-base font-semibold text-cream">
             {translate("artifacts.detail.preview", $locale)}
@@ -128,7 +128,9 @@
     </main>
 
     <aside class="space-y-3">
-      <section class="rounded-lg border border-plumage bg-obsidian-light/20 p-4">
+      <section
+        class="rounded-lg border border-plumage bg-obsidian-light/20 p-4"
+      >
         <div class="mb-3 flex items-center gap-2">
           <History class="size-4 text-talon-gold" />
           <h2 class="font-heading text-base font-semibold text-cream">
@@ -143,7 +145,9 @@
           <div class="flex flex-col gap-2">
             {#each data.versions as version (version.id)}
               <a
-                href={versionHref(version.id)}
+                href={resolve(
+                  `/artifacts/${data.artifact.id}?version=${version.id}`,
+                )}
                 class="rounded-md border border-plumage px-3 py-2 transition-colors hover:border-talon-gold/60"
               >
                 <div class="flex items-center justify-between gap-3">

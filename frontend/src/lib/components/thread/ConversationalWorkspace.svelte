@@ -25,8 +25,9 @@
 
   const selectedArtifact = $derived(
     selectedPreviewArtifactId
-      ? (artifacts.find((artifact) => artifact.id === selectedPreviewArtifactId) ??
-        null)
+      ? (artifacts.find(
+          (artifact) => artifact.id === selectedPreviewArtifactId,
+        ) ?? null)
       : null,
   );
 

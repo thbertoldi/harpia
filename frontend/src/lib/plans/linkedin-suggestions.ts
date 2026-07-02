@@ -1,8 +1,5 @@
-import {
-  buildDefaultLinkedInInputValues,
-  materializeLinkedInInputValues,
-  type LinkedInMaterialization,
-} from "$lib/plans/linkedin-template-inputs";
+import { buildDefaultLinkedInInputValues } from "$lib/plans/linkedin-template-inputs";
+import { parameterValuesJson } from "$lib/plans/template-inputs";
 
 export interface LinkedInSuggestionInput {
   topic: string;
@@ -10,12 +7,16 @@ export interface LinkedInSuggestionInput {
   today: Date;
 }
 
-export type LinkedInSuggestion = LinkedInMaterialization;
+export interface LinkedInSuggestion {
+  parameterValuesJson: string;
+}
 
 export function buildLinkedInSuggestion(
   input: LinkedInSuggestionInput,
 ): LinkedInSuggestion {
   const values = buildDefaultLinkedInInputValues(input.today);
   values.theme = input.topic.trim() || values.theme;
-  return materializeLinkedInInputValues(values, input.installationIdsByStep);
+  values.aggregateSourceGroupInstallationId =
+    input.installationIdsByStep["fetch-news"] ?? "";
+  return { parameterValuesJson: parameterValuesJson(values) };
 }

@@ -37,7 +37,9 @@ function rssFeeds(installation: ExecutorInstallation): string[] {
   try {
     const parsed = JSON.parse(installation.detail.value.configJson || "{}");
     return Array.isArray(parsed.feeds)
-      ? parsed.feeds.filter((feed: unknown): feed is string => typeof feed === "string")
+      ? parsed.feeds.filter(
+          (feed: unknown): feed is string => typeof feed === "string",
+        )
       : [];
   } catch {
     return [];
@@ -100,7 +102,9 @@ export async function ensureAggregateRssInstallation({
   const installations = await listInstallations(client, tenantId);
   const selected = selectedIds
     .map((id) => installations.find((installation) => installation.id === id))
-    .filter((installation): installation is ExecutorInstallation => Boolean(installation));
+    .filter((installation): installation is ExecutorInstallation =>
+      Boolean(installation),
+    );
   if (selected.length === 0) return "";
 
   const executorSkuId = selected[0].executorSkuId;

@@ -48,8 +48,36 @@ func (m *mockExecutorLookup) ListEntitlements(_ context.Context, tenantID uuid.U
 	}}, nil
 }
 
-func (m *mockExecutorLookup) ListCompatibleInstallationsForStep(_ context.Context, _ uuid.UUID, _ *plansv1.PlanStep) ([]executors.ExecutorInstallation, error) {
-	return nil, nil
+func (m *mockExecutorLookup) ListCompatibleInstallationsForStep(_ context.Context, tenantID uuid.UUID, step *plansv1.PlanStep) ([]executors.ExecutorInstallation, error) {
+	if m == nil || step == nil {
+		return nil, nil
+	}
+	defaultSKUKey := strings.TrimSpace(step.GetDefaultExecutorSkuKey())
+	var out []executors.ExecutorInstallation
+	for _, installation := range m.installations {
+		if installation == nil || installation.TenantID != tenantID || !installation.Enabled {
+			continue
+		}
+		sku := m.skus[installation.ExecutorSKUID]
+		if sku == nil {
+			continue
+		}
+		if defaultSKUKey != "" && sku.Key != defaultSKUKey {
+			continue
+		}
+		switch step.GetExecutorRequirement().GetExecutorKind() {
+		case plansv1.ExecutorKind_EXECUTOR_KIND_AGENT:
+			if installation.Kind != executors.KindAgent {
+				continue
+			}
+		case plansv1.ExecutorKind_EXECUTOR_KIND_INTEGRATION:
+			if installation.Kind != executors.KindIntegration {
+				continue
+			}
+		}
+		out = append(out, *installation)
+	}
+	return out, nil
 }
 
 func testTemplate() *PlanTemplate {
@@ -284,6 +312,42 @@ func TestValidateConfigurationForExecutionUsesRunnableRules(t *testing.T) {
 	assertBindingError(t, err, connect.CodeFailedPrecondition, "executor_installation_id is required")
 }
 
+func TestValidateConfigurationForExecutionRejectsMissingRootSeed(t *testing.T) {
+	tenantID := uuid.New()
+	validator, bindings := readySeedValidationValidator(t, tenantID)
+	config := &PlanConfiguration{
+		TenantID:     tenantID,
+		SlotBindings: mustMarshalBindings(t, bindings),
+		SeedArtifacts: mustMarshalSeeds(t, []*plansv1.SeedArtifactBinding{
+			{StepKey: "write-draft", InputName: "harpia.internal.ContentPreferences", LiteralJson: `{"tone":"analytical"}`},
+		}),
+	}
+
+	err := validator.ValidateConfigurationForExecution(context.Background(), tenantID, seedValidationTemplate(), config)
+	assertBindingError(t, err, connect.CodeFailedPrecondition, "fetch-news")
+	if !strings.Contains(err.Error(), "harpia.artifacts.v1.DateRange") {
+		t.Fatalf("error = %v, want artifact type", err)
+	}
+}
+
+func TestValidateConfigurationForExecutionAcceptsSeededRootStep(t *testing.T) {
+	tenantID := uuid.New()
+	validator, bindings := readySeedValidationValidator(t, tenantID)
+	config := &PlanConfiguration{
+		TenantID:     tenantID,
+		SlotBindings: mustMarshalBindings(t, bindings),
+		SeedArtifacts: mustMarshalSeeds(t, []*plansv1.SeedArtifactBinding{
+			{StepKey: "fetch-news", InputName: "date_range", LiteralJson: `{"startDate":"2026-06-24","endDate":"2026-06-30"}`},
+			{StepKey: "write-draft", InputName: "harpia.internal.ContentPreferences", LiteralJson: `{"tone":"analytical"}`},
+		}),
+	}
+
+	err := validator.ValidateConfigurationForExecution(context.Background(), tenantID, seedValidationTemplate(), config)
+	if err != nil {
+		t.Fatalf("ValidateConfigurationForExecution() error = %v", err)
+	}
+}
+
 func TestValidateOverseerBindingsDraftAllowsMissingOverseers(t *testing.T) {
 	validator := NewBindingValidator(&mockExecutorLookup{})
 	err := validator.ValidateOverseerBindings(
@@ -335,6 +399,76 @@ func mustMarshalBindings(t *testing.T, bindings []*plansv1.SlotBinding) json.Raw
 		t.Fatalf("marshal bindings: %v", err)
 	}
 	return raw
+}
+
+func seedValidationTemplate() *PlanTemplate {
+	return &PlanTemplate{
+		Steps: []PlanStep{
+			{
+				Key:                  "fetch-news",
+				InputArtifactTypeID:  "harpia.artifacts.v1.DateRange",
+				OutputArtifactTypeID: "harpia.artifacts.v1.NewsList",
+			},
+			{
+				Key:                  "write-draft",
+				InputArtifactTypeID:  "harpia.artifacts.v1.NewsList",
+				OutputArtifactTypeID: "harpia.artifacts.v1.TextDraft",
+			},
+		},
+		Edges: []PlanStepDependency{{FromStepKey: "fetch-news", ToStepKey: "write-draft"}},
+	}
+}
+
+func readySeedValidationValidator(t *testing.T, tenantID uuid.UUID) (*BindingValidator, []*plansv1.SlotBinding) {
+	t.Helper()
+	fetchSKUID := uuid.New()
+	fetchInstallationID := uuid.New()
+	writerSKUID := uuid.New()
+	writerInstallationID := uuid.New()
+	connected := "connected"
+	manifestID := "newsletter-writer-senior"
+	manifestVersion := "1.0.0"
+	lookup := &mockExecutorLookup{
+		installations: map[uuid.UUID]*executors.ExecutorInstallation{
+			fetchInstallationID: {
+				ID:               fetchInstallationID,
+				TenantID:         tenantID,
+				ExecutorSKUID:    fetchSKUID,
+				Kind:             executors.KindIntegration,
+				Enabled:          true,
+				ConnectionStatus: &connected,
+				ConfigJSON:       json.RawMessage(`{"feeds":["https://example.com/rss"]}`),
+			},
+			writerInstallationID: {
+				ID:              writerInstallationID,
+				TenantID:        tenantID,
+				ExecutorSKUID:   writerSKUID,
+				Kind:            executors.KindAgent,
+				Enabled:         true,
+				ManifestID:      &manifestID,
+				ManifestVersion: &manifestVersion,
+			},
+		},
+		skus: map[uuid.UUID]*executors.ExecutorSKU{
+			fetchSKUID:  {ID: fetchSKUID, Key: "rss-news-feed", Kind: executors.KindIntegration},
+			writerSKUID: {ID: writerSKUID, Key: "newsletter-writer-senior", Kind: executors.KindAgent},
+		},
+		entitledSKUs: map[uuid.UUID]bool{fetchSKUID: true, writerSKUID: true},
+	}
+	return NewBindingValidator(lookup), []*plansv1.SlotBinding{
+		{
+			StepKey:                "fetch-news",
+			ExecutorKind:           plansv1.ExecutorKind_EXECUTOR_KIND_INTEGRATION,
+			ExecutorSkuId:          fetchSKUID.String(),
+			ExecutorInstallationId: fetchInstallationID.String(),
+		},
+		{
+			StepKey:                "write-draft",
+			ExecutorKind:           plansv1.ExecutorKind_EXECUTOR_KIND_AGENT,
+			ExecutorSkuId:          writerSKUID.String(),
+			ExecutorInstallationId: writerInstallationID.String(),
+		},
+	}
 }
 
 func assertBindingError(t *testing.T, err error, code connect.Code, contains string) {

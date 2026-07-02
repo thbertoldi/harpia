@@ -14,7 +14,9 @@
   } = $props();
 </script>
 
-<aside class="sticky top-4 flex max-h-[calc(100vh-2rem)] flex-col gap-3 overflow-y-auto">
+<aside
+  class="sticky top-4 flex max-h-[calc(100vh-2rem)] flex-col gap-3 overflow-y-auto"
+>
   <div>
     <h2 class="font-heading text-base font-semibold text-cream">
       {translate("artifacts.rail.heading", $locale)}
@@ -33,12 +35,7 @@
   {:else}
     <div class="flex flex-col gap-2">
       {#each artifacts as artifact (artifact.id)}
-        <ArtifactCard
-          {tenantId}
-          {artifact}
-          compact
-          onOpen={onOpenArtifact}
-        />
+        <ArtifactCard {tenantId} {artifact} compact onOpen={onOpenArtifact} />
       {/each}
     </div>
   {/if}

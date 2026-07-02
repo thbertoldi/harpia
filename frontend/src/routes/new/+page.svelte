@@ -8,6 +8,10 @@
   import { PlanConfigurationStatus } from "$lib/gen/harpia/plans/v1/plans_pb";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
   import TemplatePickerCard from "$lib/components/thread/TemplatePickerCard.svelte";
+  import {
+    genericInputInitialValues,
+    genericParameterValuesJson,
+  } from "$lib/plans/template-inputs";
 
   let { data } = $props();
   const tenantId = $derived(getTenant()?.id ?? "");
@@ -54,6 +58,12 @@
     creating = true;
     createError = null;
     try {
+      const template = data.templates.find(
+        (candidate) => candidate.id === templateId,
+      );
+      const parameterValuesJson = genericParameterValuesJson(
+        genericInputInitialValues(template?.inputParameters ?? [], {}),
+      );
       const threadResponse = await threadClient.createThread({
         tenantId,
         title: matchedTemplate?.name ?? "Untitled chat",
@@ -67,16 +77,12 @@
         workspaceId: "",
         planTemplateId: templateId,
         status: PlanConfigurationStatus.DRAFT,
-        seedArtifacts: [],
-        slotBindings: [],
-        overseerBindings: [],
-        behaviorPolicies: undefined,
-        schedule: undefined,
         threadId,
+        parameterValuesJson,
       });
       const configId = response.planConfiguration?.id;
       if (!configId) throw new Error("createPlanConfiguration returned no id");
-      await goto(resolve(`/chat/${threadId}`));
+      await goto(resolve(`/plans/configurations/${configId}`));
     } catch (e) {
       createError = e instanceof Error ? e.message : "Failed to create plan";
     } finally {

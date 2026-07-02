@@ -274,8 +274,7 @@ export function buildPlanSummary(
       overseerUserId: binding.overseerUserId,
     })),
     sourceGroups: stringList(params.source_groups ?? params.source_group),
-    audience:
-      typeof params.audience === "string" ? params.audience.trim() : "",
+    audience: typeof params.audience === "string" ? params.audience.trim() : "",
   };
 }
 

@@ -25,7 +25,9 @@
   }
 </script>
 
-<aside class="sticky top-4 flex max-h-[calc(100vh-2rem)] flex-col gap-3 overflow-y-auto">
+<aside
+  class="sticky top-4 flex max-h-[calc(100vh-2rem)] flex-col gap-3 overflow-y-auto"
+>
   <button
     type="button"
     class="inline-flex items-center gap-2 self-start rounded-md border border-plumage px-3 py-2 text-[12px] text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
