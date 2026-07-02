@@ -1,0 +1,22 @@
+# air config for Tilt live reload (used by the `dev` stage of Containerfile).
+# air watches the source that Tilt syncs into the container, rebuilds ./cmd/api,
+# and restarts the binary. Environment (HARPIA_ROLE, DATABASE_URL, …) is provided
+# by the Kubernetes pod and inherited by the restarted process, so the same image
+# serves both the API and the plan worker.
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go build -o ./tmp/api ./cmd/api"
+  bin = "./tmp/api"
+  include_ext = ["go"]
+  include_dir = ["cmd", "internal"]
+  exclude_dir = ["tmp"]
+  # Wait for a burst of synced files to settle before rebuilding.
+  delay = 400
+  stop_on_error = true
+  send_interrupt = true
+  kill_delay = "2s"
+
+[misc]
+  clean_on_exit = true

@@ -8,6 +8,19 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /api ./cmd/api/
 
+# Development image for Tilt live reload (built only when target=dev). Keeps the
+# Go toolchain plus `air` (a file watcher that rebuilds and restarts the binary
+# in-container) and `tar` (required by Tilt's live_update file sync). The prod
+# stage below never depends on this, so `docker build` without a target skips it.
+FROM golang:1.25-alpine AS dev
+WORKDIR /app
+RUN apk add --no-cache tar && go install github.com/air-verse/air@latest
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+ENV HARPIA_DEV_RELOAD=1
+ENTRYPOINT ["air", "-c", ".air.toml"]
+
 FROM gcr.io/distroless/static-debian12
 
 COPY --from=builder /api /api

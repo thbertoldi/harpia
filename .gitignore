@@ -10,6 +10,7 @@ _bmad-output/
 
 # Go
 control-plane/bin/
+control-plane/tmp/
 *.exe
 *.exe~
 *.dll

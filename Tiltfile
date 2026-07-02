@@ -16,12 +16,16 @@ docker_build(
     'harpia-api',
     context='./control-plane',
     dockerfile='./control-plane/Containerfile',
-    # No live_update: the runtime image is distroless (no shell, no Go toolchain,
-    # no tar), so in-container `go build` and file sync cannot work — the
-    # `run('go build')` step never had a Go toolchain to run against. Tilt rebuilds
-    # the image on source change instead (Go module + build layers are cached).
-    # For sub-second Go reloads, switch to a golang-based dev stage running `air`
-    # and sync source into it (tracked as a dev-tooling follow-up).
+    # Build the golang `dev` stage (Go toolchain + air + tar) for local dev so
+    # live_update can sync source and air rebuilds/restarts in-container. Prod
+    # builds omit `target` and get the distroless final stage. The syncs match
+    # air's watched dirs (cmd, internal); air handles the rebuild + restart, so no
+    # in-container run step is needed.
+    target='dev',
+    live_update=[
+        sync('./control-plane/cmd', '/app/cmd'),
+        sync('./control-plane/internal', '/app/internal'),
+    ],
 )
 k8s_yaml('deploy/dev/kind/api.yaml')
 
