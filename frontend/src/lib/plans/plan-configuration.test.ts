@@ -116,6 +116,7 @@ describe("plan configuration persistence", () => {
       template,
       status: PlanConfigurationStatus.DRAFT,
       slotBindings: [],
+      threadId: "test-thread",
     });
 
     expect(createPlanConfiguration).toHaveBeenCalledWith(

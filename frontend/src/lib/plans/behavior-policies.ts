@@ -166,6 +166,7 @@ export async function saveBehaviorPoliciesForTemplate(
   template: PlanTemplate,
   values: BehaviorPoliciesFormValues,
   existingConfiguration?: PlanConfiguration | null,
+  threadId?: string,
 ): Promise<BehaviorPoliciesSaveResult> {
   const validationError = validateBehaviorPolicies(values);
   if (validationError) {
@@ -177,6 +178,7 @@ export async function saveBehaviorPoliciesForTemplate(
     existingConfiguration,
     status: existingConfiguration?.status ?? PlanConfigurationStatus.DRAFT,
     behaviorPolicies: policiesToProto(values),
+    threadId,
   });
 
   return { configuration, source: "api" };

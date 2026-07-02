@@ -181,6 +181,8 @@ describe("behavior policies", () => {
     const result = await saveBehaviorPoliciesForTemplate(
       template,
       DEFAULT_BEHAVIOR_POLICIES,
+      undefined,
+      "test-thread",
     );
 
     expect(createPlanConfiguration).toHaveBeenCalledWith(
@@ -258,7 +260,7 @@ describe("behavior policies", () => {
     createPlanConfiguration.mockRejectedValue(new Error("network error"));
 
     await expect(
-      saveBehaviorPoliciesForTemplate(template, DEFAULT_BEHAVIOR_POLICIES),
+      saveBehaviorPoliciesForTemplate(template, DEFAULT_BEHAVIOR_POLICIES, undefined, "test-thread"),
     ).rejects.toThrow("network error");
   });
 });
