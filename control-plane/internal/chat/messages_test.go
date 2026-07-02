@@ -185,6 +185,71 @@ func TestBuildPlanProposedPayload(t *testing.T) {
 	}
 }
 
+func TestBuildPlanProposedPayloadIncludesRefinementMetadata(t *testing.T) {
+	got := BuildPlanProposedPayload("msg-1", "Create a LinkedIn post about AI", []PlanProposalCandidate{
+		{
+			TemplateID:           "tpl-1",
+			TemplateKey:          "linkedin",
+			TemplateName:         "LinkedIn Post",
+			Confidence:           0.72,
+			InputValuesJSON:      `{"theme":"AI"}`,
+			RecommendationReason: "Good fit for social publishing",
+			CompatibilityLabel:   "Good match",
+		},
+		{
+			TemplateID:           "tpl-2",
+			TemplateKey:          "newsletter",
+			TemplateName:         "Newsletter",
+			Confidence:           0.91,
+			InputValuesJSON:      `{"theme":"AI"}`,
+			RecommendationReason: "Best fit for recurring digest",
+			CompatibilityLabel:   "Best match",
+		},
+	}, PlanRefinementDefaults{
+		Audience:       "startup founders",
+		Themes:         []string{"AI", "B2B"},
+		TopicsToAvoid:  []string{"rumors"},
+		SourceGroups:   []string{"tech", "business"},
+		Language:       "pt-BR",
+		Tone:           "practical",
+		DateRangeStart: "2026-06-01",
+		DateRangeEnd:   "2026-07-01",
+	})
+	var decoded struct {
+		BestCandidateID    string `json:"best_candidate_id"`
+		RefinementDefaults struct {
+			Audience       string   `json:"audience"`
+			Themes         []string `json:"themes"`
+			TopicsToAvoid  []string `json:"topics_to_avoid"`
+			SourceGroups   []string `json:"source_groups"`
+			Language       string   `json:"language"`
+			Tone           string   `json:"tone"`
+			DateRangeStart string   `json:"date_range_start"`
+			DateRangeEnd   string   `json:"date_range_end"`
+		} `json:"refinement_defaults"`
+		Candidates []struct {
+			TemplateID           string `json:"template_id"`
+			RecommendationReason string `json:"recommendation_reason"`
+			CompatibilityLabel   string `json:"compatibility_label"`
+		} `json:"candidates"`
+	}
+	if err := json.Unmarshal([]byte(got), &decoded); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if decoded.BestCandidateID != "tpl-2" {
+		t.Fatalf("best_candidate_id = %q", decoded.BestCandidateID)
+	}
+	if decoded.RefinementDefaults.Audience != "startup founders" {
+		t.Fatalf("refinement_defaults = %+v", decoded.RefinementDefaults)
+	}
+	if len(decoded.RefinementDefaults.Themes) != 2 || decoded.RefinementDefaults.Themes[0] != "AI" {
+		t.Fatalf("themes = %+v", decoded.RefinementDefaults.Themes)
+	}
+	if decoded.Candidates[1].RecommendationReason != "Best fit for recurring digest" {
+		t.Fatalf("candidate metadata = %+v", decoded.Candidates)
+	}
+}
+
 func TestBuildPlanProposedPayloadEmptyCandidates(t *testing.T) {
 	got := BuildPlanProposedPayload("msg-1", "", nil)
 	var decoded struct {

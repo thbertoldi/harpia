@@ -130,6 +130,14 @@ type assistantBindingStepPayload struct {
 	Rows        []AssistantMatrixRow `json:"rows"`
 }
 
+type assistantOverseerStepPayload struct {
+	State            string               `json:"state"`
+	StepKey          string               `json:"step_key"`
+	Options          []AssistantOption    `json:"options"`
+	RequiredStepKeys []string             `json:"required_step_keys"`
+	Rows             []AssistantMatrixRow `json:"rows"`
+}
+
 type userSelectionPayload struct {
 	InResponseToMessageID string `json:"in_response_to_message_id"`
 	OptionID              string `json:"option_id"`
@@ -178,6 +186,28 @@ func BuildAssistantBindingStepPayload(stepKey string, options []AssistantOption,
 		Options:     options,
 		PoliciesSet: policiesSet,
 		Rows:        rows,
+	})
+}
+
+// BuildAssistantOverseerStepPayload returns the JSON payload for a focused
+// conversational OverseerBinding prompt. The focused options feed the chips;
+// rows feed the matrix review context after selection.
+func BuildAssistantOverseerStepPayload(stepKey string, options []AssistantOption, requiredStepKeys []string, rows []AssistantMatrixRow) string {
+	if options == nil {
+		options = []AssistantOption{}
+	}
+	if requiredStepKeys == nil {
+		requiredStepKeys = []string{}
+	}
+	if rows == nil {
+		rows = []AssistantMatrixRow{}
+	}
+	return mustEncodeJSON(assistantOverseerStepPayload{
+		State:            "OVERSEER_STEP",
+		StepKey:          stepKey,
+		Options:          options,
+		RequiredStepKeys: requiredStepKeys,
+		Rows:             rows,
 	})
 }
 
@@ -267,30 +297,67 @@ func BuildAssistantLandingPayload(actions []AssistantAction) string {
 // PlanProposalCandidate is one template the router proposes for a thread's
 // latest user message, with inferred input values.
 type PlanProposalCandidate struct {
-	TemplateID      string  `json:"template_id"`
-	TemplateKey     string  `json:"template_key"`
-	TemplateName    string  `json:"template_name"`
-	Confidence      float64 `json:"confidence"`
-	InputValuesJSON string  `json:"input_values_json"`
+	TemplateID           string  `json:"template_id"`
+	TemplateKey          string  `json:"template_key"`
+	TemplateName         string  `json:"template_name"`
+	Confidence           float64 `json:"confidence"`
+	InputValuesJSON      string  `json:"input_values_json"`
+	RecommendationReason string  `json:"recommendation_reason,omitempty"`
+	CompatibilityLabel   string  `json:"compatibility_label,omitempty"`
+}
+
+// PlanRefinementDefaults carries deterministic assistant suggestions for the
+// pre-create refinement loop.
+type PlanRefinementDefaults struct {
+	Audience       string   `json:"audience,omitempty"`
+	Themes         []string `json:"themes,omitempty"`
+	TopicsToAvoid  []string `json:"topics_to_avoid,omitempty"`
+	SourceGroups   []string `json:"source_groups,omitempty"`
+	Language       string   `json:"language,omitempty"`
+	Tone           string   `json:"tone,omitempty"`
+	DateRangeStart string   `json:"date_range_start,omitempty"`
+	DateRangeEnd   string   `json:"date_range_end,omitempty"`
 }
 
 type planProposedPayload struct {
-	SourceMessageID string                  `json:"source_message_id"`
-	Summary         string                  `json:"summary,omitempty"`
-	Candidates      []PlanProposalCandidate `json:"candidates"`
+	SourceMessageID    string                  `json:"source_message_id"`
+	Summary            string                  `json:"summary,omitempty"`
+	BestCandidateID    string                  `json:"best_candidate_id,omitempty"`
+	RefinementDefaults *PlanRefinementDefaults `json:"refinement_defaults,omitempty"`
+	Candidates         []PlanProposalCandidate `json:"candidates"`
 }
 
 // BuildPlanProposedPayload returns the JSON payload for a PLAN_PROPOSED message.
 // candidates may be empty when the router found no confident match.
-func BuildPlanProposedPayload(sourceMessageID, summary string, candidates []PlanProposalCandidate) string {
+func BuildPlanProposedPayload(sourceMessageID, summary string, candidates []PlanProposalCandidate, defaults ...PlanRefinementDefaults) string {
 	if candidates == nil {
 		candidates = []PlanProposalCandidate{}
 	}
+	bestCandidateID := bestPlanProposalCandidateID(candidates)
+	var refinementDefaults *PlanRefinementDefaults
+	if len(defaults) > 0 {
+		refinementDefaults = &defaults[0]
+	}
 	return mustEncodeJSON(planProposedPayload{
-		SourceMessageID: sourceMessageID,
-		Summary:         strings.TrimSpace(summary),
-		Candidates:      candidates,
+		SourceMessageID:    sourceMessageID,
+		Summary:            strings.TrimSpace(summary),
+		BestCandidateID:    bestCandidateID,
+		RefinementDefaults: refinementDefaults,
+		Candidates:         candidates,
 	})
+}
+
+func bestPlanProposalCandidateID(candidates []PlanProposalCandidate) string {
+	if len(candidates) == 0 {
+		return ""
+	}
+	best := candidates[0]
+	for _, candidate := range candidates[1:] {
+		if candidate.Confidence > best.Confidence {
+			best = candidate
+		}
+	}
+	return best.TemplateID
 }
 
 type planAttachedPayload struct {

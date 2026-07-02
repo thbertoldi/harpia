@@ -61,6 +61,15 @@ func testTemplate() *PlanTemplate {
 	}
 }
 
+func overseerTestTemplate() *PlanTemplate {
+	return &PlanTemplate{
+		Steps: []PlanStep{
+			{Key: "fetch-news", ExecutorRequirement: json.RawMessage(`{"executor_kind":2}`)},
+			{Key: "adapt-for-linkedin", ExecutorRequirement: json.RawMessage(`{"executor_kind":1}`)},
+		},
+	}
+}
+
 func TestValidateSlotBindingsDraftAllowsMissingBindings(t *testing.T) {
 	validator := NewBindingValidator(&mockExecutorLookup{})
 	err := validator.ValidateSlotBindings(context.Background(), uuid.New(), testTemplate(), plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT, nil)
@@ -273,6 +282,50 @@ func TestValidateConfigurationForExecutionUsesRunnableRules(t *testing.T) {
 	validator := NewBindingValidator(&mockExecutorLookup{})
 	err := validator.ValidateConfigurationForExecution(context.Background(), tenantID, testTemplate(), config)
 	assertBindingError(t, err, connect.CodeFailedPrecondition, "executor_installation_id is required")
+}
+
+func TestValidateOverseerBindingsDraftAllowsMissingOverseers(t *testing.T) {
+	validator := NewBindingValidator(&mockExecutorLookup{})
+	err := validator.ValidateOverseerBindings(
+		overseerTestTemplate(),
+		plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("expected draft with no overseers to succeed: %v", err)
+	}
+}
+
+func TestValidateOverseerBindingsRunnableRejectsMissingAgentOverseer(t *testing.T) {
+	validator := NewBindingValidator(&mockExecutorLookup{})
+	err := validator.ValidateOverseerBindings(
+		overseerTestTemplate(),
+		plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
+		nil,
+	)
+	assertBindingError(t, err, connect.CodeFailedPrecondition, "overseer binding is required")
+}
+
+func TestValidateOverseerBindingsScheduledRejectsMissingAgentOverseer(t *testing.T) {
+	validator := NewBindingValidator(&mockExecutorLookup{})
+	err := validator.ValidateOverseerBindings(
+		overseerTestTemplate(),
+		plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_SCHEDULED,
+		[]*plansv1.OverseerBinding{{StepKey: "fetch-news", OverseerUserId: "user-ana"}},
+	)
+	assertBindingError(t, err, connect.CodeFailedPrecondition, "adapt-for-linkedin")
+}
+
+func TestValidateOverseerBindingsRunnableAcceptsAgentOverseerAndSkipsIntegration(t *testing.T) {
+	validator := NewBindingValidator(&mockExecutorLookup{})
+	err := validator.ValidateOverseerBindings(
+		overseerTestTemplate(),
+		plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
+		[]*plansv1.OverseerBinding{{StepKey: "adapt-for-linkedin", OverseerUserId: "user-ana"}},
+	)
+	if err != nil {
+		t.Fatalf("expected runnable overseer bindings to pass: %v", err)
+	}
 }
 
 func mustMarshalBindings(t *testing.T, bindings []*plansv1.SlotBinding) json.RawMessage {

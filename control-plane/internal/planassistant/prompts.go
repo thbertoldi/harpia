@@ -27,6 +27,8 @@ type PromptInput struct {
 	Template         *plansv1.PlanTemplate
 	Config           *plansv1.PlanConfiguration
 	CandidatesByStep map[string][]ExecutorOption
+	// CurrentUserID is the MVP overseer candidate value for OVERSEER_STEP.
+	CurrentUserID string
 	// CurrentUserLabel is the display name used as the per-row overseer
 	// default ("You" when empty).
 	CurrentUserLabel string
@@ -45,6 +47,9 @@ func BuildPrompt(state AssistantState, in PromptInput) (text, payload string) {
 	case StateBindingStep:
 		return buildBindingStepPrompt(state, in)
 
+	case StateOverseerStep:
+		return buildOverseerStepPrompt(state, in)
+
 	case StateBindingMatrix:
 		return buildMatrixPrompt(in)
 
@@ -56,15 +61,14 @@ func BuildPrompt(state AssistantState, in PromptInput) (text, payload string) {
 
 func buildMatrixPrompt(in PromptInput) (string, string) {
 	user := currentUserLabel(in)
-	rows := matrixRows(in, user)
+	rows := matrixRows(in)
 	text := fmt.Sprintf("Here's the plan. Pick an executor for each task — overseer defaults to %s.", user)
 	payload := chat.BuildAssistantMatrixPayload(rows, policiesSet(in.Config.GetBehaviorPolicies()))
 	return text, payload
 }
 
 func buildBindingStepPrompt(state AssistantState, in PromptInput) (string, string) {
-	user := currentUserLabel(in)
-	rows := matrixRows(in, user)
+	rows := matrixRows(in)
 	var focusedTitle string
 	var focusedOptions []chat.AssistantOption
 	for _, row := range rows {
@@ -87,6 +91,25 @@ func buildBindingStepPrompt(state AssistantState, in PromptInput) (string, strin
 	return text, payload
 }
 
+func buildOverseerStepPrompt(state AssistantState, in PromptInput) (string, string) {
+	rows := matrixRows(in)
+	focusedTitle := state.StepKey
+	for _, row := range rows {
+		if row.StepKey == state.StepKey {
+			focusedTitle = row.StepTitle
+			break
+		}
+	}
+	text := fmt.Sprintf("Who should oversee %s?", focusedTitle)
+	payload := chat.BuildAssistantOverseerStepPayload(
+		state.StepKey,
+		overseerOptions(in),
+		requiredOverseerStepKeys(in.Template),
+		rows,
+	)
+	return text, payload
+}
+
 func currentUserLabel(in PromptInput) string {
 	user := in.CurrentUserLabel
 	if user == "" {
@@ -95,7 +118,17 @@ func currentUserLabel(in PromptInput) string {
 	return user
 }
 
-func matrixRows(in PromptInput, user string) []chat.AssistantMatrixRow {
+func currentUserID(in PromptInput) string {
+	userID := in.CurrentUserID
+	if userID == "" {
+		userID = "self"
+	}
+	return userID
+}
+
+func matrixRows(in PromptInput) []chat.AssistantMatrixRow {
+	user := currentUserLabel(in)
+	userID := currentUserID(in)
 	bindings := map[string]string{}
 	for _, sb := range in.Config.GetSlotBindings() {
 		if sb.GetExecutorInstallationId() != "" {
@@ -113,7 +146,7 @@ func matrixRows(in PromptInput, user string) []chat.AssistantMatrixRow {
 	for _, step := range in.Template.GetSteps() {
 		overseerID := overseers[step.GetKey()]
 		overseerLabel := user
-		if overseerID != "" && overseerID != "self" {
+		if overseerID != "" && overseerID != "self" && overseerID != userID {
 			overseerLabel = overseerID
 		}
 		rows = append(rows, chat.AssistantMatrixRow{
@@ -130,6 +163,15 @@ func matrixRows(in PromptInput, user string) []chat.AssistantMatrixRow {
 		})
 	}
 	return rows
+}
+
+func overseerOptions(in PromptInput) []chat.AssistantOption {
+	userID := currentUserID(in)
+	return []chat.AssistantOption{{
+		ID:    userID,
+		Label: currentUserLabel(in),
+		Value: userID,
+	}}
 }
 
 func buildLandingPrompt() (string, string) {

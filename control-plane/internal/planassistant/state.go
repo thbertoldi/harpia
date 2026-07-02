@@ -17,6 +17,8 @@ const (
 	// StateBindingMatrix is the review/save gate once all PlanSteps have an
 	// executor SlotBinding but the configuration is still DRAFT.
 	StateBindingMatrix StateKind = "BINDING_MATRIX"
+	// StateOverseerStep asks who oversees one agent-backed PlanStep at a time.
+	StateOverseerStep StateKind = "OVERSEER_STEP"
 	// StateSaved is returned once status leaves DRAFT (the matrix card's
 	// Save button promoted it). The controller emits the LandingCard.
 	StateSaved StateKind = "SAVED"
@@ -44,6 +46,9 @@ func DeriveState(template *plansv1.PlanTemplate, config *plansv1.PlanConfigurati
 		if stepKey := firstUnboundStepKey(template, config); stepKey != "" {
 			return AssistantState{Kind: StateBindingStep, StepKey: stepKey}
 		}
+		if stepKey := firstUnboundOverseerStepKey(template, config); stepKey != "" {
+			return AssistantState{Kind: StateOverseerStep, StepKey: stepKey}
+		}
 		return AssistantState{Kind: StateBindingMatrix}
 	default:
 		// RUNNABLE / SCHEDULED / DISABLED / ARCHIVED — the Save button fired
@@ -68,6 +73,41 @@ func firstUnboundStepKey(template *plansv1.PlanTemplate, config *plansv1.PlanCon
 		}
 	}
 	return ""
+}
+
+func firstUnboundOverseerStepKey(template *plansv1.PlanTemplate, config *plansv1.PlanConfiguration) string {
+	if template == nil || config == nil {
+		return ""
+	}
+	bound := make(map[string]bool, len(config.GetOverseerBindings()))
+	for _, ob := range config.GetOverseerBindings() {
+		if ob.GetStepKey() != "" && ob.GetOverseerUserId() != "" {
+			bound[ob.GetStepKey()] = true
+		}
+	}
+	for _, step := range template.GetSteps() {
+		if step.GetKey() != "" && isAgentBackedStep(step) && !bound[step.GetKey()] {
+			return step.GetKey()
+		}
+	}
+	return ""
+}
+
+func requiredOverseerStepKeys(template *plansv1.PlanTemplate) []string {
+	if template == nil {
+		return nil
+	}
+	keys := make([]string, 0, len(template.GetSteps()))
+	for _, step := range template.GetSteps() {
+		if step.GetKey() != "" && isAgentBackedStep(step) {
+			keys = append(keys, step.GetKey())
+		}
+	}
+	return keys
+}
+
+func isAgentBackedStep(step *plansv1.PlanStep) bool {
+	return step.GetExecutorRequirement().GetExecutorKind() == plansv1.ExecutorKind_EXECUTOR_KIND_AGENT
 }
 
 // policiesSet reports whether both behavior-policy fields are set. Consumed by

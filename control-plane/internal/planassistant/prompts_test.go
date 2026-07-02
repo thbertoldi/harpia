@@ -139,6 +139,83 @@ func TestBuildPrompt_BindingStep_RendersFocusedOptionsAndAllRows(t *testing.T) {
 	}
 }
 
+func TestBuildPrompt_OverseerStep_RendersCurrentUserOptionAndRows(t *testing.T) {
+	tpl := mkTemplate("fetch-news", "write-draft", "adapt")
+	markStepIntegration(tpl, "fetch-news")
+	markStepAgent(tpl, "write-draft")
+	markStepAgent(tpl, "adapt")
+	tpl.Steps[1].Title = "Write draft"
+	tpl.Steps[1].InputArtifactTypeId = "NewsItems"
+	tpl.Steps[1].OutputArtifactTypeId = "TextDraft"
+	in := planassistant.PromptInput{
+		Template: tpl,
+		Config: &plansv1.PlanConfiguration{
+			PlanTemplateId: "tpl-1",
+			SlotBindings: []*plansv1.SlotBinding{
+				{StepKey: "fetch-news", ExecutorInstallationId: "inst-rss"},
+				{StepKey: "write-draft", ExecutorInstallationId: "inst-writer"},
+				{StepKey: "adapt", ExecutorInstallationId: "inst-adapt"},
+			},
+			OverseerBindings: []*plansv1.OverseerBinding{
+				{StepKey: "adapt", OverseerUserId: "user-paula"},
+			},
+		},
+		CandidatesByStep: map[string][]planassistant.ExecutorOption{
+			"fetch-news":  {{StepKey: "fetch-news", InstallationID: "inst-rss", DisplayName: "Tech RSS", SkuKey: "rss-news-feed"}},
+			"write-draft": {{StepKey: "write-draft", InstallationID: "inst-writer", DisplayName: "Writer", SkuKey: "newsletter-writer-senior"}},
+			"adapt":       {{StepKey: "adapt", InstallationID: "inst-adapt", DisplayName: "Voice", SkuKey: "linkedin-voice-senior"}},
+		},
+		CurrentUserID:    "user-ana",
+		CurrentUserLabel: "Ana Operator",
+	}
+	state := planassistant.AssistantState{Kind: planassistant.StateKind("OVERSEER_STEP"), StepKey: "write-draft"}
+	text, payload := planassistant.BuildPrompt(state, in)
+	if !strings.Contains(text, "Write draft") {
+		t.Fatalf("text should mention the focused step, got %q", text)
+	}
+
+	var parsed struct {
+		State            string   `json:"state"`
+		StepKey          string   `json:"step_key"`
+		RequiredStepKeys []string `json:"required_step_keys"`
+		Options          []struct {
+			ID    string `json:"id"`
+			Label string `json:"label"`
+			Value string `json:"value"`
+		} `json:"options"`
+		Rows []struct {
+			StepKey              string `json:"step_key"`
+			CurrentExecutorID    string `json:"current_executor_id"`
+			CurrentOverseerID    string `json:"current_overseer_id"`
+			CurrentOverseerLabel string `json:"current_overseer_label"`
+		} `json:"rows"`
+	}
+	if err := json.Unmarshal([]byte(payload), &parsed); err != nil {
+		t.Fatalf("payload not valid JSON: %v\n%s", err, payload)
+	}
+	if parsed.State != "OVERSEER_STEP" {
+		t.Fatalf("want state OVERSEER_STEP, got %q", parsed.State)
+	}
+	if parsed.StepKey != "write-draft" {
+		t.Fatalf("step_key = %q, want write-draft", parsed.StepKey)
+	}
+	if len(parsed.RequiredStepKeys) != 2 || parsed.RequiredStepKeys[0] != "write-draft" || parsed.RequiredStepKeys[1] != "adapt" {
+		t.Fatalf("required_step_keys not populated from agent steps: %+v", parsed.RequiredStepKeys)
+	}
+	if len(parsed.Options) != 1 || parsed.Options[0].Value != "user-ana" || parsed.Options[0].Label != "Ana Operator" {
+		t.Fatalf("current-user overseer option not populated: %+v", parsed.Options)
+	}
+	if len(parsed.Rows) != 3 {
+		t.Fatalf("want all 3 rows, got %d", len(parsed.Rows))
+	}
+	if parsed.Rows[1].CurrentOverseerID != "" {
+		t.Fatalf("focused row should be missing overseer, got %+v", parsed.Rows[1])
+	}
+	if parsed.Rows[2].CurrentOverseerID != "user-paula" || parsed.Rows[2].CurrentOverseerLabel != "user-paula" {
+		t.Fatalf("existing overseer binding not reflected in rows: %+v", parsed.Rows[2])
+	}
+}
+
 func TestBuildPrompt_Landing_HasThreeActions(t *testing.T) {
 	state := planassistant.AssistantState{Kind: planassistant.StateSaved}
 	in := planassistant.PromptInput{Config: &plansv1.PlanConfiguration{

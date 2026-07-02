@@ -2,7 +2,9 @@ package threads
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -422,25 +424,160 @@ func (h *Handler) ProposePlan(ctx context.Context, req *connect.Request[chatv1.P
 	}
 
 	payloadCandidates := make([]chat.PlanProposalCandidate, 0, len(candidates))
+	bestTemplateID := bestCopilotCandidateID(candidates)
 	for _, c := range candidates {
+		templateID := c.TemplateID.String()
 		payloadCandidates = append(payloadCandidates, chat.PlanProposalCandidate{
-			TemplateID:      c.TemplateID.String(),
-			TemplateKey:     keyByID[c.TemplateID.String()],
-			TemplateName:    nameByID[c.TemplateID.String()],
-			Confidence:      c.Confidence,
-			InputValuesJSON: c.InputValuesJSON,
+			TemplateID:           templateID,
+			TemplateKey:          keyByID[templateID],
+			TemplateName:         nameByID[templateID],
+			Confidence:           c.Confidence,
+			InputValuesJSON:      c.InputValuesJSON,
+			RecommendationReason: proposalRecommendationReason(nameByID[templateID]),
+			CompatibilityLabel:   proposalCompatibilityLabel(templateID, bestTemplateID),
 		})
 	}
+	refinementDefaults := buildPlanRefinementDefaults(candidates, summaries)
 
 	msg, err := h.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
 		ThreadID:    threadID.String(),
 		Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_AGENT,
 		Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_PLAN_PROPOSED,
 		Text:        "Proposed a plan.",
-		PayloadJSON: chat.BuildPlanProposedPayload(latestUser.GetId(), summary, payloadCandidates),
+		PayloadJSON: chat.BuildPlanProposedPayload(latestUser.GetId(), summary, payloadCandidates, refinementDefaults),
 	})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 	return connect.NewResponse(&chatv1.ProposePlanResponse{Message: msg}), nil
+}
+
+func bestCopilotCandidateID(candidates []copilot.Candidate) string {
+	if len(candidates) == 0 {
+		return ""
+	}
+	best := candidates[0]
+	for _, candidate := range candidates[1:] {
+		if candidate.Confidence > best.Confidence {
+			best = candidate
+		}
+	}
+	return best.TemplateID.String()
+}
+
+func proposalCompatibilityLabel(templateID, bestTemplateID string) string {
+	if templateID != "" && templateID == bestTemplateID {
+		return "Best match"
+	}
+	return "Alternative"
+}
+
+func proposalRecommendationReason(templateName string) string {
+	if strings.TrimSpace(templateName) == "" {
+		return "This plan is compatible with the request."
+	}
+	return "This plan matches the requested outcome for " + templateName + "."
+}
+
+func buildPlanRefinementDefaults(candidates []copilot.Candidate, summaries []copilot.TemplateSummary) chat.PlanRefinementDefaults {
+	bestID := bestCopilotCandidateID(candidates)
+	if bestID == "" {
+		return chat.PlanRefinementDefaults{}
+	}
+	summaryByID := map[string]copilot.TemplateSummary{}
+	for _, summary := range summaries {
+		summaryByID[summary.ID.String()] = summary
+	}
+	var best copilot.Candidate
+	for _, candidate := range candidates {
+		if candidate.TemplateID.String() == bestID {
+			best = candidate
+			break
+		}
+	}
+	inputs := parseProposalInputs(best.InputValuesJSON)
+	tpl := summaryByID[bestID]
+	defaults := chat.PlanRefinementDefaults{
+		Audience:      stringInput(inputs, "audience"),
+		Themes:        stringListInput(inputs, "theme"),
+		TopicsToAvoid: stringListInput(inputs, "topics_to_avoid"),
+		SourceGroups:  sourceGroupDefaults(inputs, tpl),
+		Language:      stringInput(inputs, "language"),
+		Tone:          stringInput(inputs, "tone"),
+	}
+	if dateRange, ok := inputs["date_range"].(map[string]any); ok {
+		defaults.DateRangeStart = stringFromAny(dateRange["startDate"])
+		defaults.DateRangeEnd = stringFromAny(dateRange["endDate"])
+	}
+	return defaults
+}
+
+func parseProposalInputs(raw string) map[string]any {
+	out := map[string]any{}
+	if strings.TrimSpace(raw) == "" {
+		return out
+	}
+	if err := json.Unmarshal([]byte(raw), &out); err != nil {
+		return map[string]any{}
+	}
+	return out
+}
+
+func stringInput(inputs map[string]any, key string) string {
+	return stringFromAny(inputs[key])
+}
+
+func stringListInput(inputs map[string]any, key string) []string {
+	value, ok := inputs[key]
+	if !ok {
+		return nil
+	}
+	if list, ok := value.([]any); ok {
+		out := make([]string, 0, len(list))
+		for _, item := range list {
+			if s := strings.TrimSpace(stringFromAny(item)); s != "" {
+				out = append(out, s)
+			}
+		}
+		return out
+	}
+	if s := strings.TrimSpace(stringFromAny(value)); s != "" {
+		return []string{s}
+	}
+	return nil
+}
+
+func stringFromAny(value any) string {
+	if value == nil {
+		return ""
+	}
+	if s, ok := value.(string); ok {
+		return strings.TrimSpace(s)
+	}
+	return strings.TrimSpace(fmt.Sprint(value))
+}
+
+func sourceGroupDefaults(inputs map[string]any, tpl copilot.TemplateSummary) []string {
+	if selected := stringListInput(inputs, "source_group"); len(selected) > 0 {
+		return selected
+	}
+	for _, param := range tpl.Inputs {
+		if param.Key != "source_group" || strings.TrimSpace(param.OptionsJSON) == "" {
+			continue
+		}
+		var parsed []struct {
+			Value string `json:"value"`
+		}
+		if err := json.Unmarshal([]byte(param.OptionsJSON), &parsed); err != nil {
+			return nil
+		}
+		out := make([]string, 0, len(parsed))
+		for _, option := range parsed {
+			if value := strings.TrimSpace(option.Value); value != "" {
+				out = append(out, value)
+			}
+		}
+		return out
+	}
+	return nil
 }

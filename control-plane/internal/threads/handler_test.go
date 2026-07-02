@@ -2,6 +2,7 @@ package threads
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -387,6 +388,103 @@ func TestProposePlanEmitsPlanProposed(t *testing.T) {
 	}
 	if !strings.Contains(resp.Msg.Message.GetPayloadJson(), "Create a LinkedIn post about retail") {
 		t.Fatalf("payload missing summary: %s", resp.Msg.Message.GetPayloadJson())
+	}
+}
+
+func TestProposePlanAddsRefinementDefaultsAndCandidateMetadata(t *testing.T) {
+	tenantID := uuid.New()
+	threadID := uuid.New()
+	lowID := uuid.New()
+	highID := uuid.New()
+	messages := &fakeMessageStore{}
+	_, _ = messages.AppendMessage(context.Background(), tenantID, chat.AppendInput{
+		ThreadID: threadID.String(),
+		Role:     chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_OVERSEER,
+		Kind:     chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_USER_TEXT,
+		Text:     "Quero um boletim de IA para fundadores",
+	})
+	catalog := fakeCatalog{summaries: []copilot.TemplateSummary{
+		{
+			ID:   lowID,
+			Key:  "linkedin",
+			Name: "LinkedIn Post",
+			Inputs: []copilot.InputParamSummary{
+				{Key: "theme", Label: "Theme"},
+				{Key: "source_group", Label: "Sources", OptionsJSON: `[{"value":"tech","label":"Tech"},{"value":"business","label":"Business"}]`},
+			},
+		},
+		{
+			ID:   highID,
+			Key:  "weekly-newsletter-linkedin",
+			Name: "LinkedIn News Digest",
+			Inputs: []copilot.InputParamSummary{
+				{Key: "theme", Label: "Theme"},
+				{Key: "audience", Label: "Audience"},
+				{Key: "topics_to_avoid", Label: "Topics to avoid"},
+				{Key: "source_group", Label: "Sources", OptionsJSON: `[{"value":"tech","label":"Tech"},{"value":"business","label":"Business"}]`},
+				{Key: "language", Label: "Language"},
+				{Key: "tone", Label: "Tone"},
+				{Key: "date_range", Label: "Period"},
+			},
+		},
+	}}
+	classifier := fakeClassifier{result: copilot.ClassifyResult{
+		Candidates: []copilot.Candidate{
+			{TemplateID: lowID, Confidence: 0.6, InputValuesJSON: `{"theme":"IA"}`},
+			{TemplateID: highID, Confidence: 0.93, InputValuesJSON: `{"theme":"IA","audience":"fundadores","topics_to_avoid":"rumores","language":"pt-BR","tone":"prático"}`},
+		},
+		Summary: "Criar boletim de IA para fundadores",
+	}}
+	h := NewHandler(&fakeThreadRepo{}, messages, catalog, classifier)
+	ctx := identity.WithRequestContext(context.Background(), identity.RequestContext{
+		UserID: uuid.NewString(), TenantID: tenantID, Roles: []string{"Overseer"},
+	})
+
+	resp, err := h.ProposePlan(ctx, connect.NewRequest(&chatv1.ProposePlanRequest{
+		TenantId: tenantID.String(), ThreadId: threadID.String(),
+	}))
+	if err != nil {
+		t.Fatalf("ProposePlan: %v", err)
+	}
+	var payload struct {
+		BestCandidateID    string `json:"best_candidate_id"`
+		RefinementDefaults struct {
+			Audience      string   `json:"audience"`
+			Themes        []string `json:"themes"`
+			TopicsToAvoid []string `json:"topics_to_avoid"`
+			SourceGroups  []string `json:"source_groups"`
+			Language      string   `json:"language"`
+			Tone          string   `json:"tone"`
+		} `json:"refinement_defaults"`
+		Candidates []struct {
+			TemplateID           string `json:"template_id"`
+			RecommendationReason string `json:"recommendation_reason"`
+			CompatibilityLabel   string `json:"compatibility_label"`
+		} `json:"candidates"`
+	}
+	if err := json.Unmarshal([]byte(resp.Msg.Message.GetPayloadJson()), &payload); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if payload.BestCandidateID != highID.String() {
+		t.Fatalf("best_candidate_id = %q, want %s", payload.BestCandidateID, highID)
+	}
+	if payload.Candidates[1].RecommendationReason == "" || payload.Candidates[1].CompatibilityLabel != "Best match" {
+		t.Fatalf("candidate metadata = %+v", payload.Candidates)
+	}
+	if payload.RefinementDefaults.Audience != "fundadores" {
+		t.Fatalf("audience = %q", payload.RefinementDefaults.Audience)
+	}
+	if len(payload.RefinementDefaults.Themes) != 1 || payload.RefinementDefaults.Themes[0] != "IA" {
+		t.Fatalf("themes = %+v", payload.RefinementDefaults.Themes)
+	}
+	if len(payload.RefinementDefaults.TopicsToAvoid) != 1 || payload.RefinementDefaults.TopicsToAvoid[0] != "rumores" {
+		t.Fatalf("topics_to_avoid = %+v", payload.RefinementDefaults.TopicsToAvoid)
+	}
+	if len(payload.RefinementDefaults.SourceGroups) != 2 {
+		t.Fatalf("source_groups = %+v", payload.RefinementDefaults.SourceGroups)
+	}
+	if payload.RefinementDefaults.Language != "pt-BR" || payload.RefinementDefaults.Tone != "prático" {
+		t.Fatalf("language/tone = %q/%q", payload.RefinementDefaults.Language, payload.RefinementDefaults.Tone)
 	}
 }
 

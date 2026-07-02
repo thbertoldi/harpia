@@ -10,6 +10,7 @@ import (
 	chatv1 "github.com/harpia/control-plane/gen/harpia/chat/v1"
 	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
 	"github.com/harpia/control-plane/internal/chat"
+	"github.com/harpia/control-plane/internal/identity"
 	"github.com/harpia/control-plane/internal/planassistant"
 )
 
@@ -152,6 +153,61 @@ func TestNextTurn_AdvancesThroughUnboundStepsThenMatrix(t *testing.T) {
 	}
 	if !strings.Contains(chatStore.appended[2].PayloadJSON, `"state":"BINDING_MATRIX"`) {
 		t.Fatalf("expected review matrix after all steps are bound, got %s", chatStore.appended[2].PayloadJSON)
+	}
+}
+
+func TestNextTurn_AdvancesFromBindingsToOverseerThenMatrix(t *testing.T) {
+	chatStore := &fakeChat{}
+	tpl := mkTemplate("fetch-news", "write-draft")
+	tpl.Id = testTemplateUUID
+	markStepIntegration(tpl, "fetch-news")
+	markStepAgent(tpl, "write-draft")
+	cfgID := uuid.NewString()
+	configs := &fakeConfigs{cur: &plansv1.PlanConfiguration{
+		Id:             cfgID,
+		PlanTemplateId: testTemplateUUID,
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+		SlotBindings: []*plansv1.SlotBinding{
+			{StepKey: "fetch-news", ExecutorInstallationId: "rss-tech"},
+			{StepKey: "write-draft", ExecutorInstallationId: "writer"},
+		},
+	}}
+	c := &planassistant.Controller{
+		Chat: chatStore,
+		Catalog: fakeCatalog{byStep: map[string][]planassistant.ExecutorOption{
+			"fetch-news":  {{StepKey: "fetch-news", InstallationID: "rss-tech", DisplayName: "Tech RSS", SkuKey: "rss-news-feed"}},
+			"write-draft": {{StepKey: "write-draft", InstallationID: "writer", DisplayName: "Writer", SkuKey: "newsletter-writer-senior"}},
+		}},
+		Configs:   configs,
+		Templates: &fakeTemplates{tpl: tpl},
+	}
+	ctx := identity.WithRequestContext(context.Background(), identity.RequestContext{UserID: "user-ana"})
+	if err := c.NextTurn(ctx, uuid.New(), uuid.New()); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(chatStore.appended[0].PayloadJSON, `"state":"OVERSEER_STEP"`) ||
+		!strings.Contains(chatStore.appended[0].PayloadJSON, `"step_key":"write-draft"`) ||
+		!strings.Contains(chatStore.appended[0].PayloadJSON, `"value":"user-ana"`) {
+		t.Fatalf("expected write-draft overseer step with current user option, got %s", chatStore.appended[0].PayloadJSON)
+	}
+
+	configs.cur = &plansv1.PlanConfiguration{
+		Id:             cfgID,
+		PlanTemplateId: testTemplateUUID,
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+		SlotBindings: []*plansv1.SlotBinding{
+			{StepKey: "fetch-news", ExecutorInstallationId: "rss-tech"},
+			{StepKey: "write-draft", ExecutorInstallationId: "writer"},
+		},
+		OverseerBindings: []*plansv1.OverseerBinding{
+			{StepKey: "write-draft", OverseerUserId: "user-ana"},
+		},
+	}
+	if err := c.NextTurn(ctx, uuid.New(), uuid.New()); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(chatStore.appended[1].PayloadJSON, `"state":"BINDING_MATRIX"`) {
+		t.Fatalf("expected review matrix after overseer is bound, got %s", chatStore.appended[1].PayloadJSON)
 	}
 }
 

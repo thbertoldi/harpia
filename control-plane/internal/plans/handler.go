@@ -310,6 +310,9 @@ func (h *PlanHandler) CreatePlanConfiguration(ctx context.Context, req *connect.
 	if err := h.validator.ValidateSlotBindings(ctx, tenantID, template, req.Msg.Status, req.Msg.SlotBindings); err != nil {
 		return nil, connectErrorFromBinding(err)
 	}
+	if err := h.validator.ValidateOverseerBindings(template, req.Msg.Status, req.Msg.OverseerBindings); err != nil {
+		return nil, connectErrorFromBinding(err)
+	}
 
 	config, err := h.buildConfigurationFromRequest(tenantID, template, req.Msg.WorkspaceId, req.Msg.Status,
 		req.Msg.SeedArtifacts, req.Msg.SlotBindings, req.Msg.OverseerBindings,
@@ -411,6 +414,9 @@ func (h *PlanHandler) UpdatePlanConfiguration(ctx context.Context, req *connect.
 	}
 
 	if err := h.validator.ValidateSlotBindings(ctx, tenantID, template, updatedInput.Status, updatedInput.SlotBindings); err != nil {
+		return nil, connectErrorFromBinding(err)
+	}
+	if err := h.validator.ValidateOverseerBindings(template, updatedInput.Status, updatedInput.OverseerBindings); err != nil {
 		return nil, connectErrorFromBinding(err)
 	}
 

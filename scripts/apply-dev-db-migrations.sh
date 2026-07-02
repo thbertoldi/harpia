@@ -7,6 +7,7 @@ MIGRATIONS_DIR="$REPO_ROOT/database/migrations"
 PORT="${HARPIA_DEV_DB_PORT:-15432}"
 NAMESPACE="${HARPIA_DEV_K8S_NAMESPACE:-default}"
 LOG_FILE="${TMPDIR:-/tmp}/harpia-postgres-port-forward.log"
+STATUS_LOG_FILE="${TMPDIR:-/tmp}/harpia-atlas-migrate-status.log"
 PF_PID=""
 
 cleanup() {
@@ -37,12 +38,13 @@ kubectl wait --for=condition=Ready pod -l app=postgres --timeout=120s >/dev/null
 
 echo "Port-forwarding PostgreSQL on localhost:${PORT}..."
 rm -f "$LOG_FILE"
+rm -f "$STATUS_LOG_FILE"
 kubectl port-forward svc/postgres "${PORT}:5432" >"$LOG_FILE" 2>&1 &
 PF_PID=$!
 
 READY=false
 for _ in $(seq 1 60); do
-  if atlas migrate status --dir "file://${MIGRATIONS_DIR}" --url "$DATABASE_URL" >/dev/null 2>&1; then
+  if atlas migrate status --dir "file://${MIGRATIONS_DIR}" --url "$DATABASE_URL" >"$STATUS_LOG_FILE" 2>&1; then
     READY=true
     break
   fi
@@ -58,6 +60,8 @@ done
 
 if [[ "$READY" != "true" ]]; then
   echo "ERROR: timed out waiting for PostgreSQL migration endpoint on localhost:${PORT}." >&2
+  echo "Last Atlas status error:" >&2
+  cat "$STATUS_LOG_FILE" >&2 || true
   cat "$LOG_FILE" >&2 || true
   exit 1
 fi

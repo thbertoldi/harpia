@@ -16,6 +16,28 @@ func mkTemplate(stepKeys ...string) *plansv1.PlanTemplate {
 	return tpl
 }
 
+func markStepAgent(tpl *plansv1.PlanTemplate, stepKey string) {
+	for _, step := range tpl.GetSteps() {
+		if step.GetKey() == stepKey {
+			step.ExecutorRequirement = &plansv1.ExecutorRequirement{
+				ExecutorKind: plansv1.ExecutorKind_EXECUTOR_KIND_AGENT,
+			}
+			return
+		}
+	}
+}
+
+func markStepIntegration(tpl *plansv1.PlanTemplate, stepKey string) {
+	for _, step := range tpl.GetSteps() {
+		if step.GetKey() == stepKey {
+			step.ExecutorRequirement = &plansv1.ExecutorRequirement{
+				ExecutorKind: plansv1.ExecutorKind_EXECUTOR_KIND_INTEGRATION,
+			}
+			return
+		}
+	}
+}
+
 func validPolicies() *plansv1.PlanBehaviorPolicies {
 	return &plansv1.PlanBehaviorPolicies{
 		ElicitationTimeoutBehavior: plansv1.ElicitationTimeoutBehavior_ELICITATION_TIMEOUT_BEHAVIOR_PAUSE_UNTIL_ANSWERED,
@@ -70,6 +92,77 @@ func TestDeriveState_BindingMatrix_WhenAllStepsBoundAndStatusStillDraft(t *testi
 	got := planassistant.DeriveState(mkTemplate("a"), cfg, nil)
 	if got.Kind != planassistant.StateBindingMatrix {
 		t.Fatalf("got %+v, want BINDING_MATRIX (still DRAFT)", got)
+	}
+}
+
+func TestDeriveState_OverseerStep_WhenAgentStepMissingOverseer(t *testing.T) {
+	tpl := mkTemplate("fetch-news", "write-draft")
+	markStepIntegration(tpl, "fetch-news")
+	markStepAgent(tpl, "write-draft")
+	cfg := &plansv1.PlanConfiguration{
+		PlanTemplateId: "tpl-1",
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+		SlotBindings: []*plansv1.SlotBinding{
+			{StepKey: "fetch-news", ExecutorInstallationId: "inst-rss"},
+			{StepKey: "write-draft", ExecutorInstallationId: "inst-agent"},
+		},
+		BehaviorPolicies: validPolicies(),
+	}
+	got := planassistant.DeriveState(tpl, cfg, nil)
+	if got.Kind != planassistant.StateKind("OVERSEER_STEP") {
+		t.Fatalf("got %+v, want OVERSEER_STEP", got)
+	}
+	if got.StepKey != "write-draft" {
+		t.Fatalf("StepKey = %q, want write-draft", got.StepKey)
+	}
+}
+
+func TestDeriveState_OverseerStep_SkipsBoundAndIntegrationSteps(t *testing.T) {
+	tpl := mkTemplate("fetch-news", "write-draft", "adapt")
+	markStepIntegration(tpl, "fetch-news")
+	markStepAgent(tpl, "write-draft")
+	markStepAgent(tpl, "adapt")
+	cfg := &plansv1.PlanConfiguration{
+		PlanTemplateId: "tpl-1",
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+		SlotBindings: []*plansv1.SlotBinding{
+			{StepKey: "fetch-news", ExecutorInstallationId: "inst-rss"},
+			{StepKey: "write-draft", ExecutorInstallationId: "inst-writer"},
+			{StepKey: "adapt", ExecutorInstallationId: "inst-adapt"},
+		},
+		OverseerBindings: []*plansv1.OverseerBinding{
+			{StepKey: "write-draft", OverseerUserId: "user-ana"},
+		},
+		BehaviorPolicies: validPolicies(),
+	}
+	got := planassistant.DeriveState(tpl, cfg, nil)
+	if got.Kind != planassistant.StateKind("OVERSEER_STEP") {
+		t.Fatalf("got %+v, want OVERSEER_STEP", got)
+	}
+	if got.StepKey != "adapt" {
+		t.Fatalf("StepKey = %q, want adapt", got.StepKey)
+	}
+}
+
+func TestDeriveState_BindingMatrix_WhenRequiredOverseersBound(t *testing.T) {
+	tpl := mkTemplate("fetch-news", "write-draft")
+	markStepIntegration(tpl, "fetch-news")
+	markStepAgent(tpl, "write-draft")
+	cfg := &plansv1.PlanConfiguration{
+		PlanTemplateId: "tpl-1",
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+		SlotBindings: []*plansv1.SlotBinding{
+			{StepKey: "fetch-news", ExecutorInstallationId: "inst-rss"},
+			{StepKey: "write-draft", ExecutorInstallationId: "inst-agent"},
+		},
+		OverseerBindings: []*plansv1.OverseerBinding{
+			{StepKey: "write-draft", OverseerUserId: "user-ana"},
+		},
+		BehaviorPolicies: validPolicies(),
+	}
+	got := planassistant.DeriveState(tpl, cfg, nil)
+	if got.Kind != planassistant.StateBindingMatrix {
+		t.Fatalf("got %+v, want BINDING_MATRIX", got)
 	}
 }
 

@@ -141,6 +141,63 @@ func (v *BindingValidator) ValidateSlotBindings(
 	return nil
 }
 
+func (v *BindingValidator) ValidateOverseerBindings(
+	template *PlanTemplate,
+	status plansv1.PlanConfigurationStatus,
+	overseerBindings []*plansv1.OverseerBinding,
+) error {
+	if template == nil {
+		return connect.NewError(connect.CodeInvalidArgument, errors.New("plan template is required"))
+	}
+
+	statusStr, err := configurationStatusToString(status)
+	if err != nil {
+		return connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	if statusStr == "" {
+		statusStr = ConfigurationStatusDraft
+	}
+
+	strict := statusStr == ConfigurationStatusRunnable || statusStr == ConfigurationStatusScheduled
+	stepKeys := templateStepKeys(template)
+	bindingsByStep := make(map[string]*plansv1.OverseerBinding, len(overseerBindings))
+
+	for _, binding := range overseerBindings {
+		if binding == nil {
+			return bindingError("", "", "", connect.CodeInvalidArgument, "overseer binding entry is required")
+		}
+		stepKey := strings.TrimSpace(binding.StepKey)
+		if stepKey == "" {
+			return bindingError("", "", "", connect.CodeInvalidArgument, "step_key is required")
+		}
+		if _, ok := stepKeys[stepKey]; !ok {
+			return bindingError(stepKey, "", "", connect.CodeInvalidArgument, "step_key does not exist in plan template")
+		}
+		if existing, ok := bindingsByStep[stepKey]; ok {
+			return bindingError(existing.StepKey, "", "", connect.CodeInvalidArgument, "duplicate overseer binding for step")
+		}
+		if strings.TrimSpace(binding.OverseerUserId) == "" {
+			return bindingError(stepKey, "", "", connect.CodeInvalidArgument, "overseer_user_id is required")
+		}
+		bindingsByStep[stepKey] = binding
+	}
+
+	if !strict {
+		return nil
+	}
+
+	for _, step := range template.Steps {
+		stepKey := strings.TrimSpace(step.Key)
+		if stepKey == "" || planStepExecutorKind(step) != plansv1.ExecutorKind_EXECUTOR_KIND_AGENT {
+			continue
+		}
+		if _, ok := bindingsByStep[stepKey]; !ok {
+			return bindingError(stepKey, "", "", connect.CodeFailedPrecondition, "overseer binding is required for runnable or scheduled configuration")
+		}
+	}
+	return nil
+}
+
 func (v *BindingValidator) ValidateConfigurationForExecution(
 	ctx context.Context,
 	tenantID uuid.UUID,
@@ -159,6 +216,30 @@ func (v *BindingValidator) ValidateConfigurationForExecution(
 	}
 
 	return v.ValidateSlotBindings(ctx, tenantID, template, plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE, slotBindings)
+}
+
+func planStepExecutorKind(step PlanStep) plansv1.ExecutorKind {
+	if len(step.ExecutorRequirement) == 0 {
+		return plansv1.ExecutorKind_EXECUTOR_KIND_UNSPECIFIED
+	}
+	var raw struct {
+		ExecutorKind any `json:"executor_kind"`
+	}
+	if err := json.Unmarshal(step.ExecutorRequirement, &raw); err != nil {
+		return plansv1.ExecutorKind_EXECUTOR_KIND_UNSPECIFIED
+	}
+	switch v := raw.ExecutorKind.(type) {
+	case float64:
+		return plansv1.ExecutorKind(int32(v))
+	case string:
+		switch strings.ToUpper(strings.TrimSpace(v)) {
+		case "AGENT", "EXECUTOR_KIND_AGENT":
+			return plansv1.ExecutorKind_EXECUTOR_KIND_AGENT
+		case "INTEGRATION", "EXECUTOR_KIND_INTEGRATION":
+			return plansv1.ExecutorKind_EXECUTOR_KIND_INTEGRATION
+		}
+	}
+	return plansv1.ExecutorKind_EXECUTOR_KIND_UNSPECIFIED
 }
 
 func (v *BindingValidator) validateBinding(

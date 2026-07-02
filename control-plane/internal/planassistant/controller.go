@@ -11,6 +11,7 @@ import (
 	chatv1 "github.com/harpia/control-plane/gen/harpia/chat/v1"
 	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
 	"github.com/harpia/control-plane/internal/chat"
+	"github.com/harpia/control-plane/internal/identity"
 )
 
 // ExecutorCatalog returns the candidate executors for a step.
@@ -101,7 +102,11 @@ func (c *Controller) emitCurrentPrompt(ctx context.Context, tenantID uuid.UUID, 
 	}
 
 	in := PromptInput{Template: tpl, Config: cfg}
-	if state.Kind == StateBindingStep || state.Kind == StateBindingMatrix {
+	if rc, ok := identity.RequestContextFrom(ctx); ok {
+		in.CurrentUserID = rc.UserID
+		in.CurrentUserLabel = rc.UserID
+	}
+	if state.Kind == StateBindingStep || state.Kind == StateOverseerStep || state.Kind == StateBindingMatrix {
 		byStep := make(map[string][]ExecutorOption, len(tpl.GetSteps()))
 		for _, step := range tpl.GetSteps() {
 			cands, err := c.Catalog.CandidatesForStep(ctx, tenantID, tpl, step.GetKey())
