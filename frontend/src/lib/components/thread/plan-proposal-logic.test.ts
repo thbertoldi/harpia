@@ -44,31 +44,18 @@ describe("confirmSummaryLabel", () => {
 });
 
 describe("confirmPrompt", () => {
-  it("wraps a normalized second-person clause in a natural confirmation sentence", () => {
-    expect(
-      confirmPrompt(
-        "pt-BR",
-        "O usuário quer escrever uma newsletter.",
-        "Newsletter",
-        "newsletter",
-      ),
-    ).toBe("Entendi que você quer escrever uma newsletter. Posso criar esse plano?");
-    expect(
-      confirmPrompt(
-        "en",
-        "The user wants to write a newsletter.",
-        "Newsletter",
-        "newsletter",
-      ),
-    ).toBe("Got it — you want to write a newsletter. Shall I create this plan?");
+  it("names the selected plan in a grammatical confirmation sentence", () => {
+    expect(confirmPrompt("pt-BR", "Newsletter semanal", "weekly")).toBe(
+      "Encontrei um plano para o seu pedido: Newsletter semanal. Posso criar?",
+    );
+    expect(confirmPrompt("en", "Weekly Newsletter", "weekly")).toBe(
+      "I found a plan for your request: Weekly Newsletter. Shall I create it?",
+    );
   });
 
-  it("falls back to the plan name when there is no usable summary", () => {
-    expect(confirmPrompt("pt-BR", "", "Newsletter semanal", "weekly")).toBe(
-      "Você quer criar Newsletter semanal. Posso seguir?",
-    );
-    expect(confirmPrompt("en", "  ", "", "weekly")).toBe(
-      "You want to create weekly. Shall I proceed?",
+  it("falls back to the template key when there is no display name", () => {
+    expect(confirmPrompt("en", "", "weekly")).toBe(
+      "I found a plan for your request: weekly. Shall I create it?",
     );
   });
 });

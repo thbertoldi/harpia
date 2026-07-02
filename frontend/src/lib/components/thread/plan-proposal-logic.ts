@@ -106,22 +106,16 @@ function normalizeUserFacingSummary(summary: string): string {
     .replace(/^the user wants to\s+/i, "you want to ");
 }
 
-// confirmPrompt builds the assistant's opening confirmation sentence. When the
-// model produced a summary we restate it in the second person and embed it in a
-// complete sentence ("Got it — you want to …. Shall I create this plan?"). With
-// no usable summary we fall back to naming the plan directly so the sentence
-// still reads naturally instead of stitching fragments around a raw label.
+// confirmPrompt builds the assistant's opening confirmation sentence. It names
+// the selected plan directly so the sentence is always grammatical (regardless
+// of the model's free-text summary) and so it visibly changes when the user
+// picks a different candidate.
 export function confirmPrompt(
   loc: Locale,
-  summary: string,
   templateName: string,
   templateKey: string,
 ): string {
-  const clause = normalizeUserFacingSummary(summary);
-  if (clause) {
-    return translate("thread.propose.confirm", loc, { summary: clause });
-  }
-  return translate("thread.propose.confirmFallback", loc, {
+  return translate("thread.propose.confirm", loc, {
     plan: templateName || templateKey,
   });
 }

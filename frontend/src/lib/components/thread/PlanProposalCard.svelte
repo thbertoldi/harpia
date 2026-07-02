@@ -66,10 +66,6 @@
     }
   });
 
-  const summary = $derived(
-    typeof payload.summary === "string" ? payload.summary : "",
-  );
-
   const candidates = $derived.by<PlanProposalCandidate[]>(() =>
     Array.isArray(payload.candidates) ? payload.candidates : [],
   );
@@ -104,16 +100,12 @@
   let confirmChoice = $state<"yes" | "adjust" | null>(null);
   let wentThroughForm = $state(false);
 
-  // The assistant's opening confirmation sentence, restated in the second person.
+  // The assistant's opening confirmation sentence. Names the selected plan so it
+  // is always grammatical and visibly updates when the user picks another one.
   const confirmPromptText = $derived.by(() => {
     const cand = active;
     if (!cand) return "";
-    return confirmPrompt(
-      $locale,
-      summary,
-      cand.template_name,
-      cand.template_key,
-    );
+    return confirmPrompt($locale, cand.template_name, cand.template_key);
   });
 
   const createdActions = $derived.by(() => {

@@ -563,3 +563,22 @@ func TestProposePlanEmptyCandidatesStillEmits(t *testing.T) {
 		t.Fatalf("kind = %v", resp.Msg.Message.GetKind())
 	}
 }
+
+func TestDedupeCandidatesByTemplateKeepsHighestConfidencePreservingOrder(t *testing.T) {
+	a := uuid.New()
+	b := uuid.New()
+	got := dedupeCandidatesByTemplate([]copilot.Candidate{
+		{TemplateID: a, Confidence: 0.5, InputValuesJSON: `{"x":1}`},
+		{TemplateID: b, Confidence: 0.9},
+		{TemplateID: a, Confidence: 0.8, InputValuesJSON: `{"x":2}`},
+	})
+	if len(got) != 2 {
+		t.Fatalf("expected 2 deduped candidates, got %d", len(got))
+	}
+	if got[0].TemplateID != a || got[1].TemplateID != b {
+		t.Fatalf("order not preserved: %v", got)
+	}
+	if got[0].Confidence != 0.8 || got[0].InputValuesJSON != `{"x":2}` {
+		t.Fatalf("expected highest-confidence occurrence kept, got %+v", got[0])
+	}
+}

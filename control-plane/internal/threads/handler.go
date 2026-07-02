@@ -411,7 +411,7 @@ func (h *Handler) ProposePlan(ctx context.Context, req *connect.Request[chatv1.P
 			Text:      latestUser.GetText(),
 			Templates: summaries,
 		}); clsErr == nil {
-			candidates = result.Candidates
+			candidates = dedupeCandidatesByTemplate(result.Candidates)
 			summary = result.Summary
 		}
 	}
@@ -450,6 +450,32 @@ func (h *Handler) ProposePlan(ctx context.Context, req *connect.Request[chatv1.P
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 	return connect.NewResponse(&chatv1.ProposePlanResponse{Message: msg}), nil
+}
+
+// dedupeCandidatesByTemplate collapses candidates that point at the same
+// template (the router can return the same template_key more than once) into a
+// single entry, keeping the highest-confidence occurrence and preserving
+// first-seen order. Without this, two candidates share a template_id, which
+// makes the frontend's keyed selection ambiguous — picking the "second" plan is
+// a no-op because it resolves to the same template as the first.
+func dedupeCandidatesByTemplate(candidates []copilot.Candidate) []copilot.Candidate {
+	if len(candidates) <= 1 {
+		return candidates
+	}
+	indexByID := make(map[string]int, len(candidates))
+	out := make([]copilot.Candidate, 0, len(candidates))
+	for _, candidate := range candidates {
+		id := candidate.TemplateID.String()
+		if pos, seen := indexByID[id]; seen {
+			if candidate.Confidence > out[pos].Confidence {
+				out[pos] = candidate
+			}
+			continue
+		}
+		indexByID[id] = len(out)
+		out = append(out, candidate)
+	}
+	return out
 }
 
 func bestCopilotCandidateID(candidates []copilot.Candidate) string {
