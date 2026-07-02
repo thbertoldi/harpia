@@ -19,6 +19,8 @@ const (
 	StateBindingMatrix StateKind = "BINDING_MATRIX"
 	// StateOverseerStep asks who oversees one agent-backed PlanStep at a time.
 	StateOverseerStep StateKind = "OVERSEER_STEP"
+	// StatePoliciesStep asks for required PlanBehaviorPolicies before review.
+	StatePoliciesStep StateKind = "POLICIES_STEP"
 	// StateSaved is returned once status leaves DRAFT (the matrix card's
 	// Save button promoted it). The controller emits the LandingCard.
 	StateSaved StateKind = "SAVED"
@@ -48,6 +50,9 @@ func DeriveState(template *plansv1.PlanTemplate, config *plansv1.PlanConfigurati
 		}
 		if stepKey := firstUnboundOverseerStepKey(template, config); stepKey != "" {
 			return AssistantState{Kind: StateOverseerStep, StepKey: stepKey}
+		}
+		if !policiesSet(config.GetBehaviorPolicies()) {
+			return AssistantState{Kind: StatePoliciesStep}
 		}
 		return AssistantState{Kind: StateBindingMatrix}
 	default:

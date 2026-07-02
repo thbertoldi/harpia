@@ -132,3 +132,13 @@ input_parameters:
     runtimeMappings:
       - target: TEMPLATE_INPUT_RUNTIME_TARGET_BEHAVIOR_POLICY
         policyKey: publish_approval_mode
+  - key: elicitation_timeout_behavior
+    label: Elicitation timeout behavior
+    description: What happens when a human answer is needed and not provided in time.
+    type: TEMPLATE_INPUT_PARAMETER_TYPE_SELECT
+    required: true
+    defaultValueJson: '"pause_until_answered"'
+    optionsJson: '[{"value":"pause_until_answered","label":"Pause until answered"},{"value":"fail_step","label":"Fail step"},{"value":"fail_plan","label":"Fail plan"}]'
+    runtimeMappings:
+      - target: TEMPLATE_INPUT_RUNTIME_TARGET_BEHAVIOR_POLICY
+        policyKey: elicitation_timeout_behavior

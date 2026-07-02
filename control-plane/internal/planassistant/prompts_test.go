@@ -216,6 +216,79 @@ func TestBuildPrompt_OverseerStep_RendersCurrentUserOptionAndRows(t *testing.T) 
 	}
 }
 
+func TestBuildPrompt_PoliciesStep_RendersPolicyFields(t *testing.T) {
+	tpl := mkTemplate("fetch-news", "publish")
+	tpl.InputParameters = []*plansv1.TemplateInputParameter{
+		{
+			Key: "approval_mode",
+			RuntimeMappings: []*plansv1.TemplateInputRuntimeMapping{{
+				Target:    plansv1.TemplateInputRuntimeTarget_TEMPLATE_INPUT_RUNTIME_TARGET_BEHAVIOR_POLICY,
+				PolicyKey: "publish_approval_mode",
+			}},
+		},
+		{
+			Key: "elicitation_timeout",
+			RuntimeMappings: []*plansv1.TemplateInputRuntimeMapping{{
+				Target:    plansv1.TemplateInputRuntimeTarget_TEMPLATE_INPUT_RUNTIME_TARGET_BEHAVIOR_POLICY,
+				PolicyKey: "elicitation_timeout_behavior",
+			}},
+		},
+	}
+	in := planassistant.PromptInput{
+		Template: tpl,
+		Config: &plansv1.PlanConfiguration{
+			PlanTemplateId: "tpl-1",
+			BehaviorPolicies: &plansv1.PlanBehaviorPolicies{
+				PublishApprovalMode: plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_REQUIRE_APPROVAL,
+			},
+		},
+	}
+	state := planassistant.AssistantState{Kind: planassistant.StatePoliciesStep}
+	text, payload := planassistant.BuildPrompt(state, in)
+	if !strings.Contains(strings.ToLower(text), "runtime") {
+		t.Fatalf("text should mention runtime behavior, got %q", text)
+	}
+
+	var parsed struct {
+		State  string `json:"state"`
+		Fields []struct {
+			Key          string `json:"key"`
+			ParameterKey string `json:"parameter_key"`
+			CurrentValue string `json:"current_value"`
+			Options      []struct {
+				ID    string `json:"id"`
+				Label string `json:"label"`
+				Value string `json:"value"`
+			} `json:"options"`
+		} `json:"fields"`
+		PoliciesSet bool `json:"policies_set"`
+	}
+	if err := json.Unmarshal([]byte(payload), &parsed); err != nil {
+		t.Fatalf("payload not valid JSON: %v\n%s", err, payload)
+	}
+	if parsed.State != "POLICIES_STEP" {
+		t.Fatalf("want state POLICIES_STEP, got %q", parsed.State)
+	}
+	if parsed.PoliciesSet {
+		t.Fatalf("partial policies should not be complete")
+	}
+	if len(parsed.Fields) != 2 {
+		t.Fatalf("want 2 policy fields, got %d", len(parsed.Fields))
+	}
+	if parsed.Fields[0].Key != "publish_approval_mode" ||
+		parsed.Fields[0].ParameterKey != "approval_mode" ||
+		parsed.Fields[0].CurrentValue != "require_approval" ||
+		len(parsed.Fields[0].Options) != 2 {
+		t.Fatalf("publish field not populated from template/current config: %+v", parsed.Fields[0])
+	}
+	if parsed.Fields[1].Key != "elicitation_timeout_behavior" ||
+		parsed.Fields[1].ParameterKey != "elicitation_timeout" ||
+		parsed.Fields[1].CurrentValue != "" ||
+		len(parsed.Fields[1].Options) != 3 {
+		t.Fatalf("elicitation field not populated from template/current config: %+v", parsed.Fields[1])
+	}
+}
+
 func TestBuildPrompt_Landing_HasThreeActions(t *testing.T) {
 	state := planassistant.AssistantState{Kind: planassistant.StateSaved}
 	in := planassistant.PromptInput{Config: &plansv1.PlanConfiguration{

@@ -69,7 +69,7 @@ func TestDeriveState_BindingStep_WhenStepUnbound(t *testing.T) {
 	}
 }
 
-func TestDeriveState_BindingMatrix_WhenPoliciesUnset(t *testing.T) {
+func TestDeriveState_PoliciesStep_WhenPoliciesUnset(t *testing.T) {
 	cfg := &plansv1.PlanConfiguration{
 		PlanTemplateId: "tpl-1",
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
@@ -77,8 +77,23 @@ func TestDeriveState_BindingMatrix_WhenPoliciesUnset(t *testing.T) {
 		// policies unset
 	}
 	got := planassistant.DeriveState(mkTemplate("a"), cfg, nil)
-	if got.Kind != planassistant.StateBindingMatrix {
-		t.Fatalf("got %+v, want BINDING_MATRIX (policies unset)", got)
+	if got.Kind != planassistant.StateKind("POLICIES_STEP") {
+		t.Fatalf("got %+v, want POLICIES_STEP (policies unset)", got)
+	}
+}
+
+func TestDeriveState_PoliciesStep_WhenPoliciesPartial(t *testing.T) {
+	cfg := &plansv1.PlanConfiguration{
+		PlanTemplateId: "tpl-1",
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+		SlotBindings:   []*plansv1.SlotBinding{{StepKey: "a", ExecutorInstallationId: "inst-a"}},
+		BehaviorPolicies: &plansv1.PlanBehaviorPolicies{
+			PublishApprovalMode: plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_REQUIRE_APPROVAL,
+		},
+	}
+	got := planassistant.DeriveState(mkTemplate("a"), cfg, nil)
+	if got.Kind != planassistant.StateKind("POLICIES_STEP") {
+		t.Fatalf("got %+v, want POLICIES_STEP (policies partial)", got)
 	}
 }
 
@@ -163,6 +178,27 @@ func TestDeriveState_BindingMatrix_WhenRequiredOverseersBound(t *testing.T) {
 	got := planassistant.DeriveState(tpl, cfg, nil)
 	if got.Kind != planassistant.StateBindingMatrix {
 		t.Fatalf("got %+v, want BINDING_MATRIX", got)
+	}
+}
+
+func TestDeriveState_PoliciesStep_WhenRequiredOverseersBoundButPoliciesMissing(t *testing.T) {
+	tpl := mkTemplate("fetch-news", "write-draft")
+	markStepIntegration(tpl, "fetch-news")
+	markStepAgent(tpl, "write-draft")
+	cfg := &plansv1.PlanConfiguration{
+		PlanTemplateId: "tpl-1",
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+		SlotBindings: []*plansv1.SlotBinding{
+			{StepKey: "fetch-news", ExecutorInstallationId: "inst-rss"},
+			{StepKey: "write-draft", ExecutorInstallationId: "inst-agent"},
+		},
+		OverseerBindings: []*plansv1.OverseerBinding{
+			{StepKey: "write-draft", OverseerUserId: "user-ana"},
+		},
+	}
+	got := planassistant.DeriveState(tpl, cfg, nil)
+	if got.Kind != planassistant.StateKind("POLICIES_STEP") {
+		t.Fatalf("got %+v, want POLICIES_STEP", got)
 	}
 }
 
