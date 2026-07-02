@@ -66,6 +66,23 @@ seeded named `rss-news-feed` installations (`EnsureTenantRSSPresetInstallations`
 Proved the multi-template declarative path (fetch-news → write-draft → TextDraft, review-only).
 A richer library is **blocked on new ExecutorSKUs** (blog/email/X integrations don't exist yet).
 
+## Execution
+
+### 🛠️ Milestone E: a configured plan actually runs (and on schedule)
+**Taxonomy:** PlanConfiguration, PlanExecution, StepExecution, Artifact, SlotBinding,
+SeedArtifact, PlanBehaviorPolicies, PlanSchedule, runtimeMappings.
+The Temporal engine, worker, scheduling (real Temporal Schedules), RSS + LinkedIn handlers,
+the Python agent activity (two shipped manifests), and RUNNABLE validation already work. The
+gap is upstream: **nothing on the server expands a template's `runtimeMappings` +
+`parameter_values` into the config's seeds / slot bindings / behavior policies** — it is faked
+per-template in the frontend (`materializeLinkedInInputValues`), so a generic chat-created
+config has empty seeds and can't run. Also missing: execution-time resolution of the rolling
+`date_range` preset (`last_7_days`) and pre-flight seed validation. Decomposed into a
+server-authoritative materializer, per-run date resolution, pre-flight readiness, agent-worker
+deployment, and an end-to-end run of `weekly-newsletter-linkedin`. Generic agent executor
+(beyond the two manifests) is a deliberate follow-up.
+**Links:** `openspec/changes/plan-execution-runtime`.
+
 ## UX
 
 ### 🛠️ Chat-first plan lifecycle experience
