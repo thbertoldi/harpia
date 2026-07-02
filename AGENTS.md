@@ -63,6 +63,14 @@ per-task verification.
 
 ## Verification gates
 
+**Linters MUST pass before any work is considered finished** (mirrors CI). Run
+the linters for every surface you touched — formatting/format regressions on
+files you did not author still fail CI, so run the whole-project lint, not just
+changed files:
+
+- Frontend lint: `cd frontend && bun run lint` (`prettier --check . && eslint .`).
+- Python lint: `cd agent-runtime && ruff check src/`.
+- Helm lint: `mise run helm-lint` (or `helm lint deploy/**/`).
 - Frontend tests: `cd frontend && bunx vitest run <file>` (NOT `bun test`).
 - Frontend types: `cd frontend && bun run check` — **12 pre-existing baseline errors**;
   introduce no new ones.
