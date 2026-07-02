@@ -260,7 +260,12 @@ describe("behavior policies", () => {
     createPlanConfiguration.mockRejectedValue(new Error("network error"));
 
     await expect(
-      saveBehaviorPoliciesForTemplate(template, DEFAULT_BEHAVIOR_POLICIES, undefined, "test-thread"),
+      saveBehaviorPoliciesForTemplate(
+        template,
+        DEFAULT_BEHAVIOR_POLICIES,
+        undefined,
+        "test-thread",
+      ),
     ).rejects.toThrow("network error");
   });
 });
