@@ -57,6 +57,19 @@ export interface OverseerStepPayload {
   rows: MatrixRow[];
 }
 
+export interface PolicyField {
+  key: string;
+  parameter_key: string;
+  current_value: string;
+  options: MatrixOption[];
+}
+
+export interface PoliciesStepPayload {
+  state: "POLICIES_STEP";
+  fields: PolicyField[];
+  policies_set: boolean;
+}
+
 export interface MatrixHydrationInput {
   slotBindings: Array<{
     stepKey: string;
@@ -136,12 +149,70 @@ export function parseOverseerStepPayload(json: string): OverseerStepPayload {
   };
 }
 
+export function parsePoliciesStepPayload(json: string): PoliciesStepPayload {
+  const obj = parsePayloadObject(json, "parsePoliciesStepPayload");
+  if (obj.state !== "POLICIES_STEP") {
+    throw new Error(
+      `parsePoliciesStepPayload: expected state "POLICIES_STEP", got ${JSON.stringify(obj.state)}`,
+    );
+  }
+  if (!Array.isArray(obj.fields)) {
+    throw new Error("parsePoliciesStepPayload: fields is not an array");
+  }
+  return {
+    state: "POLICIES_STEP",
+    fields: obj.fields.map((field, i) => normalizePolicyField(field, i)),
+    policies_set: obj.policies_set === true,
+  };
+}
+
+export interface PolicyCardVisibility {
+  isLive: boolean;
+  editingAnswered: boolean;
+  submitted: boolean;
+}
+
+/**
+ * Whether the policy card should render any interactive chips at all. Chips
+ * appear while the prompt is live or while the user is revisiting an answered
+ * card, and only until the card is submitted.
+ */
+export function policyChipsShown(v: PolicyCardVisibility): boolean {
+  return (v.isLive || v.editingAnswered) && !v.submitted;
+}
+
+/**
+ * Whether one field's chips are visible.
+ *
+ * On the live/forward flow an already-answered field hides its chips and
+ * collapses to a caption. When the user reopens an answered card to edit,
+ * chips must reappear even for fields that already hold a value — otherwise
+ * the edit affordance is a dead end (nothing renders to re-select).
+ */
+export function policyFieldChipsShown(
+  field: PolicyField,
+  v: PolicyCardVisibility,
+): boolean {
+  return policyChipsShown(v) && (!field.current_value || v.editingAnswered);
+}
+
+/** True when an option matches the field's currently selected value. */
+export function isPolicyOptionSelected(
+  field: PolicyField,
+  option: MatrixOption,
+): boolean {
+  return (
+    option.value === field.current_value || option.id === field.current_value
+  );
+}
+
 function parsePayloadObject(
   json: string,
   caller:
     | "parseMatrixPayload"
     | "parseBindingStepPayload"
-    | "parseOverseerStepPayload",
+    | "parseOverseerStepPayload"
+    | "parsePoliciesStepPayload",
 ): Record<string, unknown> {
   let raw: unknown;
   try {
@@ -153,6 +224,24 @@ function parsePayloadObject(
     throw new Error(`${caller}: payload is not an object`);
   }
   return raw as Record<string, unknown>;
+}
+
+function normalizePolicyField(raw: unknown, index: number): PolicyField {
+  if (typeof raw !== "object" || raw === null) {
+    throw new Error(
+      `parsePoliciesStepPayload: field ${index} is not an object`,
+    );
+  }
+  const field = raw as Record<string, unknown>;
+  const options = Array.isArray(field.options)
+    ? field.options.map((option, i) => normalizeOption(option, index, i))
+    : [];
+  return {
+    key: String(field.key ?? ""),
+    parameter_key: String(field.parameter_key ?? ""),
+    current_value: String(field.current_value ?? ""),
+    options,
+  };
 }
 
 function normalizeRow(raw: unknown, index: number): MatrixRow {

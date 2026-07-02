@@ -21,6 +21,10 @@
     PlanConfiguration,
     PlanTemplate,
   } from "$lib/gen/harpia/plans/v1/plans_pb";
+  import {
+    ElicitationTimeoutBehavior as ElicitationTimeoutBehaviorEnum,
+    PublishApprovalMode as PublishApprovalModeEnum,
+  } from "$lib/gen/harpia/plans/v1/plans_pb";
 
   interface Props {
     message: ChatMessage;
@@ -72,7 +76,7 @@
           payload = hydrateMatrixPayload(payload, {
             slotBindings: cfgRes.planConfiguration.slotBindings,
             overseerBindings: cfgRes.planConfiguration.overseerBindings,
-            policiesSet: !!cfgRes.planConfiguration.behaviorPolicies,
+            policiesSet: policiesComplete(cfgRes.planConfiguration),
           });
         }
         const tplRes = await planClient.getPlanTemplate(
@@ -108,6 +112,17 @@
     return option.sublabel
       ? `${option.label} · ${option.sublabel}`
       : option.label;
+  }
+
+  function policiesComplete(config: PlanConfiguration): boolean {
+    const policies = config.behaviorPolicies;
+    return (
+      policies?.publishApprovalMode !== undefined &&
+      policies.publishApprovalMode !== PublishApprovalModeEnum.UNSPECIFIED &&
+      policies?.elicitationTimeoutBehavior !== undefined &&
+      policies.elicitationTimeoutBehavior !==
+        ElicitationTimeoutBehaviorEnum.UNSPECIFIED
+    );
   }
 
   function reflectBinding(stepKey: string, installationId: string) {

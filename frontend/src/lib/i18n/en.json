@@ -871,5 +871,21 @@
   "plans.inputs.approval_mode.label": "Approval mode",
   "plans.inputs.approval_mode.description": "Whether publishing requires your approval first.",
   "plans.inputs.approval_mode.option.require_approval": "Require approval",
-  "plans.inputs.approval_mode.option.auto_publish": "Auto publish"
+  "plans.inputs.approval_mode.option.auto_publish": "Auto publish",
+  "plans.inputs.elicitation_timeout_behavior.label": "Elicitation timeout behavior",
+  "plans.inputs.elicitation_timeout_behavior.description": "What happens when a human answer is needed and not provided in time.",
+  "plans.inputs.elicitation_timeout_behavior.option.pause_until_answered": "Pause until answered",
+  "plans.inputs.elicitation_timeout_behavior.option.fail_step": "Fail step",
+  "plans.inputs.elicitation_timeout_behavior.option.fail_plan": "Fail plan",
+  "assistant.policiesStep.progress": "{selected}/{total} runtime policies selected",
+  "assistant.policiesStep.field.publish_approval_mode": "Publishing",
+  "assistant.policiesStep.field.elicitation_timeout_behavior": "When a human answer times out",
+  "assistant.policiesStep.option.publish_approval_mode.require_approval": "Require approval",
+  "assistant.policiesStep.option.publish_approval_mode.auto_publish": "Auto publish",
+  "assistant.policiesStep.option.elicitation_timeout_behavior.pause_until_answered": "Pause until answered",
+  "assistant.policiesStep.option.elicitation_timeout_behavior.fail_step": "Fail this step",
+  "assistant.policiesStep.option.elicitation_timeout_behavior.fail_plan": "Fail the plan",
+  "assistant.policiesStep.selected": "{value}",
+  "assistant.policiesStep.noOptions": "No policy options are available.",
+  "assistant.policiesStep.complete": "Runtime policies selected."
 }

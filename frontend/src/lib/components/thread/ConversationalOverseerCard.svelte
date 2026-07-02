@@ -14,6 +14,10 @@
   } from "$lib/plans/matrix";
   import { chipFlash } from "$lib/motion/transitions";
   import { planClient } from "$lib/rpc";
+  import {
+    ElicitationTimeoutBehavior,
+    PublishApprovalMode,
+  } from "$lib/gen/harpia/plans/v1/plans_pb";
   import type { PlanConfiguration } from "$lib/gen/harpia/plans/v1/plans_pb";
 
   interface Props {
@@ -64,7 +68,7 @@
           payload = hydrateMatrixPayload(payload, {
             slotBindings: cfgRes.planConfiguration.slotBindings,
             overseerBindings: cfgRes.planConfiguration.overseerBindings,
-            policiesSet: !!cfgRes.planConfiguration.behaviorPolicies,
+            policiesSet: policiesComplete(cfgRes.planConfiguration),
           });
         }
       } catch {
@@ -97,6 +101,17 @@
       row.current_overseer_label ||
       row.current_overseer_id ||
       ""
+    );
+  }
+
+  function policiesComplete(config: PlanConfiguration): boolean {
+    const policies = config.behaviorPolicies;
+    return (
+      policies?.publishApprovalMode !== undefined &&
+      policies.publishApprovalMode !== PublishApprovalMode.UNSPECIFIED &&
+      policies?.elicitationTimeoutBehavior !== undefined &&
+      policies.elicitationTimeoutBehavior !==
+        ElicitationTimeoutBehavior.UNSPECIFIED
     );
   }
 
