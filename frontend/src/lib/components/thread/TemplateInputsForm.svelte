@@ -1,7 +1,14 @@
 <script lang="ts">
   import type { TemplateInputParameter } from "$lib/gen/harpia/plans/v1/plans_pb";
   import { TemplateInputParameterType } from "$lib/gen/harpia/plans/v1/plans_pb";
-  import { selectOptions, type DateRangeValue } from "$lib/plans/template-inputs";
+  import {
+    isDateRangePreset,
+    resolveDateRangePreset,
+    selectOptions,
+    type DateRangeValue,
+    type SelectOption,
+  } from "$lib/plans/template-inputs";
+  import { sourceGroupInstallations } from "$lib/plans/source-groups";
   import { executorClient } from "$lib/rpc";
   import type { ExecutorInstallation } from "$lib/gen/harpia/executors/v1/executors_pb";
   import { locale, translate } from "$lib/i18n";
@@ -57,11 +64,98 @@
     values[key] = range;
   }
 
+  // The active rolling preset for a date-range field, or null when explicit
+  // dates are in use. A preset means the window is recomputed on every run
+  // (e.g. a weekly newsletter always covering the previous week), so we render
+  // it as a read-only indicator rather than a fixed picker.
+  function dateRangePreset(key: string): string | null {
+    const val = values[key];
+    return isDateRangePreset(val) ? val.preset : null;
+  }
+
+  // Switch a rolling preset into editable explicit dates, seeded from the
+  // preset's current resolution so the picker starts on sensible values.
+  function useSpecificDates(key: string, preset: string): void {
+    values[key] = resolveDateRangePreset(preset, new Date()) ?? {
+      startDate: "",
+      endDate: "",
+    };
+  }
+
+  // Return to the automatic rolling window.
+  function useRollingWindow(key: string, preset: string): void {
+    values[key] = { preset };
+  }
+
+  // Translate a select option's label via catalog i18n
+  // (plans.inputs.<key>.option.<value>), falling back to the catalog label.
+  function translatedOption(p: TemplateInputParameter, opt: SelectOption): string {
+    const key = `plans.inputs.${p.key}.option.${opt.value}`;
+    const translated = translate(key, $locale);
+    return translated === key ? opt.label : translated;
+  }
+
+  // Human-readable description of a rolling preset window.
+  function rollingPresetLabel(preset: string): string {
+    const key = `plans.inputs.date_range.rolling.${preset}`;
+    const translated = translate(key, $locale);
+    return translated === key
+      ? translate("thread.propose.dateRangeRollingGeneric", $locale)
+      : translated;
+  }
+
+  function getStringList(key: string): string[] {
+    const plural = values[`${key}s`];
+    if (Array.isArray(plural)) {
+      return plural.filter((entry): entry is string => typeof entry === "string");
+    }
+    const singular = values[key];
+    return typeof singular === "string" && singular ? [singular] : [];
+  }
+
+  function toggleStringListValue(key: string, value: string): void {
+    const selected = new Set(getStringList(key));
+    if (selected.has(value)) selected.delete(value);
+    else selected.add(value);
+    const next = [...selected];
+    values[`${key}s`] = next;
+    values[key] = next[0] ?? "";
+  }
+
+  function chipValues(key: string): string[] {
+    const value = values[key];
+    if (typeof value !== "string") return [];
+    return value
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+  }
+
+  function removeChipValue(key: string, value: string): void {
+    values[key] = chipValues(key)
+      .filter((entry) => entry !== value)
+      .join(", ");
+  }
+
+  // Installations eligible as plan sources (RSS feeds). Action integrations such
+  // as a LinkedIn publisher are destinations, not sources, and are excluded from
+  // the "source group" picker.
+  const sourceInstallations = $derived(sourceGroupInstallations(installations));
+
   // Helper to translate a label with fallback to the original label
   function translatedLabel(p: TemplateInputParameter): string {
     const key = `plans.inputs.${p.key}.label`;
     const translated = translate(key, $locale);
     return translated === key ? (p.label || p.key) : translated;
+  }
+
+  // Translated helper text for a field. Catalog descriptions are authored in
+  // English, so we only surface the localized copy when a translation exists;
+  // otherwise we hide the helper rather than leak an untranslated string.
+  function translatedDescription(p: TemplateInputParameter): string {
+    const key = `plans.inputs.${p.key}.description`;
+    const translated = translate(key, $locale);
+    return translated === key ? "" : translated;
   }
 </script>
 
@@ -71,8 +165,8 @@
       <span class="font-medium text-cream">
         {translatedLabel(p)}{#if p.required}<span class="text-talon-gold"> *</span>{/if}
       </span>
-      {#if p.description}
-        <span class="text-[11px] text-crown-ash-dark">{p.description}</span>
+      {#if translatedDescription(p)}
+        <span class="text-[11px] text-crown-ash-dark">{translatedDescription(p)}</span>
       {/if}
 
       {#if p.type === T.TEXTAREA}
@@ -88,39 +182,94 @@
         >
           <option value="">—</option>
           {#each selectOptions(p.optionsJson) as opt (opt.value)}
-            <option value={opt.value}>{opt.label}</option>
+            <option value={opt.value}>{translatedOption(p, opt)}</option>
           {/each}
         </select>
       {:else if p.type === T.DATE_RANGE}
-        {@const range = getDateRange(p.key)}
-        <div class="flex gap-2">
-          <input
-            type="date"
-            value={range.startDate}
-            oninput={(e) => setDateRange(p.key, { ...getDateRange(p.key), startDate: e.currentTarget.value })}
-            class="flex-1 rounded border border-plumage bg-obsidian-light px-2 py-1 text-[12px] text-cream"
-          />
-          <input
-            type="date"
-            value={range.endDate}
-            oninput={(e) => setDateRange(p.key, { ...getDateRange(p.key), endDate: e.currentTarget.value })}
-            class="flex-1 rounded border border-plumage bg-obsidian-light px-2 py-1 text-[12px] text-cream"
-          />
-        </div>
-      {:else if p.type === T.INTEGRATION_SELECTOR}
-        <select
-          bind:value={values[p.key]}
-          class="rounded border border-plumage bg-obsidian-light px-2 py-1 text-[12px] text-cream"
-        >
-          {#if installations.length === 0}
-            <option value="" disabled>No integrations available</option>
-          {:else}
-            <option value="">—</option>
-            {#each installations as inst (inst.id)}
-              <option value={inst.id}>{inst.displayName || inst.id}</option>
-            {/each}
+        {@const preset = dateRangePreset(p.key)}
+        {#if preset}
+          <div class="flex flex-wrap items-center gap-2">
+            <span
+              class="inline-flex items-center gap-1.5 rounded-full border border-talon-gold/40 bg-talon-gold/10 px-2.5 py-1 text-[11px] text-cream"
+            >
+              <span aria-hidden="true">↻</span>
+              {rollingPresetLabel(preset)}
+            </span>
+            <button
+              type="button"
+              class="text-[11px] text-crown-ash underline hover:text-cream"
+              onclick={() => useSpecificDates(p.key, preset)}
+            >
+              {translate("thread.propose.dateRangeCustomize", $locale)}
+            </button>
+          </div>
+        {:else}
+          {@const range = getDateRange(p.key)}
+          <div class="flex gap-2">
+            <input
+              type="date"
+              value={range.startDate}
+              oninput={(e) => setDateRange(p.key, { ...getDateRange(p.key), startDate: e.currentTarget.value })}
+              class="flex-1 rounded border border-plumage bg-obsidian-light px-2 py-1 text-[12px] text-cream"
+            />
+            <input
+              type="date"
+              value={range.endDate}
+              oninput={(e) => setDateRange(p.key, { ...getDateRange(p.key), endDate: e.currentTarget.value })}
+              class="flex-1 rounded border border-plumage bg-obsidian-light px-2 py-1 text-[12px] text-cream"
+            />
+          </div>
+          {#if p.key === "date_range"}
+            <button
+              type="button"
+              class="mt-1 self-start text-[11px] text-crown-ash underline hover:text-cream"
+              onclick={() => useRollingWindow(p.key, "last_7_days")}
+            >
+              {translate("thread.propose.dateRangeUseRolling", $locale)}
+            </button>
           {/if}
-        </select>
+        {/if}
+      {:else if p.type === T.INTEGRATION_SELECTOR}
+        {#if p.key === "source_group"}
+          {@const selected = getStringList(p.key)}
+          <div class="flex flex-wrap gap-1.5">
+            {#if sourceInstallations.length === 0}
+              <span class="text-[11px] text-crown-ash-dark">
+                {installationsLoading
+                  ? translate("thread.propose.loadingIntegrations", $locale)
+                  : translate("thread.propose.noIntegrations", $locale)}
+              </span>
+            {:else}
+              {#each sourceInstallations as inst (inst.id)}
+                {@const checked = selected.includes(inst.id)}
+                <button
+                  type="button"
+                  aria-pressed={checked}
+                  class="rounded-full border px-2.5 py-1 text-[11px] {checked
+                    ? 'border-talon-gold text-cream'
+                    : 'border-plumage text-crown-ash hover:border-talon-gold hover:text-cream'}"
+                  onclick={() => toggleStringListValue(p.key, inst.id)}
+                >
+                  {inst.displayName || inst.id}
+                </button>
+              {/each}
+            {/if}
+          </div>
+        {:else}
+          <select
+            bind:value={values[p.key]}
+            class="rounded border border-plumage bg-obsidian-light px-2 py-1 text-[12px] text-cream"
+          >
+            {#if installations.length === 0}
+              <option value="" disabled>{translate("thread.propose.noIntegrations", $locale)}</option>
+            {:else}
+              <option value="">—</option>
+              {#each installations as inst (inst.id)}
+                <option value={inst.id}>{inst.displayName || inst.id}</option>
+              {/each}
+            {/if}
+          </select>
+        {/if}
       {:else}
         <!-- TEXT, UNSPECIFIED fall back to text input -->
         <input
@@ -128,6 +277,21 @@
           bind:value={values[p.key]}
           class="rounded border border-plumage bg-obsidian-light px-2 py-1 text-[12px] text-cream"
         />
+        {#if p.key === "theme" || p.key === "topics_to_avoid"}
+          <div class="mt-1 flex flex-wrap gap-1.5">
+            {#each chipValues(p.key) as chip (chip)}
+              <button
+                type="button"
+                aria-label={translate("thread.propose.removeChip", $locale, { value: chip })}
+                class="rounded-full border border-plumage px-2 py-0.5 text-[11px] text-crown-ash hover:border-talon-gold hover:text-cream"
+                onclick={() => removeChipValue(p.key, chip)}
+              >
+                {chip}
+                <span aria-hidden="true"> ×</span>
+              </button>
+            {/each}
+          </div>
+        {/if}
       {/if}
     </label>
   {/each}

@@ -8,7 +8,9 @@
   import AssistantPromptCard from "./AssistantPromptCard.svelte";
   import BindingMatrixCard from "./BindingMatrixCard.svelte";
   import ConversationalBindingCard from "./ConversationalBindingCard.svelte";
+  import ConversationalOverseerCard from "./ConversationalOverseerCard.svelte";
   import LandingCard from "./LandingCard.svelte";
+  import PlanProposalCard from "./PlanProposalCard.svelte";
 
   interface Props {
     message: ChatMessage;
@@ -39,7 +41,7 @@
 {#if message.kind === "USER_TEXT"}
   <div
     id={`m-${message.id}`}
-    class="max-w-[85%] self-end rounded-lg border border-plumage bg-obsidian-light px-3 py-2"
+    class="max-w-[85%] self-end rounded-2xl rounded-tr-sm border border-talon-gold/40 bg-talon-gold/10 px-3 py-2"
   >
     <p class="text-[13px] whitespace-pre-wrap text-cream">{message.text}</p>
     <p class="mt-1 text-right text-[10px] text-crown-ash-dark">
@@ -49,14 +51,28 @@
 {:else if message.kind === "USER_SELECTION"}
   <div
     id={`m-${message.id}`}
-    class="max-w-[85%] self-end rounded-md border border-plumage/60 bg-obsidian px-3 py-1 text-[11px] text-crown-ash"
+    class="max-w-[85%] self-end rounded-2xl rounded-tr-sm border border-talon-gold/40 bg-talon-gold/10 px-3 py-1.5 text-[11px] font-medium text-cream"
   >
-    → {message.text || JSON.parse(message.payloadJson || "{}").value || "—"}
+    {message.text || JSON.parse(message.payloadJson || "{}").value || "—"}
   </div>
+{:else if message.kind === "PLAN_PROPOSED"}
+  <PlanProposalCard
+    {message}
+    tenantId={tenantId}
+    threadId={message.threadId}
+  />
 {:else if message.kind === "ASSISTANT_PROMPT" && promptState === "BINDING_MATRIX"}
   <BindingMatrixCard {message} {configurationId} {tenantId} />
 {:else if message.kind === "ASSISTANT_PROMPT" && promptState === "BINDING_STEP"}
   <ConversationalBindingCard
+    {message}
+    {configurationId}
+    {tenantId}
+    {isAnswered}
+    {isLive}
+  />
+{:else if message.kind === "ASSISTANT_PROMPT" && promptState === "OVERSEER_STEP"}
+  <ConversationalOverseerCard
     {message}
     {configurationId}
     {tenantId}

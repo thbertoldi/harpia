@@ -6,8 +6,31 @@ export interface DateRangeValue {
   endDate: string;
 }
 
+// A date range can be pinned to explicit dates or left as a rolling preset that
+// is resolved at execution time (e.g. a weekly newsletter that always covers the
+// previous seven days). Keeping the preset unresolved through configuration is
+// what makes a scheduled plan roll forward on every run instead of freezing a
+// single week.
+export interface DateRangePreset {
+  preset: string;
+}
+
+export type DateRangeInput = DateRangeValue | DateRangePreset;
+
+export function isDateRangePreset(value: unknown): value is DateRangePreset {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    typeof (value as { preset?: unknown }).preset === "string" &&
+    (value as { preset: string }).preset !== ""
+  );
+}
+
 // genericInputInitialValues builds a value map for a template's inputs.
 // Priority per key: extracted value > default_value_json > "" (or empty object for DATE_RANGE).
+// Preset defaults (like a rolling date-range window) are preserved verbatim so
+// they stay rolling; they are only turned into concrete dates on demand.
 export function genericInputInitialValues(
   params: TemplateInputParameter[],
   extracted: Record<string, unknown>,
@@ -32,6 +55,33 @@ export function genericInputInitialValues(
   return out;
 }
 
+function isoDate(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+function addDays(date: Date, days: number): Date {
+  const next = new Date(date);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
+}
+
+// resolveDateRangePreset turns a named window into concrete dates relative to
+// `now`. "last_7_days" is a rolling window ending yesterday (the last complete
+// day), so a weekly newsletter always covers the previous week, never today's
+// partial data. Used when a user opts into explicit dates, and mirrors the
+// resolution the executor must perform at each scheduled run.
+export function resolveDateRangePreset(
+  preset: string,
+  now: Date,
+): DateRangeValue | null {
+  if (preset === "last_7_days") {
+    const end = addDays(now, -1);
+    const start = addDays(now, -7);
+    return { startDate: isoDate(start), endDate: isoDate(end) };
+  }
+  return null;
+}
+
 // genericParameterValuesJson serializes the form's values to the
 // parameter_values_json string CreatePlanConfiguration expects.
 export function genericParameterValuesJson(
@@ -47,6 +97,7 @@ function isNonEmptyRequiredValue(
   if (value == null) return false;
   if (typeof value === "string") return value.trim() !== "";
   if (type === TemplateInputParameterType.DATE_RANGE) {
+    if (isDateRangePreset(value)) return true;
     const range = value as DateRangeValue;
     return Boolean(range.startDate?.trim() && range.endDate?.trim());
   }
@@ -113,7 +164,8 @@ export interface LinkedInTemplateInputValues {
   tone: string;
   audience: string;
   topicsToAvoid: string;
-  sourceGroupInstallationId: string;
+  sourceGroupInstallationIds: string[];
+  aggregateSourceGroupInstallationId: string;
   dateRange: DateRangeValue;
   approvalMode: "require_approval" | "auto_publish";
 }
@@ -139,7 +191,8 @@ export function parameterValuesJson(values: LinkedInTemplateInputValues): string
     tone: values.tone,
     audience: values.audience,
     topics_to_avoid: values.topicsToAvoid,
-    source_group: values.sourceGroupInstallationId,
+    source_groups: values.sourceGroupInstallationIds,
+    aggregate_source_group: values.aggregateSourceGroupInstallationId,
     date_range: values.dateRange,
     approval_mode: values.approvalMode,
   });

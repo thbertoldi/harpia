@@ -3,6 +3,7 @@ import {
   genericInputInitialValues,
   genericParameterValuesJson,
   requiredInputsSatisfied,
+  resolveDateRangePreset,
   selectOptions,
 } from "./template-inputs";
 import type { TemplateInputParameter } from "$lib/gen/harpia/plans/v1/plans_pb";
@@ -48,6 +49,32 @@ describe("genericInputInitialValues", () => {
     const got = genericInputInitialValues(params, { date_range: dateRange });
     expect(got.date_range).toEqual(dateRange);
   });
+
+  it("keeps a date range preset rolling instead of freezing concrete dates", () => {
+    const params = [
+      param(
+        "date_range",
+        TemplateInputParameterType.DATE_RANGE,
+        '{"preset":"last_7_days"}',
+      ),
+    ];
+    const got = genericInputInitialValues(params, {});
+    // The preset is preserved verbatim so a scheduled plan rolls forward each
+    // run rather than being pinned to a single week at configuration time.
+    expect(got.date_range).toEqual({ preset: "last_7_days" });
+  });
+});
+
+describe("resolveDateRangePreset", () => {
+  it("resolves last_7_days to the previous complete week ending yesterday", () => {
+    expect(
+      resolveDateRangePreset("last_7_days", new Date("2026-07-01T12:00:00Z")),
+    ).toEqual({ startDate: "2026-06-24", endDate: "2026-06-30" });
+  });
+
+  it("returns null for unknown presets", () => {
+    expect(resolveDateRangePreset("all_time", new Date("2026-07-01T12:00:00Z"))).toBeNull();
+  });
 });
 
 describe("requiredInputsSatisfied", () => {
@@ -70,6 +97,15 @@ describe("requiredInputsSatisfied", () => {
     expect(requiredInputsSatisfied(params, { theme: "", language: "en-US" })).toBe(
       false,
     );
+  });
+
+  it("treats a rolling date range preset as satisfied", () => {
+    const params = [
+      param("date_range", TemplateInputParameterType.DATE_RANGE, "", true),
+    ];
+    expect(
+      requiredInputsSatisfied(params, { date_range: { preset: "last_7_days" } }),
+    ).toBe(true);
   });
 
   it("requires both dates for required date ranges", () => {

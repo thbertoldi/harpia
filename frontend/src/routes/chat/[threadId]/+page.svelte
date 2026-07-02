@@ -25,6 +25,7 @@
     mapStepRowsToActivity,
     type PlanActivityItem,
   } from "$lib/plans/activity";
+  import { buildPlanSummary } from "$lib/plans/config-summary";
   import { loadPlanExecutionDetail } from "$lib/plans/plan-execution-detail";
   import { planClient, threadClient } from "$lib/rpc";
   import { Expand } from "lucide-svelte";
@@ -82,7 +83,7 @@
   let lastProposedSourceId = $state<string | null>(null);
 
   async function triggerProposal() {
-    if (proposing || routeConfigurationId || !tenantId || !routeThreadId) return;
+    if (proposing || !tenantId || !routeThreadId) return;
     const sourceId = unansweredUserMessageId;
     if (!sourceId || sourceId === lastProposedSourceId) return;
     proposing = true;
@@ -124,6 +125,11 @@
       : liveConfiguration?.status === PlanConfigurationStatus.SCHEDULED
         ? translate("plans.configure.status.scheduled", $locale)
         : translate("plans.configure.status.draft", $locale),
+  );
+  const planSummary = $derived(
+    data.template && liveConfiguration
+      ? buildPlanSummary(data.template, liveConfiguration)
+      : null,
   );
 
   // Initial load via list-RPC, then live updates via watch-RPC with AbortController.
@@ -331,7 +337,7 @@
         {:else if m.kind === "USER_TEXT"}
           <div
             in:chatEnterStaggered={{ delay: Math.min(i * 40, 200) }}
-            class="max-w-[85%] self-end rounded-lg border border-plumage bg-obsidian-light px-3 py-2 text-[13px] whitespace-pre-wrap text-cream"
+            class="max-w-[85%] self-end rounded-2xl rounded-tr-sm border border-talon-gold/40 bg-talon-gold/10 px-3 py-2 text-[13px] whitespace-pre-wrap text-cream"
           >
             {m.text}
           </div>
@@ -354,7 +360,7 @@
   {:else}
     {#if data.template && liveConfiguration}
       <PlanThreadTopBar
-        planName={data.template.name}
+        planName={planSummary?.intent || data.template.name}
         {statusLabel}
         {cost}
         onOpenSchedule={() => (scheduleOpen = true)}
@@ -412,7 +418,11 @@
       />
     {/if}
 
-    <ThreadComposer {tenantId} configurationId={routeThreadId} />
+    <ThreadComposer
+      {tenantId}
+      configurationId={routeThreadId}
+      onSent={triggerProposal}
+    />
   {/if}
 </div>
 
