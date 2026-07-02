@@ -117,12 +117,11 @@ export async function savePlanConfigurationRecord({
 
   const nextStatus =
     status ?? existing?.status ?? PlanConfigurationStatus.DRAFT;
-  const nextSeedArtifacts = seedArtifacts ?? existing?.seedArtifacts ?? [];
-  const nextSlotBindings = slotBindings ?? existing?.slotBindings ?? [];
+  void seedArtifacts;
+  void slotBindings;
   const nextOverseerBindings =
     overseerBindings ?? existing?.overseerBindings ?? [];
-  const nextBehaviorPolicies =
-    behaviorPolicies ?? existing?.behaviorPolicies ?? undefined;
+  void behaviorPolicies;
   const nextSchedule = schedule ?? existing?.schedule ?? undefined;
   const nextParameterValuesJson =
     parameterValuesJson ?? existing?.parameterValuesJson ?? "";
@@ -132,10 +131,7 @@ export async function savePlanConfigurationRecord({
         tenantId,
         planConfigurationId: existing.id,
         status: nextStatus,
-        seedArtifacts: nextSeedArtifacts,
-        slotBindings: nextSlotBindings,
         overseerBindings: nextOverseerBindings,
-        behaviorPolicies: nextBehaviorPolicies,
         schedule: nextSchedule,
         parameterValuesJson: nextParameterValuesJson,
       })
@@ -144,10 +140,7 @@ export async function savePlanConfigurationRecord({
         workspaceId: workspaceIdForTenant(tenantId),
         planTemplateId: template.id,
         status: nextStatus,
-        seedArtifacts: nextSeedArtifacts,
-        slotBindings: nextSlotBindings,
         overseerBindings: nextOverseerBindings,
-        behaviorPolicies: nextBehaviorPolicies,
         schedule: nextSchedule,
         threadId: threadId ?? existing?.threadId ?? "",
         parameterValuesJson: nextParameterValuesJson,

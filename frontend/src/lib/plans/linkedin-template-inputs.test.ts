@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { linkedInInputValuesFromParameterValuesJson } from "./linkedin-template-inputs";
 import {
-  linkedInInputValuesFromParameterValuesJson,
-  materializeLinkedInInputValues,
-} from "./linkedin-template-inputs";
-import { parameterValuesJson, type LinkedInTemplateInputValues } from "./template-inputs";
+  parameterValuesJson,
+  type LinkedInTemplateInputValues,
+} from "./template-inputs";
 
 function values(): LinkedInTemplateInputValues {
   return {
@@ -22,6 +22,7 @@ function values(): LinkedInTemplateInputValues {
 describe("LinkedIn template source groups", () => {
   it("serializes selected source groups as a list", () => {
     expect(JSON.parse(parameterValuesJson(values()))).toMatchObject({
+      source_group: "rss-aggregate",
       source_groups: ["rss-tech", "rss-business"],
     });
   });
@@ -37,16 +38,5 @@ describe("LinkedIn template source groups", () => {
         '{"source_group":"rss-legacy"}',
       ).sourceGroupInstallationIds,
     ).toEqual(["rss-legacy"]);
-  });
-
-  it("materializes one fetch-news SlotBinding using the aggregate installation", () => {
-    const materialized = materializeLinkedInInputValues(values(), {
-      "write-draft": "writer",
-    });
-    const fetchBindings = materialized.slotBindings.filter(
-      (binding) => binding.stepKey === "fetch-news",
-    );
-    expect(fetchBindings).toHaveLength(1);
-    expect(fetchBindings[0].executorInstallationId).toBe("rss-aggregate");
   });
 });

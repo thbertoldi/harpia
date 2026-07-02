@@ -104,6 +104,16 @@ func TestFetchNewsListRejectsInvalidDateRange(t *testing.T) {
 	}
 }
 
+func TestParseDateRangeRejectsUnresolvedPresetPayload(t *testing.T) {
+	_, _, err := parseDateRangePayload([]byte(`{"preset":"last_7_days"}`))
+	if err == nil {
+		t.Fatal("expected unresolved preset error")
+	}
+	if !strings.Contains(err.Error(), "unresolved date range preset") {
+		t.Fatalf("error = %v, want unresolved preset message", err)
+	}
+}
+
 type stubFeedFetcher struct {
 	feed *gofeed.Feed
 	err  error

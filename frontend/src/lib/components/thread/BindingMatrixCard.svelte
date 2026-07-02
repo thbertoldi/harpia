@@ -247,10 +247,7 @@
         tenantId,
         planConfigurationId: configurationId,
         status,
-        seedArtifacts: configuration.seedArtifacts,
-        slotBindings: configuration.slotBindings,
         overseerBindings: configuration.overseerBindings,
-        behaviorPolicies: configuration.behaviorPolicies,
         schedule: configuration.schedule,
         parameterValuesJson: configuration.parameterValuesJson,
         // Explicit user save — announce it in the thread.

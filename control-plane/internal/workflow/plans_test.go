@@ -101,6 +101,110 @@ func TestPlanWorkflowRunsStepsInTopologicalOrder(t *testing.T) {
 	}
 }
 
+func TestPlanWorkflowRunsWeeklyNewsletterLinkedInEndToEnd(t *testing.T) {
+	env := newPlanWorkflowTestEnv(t)
+
+	input := PlanWorkflowInput{
+		TenantID:        "22222222-2222-2222-2222-222222222222",
+		PlanExecutionID: "11111111-1111-1111-1111-111111111111",
+	}
+	snapshot := testPlanSnapshot()
+	snapshot.Template.Steps = append(snapshot.Template.Steps, &plansv1.PlanStep{
+		Key:                   "publish-linkedin",
+		InputArtifactTypeId:   "harpia.artifacts.v1.LinkedInPostDraft",
+		OutputArtifactTypeId:  "harpia.artifacts.v1.PublishConfirmation",
+		DefaultExecutorSkuKey: "linkedin-publish",
+	})
+	snapshot.Template.Edges = append(snapshot.Template.Edges, &plansv1.PlanStepDependency{
+		FromStepKey: "adapt-for-linkedin",
+		ToStepKey:   "publish-linkedin",
+	})
+	snapshot.ExecutorInstallations["publish-linkedin"] = ExecutorInstallationSnapshot{
+		ID:             "installation-publish",
+		Kind:           ExecutorKindIntegration,
+		ExecutorSKUKey: "linkedin-publish",
+	}
+	snapshot.Configuration.BehaviorPolicies = &plansv1.PlanBehaviorPolicies{
+		ElicitationTimeoutBehavior: plansv1.ElicitationTimeoutBehavior_ELICITATION_TIMEOUT_BEHAVIOR_PAUSE_UNTIL_ANSWERED,
+		PublishApprovalMode:        plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_AUTO_PUBLISH,
+	}
+
+	var ranSteps []string
+	var completedOutputs []string
+	env.OnActivity(LoadPlanExecutionActivityName, mock.Anything, input).Return(LoadedPlanExecution{
+		PlanExecutionID: input.PlanExecutionID,
+		Status:          "pending",
+		Snapshot:        snapshot,
+	}, nil)
+	env.OnActivity(StartPlanExecutionActivityName, mock.Anything, input).Return(nil)
+	env.OnActivity(CreateStepExecutionActivityName, mock.Anything, mock.Anything).Return(
+		func(ctx context.Context, stepInput CreateStepExecutionInput) (StepExecutionRecord, error) {
+			return StepExecutionRecord{
+				ID:              "step-" + stepInput.PlanStepKey,
+				PlanStepKey:     stepInput.PlanStepKey,
+				Attempt:         1,
+				InputArtifactID: stepInput.InputArtifactID,
+			}, nil
+		},
+	)
+	env.OnActivity(RunIntegrationActivityName, mock.Anything, mock.Anything).Return(
+		func(ctx context.Context, executorInput ExecutorActivityInput) (ExecutorActivityResult, error) {
+			ranSteps = append(ranSteps, executorInput.PlanStepKey)
+			switch executorInput.PlanStepKey {
+			case "fetch-news":
+				assertArtifactIDs(t, executorInput.InputArtifacts, []string{"seed-date-range"})
+				return ExecutorActivityResult{Status: ExecutorResultStatusCompleted, OutputArtifactID: "artifact-news-list"}, nil
+			case "publish-linkedin":
+				assertArtifactIDs(t, executorInput.InputArtifacts, []string{"artifact-linkedin-post"})
+				return ExecutorActivityResult{Status: ExecutorResultStatusCompleted, OutputArtifactID: "artifact-publish-confirmation"}, nil
+			default:
+				t.Fatalf("unexpected integration step %q", executorInput.PlanStepKey)
+				return ExecutorActivityResult{}, nil
+			}
+		},
+	)
+	env.OnActivity(RunAgentActivityName, mock.Anything, mock.Anything).Return(
+		func(ctx context.Context, executorInput ExecutorActivityInput) (ExecutorActivityResult, error) {
+			ranSteps = append(ranSteps, executorInput.PlanStepKey)
+			switch executorInput.PlanStepKey {
+			case "write-draft":
+				assertArtifactIDs(t, executorInput.InputArtifacts, []string{"artifact-news-list"})
+				return ExecutorActivityResult{Status: ExecutorResultStatusCompleted, OutputArtifactID: "artifact-text-draft"}, nil
+			case "adapt-for-linkedin":
+				assertArtifactIDs(t, executorInput.InputArtifacts, []string{"artifact-text-draft"})
+				return ExecutorActivityResult{Status: ExecutorResultStatusCompleted, OutputArtifactID: "artifact-linkedin-post"}, nil
+			default:
+				t.Fatalf("unexpected agent step %q", executorInput.PlanStepKey)
+				return ExecutorActivityResult{}, nil
+			}
+		},
+	)
+	env.OnActivity(CompleteStepExecutionActivityName, mock.Anything, mock.Anything).Return(
+		func(ctx context.Context, statusInput StepStatusUpdateInput) error {
+			completedOutputs = append(completedOutputs, statusInput.OutputArtifactID)
+			return nil
+		},
+	)
+	env.OnActivity(CompletePlanExecutionActivityName, mock.Anything, input).Return(nil)
+
+	env.ExecuteWorkflow(PlanWorkflow, input)
+
+	if !env.IsWorkflowCompleted() {
+		t.Fatal("workflow did not complete")
+	}
+	if err := env.GetWorkflowError(); err != nil {
+		t.Fatalf("workflow failed: %v", err)
+	}
+	expectedSteps := []string{"fetch-news", "write-draft", "adapt-for-linkedin", "publish-linkedin"}
+	if !reflect.DeepEqual(ranSteps, expectedSteps) {
+		t.Fatalf("ran steps = %#v, want %#v", ranSteps, expectedSteps)
+	}
+	expectedOutputs := []string{"artifact-news-list", "artifact-text-draft", "artifact-linkedin-post", "artifact-publish-confirmation"}
+	if !reflect.DeepEqual(completedOutputs, expectedOutputs) {
+		t.Fatalf("completed outputs = %#v, want %#v", completedOutputs, expectedOutputs)
+	}
+}
+
 func TestPlanActivityOptionsUseBoundedRetries(t *testing.T) {
 	options := planActivityOptions()
 

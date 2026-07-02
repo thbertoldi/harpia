@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -307,7 +308,12 @@ func (h *PlanHandler) CreatePlanConfiguration(ctx context.Context, req *connect.
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("plan template not found: %w", err))
 	}
 
-	if err := h.validator.ValidateSlotBindings(ctx, tenantID, template, req.Msg.Status, req.Msg.SlotBindings); err != nil {
+	seedArtifacts, slotBindings, behaviorPolicies, err := h.materializeConfigurationProjection(ctx, tenantID, template, req.Msg.ParameterValuesJson)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := h.validator.ValidateSlotBindings(ctx, tenantID, template, req.Msg.Status, slotBindings); err != nil {
 		return nil, connectErrorFromBinding(err)
 	}
 	if err := h.validator.ValidateOverseerBindings(template, req.Msg.Status, req.Msg.OverseerBindings); err != nil {
@@ -315,8 +321,8 @@ func (h *PlanHandler) CreatePlanConfiguration(ctx context.Context, req *connect.
 	}
 
 	config, err := h.buildConfigurationFromRequest(tenantID, template, req.Msg.WorkspaceId, req.Msg.Status,
-		req.Msg.SeedArtifacts, req.Msg.SlotBindings, req.Msg.OverseerBindings,
-		req.Msg.BehaviorPolicies, req.Msg.Schedule, req.Msg.ParameterValuesJson)
+		seedArtifacts, slotBindings, req.Msg.OverseerBindings,
+		behaviorPolicies, req.Msg.Schedule, req.Msg.ParameterValuesJson)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
@@ -399,10 +405,7 @@ func (h *PlanHandler) UpdatePlanConfiguration(ctx context.Context, req *connect.
 	updatedInput := &plansv1.CreatePlanConfigurationRequest{
 		WorkspaceId:      existing.WorkspaceID.UUID.String(),
 		Status:           req.Msg.Status,
-		SeedArtifacts:    req.Msg.SeedArtifacts,
-		SlotBindings:     req.Msg.SlotBindings,
 		OverseerBindings: req.Msg.OverseerBindings,
-		BehaviorPolicies: req.Msg.BehaviorPolicies,
 		Schedule:         req.Msg.Schedule,
 	}
 	if !existing.WorkspaceID.Valid {
@@ -413,7 +416,12 @@ func (h *PlanHandler) UpdatePlanConfiguration(ctx context.Context, req *connect.
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	if err := h.validator.ValidateSlotBindings(ctx, tenantID, template, updatedInput.Status, updatedInput.SlotBindings); err != nil {
+	seedArtifacts, slotBindings, behaviorPolicies, err := h.materializeConfigurationProjection(ctx, tenantID, template, string(parameterValues))
+	if err != nil {
+		return nil, err
+	}
+
+	if err := h.validator.ValidateSlotBindings(ctx, tenantID, template, updatedInput.Status, slotBindings); err != nil {
 		return nil, connectErrorFromBinding(err)
 	}
 	if err := h.validator.ValidateOverseerBindings(template, updatedInput.Status, updatedInput.OverseerBindings); err != nil {
@@ -421,8 +429,8 @@ func (h *PlanHandler) UpdatePlanConfiguration(ctx context.Context, req *connect.
 	}
 
 	config, err := h.buildConfigurationFromRequest(tenantID, template, updatedInput.WorkspaceId, updatedInput.Status,
-		updatedInput.SeedArtifacts, updatedInput.SlotBindings, updatedInput.OverseerBindings,
-		updatedInput.BehaviorPolicies, updatedInput.Schedule, "{}")
+		seedArtifacts, slotBindings, updatedInput.OverseerBindings,
+		behaviorPolicies, updatedInput.Schedule, string(parameterValues))
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
@@ -888,6 +896,42 @@ func (h *PlanHandler) buildConfigurationFromRequest(
 		Schedule:            scheduleJSON,
 		ParameterValues:     parameterValues,
 	}, nil
+}
+
+func (h *PlanHandler) materializeConfigurationProjection(
+	ctx context.Context,
+	tenantID uuid.UUID,
+	template *PlanTemplate,
+	parameterValuesJSON string,
+) ([]*plansv1.SeedArtifactBinding, []*plansv1.SlotBinding, *plansv1.PlanBehaviorPolicies, error) {
+	normalized, err := normalizeParameterValuesJSON(parameterValuesJSON)
+	if err != nil {
+		return nil, nil, nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	var values map[string]any
+	if err := json.Unmarshal(normalized, &values); err != nil {
+		return nil, nil, nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("parameter values must be a JSON object: %w", err))
+	}
+
+	templateProto := templateToProto(template)
+	seeds, parameterSlots, policies, err := MaterializePlanConfiguration(templateProto, values)
+	if err != nil {
+		return nil, nil, nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	defaultSlots, err := ResolveDefaultSlotBindings(ctx, tenantID, templateProto, parameterSlots, h.executors)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	slotBindings := append([]*plansv1.SlotBinding{}, parameterSlots...)
+	slotBindings = append(slotBindings, defaultSlots...)
+	sortSlotBindings(slotBindings)
+	return seeds, slotBindings, policies, nil
+}
+
+func sortSlotBindings(bindings []*plansv1.SlotBinding) {
+	sort.Slice(bindings, func(i, j int) bool {
+		return bindings[i].GetStepKey() < bindings[j].GetStepKey()
+	})
 }
 
 func normalizeParameterValuesJSON(parameterValuesJSON string) (json.RawMessage, error) {

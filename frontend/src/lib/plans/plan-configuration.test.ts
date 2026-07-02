@@ -115,8 +115,8 @@ describe("plan configuration persistence", () => {
     const result = await savePlanConfigurationRecord({
       template,
       status: PlanConfigurationStatus.DRAFT,
-      slotBindings: [],
       threadId: "test-thread",
+      parameterValuesJson: "{\"theme\":\"sports\"}",
     });
 
     expect(createPlanConfiguration).toHaveBeenCalledWith(
@@ -125,8 +125,14 @@ describe("plan configuration persistence", () => {
         workspaceId: "",
         planTemplateId: template.id,
         status: PlanConfigurationStatus.DRAFT,
+        parameterValuesJson: "{\"theme\":\"sports\"}",
       }),
     );
+    expect(createPlanConfiguration.mock.calls[0][0].seedArtifacts).toBeUndefined();
+    expect(createPlanConfiguration.mock.calls[0][0].slotBindings).toBeUndefined();
+    expect(
+      createPlanConfiguration.mock.calls[0][0].behaviorPolicies,
+    ).toBeUndefined();
     expect(result.id).toBe("created");
   });
 
@@ -173,10 +179,13 @@ describe("plan configuration persistence", () => {
         tenantId: "dev",
         planConfigurationId: "existing",
         status: PlanConfigurationStatus.DRAFT,
-        slotBindings: existing.slotBindings,
         overseerBindings: existing.overseerBindings,
-        behaviorPolicies: existing.behaviorPolicies,
       }),
     );
+    expect(updatePlanConfiguration.mock.calls[0][0].seedArtifacts).toBeUndefined();
+    expect(updatePlanConfiguration.mock.calls[0][0].slotBindings).toBeUndefined();
+    expect(
+      updatePlanConfiguration.mock.calls[0][0].behaviorPolicies,
+    ).toBeUndefined();
   });
 });

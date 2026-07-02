@@ -18,18 +18,36 @@ import {
 } from "./assistant";
 import {
   PlanConfigurationStatus,
-  PublishApprovalMode,
+  TemplateInputRuntimeTarget,
   type PlanConfiguration,
   type PlanTemplate,
   type OverseerBinding,
-  type SeedArtifactBinding,
-  type SlotBinding,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
 
 beforeEach(() => {
   appendThreadMessage.mockReset();
   updatePlanConfiguration.mockReset();
 });
+
+function templateWithSlotBindingParam(
+  stepKey = "fetch-news",
+  key = "source_group",
+): PlanTemplate {
+  return {
+    id: "tpl",
+    inputParameters: [
+      {
+        key,
+        runtimeMappings: [
+          {
+            target: TemplateInputRuntimeTarget.SLOT_BINDING,
+            stepKey,
+          },
+        ],
+      },
+    ],
+  } as PlanTemplate;
+}
 
 describe("selectChip", () => {
   it("appends a USER_SELECTION message", async () => {
@@ -53,7 +71,7 @@ describe("selectChip", () => {
 });
 
 describe("applyLinkedInSuggestion", () => {
-  it("binds the Monday sports LinkedIn plan and stores content preferences", async () => {
+  it("stores LinkedIn parameter values and leaves materialization to the server", async () => {
     appendThreadMessage.mockResolvedValueOnce({});
     updatePlanConfiguration.mockResolvedValueOnce({
       planConfiguration: { id: "c" },
@@ -99,36 +117,13 @@ describe("applyLinkedInSuggestion", () => {
     });
 
     const call = updatePlanConfiguration.mock.calls[0][0];
-    expect(
-      call.slotBindings.map((binding: SlotBinding) => binding.stepKey),
-    ).toEqual([
-      "fetch-news",
-      "write-draft",
-      "adapt-for-linkedin",
-      "publish-linkedin",
-    ]);
-    expect(call.behaviorPolicies.publishApprovalMode).toBe(
-      PublishApprovalMode.REQUIRE_APPROVAL,
-    );
-    const dateSeed = call.seedArtifacts.find(
-      (seed: SeedArtifactBinding) => seed.stepKey === "fetch-news",
-    );
-    expect(JSON.parse(dateSeed.literalJson)).toEqual({
-      startDate: "2026-06-20",
-      endDate: "2026-06-26",
-    });
-    const preferences = call.seedArtifacts.find(
-      (seed: SeedArtifactBinding) =>
-        seed.inputName === "harpia.internal.ContentPreferences",
-    );
-    expect(JSON.parse(preferences.literalJson)).toMatchObject({
-      topic: "sports",
-      language: "pt-BR",
-      tone: "analytical, concise, and practical",
-    });
+    expect(call.seedArtifacts).toBeUndefined();
+    expect(call.slotBindings).toBeUndefined();
+    expect(call.behaviorPolicies).toBeUndefined();
     expect(JSON.parse(call.parameterValuesJson)).toMatchObject({
       theme: "sports",
       language: "pt-BR",
+      source_group: "inst-rss-sports",
       approval_mode: "require_approval",
     });
   });
@@ -139,10 +134,7 @@ describe("editBinding", () => {
     updatePlanConfiguration.mockResolvedValueOnce({
       planConfiguration: { id: "c" },
     });
-    const template = {
-      id: "tpl",
-      steps: [{ key: "a" }, { key: "b" }],
-    } as PlanTemplate;
+    const template = templateWithSlotBindingParam("a", "source_group");
     const config = {
       id: "c",
       status: PlanConfigurationStatus.RUNNABLE,
@@ -169,11 +161,11 @@ describe("editBinding", () => {
     expect(updatePlanConfiguration).toHaveBeenCalledTimes(1);
     const call = updatePlanConfiguration.mock.calls[0][0];
     expect(call.announceSaved).toBeFalsy();
-    expect(
-      call.slotBindings.find((b: SlotBinding) => b.stepKey === "a")
-        ?.executorInstallationId,
-    ).toBe("inst-new");
-    expect(call.parameterValuesJson).toBe("{\"theme\":\"existing\"}");
+    expect(call.slotBindings).toBeUndefined();
+    expect(JSON.parse(call.parameterValuesJson)).toMatchObject({
+      theme: "existing",
+      source_group: "inst-new",
+    });
   });
 
   it("adds a binding for a step that was previously unbound", async () => {
@@ -181,10 +173,7 @@ describe("editBinding", () => {
     updatePlanConfiguration.mockResolvedValueOnce({
       planConfiguration: { id: "c" },
     });
-    const template = {
-      id: "tpl",
-      steps: [{ key: "a" }, { key: "b" }],
-    } as PlanTemplate;
+    const template = templateWithSlotBindingParam("a", "source_group");
     // Fresh DRAFT: no slot bindings yet (the regression case).
     const config = {
       id: "c",
@@ -205,11 +194,10 @@ describe("editBinding", () => {
     });
     expect(updatePlanConfiguration).toHaveBeenCalledTimes(1);
     const call = updatePlanConfiguration.mock.calls[0][0];
-    expect(call.slotBindings).toHaveLength(1);
-    expect(
-      call.slotBindings.find((b: SlotBinding) => b.stepKey === "a")
-        ?.executorInstallationId,
-    ).toBe("inst-new");
+    expect(call.slotBindings).toBeUndefined();
+    expect(JSON.parse(call.parameterValuesJson)).toMatchObject({
+      source_group: "inst-new",
+    });
   });
 });
 
@@ -236,10 +224,7 @@ describe("selectBindingOption", () => {
       schedule: undefined,
       seedArtifacts: [],
     } as unknown as PlanConfiguration;
-    const template = {
-      id: "tpl",
-      steps: [{ key: "fetch-news" }],
-    } as PlanTemplate;
+    const template = templateWithSlotBindingParam();
 
     const next = await selectBindingOption({
       tenantId: "t",
@@ -265,11 +250,10 @@ describe("selectBindingOption", () => {
     );
     expect(updatePlanConfiguration).toHaveBeenCalledTimes(1);
     expect(updatePlanConfiguration.mock.calls[0][0].announceSaved).toBeFalsy();
+    expect(updatePlanConfiguration.mock.calls[0][0].slotBindings).toBeUndefined();
     expect(
-      updatePlanConfiguration.mock.calls[0][0].slotBindings.find(
-        (binding: SlotBinding) => binding.stepKey === "fetch-news",
-      )?.executorInstallationId,
-    ).toBe("rss-tech");
+      JSON.parse(updatePlanConfiguration.mock.calls[0][0].parameterValuesJson),
+    ).toMatchObject({ source_group: "rss-tech" });
     expect(appendThreadMessage).toHaveBeenNthCalledWith(
       2,
       "t",
@@ -297,10 +281,7 @@ describe("selectBindingOption", () => {
       schedule: undefined,
       seedArtifacts: [],
     } as unknown as PlanConfiguration;
-    const template = {
-      id: "tpl",
-      steps: [{ key: "fetch-news" }],
-    } as PlanTemplate;
+    const template = templateWithSlotBindingParam();
 
     await selectBindingOption({
       tenantId: "t",
@@ -354,7 +335,7 @@ describe("editOverseerBinding", () => {
     expect(updatePlanConfiguration).toHaveBeenCalledTimes(1);
     const call = updatePlanConfiguration.mock.calls[0][0];
     expect(call.announceSaved).toBeFalsy();
-    expect(call.slotBindings).toBe(config.slotBindings);
+    expect(call.slotBindings).toBeUndefined();
     expect(
       call.overseerBindings.find(
         (binding: OverseerBinding) => binding.stepKey === "write-draft",

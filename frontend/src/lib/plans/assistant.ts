@@ -1,17 +1,15 @@
 import { create } from "@bufbuild/protobuf";
 import { appendThreadMessage } from "$lib/chat/client";
+import { buildDefaultLinkedInInputValues } from "$lib/plans/linkedin-template-inputs";
 import {
-  buildDefaultLinkedInInputValues,
-  materializeLinkedInInputValues,
-} from "$lib/plans/linkedin-template-inputs";
-import {
+  parseParameterValuesJson,
   parameterValuesJson,
   type LinkedInTemplateInputValues,
 } from "$lib/plans/template-inputs";
 import { planClient } from "$lib/rpc";
 import {
   OverseerBindingSchema,
-  SlotBindingSchema,
+  TemplateInputRuntimeTarget,
   type PlanConfiguration,
   type PlanTemplate,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
@@ -48,39 +46,19 @@ export async function editBinding(args: {
   stepKey: string;
   newInstallationId: string;
 }): Promise<PlanConfiguration> {
-  // Incremental binding picks are not announced in the thread (no STEP_REBOUND
-  // event, announce_saved=false): the thread would otherwise flood with a
-  // message on every executor change. The explicit Save announces instead.
-  // Upsert: a step bound for the first time has no existing entry, so .map
-  // alone would silently drop the pick (the bug where a selected executor
-  // never reached the canvas). Append when absent; the server resolves the
-  // SKU + kind from the installation id on validation, so installation id is
-  // the only field the client must supply.
-  const existing = args.existingConfiguration.slotBindings;
-  const alreadyBound = existing.some((b) => b.stepKey === args.stepKey);
-  const nextSlotBindings = alreadyBound
-    ? existing.map((b) =>
-        b.stepKey === args.stepKey
-          ? { ...b, executorInstallationId: args.newInstallationId }
-          : b,
-      )
-    : [
-        ...existing,
-        create(SlotBindingSchema, {
-          stepKey: args.stepKey,
-          executorInstallationId: args.newInstallationId,
-        }),
-      ];
+  const nextParameterValuesJson = parameterValuesWithSlotBinding(
+    args.template,
+    args.existingConfiguration.parameterValuesJson,
+    args.stepKey,
+    args.newInstallationId,
+  );
   const response = await planClient.updatePlanConfiguration({
     tenantId: args.tenantId,
     planConfigurationId: args.configurationId,
     status: args.existingConfiguration.status,
-    seedArtifacts: args.existingConfiguration.seedArtifacts,
-    slotBindings: nextSlotBindings,
     overseerBindings: args.existingConfiguration.overseerBindings,
-    behaviorPolicies: args.existingConfiguration.behaviorPolicies,
     schedule: args.existingConfiguration.schedule,
-    parameterValuesJson: args.existingConfiguration.parameterValuesJson,
+    parameterValuesJson: nextParameterValuesJson,
   });
   if (!response.planConfiguration) {
     throw new Error(
@@ -116,10 +94,7 @@ export async function editOverseerBinding(args: {
     tenantId: args.tenantId,
     planConfigurationId: args.configurationId,
     status: args.existingConfiguration.status,
-    seedArtifacts: args.existingConfiguration.seedArtifacts,
-    slotBindings: args.existingConfiguration.slotBindings,
     overseerBindings: nextOverseerBindings,
-    behaviorPolicies: args.existingConfiguration.behaviorPolicies,
     schedule: args.existingConfiguration.schedule,
     parameterValuesJson: args.existingConfiguration.parameterValuesJson,
   });
@@ -261,20 +236,18 @@ export async function applyLinkedInSuggestion(args: {
     ? { ...args.values, dateRange: { ...args.values.dateRange } }
     : buildDefaultLinkedInInputValues(args.today ?? new Date());
   values.theme = args.topic.trim() || values.theme;
-  const suggestion = materializeLinkedInInputValues(
-    values,
-    args.installationIdsByStep,
-  );
+  values.aggregateSourceGroupInstallationId =
+    values.aggregateSourceGroupInstallationId.trim() ||
+    values.sourceGroupInstallationIds.find((id) => id.trim())?.trim() ||
+    args.installationIdsByStep["fetch-news"] ||
+    "";
   // Suggest is an incremental edit (announce_saved=false, no thread event):
   // the user reviews the populated matrix and then explicitly saves.
   const response = await planClient.updatePlanConfiguration({
     tenantId: args.tenantId,
     planConfigurationId: args.configurationId,
     status: args.existingConfiguration.status,
-    seedArtifacts: suggestion.seedArtifacts,
-    slotBindings: suggestion.slotBindings,
     overseerBindings: args.existingConfiguration.overseerBindings,
-    behaviorPolicies: suggestion.behaviorPolicies,
     schedule: args.existingConfiguration.schedule,
     parameterValuesJson: parameterValuesJson(values),
   });
@@ -284,4 +257,26 @@ export async function applyLinkedInSuggestion(args: {
     );
   }
   return response.planConfiguration;
+}
+
+function parameterValuesWithSlotBinding(
+  template: PlanTemplate,
+  raw: string | undefined,
+  stepKey: string,
+  installationId: string,
+): string {
+  const parameter = template.inputParameters.find((input) =>
+    input.runtimeMappings.some(
+      (mapping) =>
+        mapping.target === TemplateInputRuntimeTarget.SLOT_BINDING &&
+        mapping.stepKey === stepKey,
+    ),
+  );
+  if (!parameter?.key) {
+    return raw ?? "";
+  }
+  return JSON.stringify({
+    ...parseParameterValuesJson(raw),
+    [parameter.key]: installationId,
+  });
 }

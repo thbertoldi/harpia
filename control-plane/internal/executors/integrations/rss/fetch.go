@@ -2,6 +2,7 @@ package rss
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sort"
@@ -11,6 +12,7 @@ import (
 	"github.com/mmcdole/gofeed"
 
 	artifactsv1 "github.com/harpia/control-plane/gen/harpia/artifacts/v1"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type FeedFetcher interface {
@@ -52,6 +54,13 @@ func FetchNewsList(ctx context.Context, fetcher FeedFetcher, feeds []string, dat
 	startDate, endDate, err := parseDateRange(dateRange)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrInvalidInput, err)
+	}
+	return fetchNewsListInRange(ctx, fetcher, feeds, startDate, endDate)
+}
+
+func fetchNewsListInRange(ctx context.Context, fetcher FeedFetcher, feeds []string, startDate, endDate time.Time) (*artifactsv1.NewsList, error) {
+	if fetcher == nil {
+		return nil, fmt.Errorf("%w: feed fetcher is required", ErrInvalidInput)
 	}
 
 	articlesByURL := make(map[string]*artifactsv1.NewsArticle)
@@ -150,6 +159,20 @@ func parseDateRange(dateRange *artifactsv1.DateRange) (time.Time, time.Time, err
 	startDate = startDate.UTC()
 	endDate = endDate.UTC()
 	return startDate, endDate, nil
+}
+
+func parseDateRangePayload(payload []byte) (time.Time, time.Time, error) {
+	var raw struct {
+		Preset string `json:"preset"`
+	}
+	if err := json.Unmarshal(payload, &raw); err == nil && strings.TrimSpace(raw.Preset) != "" {
+		return time.Time{}, time.Time{}, fmt.Errorf("unresolved date range preset %q reached RSS executor", raw.Preset)
+	}
+	dateRange := &artifactsv1.DateRange{}
+	if err := protojson.Unmarshal(payload, dateRange); err != nil {
+		return time.Time{}, time.Time{}, fmt.Errorf("parse date range artifact: %w", err)
+	}
+	return parseDateRange(dateRange)
 }
 
 func articleInDateRange(article *artifactsv1.NewsArticle, startDate, endDate time.Time) bool {
