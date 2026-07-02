@@ -33,12 +33,14 @@ and `STEP_REBOUND` message kinds. No new ADR (ADR-012 §10 covers it).
 "edit all" fallback**; both surfaces sync via `UpdatePlanConfiguration`.
 
 **Decomposition (4 sequenced OpenSpec changes, 1→2→3→4):**
-1. `conversational-slot-binding` — guided per-step "who handles X?" chips (incl. RSS presets); re-enable USER_SELECTION/STEP_REBOUND.
-2. `conversational-overseer` — "who oversees the agent steps?" (wire the stubbed overseer; MVP self/tenant user).
+1. ✅ `conversational-slot-binding` — guided per-step "who handles X?" chips (incl. RSS presets); re-enable USER_SELECTION/STEP_REBOUND.
+2. ✅ `conversational-overseer` — "who oversees the agent steps?" (wire the stubbed overseer; MVP self/tenant user).
 3. `conversational-policies` — approval mode + elicitation timeout as enum chips (generalize beyond LinkedIn).
 4. `conversational-schedule-promote` — schedule in-flow, validate invariants, promote → RUNNABLE (reuse the shipped celebration), add "Revise" backward handoff.
 
-**Links:** ADR-012 §10; builds on `openspec/changes/archive/2026-07-01-conversational-plan-proposal`.
+**Links:** ADR-012 §10; builds on `openspec/changes/archive/2026-07-01-conversational-plan-proposal`; shipped slices:
+`openspec/changes/archive/2026-07-01-conversational-slot-binding`,
+`openspec/changes/archive/2026-07-01-conversational-overseer`.
 
 ## Content
 
@@ -66,7 +68,28 @@ A richer library is **blocked on new ExecutorSKUs** (blog/email/X integrations d
 
 ## UX
 
-_(chat-first UX follow-ups tracked in `docs/superpowers/specs/2026-07-01-chat-first-ux-backlog.md`; migrate here as they graduate.)_
+### 🛠️ Chat-first plan lifecycle experience
+**Taxonomy:** PlanTemplate, PlanConfiguration, PlanExecution, Artifact, OverseerBinding,
+PlanSchedule.
+The UX north star is that the user **talks to Harpia**, Harpia identifies and configures
+plans, then keeps execution, schedule, control, audit, artifacts, and later edits available
+through the same conversational mental model. Chat must not feel like a launcher for modal
+forms. Plan proposal, refinement, configuration, post-create transition, run/schedule, and
+"anything else?" should accumulate as a conversation.
+
+**Captured direction:** choose the rich conversational refinement direction ("C"):
+best-match plan highlighting, recommended themes, audience, topics to avoid, multiple
+source groups, clear date-range explanation, and a natural final confirmation. After the
+plan is configured, keep the user in the thread with actions like Run now / Schedule /
+Review plan / Adjust configuration / Ask about another plan.
+
+**Cohesion requirement:** the same PlanConfiguration must look and behave like the same
+object across chat, plan lists, canvas, settings/configuration, execution detail, artifact
+views, and audit surfaces. Structured pages may be denser than chat, but they must reuse
+the same vocabulary and controls.
+
+**Links:** detailed backlog and investigation notes in
+`docs/superpowers/specs/2026-07-01-chat-first-ux-backlog.md`.
 
 ## Follow-ups / smaller
 
