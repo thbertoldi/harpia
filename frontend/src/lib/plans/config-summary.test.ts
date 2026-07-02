@@ -11,12 +11,14 @@ import {
   OverseerBindingSchema,
   PlanBehaviorPoliciesSchema,
   PlanConfigurationSchema,
+  PlanConfigurationStatus,
   PublishApprovalMode,
   SlotBindingSchema,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
 import {
   buildConfigCostSummary,
   buildConfigLineItems,
+  buildPlanSummary,
   formatMoney,
   resolveListPrice,
   sumLineItemCosts,
@@ -163,5 +165,38 @@ describe("config summary", () => {
 
   it("formats money for display", () => {
     expect(formatMoney(1850, "USD", "en")).toBe("$18.50");
+  });
+
+  it("builds shared plan summary vocabulary", () => {
+    const configuration = create(PlanConfigurationSchema, {
+      id: "config-weekly-newsletter",
+      planTemplateId: WEEKLY_NEWSLETTER_TEMPLATE.id,
+      status: PlanConfigurationStatus.RUNNABLE,
+      parameterValuesJson:
+        '{"theme":"AI","audience":"founders","source_groups":["rss-tech","rss-business"]}',
+      slotBindings: [
+        create(SlotBindingSchema, {
+          stepKey: "fetch-news",
+          executorInstallationId: "rss-aggregate",
+        }),
+      ],
+      overseerBindings: [
+        create(OverseerBindingSchema, {
+          stepKey: "write-draft",
+          overseerUserId: "overseer-1",
+        }),
+      ],
+    });
+
+    expect(buildPlanSummary(WEEKLY_NEWSLETTER_TEMPLATE, configuration)).toEqual({
+      id: "config-weekly-newsletter",
+      templateName: WEEKLY_NEWSLETTER_TEMPLATE.name,
+      intent: "AI",
+      status: PlanConfigurationStatus.RUNNABLE,
+      executorBindings: [{ stepKey: "fetch-news", installationId: "rss-aggregate" }],
+      overseerBindings: [{ stepKey: "write-draft", overseerUserId: "overseer-1" }],
+      sourceGroups: ["rss-tech", "rss-business"],
+      audience: "founders",
+    });
   });
 });

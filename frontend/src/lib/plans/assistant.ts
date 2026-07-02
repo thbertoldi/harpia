@@ -10,6 +10,7 @@ import {
 } from "$lib/plans/template-inputs";
 import { planClient } from "$lib/rpc";
 import {
+  OverseerBindingSchema,
   SlotBindingSchema,
   type PlanConfiguration,
   type PlanTemplate,
@@ -89,6 +90,47 @@ export async function editBinding(args: {
   return response.planConfiguration;
 }
 
+export async function editOverseerBinding(args: {
+  tenantId: string;
+  configurationId: string;
+  existingConfiguration: PlanConfiguration;
+  stepKey: string;
+  newOverseerUserId: string;
+}): Promise<PlanConfiguration> {
+  const existing = args.existingConfiguration.overseerBindings;
+  const alreadyBound = existing.some((b) => b.stepKey === args.stepKey);
+  const nextOverseerBindings = alreadyBound
+    ? existing.map((b) =>
+        b.stepKey === args.stepKey
+          ? { ...b, overseerUserId: args.newOverseerUserId }
+          : b,
+      )
+    : [
+        ...existing,
+        create(OverseerBindingSchema, {
+          stepKey: args.stepKey,
+          overseerUserId: args.newOverseerUserId,
+        }),
+      ];
+  const response = await planClient.updatePlanConfiguration({
+    tenantId: args.tenantId,
+    planConfigurationId: args.configurationId,
+    status: args.existingConfiguration.status,
+    seedArtifacts: args.existingConfiguration.seedArtifacts,
+    slotBindings: args.existingConfiguration.slotBindings,
+    overseerBindings: nextOverseerBindings,
+    behaviorPolicies: args.existingConfiguration.behaviorPolicies,
+    schedule: args.existingConfiguration.schedule,
+    parameterValuesJson: args.existingConfiguration.parameterValuesJson,
+  });
+  if (!response.planConfiguration) {
+    throw new Error(
+      "editOverseerBinding: UpdatePlanConfiguration returned no configuration",
+    );
+  }
+  return response.planConfiguration;
+}
+
 export async function selectBindingOption(args: {
   tenantId: string;
   configurationId: string;
@@ -135,12 +177,58 @@ export async function selectBindingOption(args: {
   return next;
 }
 
+export async function selectOverseerOption(args: {
+  tenantId: string;
+  configurationId: string;
+  promptMessageId: string;
+  existingConfiguration: PlanConfiguration;
+  stepKey: string;
+  optionId: string;
+  value: string;
+  label: string;
+}): Promise<PlanConfiguration> {
+  const previousOverseerUserId =
+    args.existingConfiguration.overseerBindings.find(
+      (binding) => binding.stepKey === args.stepKey,
+    )?.overseerUserId ?? "";
+
+  await selectChip({
+    tenantId: args.tenantId,
+    configurationId: args.configurationId,
+    promptMessageId: args.promptMessageId,
+    optionId: args.optionId,
+    value: args.value,
+    label: args.label,
+  });
+
+  const next = await editOverseerBinding({
+    tenantId: args.tenantId,
+    configurationId: args.configurationId,
+    existingConfiguration: args.existingConfiguration,
+    stepKey: args.stepKey,
+    newOverseerUserId: args.value,
+  });
+
+  await appendStepRebound({
+    tenantId: args.tenantId,
+    configurationId: args.configurationId,
+    stepKey: args.stepKey,
+    previousOverseerUserId,
+    newOverseerUserId: args.value,
+    label: args.label,
+  });
+
+  return next;
+}
+
 export async function appendStepRebound(args: {
   tenantId: string;
   configurationId: string;
   stepKey: string;
-  previousInstallationId: string;
-  newInstallationId: string;
+  previousInstallationId?: string;
+  newInstallationId?: string;
+  previousOverseerUserId?: string;
+  newOverseerUserId?: string;
   label: string;
 }): Promise<void> {
   await appendThreadMessage(
@@ -153,6 +241,8 @@ export async function appendStepRebound(args: {
       step_key: args.stepKey,
       previous_executor_installation_id: args.previousInstallationId,
       new_executor_installation_id: args.newInstallationId,
+      previous_overseer_user_id: args.previousOverseerUserId,
+      new_overseer_user_id: args.newOverseerUserId,
     }),
   );
 }

@@ -4,6 +4,7 @@ import {
   ElicitationTimeoutBehavior,
   ExecutorKind,
   PublishApprovalMode,
+  type PlanConfiguration,
   type PlanStep,
   type PlanTemplate,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
@@ -30,6 +31,17 @@ export interface ConfigCostSummary {
   lineItems: ConfigLineItem[];
   totalCents: number;
   currency: string;
+}
+
+export interface SharedPlanSummary {
+  id: string;
+  templateName: string;
+  intent: string;
+  status: PlanConfiguration["status"];
+  executorBindings: Array<{ stepKey: string; installationId: string }>;
+  overseerBindings: Array<{ stepKey: string; overseerUserId: string }>;
+  sourceGroups: string[];
+  audience: string;
 }
 
 export type ExecutorSkuSource = "api" | "mock";
@@ -215,6 +227,56 @@ export function buildConfigCostSummary(
   const { totalCents, currency } = sumLineItemCosts(lineItems);
 
   return { lineItems, totalCents, currency };
+}
+
+function parseParameterValues(raw: string): Record<string, unknown> {
+  if (!raw.trim()) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function stringList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
+      .filter(Boolean);
+  }
+  if (typeof value === "string" && value.trim()) return [value.trim()];
+  return [];
+}
+
+export function buildPlanSummary(
+  template: PlanTemplate,
+  configuration: PlanConfiguration,
+): SharedPlanSummary {
+  const params = parseParameterValues(configuration.parameterValuesJson);
+  const intent =
+    typeof params.theme === "string" && params.theme.trim()
+      ? params.theme.trim()
+      : template.name;
+  return {
+    id: configuration.id,
+    templateName: template.name,
+    intent,
+    status: configuration.status,
+    executorBindings: configuration.slotBindings.map((binding) => ({
+      stepKey: binding.stepKey,
+      installationId: binding.executorInstallationId,
+    })),
+    overseerBindings: configuration.overseerBindings.map((binding) => ({
+      stepKey: binding.stepKey,
+      overseerUserId: binding.overseerUserId,
+    })),
+    sourceGroups: stringList(params.source_groups ?? params.source_group),
+    audience:
+      typeof params.audience === "string" ? params.audience.trim() : "",
+  };
 }
 
 async function fetchExecutorSkusFromApi(): Promise<ExecutorSKU[]> {

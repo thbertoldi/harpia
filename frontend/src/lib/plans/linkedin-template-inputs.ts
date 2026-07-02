@@ -43,7 +43,8 @@ export function buildDefaultLinkedInInputValues(
     tone: "analytical, concise, and practical",
     audience: "",
     topicsToAvoid: "",
-    sourceGroupInstallationId: "",
+    sourceGroupInstallationIds: [],
+    aggregateSourceGroupInstallationId: "",
     dateRange: {
       startDate: isoDate(start),
       endDate: isoDate(end),
@@ -76,6 +77,16 @@ function parseDateRange(value: unknown): DateRangeValue | null {
     : null;
 }
 
+function parseStringList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
+      .filter(Boolean);
+  }
+  if (typeof value === "string" && value.trim()) return [value.trim()];
+  return [];
+}
+
 export function linkedInInputValuesFromParameterValuesJson(
   raw: string | undefined,
   today = new Date(),
@@ -83,6 +94,9 @@ export function linkedInInputValuesFromParameterValuesJson(
   const defaults = buildDefaultLinkedInInputValues(today);
   const parsed = parseParameterValuesJson(raw);
   const dateRange = parseDateRange(parsed.date_range);
+  const sourceGroupInstallationIds = parseStringList(
+    parsed.source_groups ?? parsed.source_group,
+  );
 
   return {
     ...defaults,
@@ -95,10 +109,11 @@ export function linkedInInputValuesFromParameterValuesJson(
       typeof parsed.topics_to_avoid === "string"
         ? parsed.topics_to_avoid
         : defaults.topicsToAvoid,
-    sourceGroupInstallationId:
-      typeof parsed.source_group === "string"
-        ? parsed.source_group
-        : defaults.sourceGroupInstallationId,
+    sourceGroupInstallationIds,
+    aggregateSourceGroupInstallationId:
+      typeof parsed.aggregate_source_group === "string"
+        ? parsed.aggregate_source_group
+        : defaults.aggregateSourceGroupInstallationId,
     dateRange: dateRange ?? defaults.dateRange,
     approvalMode: isApprovalMode(parsed.approval_mode)
       ? parsed.approval_mode
@@ -125,7 +140,8 @@ export function materializeLinkedInInputValues(
   installationIdsByStep: Record<string, string>,
 ): LinkedInMaterialization {
   const fetchInstallationId =
-    values.sourceGroupInstallationId.trim() ||
+    values.aggregateSourceGroupInstallationId.trim() ||
+    values.sourceGroupInstallationIds.find((id) => id.trim())?.trim() ||
     installationIdsByStep["fetch-news"] ||
     "";
   const slotBindings = [

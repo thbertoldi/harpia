@@ -49,10 +49,22 @@ export interface BindingStepPayload {
   rows: MatrixRow[];
 }
 
+export interface OverseerStepPayload {
+  state: "OVERSEER_STEP";
+  step_key: string;
+  options: MatrixOption[];
+  required_step_keys: string[];
+  rows: MatrixRow[];
+}
+
 export interface MatrixHydrationInput {
   slotBindings: Array<{
     stepKey: string;
     executorInstallationId: string;
+  }>;
+  overseerBindings?: Array<{
+    stepKey: string;
+    overseerUserId: string;
   }>;
   policiesSet: boolean;
 }
@@ -101,9 +113,35 @@ export function parseBindingStepPayload(json: string): BindingStepPayload {
   };
 }
 
+export function parseOverseerStepPayload(json: string): OverseerStepPayload {
+  const obj = parsePayloadObject(json, "parseOverseerStepPayload");
+  if (obj.state !== "OVERSEER_STEP") {
+    throw new Error(
+      `parseOverseerStepPayload: expected state "OVERSEER_STEP", got ${JSON.stringify(obj.state)}`,
+    );
+  }
+  if (!Array.isArray(obj.rows)) {
+    throw new Error("parseOverseerStepPayload: rows is not an array");
+  }
+  const rawOptions = Array.isArray(obj.options) ? obj.options : [];
+  const rawRequired = Array.isArray(obj.required_step_keys)
+    ? obj.required_step_keys
+    : [];
+  return {
+    state: "OVERSEER_STEP",
+    step_key: String(obj.step_key ?? ""),
+    options: rawOptions.map((o, i) => normalizeOption(o, -1, i)),
+    required_step_keys: rawRequired.map((key) => String(key)),
+    rows: obj.rows.map((r, i) => normalizeRow(r, i)),
+  };
+}
+
 function parsePayloadObject(
   json: string,
-  caller: "parseMatrixPayload" | "parseBindingStepPayload",
+  caller:
+    | "parseMatrixPayload"
+    | "parseBindingStepPayload"
+    | "parseOverseerStepPayload",
 ): Record<string, unknown> {
   let raw: unknown;
   try {
@@ -213,7 +251,9 @@ export function isMatrixComplete(payload: MatrixPayload): boolean {
   return payload.rows.every((row) => row.current_executor_id !== "");
 }
 
-export function hydrateMatrixPayload<T extends MatrixPayload | BindingStepPayload>(
+export function hydrateMatrixPayload<
+  T extends MatrixPayload | BindingStepPayload | OverseerStepPayload,
+>(
   payload: T,
   input: MatrixHydrationInput,
 ): T {
@@ -223,6 +263,12 @@ export function hydrateMatrixPayload<T extends MatrixPayload | BindingStepPayloa
       binding.executorInstallationId,
     ]),
   );
+  const overseerBindings = new Map(
+    (input.overseerBindings ?? []).map((binding) => [
+      binding.stepKey,
+      binding.overseerUserId,
+    ]),
+  );
   return {
     ...payload,
     policies_set: input.policiesSet,
@@ -230,6 +276,11 @@ export function hydrateMatrixPayload<T extends MatrixPayload | BindingStepPayloa
       ...row,
       current_executor_id:
         bindings.get(row.step_key) ?? row.current_executor_id,
+      current_overseer_id:
+        overseerBindings.get(row.step_key) ?? row.current_overseer_id,
+      current_overseer_label:
+        overseerBindings.get(row.step_key) ??
+        row.current_overseer_label,
     })),
   } as T;
 }

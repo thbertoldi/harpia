@@ -1,0 +1,271 @@
+<script lang="ts">
+  import { Pencil } from "lucide-svelte";
+  import { fade } from "svelte/transition";
+  import type { ChatMessage } from "$lib/chat/types";
+  import { getSession } from "$lib/auth";
+  import { locale, translate } from "$lib/i18n";
+  import { selectOverseerOption } from "$lib/plans/assistant";
+  import {
+    hydrateMatrixPayload,
+    parseOverseerStepPayload,
+    type MatrixOption,
+    type MatrixRow,
+    type OverseerStepPayload,
+  } from "$lib/plans/matrix";
+  import { chipFlash } from "$lib/motion/transitions";
+  import { planClient } from "$lib/rpc";
+  import type { PlanConfiguration } from "$lib/gen/harpia/plans/v1/plans_pb";
+
+  interface Props {
+    message: ChatMessage;
+    configurationId: string;
+    tenantId: string;
+    isLive?: boolean;
+    isAnswered?: boolean;
+  }
+
+  let {
+    message,
+    configurationId,
+    tenantId,
+    isLive = false,
+    isAnswered = false,
+  }: Props = $props();
+
+  function parsePayloadSafe(json: string): OverseerStepPayload | null {
+    try {
+      return parseOverseerStepPayload(json);
+    } catch {
+      return null;
+    }
+  }
+
+  let payload = $state<OverseerStepPayload | null>(null);
+  let configuration = $state<PlanConfiguration | null>(null);
+  let saving = $state(false);
+  let saveError = $state(false);
+  let editingAnswered = $state(false);
+  let submitted = $state(false);
+
+  $effect(() => {
+    payload = parsePayloadSafe(message.payloadJson);
+  });
+
+  $effect(() => {
+    if (!tenantId || !configurationId) return;
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const cfgRes = await planClient.getPlanConfiguration(
+          { tenantId, planConfigurationId: configurationId },
+          { signal: controller.signal },
+        );
+        if (controller.signal.aborted || !cfgRes.planConfiguration) return;
+        configuration = cfgRes.planConfiguration;
+        if (payload) {
+          payload = hydrateMatrixPayload(payload, {
+            slotBindings: cfgRes.planConfiguration.slotBindings,
+            overseerBindings: cfgRes.planConfiguration.overseerBindings,
+            policiesSet: !!cfgRes.planConfiguration.behaviorPolicies,
+          });
+        }
+      } catch {
+        saveError = true;
+      }
+    })();
+    return () => controller.abort();
+  });
+
+  const rows = $derived(payload?.rows ?? []);
+  const focusedRow = $derived(
+    rows.find((row) => row.step_key === payload?.step_key) ?? null,
+  );
+  const requiredRows = $derived(
+    rows.filter((row) => payload?.required_step_keys.includes(row.step_key)),
+  );
+  const overseerCount = $derived(
+    requiredRows.filter((row) => row.current_overseer_id !== "").length,
+  );
+  const showChips = $derived(
+    (isLive || editingAnswered) && !submitted && !!focusedRow,
+  );
+
+  function optionText(option?: MatrixOption): string {
+    if (!option) return "";
+    return option.sublabel ? `${option.label} · ${option.sublabel}` : option.label;
+  }
+
+  function selectedOverseer(row: MatrixRow): string {
+    const selected = payload?.options.find(
+      (option) => option.value === row.current_overseer_id,
+    );
+    return (
+      selected?.label ||
+      row.current_overseer_label ||
+      row.current_overseer_id ||
+      ""
+    );
+  }
+
+  function currentUserFallback(option: MatrixOption): MatrixOption {
+    const sessionUser = getSession()?.user;
+    if (!sessionUser || option.value !== sessionUser.sub) return option;
+    return {
+      ...option,
+      label: sessionUser.name || sessionUser.email || option.label,
+    };
+  }
+
+  function reflectOverseer(stepKey: string, overseerUserId: string, label: string) {
+    if (!payload) return;
+    payload = {
+      ...payload,
+      rows: payload.rows.map((row) =>
+        row.step_key === stepKey
+          ? {
+              ...row,
+              current_overseer_id: overseerUserId,
+              current_overseer_label: label || overseerUserId,
+            }
+          : row,
+      ),
+    };
+  }
+
+  async function onPickFocused(option: MatrixOption) {
+    if (!payload || !focusedRow || !configuration) return;
+    const picked = currentUserFallback(option);
+    if (saving || picked.value === focusedRow.current_overseer_id) return;
+    saving = true;
+    saveError = false;
+    try {
+      const next = await selectOverseerOption({
+        tenantId,
+        configurationId,
+        promptMessageId: message.id,
+        existingConfiguration: configuration,
+        stepKey: focusedRow.step_key,
+        optionId: picked.id,
+        value: picked.value || picked.id,
+        label: picked.label,
+      });
+      configuration = next;
+      reflectOverseer(focusedRow.step_key, picked.value || picked.id, picked.label);
+      submitted = true;
+      editingAnswered = false;
+    } catch {
+      saveError = true;
+    } finally {
+      saving = false;
+    }
+  }
+
+  function toggleAnsweredEdit() {
+    editingAnswered = !editingAnswered;
+    if (editingAnswered) submitted = false;
+  }
+</script>
+
+<div
+  id={`m-${message.id}`}
+  class="rounded-lg border border-plumage bg-obsidian-light px-4 py-3 {isLive
+    ? 'ring-1 ring-talon-gold'
+    : ''}"
+>
+  {#if !payload || !focusedRow}
+    <p class="text-[13px] text-cream">{message.text}</p>
+  {:else}
+    <div class="flex items-start justify-between gap-3">
+      <div class="min-w-0">
+        <p class="font-body text-[13px] text-cream">{message.text}</p>
+        <div
+          class="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-crown-ash"
+        >
+          <span
+            class="rounded border border-plumage bg-surface-hover px-2 py-1 font-mono text-[10px] text-crown-ash"
+          >
+            {focusedRow.contracts.input || "—"} → {focusedRow.contracts.output ||
+              "—"}
+          </span>
+          <span>
+            {translate("assistant.overseerStep.progress", $locale, {
+              bound: overseerCount,
+              total: requiredRows.length,
+            })}
+          </span>
+        </div>
+      </div>
+      {#if isAnswered && !isLive}
+        <button
+          type="button"
+          class="cursor-pointer rounded p-1 text-crown-ash hover:text-talon-gold"
+          onclick={toggleAnsweredEdit}
+          aria-label={translate("assistant.edit", $locale)}
+        >
+          <Pencil class="size-3.5" />
+        </button>
+      {/if}
+    </div>
+
+    {#if selectedOverseer(focusedRow) && !showChips}
+      <p class="mt-3 text-[12px] text-crown-ash">
+        {translate("assistant.overseerStep.selected", $locale, {
+          overseer: selectedOverseer(focusedRow),
+        })}
+      </p>
+    {/if}
+
+    {#if showChips}
+      <div class="mt-3 flex flex-wrap gap-2">
+        {#each payload.options.map(currentUserFallback) as opt (opt.id)}
+          <button
+            type="button"
+            in:chipFlash
+            disabled={saving || !configuration}
+            onclick={() => onPickFocused(opt)}
+            class="cursor-pointer rounded-md border border-plumage bg-obsidian px-3 py-2 text-left text-[12px] text-cream hover:border-talon-gold hover:text-talon-gold disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <span class="font-medium">{opt.label}</span>
+            {#if opt.sublabel}
+              <span class="ml-2 text-[10px] text-crown-ash-dark">
+                {opt.sublabel}
+              </span>
+            {/if}
+          </button>
+        {/each}
+        {#if payload.options.length === 0}
+          <p class="text-[12px] text-crown-ash">
+            {translate("assistant.overseerStep.noOptions", $locale)}
+          </p>
+        {/if}
+      </div>
+    {/if}
+
+    <div class="mt-3 border-t border-plumage/70 pt-3">
+      <p class="text-[10px] font-semibold text-crown-ash-dark uppercase">
+        {translate("assistant.overseerStep.required", $locale)}
+      </p>
+      <div class="mt-2 grid gap-2">
+        {#each requiredRows as row (row.step_key)}
+          <div class="grid grid-cols-[minmax(0,1fr)_minmax(120px,180px)] gap-3 text-[12px]">
+            <div class="min-w-0">
+              <p class="truncate text-cream">{row.step_title}</p>
+              <p class="font-mono text-[10px] text-crown-ash-dark">
+                {row.contracts.input || "—"} → {row.contracts.output || "—"}
+              </p>
+            </div>
+            <p class="truncate text-crown-ash">
+              {selectedOverseer(row) || translate("assistant.overseerStep.unassigned", $locale)}
+            </p>
+          </div>
+        {/each}
+      </div>
+    </div>
+  {/if}
+
+  {#if saveError}
+    <p transition:fade class="mt-2 text-[11px] text-red-400">
+      {translate("thread.saveError", $locale)}
+    </p>
+  {/if}
+</div>

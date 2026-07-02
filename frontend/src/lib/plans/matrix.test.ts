@@ -5,9 +5,11 @@ import {
   isMatrixComplete,
   parseBindingStepPayload,
   parseMatrixPayload,
+  parseOverseerStepPayload,
   type BindingStepPayload,
   type MatrixPayload,
   type MatrixRow,
+  type OverseerStepPayload,
 } from "./matrix";
 
 function row(overrides: Partial<MatrixRow> = {}): MatrixRow {
@@ -177,6 +179,79 @@ describe("parseBindingStepPayload", () => {
   });
 });
 
+describe("parseOverseerStepPayload", () => {
+  it("parses overseer options, required step keys, and shared rows", () => {
+    const json = JSON.stringify({
+      state: "OVERSEER_STEP",
+      step_key: "write-draft",
+      options: [{ id: "user-ana", label: "Ana", value: "user-ana" }],
+      required_step_keys: ["write-draft", "adapt-for-linkedin"],
+      rows: [
+        row({
+          step_key: "write-draft",
+          current_executor_id: "writer",
+          current_overseer_id: "",
+        }),
+        row({
+          step_key: "adapt-for-linkedin",
+          current_executor_id: "voice",
+          current_overseer_id: "user-paula",
+          current_overseer_label: "Paula",
+        }),
+      ],
+    });
+
+    const parsed = parseOverseerStepPayload(json);
+
+    expect(parsed.state).toBe("OVERSEER_STEP");
+    expect(parsed.step_key).toBe("write-draft");
+    expect(parsed.options).toEqual([
+      { id: "user-ana", label: "Ana", value: "user-ana" },
+    ]);
+    expect(parsed.required_step_keys).toEqual([
+      "write-draft",
+      "adapt-for-linkedin",
+    ]);
+    expect(parsed.rows[1].current_overseer_id).toBe("user-paula");
+  });
+
+  it("hydrates rows from saved OverseerBindings", () => {
+    const payload: OverseerStepPayload = {
+      state: "OVERSEER_STEP",
+      step_key: "write-draft",
+      options: [{ id: "user-ana", label: "Ana", value: "user-ana" }],
+      required_step_keys: ["write-draft"],
+      rows: [
+        row({
+          step_key: "write-draft",
+          current_executor_id: "writer",
+          current_overseer_id: "",
+          current_overseer_label: "",
+        }),
+      ],
+    };
+
+    const hydrated = hydrateMatrixPayload(payload, {
+      policiesSet: true,
+      slotBindings: [],
+      overseerBindings: [
+        { stepKey: "write-draft", overseerUserId: "user-ana" },
+      ],
+    });
+
+    expect(hydrated.rows[0].current_overseer_id).toBe("user-ana");
+    expect(hydrated.rows[0].current_overseer_label).toBe("user-ana");
+  });
+
+  it("throws on the wrong state", () => {
+    expect(() =>
+      parseOverseerStepPayload(
+        JSON.stringify({ state: "BINDING_STEP", rows: [] }),
+      ),
+    ).toThrow(/OVERSEER_STEP/);
+  });
+});
+
 describe("computeRunCostBRL", () => {
   it("sums the bound option price across rows", () => {
     const rows = [
@@ -286,6 +361,9 @@ describe("hydrateMatrixPayload", () => {
             executorInstallationId: "writer",
           },
         ],
+        overseerBindings: [
+          { stepKey: "write-draft", overseerUserId: "user-ana" },
+        ],
         policiesSet: true,
       },
     );
@@ -295,5 +373,6 @@ describe("hydrateMatrixPayload", () => {
       "rss",
       "writer",
     ]);
+    expect(hydrated.rows[1].current_overseer_id).toBe("user-ana");
   });
 });

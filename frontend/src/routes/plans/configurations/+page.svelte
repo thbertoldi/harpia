@@ -10,6 +10,7 @@
     PlanConfigurationStatus,
     type PlanConfiguration,
   } from "$lib/gen/harpia/plans/v1/plans_pb";
+  import { buildPlanSummary } from "$lib/plans/config-summary";
 
   let { data } = $props();
 
@@ -66,6 +67,11 @@
       data.templatesById.get(p.planTemplateId)?.name ||
       p.planTemplateId.slice(0, 8)
     );
+  }
+
+  function summaryFor(p: PlanConfiguration) {
+    const template = data.templatesById.get(p.planTemplateId);
+    return template ? buildPlanSummary(template, p) : null;
   }
 
   async function archive(p: PlanConfiguration) {
@@ -142,6 +148,7 @@
       class="mt-4 divide-y divide-plumage/40 rounded-lg border border-plumage bg-obsidian-light"
     >
       {#each sorted as p (p.id)}
+        {@const summary = summaryFor(p)}
         <div class="flex items-center gap-3 px-4 py-3">
           <a
             href={resolve(`/plans/configurations/${p.id}`)}
@@ -150,12 +157,12 @@
             <p
               class="truncate font-heading text-[13px] font-semibold text-cream hover:text-talon-gold"
             >
-              {templateName(p)}
+              {summary?.intent || templateName(p)}
             </p>
             <p
               class="mt-0.5 truncate font-mono text-[10px] text-crown-ash-dark"
             >
-              {p.id}
+              {summary?.templateName || templateName(p)} · {p.id}
             </p>
           </a>
           <span

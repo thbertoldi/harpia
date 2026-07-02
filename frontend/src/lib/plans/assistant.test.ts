@@ -11,7 +11,9 @@ vi.mock("$lib/rpc", () => ({ planClient: { updatePlanConfiguration } }));
 import {
   selectChip,
   selectBindingOption,
+  selectOverseerOption,
   editBinding,
+  editOverseerBinding,
   applyLinkedInSuggestion,
 } from "./assistant";
 import {
@@ -19,6 +21,7 @@ import {
   PublishApprovalMode,
   type PlanConfiguration,
   type PlanTemplate,
+  type OverseerBinding,
   type SeedArtifactBinding,
   type SlotBinding,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
@@ -318,5 +321,148 @@ describe("selectBindingOption", () => {
     expect(reboundPayload).toContain(
       "\"new_executor_installation_id\":\"rss-new\"",
     );
+  });
+});
+
+describe("editOverseerBinding", () => {
+  it("upserts an overseer binding without announcing a save", async () => {
+    updatePlanConfiguration.mockResolvedValueOnce({
+      planConfiguration: { id: "c" },
+    });
+    const config = {
+      id: "c",
+      status: PlanConfigurationStatus.DRAFT,
+      slotBindings: [
+        { stepKey: "write-draft", executorInstallationId: "writer" },
+      ],
+      overseerBindings: [],
+      behaviorPolicies: undefined,
+      schedule: undefined,
+      seedArtifacts: [],
+      parameterValuesJson: "{\"theme\":\"existing\"}",
+    } as unknown as PlanConfiguration;
+
+    await editOverseerBinding({
+      tenantId: "t",
+      configurationId: "c",
+      existingConfiguration: config,
+      stepKey: "write-draft",
+      newOverseerUserId: "user-ana",
+    });
+
+    expect(appendThreadMessage).not.toHaveBeenCalled();
+    expect(updatePlanConfiguration).toHaveBeenCalledTimes(1);
+    const call = updatePlanConfiguration.mock.calls[0][0];
+    expect(call.announceSaved).toBeFalsy();
+    expect(call.slotBindings).toBe(config.slotBindings);
+    expect(
+      call.overseerBindings.find(
+        (binding: OverseerBinding) => binding.stepKey === "write-draft",
+      )?.overseerUserId,
+    ).toBe("user-ana");
+    expect(call.parameterValuesJson).toBe("{\"theme\":\"existing\"}");
+  });
+});
+
+describe("selectOverseerOption", () => {
+  it("appends selection, persists OverseerBinding silently, and emits overseer STEP_REBOUND", async () => {
+    appendThreadMessage.mockResolvedValue({});
+    updatePlanConfiguration.mockResolvedValueOnce({
+      planConfiguration: {
+        id: "c",
+        status: PlanConfigurationStatus.DRAFT,
+        slotBindings: [
+          { stepKey: "write-draft", executorInstallationId: "writer" },
+        ],
+        overseerBindings: [
+          { stepKey: "write-draft", overseerUserId: "user-ana" },
+        ],
+        seedArtifacts: [],
+      },
+    });
+    const config = {
+      id: "c",
+      status: PlanConfigurationStatus.DRAFT,
+      slotBindings: [
+        { stepKey: "write-draft", executorInstallationId: "writer" },
+      ],
+      overseerBindings: [],
+      behaviorPolicies: undefined,
+      schedule: undefined,
+      seedArtifacts: [],
+    } as unknown as PlanConfiguration;
+
+    const next = await selectOverseerOption({
+      tenantId: "t",
+      configurationId: "c",
+      promptMessageId: "prompt-1",
+      existingConfiguration: config,
+      stepKey: "write-draft",
+      optionId: "user-ana",
+      value: "user-ana",
+      label: "Ana",
+    });
+
+    expect(next.id).toBe("c");
+    expect(appendThreadMessage).toHaveBeenNthCalledWith(
+      1,
+      "t",
+      "c",
+      "OVERSEER",
+      "USER_SELECTION",
+      "Ana",
+      expect.stringContaining("prompt-1"),
+    );
+    expect(updatePlanConfiguration).toHaveBeenCalledTimes(1);
+    expect(updatePlanConfiguration.mock.calls[0][0].announceSaved).toBeFalsy();
+    expect(
+      updatePlanConfiguration.mock.calls[0][0].overseerBindings.find(
+        (binding: OverseerBinding) => binding.stepKey === "write-draft",
+      )?.overseerUserId,
+    ).toBe("user-ana");
+    expect(appendThreadMessage).toHaveBeenNthCalledWith(
+      2,
+      "t",
+      "c",
+      "SYSTEM",
+      "STEP_REBOUND",
+      "Ana",
+      expect.stringContaining("\"new_overseer_user_id\":\"user-ana\""),
+    );
+  });
+
+  it("records previous and new overseer user ids when rebinding", async () => {
+    appendThreadMessage.mockResolvedValue({});
+    updatePlanConfiguration.mockResolvedValueOnce({
+      planConfiguration: { id: "c" },
+    });
+    const config = {
+      id: "c",
+      status: PlanConfigurationStatus.DRAFT,
+      slotBindings: [],
+      overseerBindings: [
+        { stepKey: "write-draft", overseerUserId: "user-old" },
+      ],
+      behaviorPolicies: undefined,
+      schedule: undefined,
+      seedArtifacts: [],
+    } as unknown as PlanConfiguration;
+
+    await selectOverseerOption({
+      tenantId: "t",
+      configurationId: "c",
+      promptMessageId: "prompt-1",
+      existingConfiguration: config,
+      stepKey: "write-draft",
+      optionId: "user-new",
+      value: "user-new",
+      label: "Paula",
+    });
+
+    const reboundPayload = appendThreadMessage.mock.calls[1][5];
+    expect(reboundPayload).toContain(
+      "\"previous_overseer_user_id\":\"user-old\"",
+    );
+    expect(reboundPayload).toContain("\"new_overseer_user_id\":\"user-new\"");
   });
 });

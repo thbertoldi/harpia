@@ -69,6 +69,7 @@
         if (payload) {
           payload = hydrateMatrixPayload(payload, {
             slotBindings: cfgRes.planConfiguration.slotBindings,
+            overseerBindings: cfgRes.planConfiguration.overseerBindings,
             policiesSet: !!cfgRes.planConfiguration.behaviorPolicies,
           });
         }
