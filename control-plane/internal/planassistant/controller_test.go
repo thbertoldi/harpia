@@ -151,8 +151,28 @@ func TestNextTurn_AdvancesThroughUnboundStepsThenMatrix(t *testing.T) {
 	if err := c.NextTurn(context.Background(), uuid.New(), uuid.New()); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(chatStore.appended[2].PayloadJSON, `"state":"BINDING_MATRIX"`) {
-		t.Fatalf("expected review matrix after all steps are bound, got %s", chatStore.appended[2].PayloadJSON)
+	if !strings.Contains(chatStore.appended[2].PayloadJSON, `"state":"POLICIES_STEP"`) {
+		t.Fatalf("expected policies after all steps are bound, got %s", chatStore.appended[2].PayloadJSON)
+	}
+
+	configs.cur = &plansv1.PlanConfiguration{
+		Id:             cfg.Id,
+		PlanTemplateId: testTemplateUUID,
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+		SlotBindings: []*plansv1.SlotBinding{
+			{StepKey: "fetch-news", ExecutorInstallationId: "rss-tech"},
+			{StepKey: "write-draft", ExecutorInstallationId: "writer"},
+		},
+		BehaviorPolicies: &plansv1.PlanBehaviorPolicies{
+			ElicitationTimeoutBehavior: plansv1.ElicitationTimeoutBehavior_ELICITATION_TIMEOUT_BEHAVIOR_PAUSE_UNTIL_ANSWERED,
+			PublishApprovalMode:        plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_REQUIRE_APPROVAL,
+		},
+	}
+	if err := c.NextTurn(context.Background(), uuid.New(), uuid.New()); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(chatStore.appended[3].PayloadJSON, `"state":"BINDING_MATRIX"`) {
+		t.Fatalf("expected review matrix after policies are set, got %s", chatStore.appended[3].PayloadJSON)
 	}
 }
 
@@ -206,8 +226,31 @@ func TestNextTurn_AdvancesFromBindingsToOverseerThenMatrix(t *testing.T) {
 	if err := c.NextTurn(ctx, uuid.New(), uuid.New()); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(chatStore.appended[1].PayloadJSON, `"state":"BINDING_MATRIX"`) {
-		t.Fatalf("expected review matrix after overseer is bound, got %s", chatStore.appended[1].PayloadJSON)
+	if !strings.Contains(chatStore.appended[1].PayloadJSON, `"state":"POLICIES_STEP"`) {
+		t.Fatalf("expected policies after overseer is bound, got %s", chatStore.appended[1].PayloadJSON)
+	}
+
+	configs.cur = &plansv1.PlanConfiguration{
+		Id:             cfgID,
+		PlanTemplateId: testTemplateUUID,
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+		SlotBindings: []*plansv1.SlotBinding{
+			{StepKey: "fetch-news", ExecutorInstallationId: "rss-tech"},
+			{StepKey: "write-draft", ExecutorInstallationId: "writer"},
+		},
+		OverseerBindings: []*plansv1.OverseerBinding{
+			{StepKey: "write-draft", OverseerUserId: "user-ana"},
+		},
+		BehaviorPolicies: &plansv1.PlanBehaviorPolicies{
+			ElicitationTimeoutBehavior: plansv1.ElicitationTimeoutBehavior_ELICITATION_TIMEOUT_BEHAVIOR_PAUSE_UNTIL_ANSWERED,
+			PublishApprovalMode:        plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_REQUIRE_APPROVAL,
+		},
+	}
+	if err := c.NextTurn(ctx, uuid.New(), uuid.New()); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(chatStore.appended[2].PayloadJSON, `"state":"BINDING_MATRIX"`) {
+		t.Fatalf("expected review matrix after policies are set, got %s", chatStore.appended[2].PayloadJSON)
 	}
 }
 

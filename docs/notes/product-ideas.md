@@ -108,6 +108,27 @@ the same vocabulary and controls.
 **Links:** detailed backlog and investigation notes in
 `docs/superpowers/specs/2026-07-01-chat-first-ux-backlog.md`.
 
+### 💡 Proactive memory capture from conversational configuration
+**Taxonomy:** PlanConfiguration, PlanBehaviorPolicies, MemoryResource, MemoryBinding,
+Artifact.
+When a user gives reusable preferences while configuring or executing a plan in chat
+(for example LinkedIn writing preferences such as tone, audience, language, topics to
+avoid, or brand voice), Harpia should proactively offer to save those preferences as an
+explicit reusable memory. Future configurations of the same or related PlanTemplate can
+then suggest defaults from that saved memory to prefill fields and explain why those
+defaults were chosen.
+
+**Boundary:** this must follow ADR-014. Preferences are not hidden agent memory and must not
+silently accumulate from elicitation answers. Saving should be a visible promotion flow
+that creates or updates a tenant/workspace/user-scoped `MemoryResource` with provenance
+back to the originating PlanConfiguration / PlanExecution / chat turn, and later use should
+flow through explicit `MemoryBinding` or an equivalent inspectable configuration object.
+
+**Product shape:** during configuration, the assistant can ask "Save these as your
+LinkedIn writing preferences?" after the user finalizes relevant fields. On future runs,
+the assistant can say it found saved preferences and offer chips to apply, revise, or
+ignore them before materializing parameter values.
+
 ## Follow-ups / smaller
 
 - Add a test that validates the **real embedded template YAML** (seeder tests currently only use synthetic YAML → a typo ships and fails only at API boot).

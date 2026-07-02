@@ -871,5 +871,21 @@
   "plans.inputs.approval_mode.label": "Modo de aprovação",
   "plans.inputs.approval_mode.description": "Se a publicação precisa da sua aprovação antes.",
   "plans.inputs.approval_mode.option.require_approval": "Exigir aprovação",
-  "plans.inputs.approval_mode.option.auto_publish": "Publicar automaticamente"
+  "plans.inputs.approval_mode.option.auto_publish": "Publicar automaticamente",
+  "plans.inputs.elicitation_timeout_behavior.label": "Comportamento de timeout de elicitação",
+  "plans.inputs.elicitation_timeout_behavior.description": "O que acontece quando uma resposta humana é necessária e não chega a tempo.",
+  "plans.inputs.elicitation_timeout_behavior.option.pause_until_answered": "Pausar até responder",
+  "plans.inputs.elicitation_timeout_behavior.option.fail_step": "Falhar etapa",
+  "plans.inputs.elicitation_timeout_behavior.option.fail_plan": "Falhar plano",
+  "assistant.policiesStep.progress": "{selected}/{total} políticas de execução selecionadas",
+  "assistant.policiesStep.field.publish_approval_mode": "Publicação",
+  "assistant.policiesStep.field.elicitation_timeout_behavior": "Quando uma resposta humana expira",
+  "assistant.policiesStep.option.publish_approval_mode.require_approval": "Exigir aprovação",
+  "assistant.policiesStep.option.publish_approval_mode.auto_publish": "Publicar automaticamente",
+  "assistant.policiesStep.option.elicitation_timeout_behavior.pause_until_answered": "Pausar até responder",
+  "assistant.policiesStep.option.elicitation_timeout_behavior.fail_step": "Falhar esta etapa",
+  "assistant.policiesStep.option.elicitation_timeout_behavior.fail_plan": "Falhar o plano",
+  "assistant.policiesStep.selected": "{value}",
+  "assistant.policiesStep.noOptions": "Nenhuma opção de política disponível.",
+  "assistant.policiesStep.complete": "Políticas de execução selecionadas."
 }

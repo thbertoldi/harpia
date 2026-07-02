@@ -14,6 +14,8 @@ import {
   selectOverseerOption,
   editBinding,
   editOverseerBinding,
+  editPolicyParameter,
+  selectPolicyOption,
   applyLinkedInSuggestion,
 } from "./assistant";
 import {
@@ -42,6 +44,26 @@ function templateWithSlotBindingParam(
           {
             target: TemplateInputRuntimeTarget.SLOT_BINDING,
             stepKey,
+          },
+        ],
+      },
+    ],
+  } as PlanTemplate;
+}
+
+function templateWithPolicyParam(
+  key = "approval_mode",
+  policyKey = "publish_approval_mode",
+): PlanTemplate {
+  return {
+    id: "tpl",
+    inputParameters: [
+      {
+        key,
+        runtimeMappings: [
+          {
+            target: TemplateInputRuntimeTarget.BEHAVIOR_POLICY,
+            policyKey,
           },
         ],
       },
@@ -344,6 +366,109 @@ describe("editOverseerBinding", () => {
       )?.overseerUserId,
     ).toBe("user-ana");
     expect(call.parameterValuesJson).toBe('{"theme":"existing"}');
+  });
+});
+
+describe("editPolicyParameter", () => {
+  it("updates one behavior policy input via parameterValuesJson only", async () => {
+    updatePlanConfiguration.mockResolvedValueOnce({
+      planConfiguration: { id: "c" },
+    });
+    const config = {
+      id: "c",
+      status: PlanConfigurationStatus.DRAFT,
+      slotBindings: [
+        { stepKey: "fetch-news", executorInstallationId: "rss-tech" },
+      ],
+      overseerBindings: [
+        { stepKey: "write-draft", overseerUserId: "user-ana" },
+      ],
+      behaviorPolicies: undefined,
+      schedule: { cron: "0 9 * * 1", timezone: "America/Sao_Paulo" },
+      parameterValuesJson:
+        '{"theme":"existing","approval_mode":"auto_publish"}',
+    } as unknown as PlanConfiguration;
+
+    await editPolicyParameter({
+      tenantId: "t",
+      configurationId: "c",
+      existingConfiguration: config,
+      template: templateWithPolicyParam(),
+      policyKey: "publish_approval_mode",
+      parameterKey: "approval_mode",
+      value: "require_approval",
+    });
+
+    expect(updatePlanConfiguration).toHaveBeenCalledTimes(1);
+    const call = updatePlanConfiguration.mock.calls[0][0];
+    expect(call.slotBindings).toBeUndefined();
+    expect(call.behaviorPolicies).toBeUndefined();
+    expect(call.overseerBindings).toBe(config.overseerBindings);
+    expect(call.schedule).toBe(config.schedule);
+    expect(JSON.parse(call.parameterValuesJson)).toEqual({
+      theme: "existing",
+      approval_mode: "require_approval",
+    });
+  });
+});
+
+describe("selectPolicyOption", () => {
+  it("appends selection, persists policy parameter, and emits policy STEP_REBOUND", async () => {
+    appendThreadMessage.mockResolvedValue({});
+    updatePlanConfiguration.mockResolvedValueOnce({
+      planConfiguration: { id: "c" },
+    });
+    const config = {
+      id: "c",
+      status: PlanConfigurationStatus.DRAFT,
+      slotBindings: [],
+      overseerBindings: [],
+      behaviorPolicies: undefined,
+      schedule: undefined,
+      parameterValuesJson: '{"approval_mode":"auto_publish"}',
+    } as unknown as PlanConfiguration;
+
+    await selectPolicyOption({
+      tenantId: "t",
+      configurationId: "c",
+      promptMessageId: "prompt-1",
+      existingConfiguration: config,
+      template: templateWithPolicyParam(),
+      policyKey: "publish_approval_mode",
+      parameterKey: "approval_mode",
+      optionId: "require_approval",
+      value: "require_approval",
+      label: "Require approval",
+    });
+
+    expect(appendThreadMessage).toHaveBeenNthCalledWith(
+      1,
+      "t",
+      "c",
+      "OVERSEER",
+      "USER_SELECTION",
+      "Require approval",
+      expect.stringContaining("prompt-1"),
+    );
+    expect(updatePlanConfiguration).toHaveBeenCalledTimes(1);
+    expect(
+      JSON.parse(updatePlanConfiguration.mock.calls[0][0].parameterValuesJson),
+    ).toMatchObject({ approval_mode: "require_approval" });
+    expect(appendThreadMessage).toHaveBeenNthCalledWith(
+      2,
+      "t",
+      "c",
+      "SYSTEM",
+      "STEP_REBOUND",
+      "Require approval",
+      expect.stringContaining('"policy_key":"publish_approval_mode"'),
+    );
+    expect(appendThreadMessage.mock.calls[1][5]).toContain(
+      '"previous_policy_value":"auto_publish"',
+    );
+    expect(appendThreadMessage.mock.calls[1][5]).toContain(
+      '"new_policy_value":"require_approval"',
+    );
   });
 });
 

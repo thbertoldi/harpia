@@ -3,13 +3,18 @@ import {
   computeRunCostBRL,
   hydrateMatrixPayload,
   isMatrixComplete,
+  isPolicyOptionSelected,
   parseBindingStepPayload,
   parseMatrixPayload,
   parseOverseerStepPayload,
+  parsePoliciesStepPayload,
+  policyFieldChipsShown,
+  policyChipsShown,
   type BindingStepPayload,
   type MatrixPayload,
   type MatrixRow,
   type OverseerStepPayload,
+  type PolicyField,
 } from "./matrix";
 
 function row(overrides: Partial<MatrixRow> = {}): MatrixRow {
@@ -249,6 +254,176 @@ describe("parseOverseerStepPayload", () => {
         JSON.stringify({ state: "BINDING_STEP", rows: [] }),
       ),
     ).toThrow(/OVERSEER_STEP/);
+  });
+});
+
+describe("parsePoliciesStepPayload", () => {
+  it("parses policy fields and options", () => {
+    const json = JSON.stringify({
+      state: "POLICIES_STEP",
+      policies_set: false,
+      fields: [
+        {
+          key: "publish_approval_mode",
+          parameter_key: "approval_mode",
+          current_value: "require_approval",
+          options: [
+            {
+              id: "require_approval",
+              label: "Require approval",
+              value: "require_approval",
+            },
+          ],
+        },
+      ],
+    });
+
+    const parsed = parsePoliciesStepPayload(json);
+
+    expect(parsed.state).toBe("POLICIES_STEP");
+    expect(parsed.policies_set).toBe(false);
+    expect(parsed.fields).toHaveLength(1);
+    expect(parsed.fields[0].key).toBe("publish_approval_mode");
+    expect(parsed.fields[0].parameter_key).toBe("approval_mode");
+    expect(parsed.fields[0].current_value).toBe("require_approval");
+    expect(parsed.fields[0].options[0].value).toBe("require_approval");
+  });
+
+  it("defaults missing field options and current values", () => {
+    const parsed = parsePoliciesStepPayload(
+      JSON.stringify({
+        state: "POLICIES_STEP",
+        fields: [{ key: "elicitation_timeout_behavior" }],
+      }),
+    );
+
+    expect(parsed.policies_set).toBe(false);
+    expect(parsed.fields[0]).toMatchObject({
+      key: "elicitation_timeout_behavior",
+      parameter_key: "",
+      current_value: "",
+      options: [],
+    });
+  });
+
+  it("throws on malformed policies payloads", () => {
+    expect(() => parsePoliciesStepPayload("{bad")).toThrow(/valid JSON/);
+    expect(() =>
+      parsePoliciesStepPayload(JSON.stringify({ state: "BINDING_STEP" })),
+    ).toThrow(/POLICIES_STEP/);
+    expect(() =>
+      parsePoliciesStepPayload(
+        JSON.stringify({ state: "POLICIES_STEP", fields: {} }),
+      ),
+    ).toThrow(/fields is not an array/);
+  });
+});
+
+function field(overrides: Partial<PolicyField> = {}): PolicyField {
+  return {
+    key: "publish_approval_mode",
+    parameter_key: "approval_mode",
+    current_value: "",
+    options: [
+      {
+        id: "require_approval",
+        label: "Require approval",
+        value: "require_approval",
+      },
+      { id: "auto_publish", label: "Auto publish", value: "auto_publish" },
+    ],
+    ...overrides,
+  };
+}
+
+describe("policyChipsShown", () => {
+  it("shows chips while live and unsubmitted", () => {
+    expect(
+      policyChipsShown({
+        isLive: true,
+        editingAnswered: false,
+        submitted: false,
+      }),
+    ).toBe(true);
+  });
+
+  it("shows chips while editing an answered card", () => {
+    expect(
+      policyChipsShown({
+        isLive: false,
+        editingAnswered: true,
+        submitted: false,
+      }),
+    ).toBe(true);
+  });
+
+  it("hides chips once submitted", () => {
+    expect(
+      policyChipsShown({
+        isLive: true,
+        editingAnswered: false,
+        submitted: true,
+      }),
+    ).toBe(false);
+    expect(
+      policyChipsShown({
+        isLive: false,
+        editingAnswered: true,
+        submitted: true,
+      }),
+    ).toBe(false);
+  });
+
+  it("hides chips on a settled answered card", () => {
+    expect(
+      policyChipsShown({
+        isLive: false,
+        editingAnswered: false,
+        submitted: false,
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("policyFieldChipsShown", () => {
+  it("hides chips for an answered field on the live flow", () => {
+    const answered = field({ current_value: "require_approval" });
+    expect(
+      policyFieldChipsShown(answered, {
+        isLive: true,
+        editingAnswered: false,
+        submitted: false,
+      }),
+    ).toBe(false);
+  });
+
+  it("regression: reveals chips for an answered field when editing", () => {
+    const answered = field({ current_value: "require_approval" });
+    expect(
+      policyFieldChipsShown(answered, {
+        isLive: false,
+        editingAnswered: true,
+        submitted: false,
+      }),
+    ).toBe(true);
+  });
+
+  it("shows chips for an unset field on the live flow", () => {
+    expect(
+      policyFieldChipsShown(field(), {
+        isLive: true,
+        editingAnswered: false,
+        submitted: false,
+      }),
+    ).toBe(true);
+  });
+});
+
+describe("isPolicyOptionSelected", () => {
+  it("matches by value or id", () => {
+    const answered = field({ current_value: "require_approval" });
+    expect(isPolicyOptionSelected(answered, answered.options[0])).toBe(true);
+    expect(isPolicyOptionSelected(answered, answered.options[1])).toBe(false);
   });
 });
 

@@ -9,6 +9,7 @@
   import BindingMatrixCard from "./BindingMatrixCard.svelte";
   import ConversationalBindingCard from "./ConversationalBindingCard.svelte";
   import ConversationalOverseerCard from "./ConversationalOverseerCard.svelte";
+  import ConversationalPoliciesCard from "./ConversationalPoliciesCard.svelte";
   import LandingCard from "./LandingCard.svelte";
   import PlanProposalCard from "./PlanProposalCard.svelte";
 
@@ -69,6 +70,14 @@
   />
 {:else if message.kind === "ASSISTANT_PROMPT" && promptState === "OVERSEER_STEP"}
   <ConversationalOverseerCard
+    {message}
+    {configurationId}
+    {tenantId}
+    {isAnswered}
+    {isLive}
+  />
+{:else if message.kind === "ASSISTANT_PROMPT" && promptState === "POLICIES_STEP"}
+  <ConversationalPoliciesCard
     {message}
     {configurationId}
     {tenantId}

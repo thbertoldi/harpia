@@ -106,6 +106,38 @@ export async function editOverseerBinding(args: {
   return response.planConfiguration;
 }
 
+export async function editPolicyParameter(args: {
+  tenantId: string;
+  configurationId: string;
+  existingConfiguration: PlanConfiguration;
+  template: PlanTemplate;
+  policyKey: string;
+  parameterKey: string;
+  value: string;
+}): Promise<PlanConfiguration> {
+  const nextParameterValuesJson = parameterValuesWithPolicyParameter(
+    args.template,
+    args.existingConfiguration.parameterValuesJson,
+    args.policyKey,
+    args.parameterKey,
+    args.value,
+  );
+  const response = await planClient.updatePlanConfiguration({
+    tenantId: args.tenantId,
+    planConfigurationId: args.configurationId,
+    status: args.existingConfiguration.status,
+    overseerBindings: args.existingConfiguration.overseerBindings,
+    schedule: args.existingConfiguration.schedule,
+    parameterValuesJson: nextParameterValuesJson,
+  });
+  if (!response.planConfiguration) {
+    throw new Error(
+      "editPolicyParameter: UpdatePlanConfiguration returned no configuration",
+    );
+  }
+  return response.planConfiguration;
+}
+
 export async function selectBindingOption(args: {
   tenantId: string;
   configurationId: string;
@@ -196,6 +228,56 @@ export async function selectOverseerOption(args: {
   return next;
 }
 
+export async function selectPolicyOption(args: {
+  tenantId: string;
+  configurationId: string;
+  promptMessageId: string;
+  existingConfiguration: PlanConfiguration;
+  template: PlanTemplate;
+  policyKey: string;
+  parameterKey: string;
+  optionId: string;
+  value: string;
+  label: string;
+}): Promise<PlanConfiguration> {
+  const previousPolicyValue = String(
+    parseParameterValuesJson(args.existingConfiguration.parameterValuesJson)[
+      args.parameterKey
+    ] ?? "",
+  );
+
+  await selectChip({
+    tenantId: args.tenantId,
+    configurationId: args.configurationId,
+    promptMessageId: args.promptMessageId,
+    optionId: args.optionId,
+    value: args.value,
+    label: args.label,
+  });
+
+  const next = await editPolicyParameter({
+    tenantId: args.tenantId,
+    configurationId: args.configurationId,
+    existingConfiguration: args.existingConfiguration,
+    template: args.template,
+    policyKey: args.policyKey,
+    parameterKey: args.parameterKey,
+    value: args.value,
+  });
+
+  await appendStepRebound({
+    tenantId: args.tenantId,
+    configurationId: args.configurationId,
+    stepKey: "",
+    policyKey: args.policyKey,
+    previousPolicyValue,
+    newPolicyValue: args.value,
+    label: args.label,
+  });
+
+  return next;
+}
+
 export async function appendStepRebound(args: {
   tenantId: string;
   configurationId: string;
@@ -204,6 +286,9 @@ export async function appendStepRebound(args: {
   newInstallationId?: string;
   previousOverseerUserId?: string;
   newOverseerUserId?: string;
+  policyKey?: string;
+  previousPolicyValue?: string;
+  newPolicyValue?: string;
   label: string;
 }): Promise<void> {
   await appendThreadMessage(
@@ -218,6 +303,9 @@ export async function appendStepRebound(args: {
       new_executor_installation_id: args.newInstallationId,
       previous_overseer_user_id: args.previousOverseerUserId,
       new_overseer_user_id: args.newOverseerUserId,
+      policy_key: args.policyKey,
+      previous_policy_value: args.previousPolicyValue,
+      new_policy_value: args.newPolicyValue,
     }),
   );
 }
@@ -278,5 +366,31 @@ function parameterValuesWithSlotBinding(
   return JSON.stringify({
     ...parseParameterValuesJson(raw),
     [parameter.key]: installationId,
+  });
+}
+
+function parameterValuesWithPolicyParameter(
+  template: PlanTemplate,
+  raw: string | undefined,
+  policyKey: string,
+  parameterKey: string,
+  value: string,
+): string {
+  const key =
+    parameterKey ||
+    template.inputParameters.find((input) =>
+      input.runtimeMappings.some(
+        (mapping) =>
+          mapping.target === TemplateInputRuntimeTarget.BEHAVIOR_POLICY &&
+          mapping.policyKey === policyKey,
+      ),
+    )?.key ||
+    "";
+  if (!key) {
+    return raw ?? "";
+  }
+  return JSON.stringify({
+    ...parseParameterValuesJson(raw),
+    [key]: value,
   });
 }

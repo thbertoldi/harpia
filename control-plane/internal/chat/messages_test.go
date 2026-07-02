@@ -129,6 +129,39 @@ func TestBuildAssistantPromptPayload(t *testing.T) {
 	}
 }
 
+func TestBuildAssistantPoliciesStepPayload(t *testing.T) {
+	got := BuildAssistantPoliciesStepPayload([]AssistantPolicyField{
+		{
+			Key:          "publish_approval_mode",
+			ParameterKey: "approval_mode",
+			CurrentValue: "require_approval",
+			Options: []AssistantOption{
+				{ID: "require_approval", Label: "Require approval", Value: "require_approval"},
+				{ID: "auto_publish", Label: "Auto publish", Value: "auto_publish"},
+			},
+		},
+		{
+			Key:          "elicitation_timeout_behavior",
+			ParameterKey: "elicitation_timeout_behavior",
+			Options: []AssistantOption{
+				{ID: "pause_until_answered", Label: "Pause until answered", Value: "pause_until_answered"},
+			},
+		},
+	}, false)
+	want := `{"state":"POLICIES_STEP","fields":[{"key":"publish_approval_mode","parameter_key":"approval_mode","current_value":"require_approval","options":[{"id":"require_approval","label":"Require approval","value":"require_approval"},{"id":"auto_publish","label":"Auto publish","value":"auto_publish"}]},{"key":"elicitation_timeout_behavior","parameter_key":"elicitation_timeout_behavior","current_value":"","options":[{"id":"pause_until_answered","label":"Pause until answered","value":"pause_until_answered"}]}],"policies_set":false}`
+	if got != want {
+		t.Fatalf("got %s, want %s", got, want)
+	}
+}
+
+func TestBuildAssistantPoliciesStepPayloadDefaultsNilFields(t *testing.T) {
+	got := BuildAssistantPoliciesStepPayload(nil, false)
+	want := `{"state":"POLICIES_STEP","fields":[],"policies_set":false}`
+	if got != want {
+		t.Fatalf("got %s, want %s", got, want)
+	}
+}
+
 func TestBuildUserSelectionPayload(t *testing.T) {
 	got := BuildUserSelectionPayload("msg-1", "opt-2", "inst-2")
 	want := `{"in_response_to_message_id":"msg-1","option_id":"opt-2","value":"inst-2"}`

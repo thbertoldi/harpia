@@ -18,15 +18,16 @@ func TestMaterializePlanConfigurationFromParameterValues(t *testing.T) {
 	sourceGroupID := uuid.New().String()
 
 	seeds, slots, policies, err := MaterializePlanConfiguration(template, map[string]any{
-		"theme":           "AI operations",
-		"language":        "pt-BR",
-		"tone":            "analytical",
-		"audience":        "operations leaders",
-		"topics_to_avoid": "crypto hype",
-		"date_range":      map[string]any{"preset": "last_7_days"},
-		"source_group":    sourceGroupID,
-		"approval_mode":   "require_approval",
-		"unknown":         "ignored",
+		"theme":                        "AI operations",
+		"language":                     "pt-BR",
+		"tone":                         "analytical",
+		"audience":                     "operations leaders",
+		"topics_to_avoid":              "crypto hype",
+		"date_range":                   map[string]any{"preset": "last_7_days"},
+		"source_group":                 sourceGroupID,
+		"approval_mode":                "require_approval",
+		"elicitation_timeout_behavior": "pause_until_answered",
+		"unknown":                      "ignored",
 	})
 	if err != nil {
 		t.Fatalf("MaterializePlanConfiguration() error = %v", err)
@@ -62,6 +63,9 @@ func TestMaterializePlanConfigurationFromParameterValues(t *testing.T) {
 
 	if got := policies.GetPublishApprovalMode(); got != plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_REQUIRE_APPROVAL {
 		t.Fatalf("publish approval mode = %v, want REQUIRE_APPROVAL", got)
+	}
+	if got := policies.GetElicitationTimeoutBehavior(); got != plansv1.ElicitationTimeoutBehavior_ELICITATION_TIMEOUT_BEHAVIOR_PAUSE_UNTIL_ANSWERED {
+		t.Fatalf("elicitation timeout behavior = %v, want PAUSE_UNTIL_ANSWERED", got)
 	}
 }
 
@@ -198,6 +202,13 @@ func weeklyNewsletterMaterializeTemplate() *plansv1.PlanTemplate {
 				RuntimeMappings: []*plansv1.TemplateInputRuntimeMapping{{
 					Target:    plansv1.TemplateInputRuntimeTarget_TEMPLATE_INPUT_RUNTIME_TARGET_BEHAVIOR_POLICY,
 					PolicyKey: "publish_approval_mode",
+				}},
+			},
+			{
+				Key: "elicitation_timeout_behavior",
+				RuntimeMappings: []*plansv1.TemplateInputRuntimeMapping{{
+					Target:    plansv1.TemplateInputRuntimeTarget_TEMPLATE_INPUT_RUNTIME_TARGET_BEHAVIOR_POLICY,
+					PolicyKey: "elicitation_timeout_behavior",
 				}},
 			},
 		},

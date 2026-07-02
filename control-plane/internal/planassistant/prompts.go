@@ -50,6 +50,9 @@ func BuildPrompt(state AssistantState, in PromptInput) (text, payload string) {
 	case StateOverseerStep:
 		return buildOverseerStepPrompt(state, in)
 
+	case StatePoliciesStep:
+		return buildPoliciesStepPrompt(in)
+
 	case StateBindingMatrix:
 		return buildMatrixPrompt(in)
 
@@ -110,6 +113,33 @@ func buildOverseerStepPrompt(state AssistantState, in PromptInput) (string, stri
 	return text, payload
 }
 
+func buildPoliciesStepPrompt(in PromptInput) (string, string) {
+	fields := []chat.AssistantPolicyField{
+		{
+			Key:          "publish_approval_mode",
+			ParameterKey: policyParameterKey(in.Template, "publish_approval_mode", "approval_mode"),
+			CurrentValue: publishApprovalModeValue(in.Config.GetBehaviorPolicies().GetPublishApprovalMode()),
+			Options: []chat.AssistantOption{
+				{ID: "require_approval", Label: "Require approval", Value: "require_approval"},
+				{ID: "auto_publish", Label: "Auto publish", Value: "auto_publish"},
+			},
+		},
+		{
+			Key:          "elicitation_timeout_behavior",
+			ParameterKey: policyParameterKey(in.Template, "elicitation_timeout_behavior", "elicitation_timeout_behavior"),
+			CurrentValue: elicitationTimeoutBehaviorValue(in.Config.GetBehaviorPolicies().GetElicitationTimeoutBehavior()),
+			Options: []chat.AssistantOption{
+				{ID: "pause_until_answered", Label: "Pause until answered", Value: "pause_until_answered"},
+				{ID: "fail_step", Label: "Fail step", Value: "fail_step"},
+				{ID: "fail_plan", Label: "Fail plan", Value: "fail_plan"},
+			},
+		},
+	}
+	text := "How should this plan behave at runtime?"
+	payload := chat.BuildAssistantPoliciesStepPayload(fields, policiesSet(in.Config.GetBehaviorPolicies()))
+	return text, payload
+}
+
 func currentUserLabel(in PromptInput) string {
 	user := in.CurrentUserLabel
 	if user == "" {
@@ -124,6 +154,43 @@ func currentUserID(in PromptInput) string {
 		userID = "self"
 	}
 	return userID
+}
+
+func policyParameterKey(template *plansv1.PlanTemplate, policyKey, fallback string) string {
+	for _, parameter := range template.GetInputParameters() {
+		for _, mapping := range parameter.GetRuntimeMappings() {
+			if mapping.GetTarget() == plansv1.TemplateInputRuntimeTarget_TEMPLATE_INPUT_RUNTIME_TARGET_BEHAVIOR_POLICY &&
+				mapping.GetPolicyKey() == policyKey &&
+				parameter.GetKey() != "" {
+				return parameter.GetKey()
+			}
+		}
+	}
+	return fallback
+}
+
+func publishApprovalModeValue(mode plansv1.PublishApprovalMode) string {
+	switch mode {
+	case plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_REQUIRE_APPROVAL:
+		return "require_approval"
+	case plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_AUTO_PUBLISH:
+		return "auto_publish"
+	default:
+		return ""
+	}
+}
+
+func elicitationTimeoutBehaviorValue(behavior plansv1.ElicitationTimeoutBehavior) string {
+	switch behavior {
+	case plansv1.ElicitationTimeoutBehavior_ELICITATION_TIMEOUT_BEHAVIOR_PAUSE_UNTIL_ANSWERED:
+		return "pause_until_answered"
+	case plansv1.ElicitationTimeoutBehavior_ELICITATION_TIMEOUT_BEHAVIOR_FAIL_STEP:
+		return "fail_step"
+	case plansv1.ElicitationTimeoutBehavior_ELICITATION_TIMEOUT_BEHAVIOR_FAIL_PLAN:
+		return "fail_plan"
+	default:
+		return ""
+	}
 }
 
 func matrixRows(in PromptInput) []chat.AssistantMatrixRow {

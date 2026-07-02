@@ -138,6 +138,21 @@ type assistantOverseerStepPayload struct {
 	Rows             []AssistantMatrixRow `json:"rows"`
 }
 
+// AssistantPolicyField is one behavior-policy field in a POLICIES_STEP
+// assistant prompt.
+type AssistantPolicyField struct {
+	Key          string            `json:"key"`
+	ParameterKey string            `json:"parameter_key"`
+	CurrentValue string            `json:"current_value"`
+	Options      []AssistantOption `json:"options"`
+}
+
+type assistantPoliciesStepPayload struct {
+	State       string                 `json:"state"`
+	Fields      []AssistantPolicyField `json:"fields"`
+	PoliciesSet bool                   `json:"policies_set"`
+}
+
 type userSelectionPayload struct {
 	InResponseToMessageID string `json:"in_response_to_message_id"`
 	OptionID              string `json:"option_id"`
@@ -208,6 +223,24 @@ func BuildAssistantOverseerStepPayload(stepKey string, options []AssistantOption
 		Options:          options,
 		RequiredStepKeys: requiredStepKeys,
 		Rows:             rows,
+	})
+}
+
+// BuildAssistantPoliciesStepPayload returns the JSON payload for a focused
+// conversational PlanBehaviorPolicies prompt.
+func BuildAssistantPoliciesStepPayload(fields []AssistantPolicyField, policiesSet bool) string {
+	if fields == nil {
+		fields = []AssistantPolicyField{}
+	}
+	for i := range fields {
+		if fields[i].Options == nil {
+			fields[i].Options = []AssistantOption{}
+		}
+	}
+	return mustEncodeJSON(assistantPoliciesStepPayload{
+		State:       "POLICIES_STEP",
+		Fields:      fields,
+		PoliciesSet: policiesSet,
 	})
 }
 
