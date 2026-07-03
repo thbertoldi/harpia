@@ -6,6 +6,8 @@ const (
 	ConfigurationStatusScheduled = "scheduled"
 	ConfigurationStatusDisabled  = "disabled"
 	ConfigurationStatusArchived  = "archived"
+	ConfigurationKindOneShot     = "one_shot"
+	ConfigurationKindRecurring   = "recurring"
 
 	ExecutionStatusPending   = "pending"
 	ExecutionStatusRunning   = "running"

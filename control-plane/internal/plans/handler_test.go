@@ -168,6 +168,7 @@ func TestPlanHandlerMaterializesConfigurationFromParameterValuesOnly(t *testing.
 		template,
 		"",
 		plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
+		plansv1.PlanConfigurationKind_PLAN_CONFIGURATION_KIND_UNSPECIFIED,
 		seeds,
 		slots,
 		nil,
@@ -180,6 +181,9 @@ func TestPlanHandlerMaterializesConfigurationFromParameterValuesOnly(t *testing.
 	}
 
 	got := configurationToProto(config)
+	if got.GetKind() != plansv1.PlanConfigurationKind_PLAN_CONFIGURATION_KIND_ONE_SHOT {
+		t.Fatalf("kind = %v, want ONE_SHOT", got.GetKind())
+	}
 	if findSeed(got.GetSeedArtifacts(), "fetch-news", "date_range") == nil {
 		t.Fatal("missing fetch-news date_range seed")
 	}

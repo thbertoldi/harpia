@@ -53,6 +53,7 @@ type PlanConfiguration struct {
 	PlanTemplateID      uuid.UUID
 	PlanTemplateVersion int32
 	Status              string
+	Kind                string
 	SeedArtifacts       json.RawMessage
 	SlotBindings        json.RawMessage
 	OverseerBindings    json.RawMessage
@@ -60,6 +61,7 @@ type PlanConfiguration struct {
 	Schedule            json.RawMessage
 	ParameterValues     json.RawMessage
 	ThreadID            uuid.UUID
+	OriginThreadID      uuid.UUID
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
 }
@@ -261,16 +263,16 @@ func (r *Repository) CreateConfiguration(ctx context.Context, config *PlanConfig
 	err := database.WithTenant(ctx, r.pool, config.TenantID, func(q database.Querier) error {
 		row := q.QueryRow(ctx,
 			`INSERT INTO plan_configurations (
-				tenant_id, workspace_id, plan_template_id, plan_template_version, status,
+				tenant_id, workspace_id, plan_template_id, plan_template_version, status, kind,
 				seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
-				parameter_values, thread_id
-			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-			RETURNING id, tenant_id, workspace_id, plan_template_id, plan_template_version, status,
+				parameter_values, thread_id, origin_thread_id
+			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+			RETURNING id, tenant_id, workspace_id, plan_template_id, plan_template_version, status, kind,
 			          seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
-			          parameter_values, thread_id, created_at, updated_at`,
+			          parameter_values, thread_id, origin_thread_id, created_at, updated_at`,
 			config.TenantID, config.WorkspaceID, config.PlanTemplateID, config.PlanTemplateVersion,
-			config.Status, config.SeedArtifacts, config.SlotBindings, config.OverseerBindings,
-			config.BehaviorPolicies, config.Schedule, config.ParameterValues, config.ThreadID,
+			config.Status, config.Kind, config.SeedArtifacts, config.SlotBindings, config.OverseerBindings,
+			config.BehaviorPolicies, config.Schedule, config.ParameterValues, config.ThreadID, config.OriginThreadID,
 		)
 		if err := scanConfiguration(row, &created); err != nil {
 			return err
@@ -296,9 +298,9 @@ func (r *Repository) GetConfiguration(ctx context.Context, tenantID, configID uu
 	var config PlanConfiguration
 	err := database.WithTenant(ctx, r.pool, tenantID, func(q database.Querier) error {
 		row := q.QueryRow(ctx,
-			`SELECT id, tenant_id, workspace_id, plan_template_id, plan_template_version, status,
+			`SELECT id, tenant_id, workspace_id, plan_template_id, plan_template_version, status, kind,
 			        seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
-			        parameter_values, thread_id, created_at, updated_at
+			        parameter_values, thread_id, origin_thread_id, created_at, updated_at
 			 FROM plan_configurations
 			 WHERE id = $1 AND tenant_id = $2`,
 			configID, tenantID,
@@ -317,18 +319,19 @@ func (r *Repository) UpdateConfiguration(ctx context.Context, config *PlanConfig
 		row := q.QueryRow(ctx,
 			`UPDATE plan_configurations
 			 SET status = $1,
-			     seed_artifacts = $2,
-			     slot_bindings = $3,
-			     overseer_bindings = $4,
-			     behavior_policies = $5,
-			     schedule = $6,
-			     parameter_values = $7,
+			     kind = $2,
+			     seed_artifacts = $3,
+			     slot_bindings = $4,
+			     overseer_bindings = $5,
+			     behavior_policies = $6,
+			     schedule = $7,
+			     parameter_values = $8,
 			     updated_at = now()
-			 WHERE id = $8 AND tenant_id = $9
-			 RETURNING id, tenant_id, workspace_id, plan_template_id, plan_template_version, status,
+			 WHERE id = $9 AND tenant_id = $10
+			 RETURNING id, tenant_id, workspace_id, plan_template_id, plan_template_version, status, kind,
 			           seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
-			           parameter_values, thread_id, created_at, updated_at`,
-			config.Status, config.SeedArtifacts, config.SlotBindings, config.OverseerBindings,
+			           parameter_values, thread_id, origin_thread_id, created_at, updated_at`,
+			config.Status, config.Kind, config.SeedArtifacts, config.SlotBindings, config.OverseerBindings,
 			config.BehaviorPolicies, config.Schedule, config.ParameterValues, config.ID, config.TenantID,
 		)
 		return scanConfiguration(row, &updated)
@@ -367,9 +370,9 @@ func (r *Repository) ListConfigurations(ctx context.Context, tenantID uuid.UUID,
 		switch {
 		case workspaceID != nil && status != "":
 			rows, err = q.Query(ctx,
-				`SELECT id, tenant_id, workspace_id, plan_template_id, plan_template_version, status,
+				`SELECT id, tenant_id, workspace_id, plan_template_id, plan_template_version, status, kind,
 				        seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
-				        parameter_values, thread_id, created_at, updated_at
+				        parameter_values, thread_id, origin_thread_id, created_at, updated_at
 				 FROM plan_configurations
 				 WHERE tenant_id = $1 AND workspace_id = $2 AND status = $3
 				 ORDER BY created_at DESC
@@ -378,9 +381,9 @@ func (r *Repository) ListConfigurations(ctx context.Context, tenantID uuid.UUID,
 			)
 		case workspaceID != nil:
 			rows, err = q.Query(ctx,
-				`SELECT id, tenant_id, workspace_id, plan_template_id, plan_template_version, status,
+				`SELECT id, tenant_id, workspace_id, plan_template_id, plan_template_version, status, kind,
 				        seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
-				        parameter_values, thread_id, created_at, updated_at
+				        parameter_values, thread_id, origin_thread_id, created_at, updated_at
 				 FROM plan_configurations
 				 WHERE tenant_id = $1 AND workspace_id = $2
 				 ORDER BY created_at DESC
@@ -389,9 +392,9 @@ func (r *Repository) ListConfigurations(ctx context.Context, tenantID uuid.UUID,
 			)
 		case status != "":
 			rows, err = q.Query(ctx,
-				`SELECT id, tenant_id, workspace_id, plan_template_id, plan_template_version, status,
+				`SELECT id, tenant_id, workspace_id, plan_template_id, plan_template_version, status, kind,
 				        seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
-				        parameter_values, thread_id, created_at, updated_at
+				        parameter_values, thread_id, origin_thread_id, created_at, updated_at
 				 FROM plan_configurations
 				 WHERE tenant_id = $1 AND status = $2
 				 ORDER BY created_at DESC
@@ -400,9 +403,9 @@ func (r *Repository) ListConfigurations(ctx context.Context, tenantID uuid.UUID,
 			)
 		default:
 			rows, err = q.Query(ctx,
-				`SELECT id, tenant_id, workspace_id, plan_template_id, plan_template_version, status,
+				`SELECT id, tenant_id, workspace_id, plan_template_id, plan_template_version, status, kind,
 				        seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
-				        parameter_values, thread_id, created_at, updated_at
+				        parameter_values, thread_id, origin_thread_id, created_at, updated_at
 				 FROM plan_configurations
 				 WHERE tenant_id = $1
 				 ORDER BY created_at DESC
@@ -419,9 +422,9 @@ func (r *Repository) ListConfigurations(ctx context.Context, tenantID uuid.UUID,
 			var config PlanConfiguration
 			if err := rows.Scan(
 				&config.ID, &config.TenantID, &config.WorkspaceID, &config.PlanTemplateID,
-				&config.PlanTemplateVersion, &config.Status, &config.SeedArtifacts,
+				&config.PlanTemplateVersion, &config.Status, &config.Kind, &config.SeedArtifacts,
 				&config.SlotBindings, &config.OverseerBindings, &config.BehaviorPolicies,
-				&config.Schedule, &config.ParameterValues, &config.ThreadID, &config.CreatedAt, &config.UpdatedAt,
+				&config.Schedule, &config.ParameterValues, &config.ThreadID, &config.OriginThreadID, &config.CreatedAt, &config.UpdatedAt,
 			); err != nil {
 				return fmt.Errorf("scan plan configuration: %w", err)
 			}
@@ -987,9 +990,9 @@ func (r *Repository) listStepExecutions(ctx context.Context, q database.Querier,
 func scanConfiguration(row pgx.Row, config *PlanConfiguration) error {
 	return row.Scan(
 		&config.ID, &config.TenantID, &config.WorkspaceID, &config.PlanTemplateID,
-		&config.PlanTemplateVersion, &config.Status, &config.SeedArtifacts,
+		&config.PlanTemplateVersion, &config.Status, &config.Kind, &config.SeedArtifacts,
 		&config.SlotBindings, &config.OverseerBindings, &config.BehaviorPolicies,
-		&config.Schedule, &config.ParameterValues, &config.ThreadID, &config.CreatedAt, &config.UpdatedAt,
+		&config.Schedule, &config.ParameterValues, &config.ThreadID, &config.OriginThreadID, &config.CreatedAt, &config.UpdatedAt,
 	)
 }
 

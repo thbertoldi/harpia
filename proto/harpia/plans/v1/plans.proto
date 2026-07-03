@@ -136,6 +136,14 @@ message PlanConfiguration {
   string updated_at = 13;
   string parameter_values_json = 14;
   string thread_id = 15;
+  PlanConfigurationKind kind = 16;
+  string origin_thread_id = 17;
+}
+
+enum PlanConfigurationKind {
+  PLAN_CONFIGURATION_KIND_UNSPECIFIED = 0;
+  PLAN_CONFIGURATION_KIND_ONE_SHOT = 1;
+  PLAN_CONFIGURATION_KIND_RECURRING = 2;
 }
 
 enum PlanConfigurationStatus {
@@ -277,6 +285,7 @@ message CreatePlanConfigurationRequest {
   PlanSchedule schedule = 9;
   string parameter_values_json = 10;
   string thread_id = 11;
+  PlanConfigurationKind kind = 12;
 }
 
 message CreatePlanConfigurationResponse {
@@ -308,6 +317,7 @@ message UpdatePlanConfigurationRequest {
   bool announce_saved = 9;
   string parameter_values_json = 10;
   string thread_id = 11;
+  PlanConfigurationKind kind = 12;
 }
 
 message UpdatePlanConfigurationResponse {

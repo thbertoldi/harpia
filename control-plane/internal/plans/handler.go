@@ -315,13 +315,14 @@ func (h *PlanHandler) CreatePlanConfiguration(ctx context.Context, req *connect.
 		return nil, connectErrorFromBinding(err)
 	}
 
-	config, err := h.buildConfigurationFromRequest(tenantID, template, req.Msg.WorkspaceId, req.Msg.Status,
+	config, err := h.buildConfigurationFromRequest(tenantID, template, req.Msg.WorkspaceId, req.Msg.Status, req.Msg.Kind,
 		seedArtifacts, slotBindings, req.Msg.OverseerBindings,
 		behaviorPolicies, req.Msg.Schedule, req.Msg.ParameterValuesJson)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 	config.ThreadID = threadID
+	config.OriginThreadID = threadID
 
 	created, err := h.repo.CreateConfiguration(ctx, config)
 	if err != nil {
@@ -423,7 +424,11 @@ func (h *PlanHandler) UpdatePlanConfiguration(ctx context.Context, req *connect.
 		return nil, connectErrorFromBinding(err)
 	}
 
-	config, err := h.buildConfigurationFromRequest(tenantID, template, updatedInput.WorkspaceId, updatedInput.Status,
+	kind := req.Msg.Kind
+	if kind == plansv1.PlanConfigurationKind_PLAN_CONFIGURATION_KIND_UNSPECIFIED {
+		kind = stringToConfigurationKind(existing.Kind)
+	}
+	config, err := h.buildConfigurationFromRequest(tenantID, template, updatedInput.WorkspaceId, updatedInput.Status, kind,
 		seedArtifacts, slotBindings, updatedInput.OverseerBindings,
 		behaviorPolicies, updatedInput.Schedule, string(parameterValues))
 	if err != nil {
@@ -434,6 +439,8 @@ func (h *PlanHandler) UpdatePlanConfiguration(ctx context.Context, req *connect.
 	config.PlanTemplateVersion = existing.PlanTemplateVersion
 	config.WorkspaceID = existing.WorkspaceID
 	config.ParameterValues = parameterValues
+	config.ThreadID = existing.ThreadID
+	config.OriginThreadID = existing.OriginThreadID
 
 	updated, err := h.repo.UpdateConfiguration(ctx, config)
 	if err != nil {
@@ -849,6 +856,7 @@ func (h *PlanHandler) buildConfigurationFromRequest(
 	template *PlanTemplate,
 	workspaceID string,
 	status plansv1.PlanConfigurationStatus,
+	kind plansv1.PlanConfigurationKind,
 	seedArtifacts []*plansv1.SeedArtifactBinding,
 	slotBindings []*plansv1.SlotBinding,
 	overseerBindings []*plansv1.OverseerBinding,
@@ -862,6 +870,10 @@ func (h *PlanHandler) buildConfigurationFromRequest(
 	}
 	if statusStr == "" {
 		statusStr = ConfigurationStatusDraft
+	}
+	kindStr, err := configurationKindToString(kind, schedule)
+	if err != nil {
+		return nil, err
 	}
 
 	var workspace uuid.NullUUID
@@ -907,6 +919,7 @@ func (h *PlanHandler) buildConfigurationFromRequest(
 		PlanTemplateID:      template.ID,
 		PlanTemplateVersion: template.Version,
 		Status:              statusStr,
+		Kind:                kindStr,
 		SeedArtifacts:       seedJSON,
 		SlotBindings:        slotJSON,
 		OverseerBindings:    overseerJSON,
@@ -1038,6 +1051,7 @@ func configurationToProto(c *PlanConfiguration) *plansv1.PlanConfiguration {
 		PlanTemplateId:      c.PlanTemplateID.String(),
 		PlanTemplateVersion: c.PlanTemplateVersion,
 		Status:              stringToConfigurationStatus(c.Status),
+		Kind:                stringToConfigurationKind(c.Kind),
 		CreatedAt:           c.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:           c.UpdatedAt.Format(time.RFC3339),
 	}
@@ -1046,6 +1060,9 @@ func configurationToProto(c *PlanConfiguration) *plansv1.PlanConfiguration {
 	}
 	if c.ThreadID != uuid.Nil {
 		config.ThreadId = c.ThreadID.String()
+	}
+	if c.OriginThreadID != uuid.Nil {
+		config.OriginThreadId = c.OriginThreadID.String()
 	}
 	parameterValues, err := normalizeParameterValuesJSON(string(c.ParameterValues))
 	if err != nil {
@@ -1183,6 +1200,33 @@ func stringToConfigurationStatus(s string) plansv1.PlanConfigurationStatus {
 		return plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_ARCHIVED
 	default:
 		return plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_UNSPECIFIED
+	}
+}
+
+func configurationKindToString(kind plansv1.PlanConfigurationKind, schedule *plansv1.PlanSchedule) (string, error) {
+	switch kind {
+	case plansv1.PlanConfigurationKind_PLAN_CONFIGURATION_KIND_UNSPECIFIED:
+		if schedule != nil && strings.TrimSpace(schedule.CronExpression) != "" {
+			return ConfigurationKindRecurring, nil
+		}
+		return ConfigurationKindOneShot, nil
+	case plansv1.PlanConfigurationKind_PLAN_CONFIGURATION_KIND_ONE_SHOT:
+		return ConfigurationKindOneShot, nil
+	case plansv1.PlanConfigurationKind_PLAN_CONFIGURATION_KIND_RECURRING:
+		return ConfigurationKindRecurring, nil
+	default:
+		return "", fmt.Errorf("unsupported plan configuration kind %s", kind.String())
+	}
+}
+
+func stringToConfigurationKind(s string) plansv1.PlanConfigurationKind {
+	switch s {
+	case ConfigurationKindOneShot:
+		return plansv1.PlanConfigurationKind_PLAN_CONFIGURATION_KIND_ONE_SHOT
+	case ConfigurationKindRecurring:
+		return plansv1.PlanConfigurationKind_PLAN_CONFIGURATION_KIND_RECURRING
+	default:
+		return plansv1.PlanConfigurationKind_PLAN_CONFIGURATION_KIND_UNSPECIFIED
 	}
 }
 
