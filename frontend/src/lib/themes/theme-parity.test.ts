@@ -48,6 +48,11 @@ const MODE_SENSITIVE_TOKENS = [
   "--token-text-muted-dark",
   "--token-border",
   "--token-danger",
+  // ADR-016 — literal-color energy/status roles must be set per color scheme.
+  "--token-energy",
+  "--token-energy-bright",
+  "--token-energy-soft",
+  "--token-status-done",
 ];
 
 describe("theme light/dark token parity", () => {

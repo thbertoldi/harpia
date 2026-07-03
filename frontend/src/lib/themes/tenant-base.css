@@ -34,6 +34,12 @@
   --token-stripe-from: var(--tenant-stripe-from, #818cf8);
   --token-stripe-via: var(--tenant-stripe-via, #6366f1);
   --token-stripe-to: var(--tenant-stripe-to, rgba(99, 102, 241, 0.25));
+  /* ADR-016 — energy/status references (mode-agnostic). */
+  --token-status-running: var(--token-energy);
+  --token-status-pending: var(--token-text-muted-dark);
+  --token-energy-gradient-from: var(--token-energy-bright);
+  --token-energy-gradient-via: var(--token-energy);
+  --token-energy-gradient-to: var(--token-energy-soft);
 }
 
 [data-theme="tenant-base"]:not(.dark) {
@@ -48,6 +54,11 @@
   --token-surface-hover: var(--tenant-surface-hover, #f5f5f5);
   --token-surface-pop: var(--tenant-surface-pop, #ffffff);
   --token-danger: var(--tenant-danger, #b42318);
+  /* ADR-016 — energy/status (light, tenant-overridable). */
+  --token-energy: var(--tenant-energy, #0d9488);
+  --token-energy-bright: var(--tenant-energy-bright, #14b8a6);
+  --token-energy-soft: var(--tenant-energy-soft, rgba(13, 148, 136, 0.12));
+  --token-status-done: var(--tenant-status-done, #059669);
 }
 
 [data-theme="tenant-base"].dark {
@@ -61,5 +72,10 @@
   --token-surface-deep: var(--tenant-surface-deep-dark, #0f0f0f);
   --token-surface-hover: var(--tenant-surface-hover-dark, #2e2e2e);
   --token-surface-pop: var(--tenant-surface-pop-dark, #363636);
-  --token-danger: var(--tenant-danger-dark, #d9534f);
+  --token-danger: var(--tenant-danger-dark, #f87171);
+  /* ADR-016 — energy/status (dark, tenant-overridable). */
+  --token-energy: var(--tenant-energy-dark, #2dd4bf);
+  --token-energy-bright: var(--tenant-energy-bright-dark, #5eead4);
+  --token-energy-soft: var(--tenant-energy-soft-dark, rgba(45, 212, 191, 0.14));
+  --token-status-done: var(--tenant-status-done-dark, #34d399);
 }

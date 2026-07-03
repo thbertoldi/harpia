@@ -17,6 +17,13 @@
   --token-font-heading: "Jost", system-ui, sans-serif;
   --token-font-body: "Jost", system-ui, sans-serif;
   --token-font-wordmark: "Jost", system-ui, sans-serif;
+  /* ADR-016 — energy/status references (teal across all themes for a
+     consistent generative signal, independent of identity primary). */
+  --token-status-running: var(--token-energy);
+  --token-status-pending: var(--token-text-muted-dark);
+  --token-energy-gradient-from: var(--token-energy-bright);
+  --token-energy-gradient-via: var(--token-energy);
+  --token-energy-gradient-to: var(--token-energy-soft);
 }
 
 [data-theme="aiuna"]:not(.dark) {
@@ -32,6 +39,11 @@
   --token-surface-hover: #eef0f3;
   --token-surface-pop: #ffffff;
   --token-danger: #b42318;
+  /* ADR-016 — energy/status (light). */
+  --token-energy: #0d9488;
+  --token-energy-bright: #14b8a6;
+  --token-energy-soft: rgba(13, 148, 136, 0.12);
+  --token-status-done: #059669;
 }
 
 [data-theme="aiuna"].dark {
@@ -48,5 +60,10 @@
   --token-surface-deep: #08090d;
   --token-surface-hover: #1d1f29;
   --token-surface-pop: #272a36;
-  --token-danger: #d9534f;
+  --token-danger: #f87171;
+  /* ADR-016 — energy/status (dark). */
+  --token-energy: #2dd4bf;
+  --token-energy-bright: #5eead4;
+  --token-energy-soft: rgba(45, 212, 191, 0.14);
+  --token-status-done: #34d399;
 }

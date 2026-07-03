@@ -29,6 +29,22 @@
   --token-surface-hover: #20222c;
   --token-surface-pop: #2a2d3a;
   --token-danger: #d9534f;
+  /*
+   * ADR-016 (Harpy Eclipse) — energy accent for generative/active state, and
+   * semantic status roles. Default values below mirror the dark theme; theme
+   * packages override the literal-color tokens per color scheme (see
+   * theme-parity.test.ts). Reference tokens (status-running/pending, gradient)
+   * are mode-agnostic and auto-adapt via var() references.
+   */
+  --token-energy: #2dd4bf;
+  --token-energy-bright: #5eead4;
+  --token-energy-soft: rgba(45, 212, 191, 0.14);
+  --token-status-done: #34d399;
+  --token-status-running: var(--token-energy);
+  --token-status-pending: var(--token-text-muted-dark);
+  --token-energy-gradient-from: var(--token-energy-bright);
+  --token-energy-gradient-via: var(--token-energy);
+  --token-energy-gradient-to: var(--token-energy-soft);
 }
 
 @theme {
@@ -52,6 +68,14 @@
   --color-border: var(--token-border);
   --color-accent: var(--token-accent);
   --color-danger: var(--token-danger);
+
+  /* ADR-016 — energy accent + semantic status roles. */
+  --color-energy: var(--token-energy);
+  --color-energy-bright: var(--token-energy-bright);
+  --color-energy-soft: var(--token-energy-soft);
+  --color-status-running: var(--token-status-running);
+  --color-status-done: var(--token-status-done);
+  --color-status-pending: var(--token-status-pending);
 
   /* shadcn-style aliases used by shared UI primitives */
   --color-background: var(--token-surface);

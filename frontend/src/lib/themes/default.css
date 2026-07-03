@@ -17,6 +17,12 @@
   --token-font-heading: "Manrope", system-ui, sans-serif;
   --token-font-body: "DM Sans", system-ui, sans-serif;
   --token-font-wordmark: "Bodoni Moda", serif;
+  /* ADR-016 — mode-agnostic energy/status references (auto-adapt per scheme). */
+  --token-status-running: var(--token-energy);
+  --token-status-pending: var(--token-text-muted-dark);
+  --token-energy-gradient-from: var(--token-energy-bright);
+  --token-energy-gradient-via: var(--token-energy);
+  --token-energy-gradient-to: var(--token-energy-soft);
 }
 
 [data-theme="default"]:not(.dark) {
@@ -32,18 +38,28 @@
   --token-surface-hover: #e3ded2;
   --token-surface-pop: #fbf9f4;
   --token-danger: #b42318;
+  /* ADR-016 — energy/status (light): darker teal/green for contrast on light. */
+  --token-energy: #0d9488;
+  --token-energy-bright: #14b8a6;
+  --token-energy-soft: rgba(13, 148, 136, 0.12);
+  --token-status-done: #059669;
 }
 
 [data-theme="default"].dark {
-  --token-surface: #121318;
-  --token-surface-elevated: #1a1b24;
+  --token-surface: #101218;
+  --token-surface-elevated: #181a22;
   --token-text: #f5f2eb;
   --token-text-muted: #9da1ab;
   --token-text-muted-dark: #6b7080;
-  --token-border: #2a2d3a;
-  /* 5-layer surfaces (dark) — spec §2.5 values. */
-  --token-surface-deep: #0a0b0e;
-  --token-surface-hover: #20222c;
-  --token-surface-pop: #2a2d3a;
-  --token-danger: #d9534f;
+  --token-border: #262838;
+  /* ADR-016 — 5-layer surfaces (dark) cooled toward a blue-black "eclipse" base. */
+  --token-surface-deep: #08090d;
+  --token-surface-hover: #1f212b;
+  --token-surface-pop: #282b36;
+  --token-danger: #f87171;
+  /* ADR-016 — energy/status (dark): luminous teal for generative/active state. */
+  --token-energy: #2dd4bf;
+  --token-energy-bright: #5eead4;
+  --token-energy-soft: rgba(45, 212, 191, 0.14);
+  --token-status-done: #34d399;
 }
