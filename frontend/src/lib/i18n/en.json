@@ -44,6 +44,8 @@
   "thread.empty": "Nothing has happened on this plan yet. When the first run starts, events will appear here.",
   "thread.loadError": "Could not load the plan thread.",
   "thread.runError": "Could not start the run. The workflow engine may be unavailable — try again shortly.",
+  "thread.run.now": "Run now",
+  "thread.run.starting": "Starting…",
   "thread.saveError": "Could not save the configuration. Try again.",
   "thread.composer.placeholder": "Leave yourself a note…",
   "thread.composer.error": "Could not send the message. Try again.",

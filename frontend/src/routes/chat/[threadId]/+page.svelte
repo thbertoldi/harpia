@@ -1,5 +1,6 @@
 <script lang="ts">
   import { browser } from "$app/environment";
+  import { invalidateAll } from "$app/navigation";
   import { resolve } from "$app/paths";
   import { listArtifacts } from "$lib/artifacts/artifacts";
   import { getTenant } from "$lib/auth";
@@ -137,6 +138,26 @@
       );
     } catch {
       // best-effort; the composer remains available for manual entry
+    }
+  }
+
+  // Execute the configured plan from within the chat. The PlanExecutionCard
+  // and the artifact grid pick up the run as RUN_*/STEP_* events stream in.
+  let runError = $state<string | null>(null);
+  async function startRun() {
+    if (!tenantId || !routeConfigurationId || anyExecutionRunning) return;
+    runError = null;
+    try {
+      await planClient.createPlanExecution({
+        tenantId,
+        planConfigurationId: routeConfigurationId,
+      });
+      await invalidateAll();
+      requestAnimationFrame(() =>
+        window.scrollTo(0, document.body.scrollHeight),
+      );
+    } catch (e) {
+      runError = e instanceof Error ? e.message : String(e);
     }
   }
 
@@ -368,6 +389,22 @@
       }
     });
   });
+
+  // On resume (no deep-link hash), land at the latest message instead of the
+  // top of the thread. Re-arms per thread so switching threads re-scrolls.
+  let scrolledForThread = "";
+  $effect(() => {
+    void routeThreadId;
+    void messages.length;
+    if (!browser) return;
+    if (scrolledForThread === routeThreadId) return;
+    if (window.location.hash.startsWith("#m-")) return;
+    if (messages.length === 0) return;
+    requestAnimationFrame(() => {
+      window.scrollTo(0, document.body.scrollHeight);
+      scrolledForThread = routeThreadId;
+    });
+  });
 </script>
 
 <svelte:head>
@@ -426,7 +463,18 @@
         {statusLabel}
         {cost}
         onOpenSchedule={() => (scheduleOpen = true)}
+        canRun={liveConfiguration.status === PlanConfigurationStatus.RUNNABLE}
+        running={anyExecutionRunning}
+        onRun={startRun}
       />
+    {/if}
+
+    {#if runError}
+      <p
+        class="rounded border border-danger/40 bg-danger/10 px-3 py-2 text-[12px] text-danger"
+      >
+        {runError}
+      </p>
     {/if}
 
     <div class="flex items-center gap-1.5 text-[11px]">

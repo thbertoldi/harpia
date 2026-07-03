@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Calendar } from "lucide-svelte";
+  import { Calendar, Play, Loader2 } from "lucide-svelte";
   import PlanCostPill from "./PlanCostPill.svelte";
   import { locale, translate } from "$lib/i18n";
   import type { RunCost } from "$lib/plans/cost";
@@ -9,8 +9,21 @@
     statusLabel: string;
     cost: RunCost;
     onOpenSchedule?: () => void;
+    /** Show a Run action (config is RUNNABLE). */
+    canRun?: boolean;
+    /** An execution is currently in flight (disables Run, shows a spinner). */
+    running?: boolean;
+    onRun?: () => void;
   }
-  let { planName, statusLabel, cost, onOpenSchedule }: Props = $props();
+  let {
+    planName,
+    statusLabel,
+    cost,
+    onOpenSchedule,
+    canRun = false,
+    running = false,
+    onRun,
+  }: Props = $props();
 </script>
 
 <header
@@ -26,6 +39,22 @@
   </span>
   <div class="ml-auto flex items-center gap-2">
     <PlanCostPill {cost} />
+    {#if onRun && canRun}
+      <button
+        type="button"
+        onclick={onRun}
+        disabled={running}
+        class="flex items-center gap-1.5 rounded border border-talon-gold/50 bg-talon-gold/10 px-2.5 py-1 text-[11px] font-medium text-talon-gold hover:bg-talon-gold/20 disabled:opacity-60"
+      >
+        {#if running}
+          <Loader2 class="size-3.5 animate-spin" />
+          {translate("thread.run.starting", $locale)}
+        {:else}
+          <Play class="size-3.5" />
+          {translate("thread.run.now", $locale)}
+        {/if}
+      </button>
+    {/if}
     {#if onOpenSchedule}
       <button
         type="button"

@@ -44,6 +44,8 @@
   "thread.empty": "Nada aconteceu neste plano ainda. Quando a primeira execução começar, eventos aparecerão aqui.",
   "thread.loadError": "Não foi possível carregar a conversa do plano.",
   "thread.runError": "Não foi possível iniciar a execução. O motor de workflow pode estar indisponível — tente novamente em instantes.",
+  "thread.run.now": "Executar agora",
+  "thread.run.starting": "Iniciando…",
   "thread.saveError": "Não foi possível salvar a configuração. Tente novamente.",
   "thread.composer.placeholder": "Deixe uma nota para você…",
   "thread.composer.error": "Não foi possível enviar a mensagem. Tente novamente.",
