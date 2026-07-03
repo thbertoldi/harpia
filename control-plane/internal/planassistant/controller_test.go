@@ -15,6 +15,7 @@ import (
 )
 
 const testTemplateUUID = "11111111-1111-1111-1111-111111111111"
+const testThreadUUID = "33333333-3333-3333-3333-333333333333"
 
 // fakeChat records appended messages and serves them back from ListMessages
 // so the controller's dedup / idempotency paths are exercised realistically.
@@ -77,6 +78,7 @@ func TestSeedThread_EmitsConfigurationStartedThenBindingStep(t *testing.T) {
 	tpl.Id = testTemplateUUID
 	cfg := &plansv1.PlanConfiguration{
 		Id:             uuid.NewString(),
+		ThreadId:       testThreadUUID,
 		PlanTemplateId: testTemplateUUID,
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
 	}
@@ -96,6 +98,13 @@ func TestSeedThread_EmitsConfigurationStartedThenBindingStep(t *testing.T) {
 	if !strings.Contains(chatStore.appended[1].PayloadJSON, `"state":"BINDING_STEP"`) {
 		t.Fatalf("first prompt should be the focused binding step: %s", chatStore.appended[1].PayloadJSON)
 	}
+	// Regression: assistant messages must be appended to the OWNING THREAD, not
+	// to the plan-configuration id (caused a chat_messages FK violation).
+	for i, m := range chatStore.appended {
+		if m.ThreadID != testThreadUUID || m.ThreadID == cfg.Id {
+			t.Fatalf("appended[%d] ThreadID = %q, want owning thread %q (not config id %q)", i, m.ThreadID, testThreadUUID, cfg.Id)
+		}
+	}
 }
 
 func TestNextTurn_AdvancesThroughUnboundStepsThenMatrix(t *testing.T) {
@@ -104,6 +113,7 @@ func TestNextTurn_AdvancesThroughUnboundStepsThenMatrix(t *testing.T) {
 	tpl.Id = testTemplateUUID
 	cfg := &plansv1.PlanConfiguration{
 		Id:             uuid.NewString(),
+		ThreadId:       testThreadUUID,
 		PlanTemplateId: testTemplateUUID,
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
 	}
@@ -127,6 +137,7 @@ func TestNextTurn_AdvancesThroughUnboundStepsThenMatrix(t *testing.T) {
 
 	configs.cur = &plansv1.PlanConfiguration{
 		Id:             cfg.Id,
+		ThreadId:       testThreadUUID,
 		PlanTemplateId: testTemplateUUID,
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
 		SlotBindings:   []*plansv1.SlotBinding{{StepKey: "fetch-news", ExecutorInstallationId: "rss-tech"}},
@@ -141,6 +152,7 @@ func TestNextTurn_AdvancesThroughUnboundStepsThenMatrix(t *testing.T) {
 
 	configs.cur = &plansv1.PlanConfiguration{
 		Id:             cfg.Id,
+		ThreadId:       testThreadUUID,
 		PlanTemplateId: testTemplateUUID,
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
 		SlotBindings: []*plansv1.SlotBinding{
@@ -157,6 +169,7 @@ func TestNextTurn_AdvancesThroughUnboundStepsThenMatrix(t *testing.T) {
 
 	configs.cur = &plansv1.PlanConfiguration{
 		Id:             cfg.Id,
+		ThreadId:       testThreadUUID,
 		PlanTemplateId: testTemplateUUID,
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
 		SlotBindings: []*plansv1.SlotBinding{
@@ -185,6 +198,7 @@ func TestNextTurn_AdvancesFromBindingsToOverseerThenMatrix(t *testing.T) {
 	cfgID := uuid.NewString()
 	configs := &fakeConfigs{cur: &plansv1.PlanConfiguration{
 		Id:             cfgID,
+		ThreadId:       testThreadUUID,
 		PlanTemplateId: testTemplateUUID,
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
 		SlotBindings: []*plansv1.SlotBinding{
@@ -213,6 +227,7 @@ func TestNextTurn_AdvancesFromBindingsToOverseerThenMatrix(t *testing.T) {
 
 	configs.cur = &plansv1.PlanConfiguration{
 		Id:             cfgID,
+		ThreadId:       testThreadUUID,
 		PlanTemplateId: testTemplateUUID,
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
 		SlotBindings: []*plansv1.SlotBinding{
@@ -232,6 +247,7 @@ func TestNextTurn_AdvancesFromBindingsToOverseerThenMatrix(t *testing.T) {
 
 	configs.cur = &plansv1.PlanConfiguration{
 		Id:             cfgID,
+		ThreadId:       testThreadUUID,
 		PlanTemplateId: testTemplateUUID,
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
 		SlotBindings: []*plansv1.SlotBinding{
@@ -260,6 +276,7 @@ func TestNextTurn_DedupsIdenticalMatrix(t *testing.T) {
 	tpl.Id = testTemplateUUID
 	cfg := &plansv1.PlanConfiguration{
 		Id:             uuid.NewString(),
+		ThreadId:       testThreadUUID,
 		PlanTemplateId: testTemplateUUID,
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
 	}
@@ -281,6 +298,7 @@ func TestNextTurn_EmitsLandingOnPromotion(t *testing.T) {
 	tpl.Id = testTemplateUUID
 	cfg := &plansv1.PlanConfiguration{
 		Id:             uuid.NewString(),
+		ThreadId:       testThreadUUID,
 		PlanTemplateId: testTemplateUUID,
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
 	}
@@ -302,6 +320,7 @@ func TestNextTurn_LandingIsIdempotent(t *testing.T) {
 	tpl.Id = testTemplateUUID
 	cfg := &plansv1.PlanConfiguration{
 		Id:             uuid.NewString(),
+		ThreadId:       testThreadUUID,
 		PlanTemplateId: testTemplateUUID,
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
 	}

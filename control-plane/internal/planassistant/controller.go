@@ -51,8 +51,12 @@ func (c *Controller) SeedThread(ctx context.Context, tenantID, configID uuid.UUI
 	if cfg == nil {
 		return errors.New("planassistant: configuration not found")
 	}
+	threadID := cfg.GetThreadId()
+	if threadID == "" {
+		return errors.New("planassistant: configuration has no owning thread")
+	}
 	if _, err := c.Chat.AppendMessage(ctx, tenantID, chat.AppendInput{
-		ThreadID:    cfg.GetId(),
+		ThreadID:    threadID,
 		Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
 		Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_CONFIGURATION_STARTED,
 		Text:        "Let's set up your plan.",
@@ -80,6 +84,10 @@ func (c *Controller) NextTurn(ctx context.Context, tenantID, configID uuid.UUID)
 }
 
 func (c *Controller) emitCurrentPrompt(ctx context.Context, tenantID uuid.UUID, cfg *plansv1.PlanConfiguration) error {
+	threadID := cfg.GetThreadId()
+	if threadID == "" {
+		return errors.New("planassistant: configuration has no owning thread")
+	}
 	tplID, err := uuid.Parse(cfg.GetPlanTemplateId())
 	if err != nil {
 		return fmt.Errorf("planassistant: parse template id: %w", err)
@@ -92,7 +100,7 @@ func (c *Controller) emitCurrentPrompt(ctx context.Context, tenantID uuid.UUID, 
 	state := DeriveState(tpl, cfg, nil)
 
 	if state.Kind == StateSaved {
-		emitted, err := c.landingAlreadyEmitted(ctx, tenantID, cfg.GetId())
+		emitted, err := c.landingAlreadyEmitted(ctx, tenantID, threadID)
 		if err != nil {
 			return err
 		}
@@ -123,14 +131,14 @@ func (c *Controller) emitCurrentPrompt(ctx context.Context, tenantID uuid.UUID, 
 	// Suppress duplicate prompts. NextTurn can fire on incremental edits, but
 	// we only want a fresh prompt when the rendered payload actually differs
 	// from the most recent assistant prompt.
-	if dup, err := c.isDuplicateAssistantPrompt(ctx, tenantID, cfg.GetId(), payload); err != nil {
+	if dup, err := c.isDuplicateAssistantPrompt(ctx, tenantID, threadID, payload); err != nil {
 		return err
 	} else if dup {
 		return nil
 	}
 
 	if _, err := c.Chat.AppendMessage(ctx, tenantID, chat.AppendInput{
-		ThreadID:    cfg.GetId(),
+		ThreadID:    threadID,
 		Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_AGENT,
 		Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_ASSISTANT_PROMPT,
 		Text:        text,
