@@ -2,9 +2,8 @@ import type {
   ApprovalRequest,
   ElicitationRequest,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
-import type { FeedbackRequest } from "$lib/gen/harpia/feedback/v1/feedback_pb";
 
-export type InboxItemKind = "elicitation" | "approval" | "feedback";
+export type InboxItemKind = "elicitation" | "approval";
 
 interface InboxItemBase {
   id: string;
@@ -36,13 +35,4 @@ export interface InboxApprovalItem extends InboxItemBase {
   raw: ApprovalRequest;
 }
 
-export interface InboxFeedbackItem extends InboxItemBase {
-  kind: "feedback";
-  taskId: string;
-  raw: FeedbackRequest;
-}
-
-export type InboxItem =
-  | InboxElicitationItem
-  | InboxApprovalItem
-  | InboxFeedbackItem;
+export type InboxItem = InboxElicitationItem | InboxApprovalItem;

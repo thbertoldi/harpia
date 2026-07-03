@@ -5,7 +5,6 @@ import type {
   ApprovalRequest,
   ElicitationRequest,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
-import type { FeedbackRequest } from "$lib/gen/harpia/feedback/v1/feedback_pb";
 
 function makeElicit(over: Partial<ElicitationRequest>): ElicitationRequest {
   return {
@@ -34,19 +33,6 @@ function makeApproval(over: Partial<ApprovalRequest>): ApprovalRequest {
   } as ApprovalRequest;
 }
 
-function makeFeedback(over: Partial<FeedbackRequest>): FeedbackRequest {
-  return {
-    id: "f1",
-    question: "Rate this?",
-    taskId: "task-1",
-    agentInstanceId: "agent-1",
-    createdAt: "2026-06-20T09:00:00Z",
-    options: [],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ...(over as any),
-  } as FeedbackRequest;
-}
-
 async function* yieldOnce<T>(value: T): AsyncIterable<T> {
   yield value;
 }
@@ -55,7 +41,6 @@ function singleEmitSources(over: Partial<InboxSources> = {}): InboxSources {
   return {
     watchElicitations: () => yieldOnce([makeElicit({})]),
     watchApprovalRequests: () => yieldOnce([makeApproval({})]),
-    loadFeedback: async () => [makeFeedback({})],
     ...over,
   };
 }
@@ -64,24 +49,19 @@ describe("watchInbox", () => {
   it("yields a combined sorted list (most recent first) after all sources emit", async () => {
     const sources = singleEmitSources();
     const iter = watchInbox("tenant-1", sources)[Symbol.asyncIterator]();
-    // Drain until we have all three kinds present.
+    // Drain until both sources are present.
     let last: InboxItem[] = [];
     for (let i = 0; i < 5; i++) {
       const { value, done } = await iter.next();
       if (done) break;
       last = value;
-      if (last.length === 3) break;
+      if (last.length === 2) break;
     }
-    expect(last).toHaveLength(3);
-    expect(last.map((it) => it.kind)).toEqual([
-      "approval", // 11:00
-      "elicitation", // 10:00
-      "feedback", // 09:00
-    ]);
+    expect(last).toHaveLength(2);
+    expect(last.map((it) => it.kind)).toEqual(["approval", "elicitation"]);
     expect(last.map((it) => it.createdAt)).toEqual([
       "2026-06-20T11:00:00Z",
       "2026-06-20T10:00:00Z",
-      "2026-06-20T09:00:00Z",
     ]);
   });
 
@@ -98,7 +78,6 @@ describe("watchInbox", () => {
           }),
         ]),
       watchApprovalRequests: () => yieldOnce([]),
-      loadFeedback: async () => [],
     });
     const iter = watchInbox("tenant-1", sources)[Symbol.asyncIterator]();
     let item: InboxItem | undefined;
@@ -130,7 +109,6 @@ describe("watchInbox", () => {
             requestedAt: "2026-06-26T15:00:00Z",
           }),
         ]),
-      loadFeedback: async () => [],
     });
     const iter = watchInbox("tenant-1", sources)[Symbol.asyncIterator]();
     let item: InboxItem | undefined;
@@ -159,7 +137,6 @@ describe("watchInbox", () => {
     const sources: InboxSources = {
       watchElicitations: () => twoBatches(),
       watchApprovalRequests: () => yieldOnce([]),
-      loadFeedback: async () => [],
     };
     const iter = watchInbox("tenant-1", sources)[Symbol.asyncIterator]();
     const first = await iter.next();

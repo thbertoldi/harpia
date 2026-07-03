@@ -6,10 +6,7 @@ import pt from "./pt-BR.json";
 
 const FRONTEND_ROOT = resolve(import.meta.dirname, "../../..");
 
-const HIGH_RISK_FILES = [
-  "src/routes/+page.svelte",
-  "src/lib/components/FeedbackPanel.svelte",
-];
+const HIGH_RISK_FILES = ["src/routes/+page.svelte"];
 
 const BANNED_LITERALS = [
   "What do you want to get done?",

@@ -6,16 +6,13 @@ import {
   loadInboxElicitations,
   watchElicitations,
 } from "$lib/plans/elicitations";
-import { loadPendingFeedback } from "$lib/feedback/counts";
 import type {
   ApprovalRequest,
   ElicitationRequest,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
-import type { FeedbackRequest } from "$lib/gen/harpia/feedback/v1/feedback_pb";
 import type {
   InboxApprovalItem,
   InboxElicitationItem,
-  InboxFeedbackItem,
   InboxItem,
 } from "./types";
 
@@ -28,7 +25,6 @@ export interface InboxSources {
     tenantId: string,
     signal?: AbortSignal,
   ) => AsyncIterable<ApprovalRequest[]>;
-  loadFeedback: (tenantId: string) => Promise<FeedbackRequest[]>;
 }
 
 export const DEFAULT_INBOX_SOURCES: InboxSources = {
@@ -36,7 +32,6 @@ export const DEFAULT_INBOX_SOURCES: InboxSources = {
     watchElicitations(tenantId, { addressedToMe: true, signal }),
   watchApprovalRequests: (tenantId, signal) =>
     watchApprovalRequests(tenantId, { signal }),
-  loadFeedback: loadPendingFeedback,
 };
 
 export interface WatchInboxOptions {
@@ -59,7 +54,6 @@ export async function* watchInbox(
 
   let elicitations: ElicitationRequest[] = [];
   let approvals: ApprovalRequest[] = [];
-  let feedbacks: FeedbackRequest[] = [];
   let dirty = true;
   let resolveNext: () => void = NOOP;
   let done = false;
@@ -93,21 +87,11 @@ export async function* watchInbox(
   void consume(sources.watchApprovalRequests(tenantId, options.signal), (b) => {
     approvals = b;
   });
-  void sources
-    .loadFeedback(tenantId)
-    .then((b) => {
-      feedbacks = b;
-      wake();
-    })
-    .catch(() => {
-      /* swallow; inbox stays empty for feedback */
-    });
-
   try {
     while (!done) {
       if (dirty) {
         dirty = false;
-        yield combine(elicitations, approvals, feedbacks);
+        yield combine(elicitations, approvals);
       }
       await new Promise<void>((resolve) => {
         if (dirty) {
@@ -126,23 +110,20 @@ export async function* watchInbox(
 }
 
 export async function countInbox(tenantId: string): Promise<number> {
-  const [e, a, f] = await Promise.all([
+  const [e, a] = await Promise.all([
     loadInboxElicitations(tenantId).catch(() => []),
     loadInboxApprovals(tenantId).catch(() => []),
-    loadPendingFeedback(tenantId).catch(() => []),
   ]);
-  return e.length + a.length + f.length;
+  return e.length + a.length;
 }
 
 function combine(
   elicitations: ElicitationRequest[],
   approvals: ApprovalRequest[],
-  feedbacks: FeedbackRequest[],
 ): InboxItem[] {
   const items: InboxItem[] = [
     ...elicitations.map(toInboxElicitation),
     ...approvals.map(toInboxApproval),
-    ...feedbacks.map(toInboxFeedback),
   ];
   items.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   return items;
@@ -177,19 +158,6 @@ function toInboxApproval(req: ApprovalRequest): InboxApprovalItem {
     stepExecutionId: req.stepExecutionId,
     inputArtifactId: req.inputArtifactId,
     configurationId: req.planConfigurationId,
-    raw: req,
-  };
-}
-
-function toInboxFeedback(req: FeedbackRequest): InboxFeedbackItem {
-  return {
-    id: req.id,
-    kind: "feedback",
-    createdAt: req.createdAt,
-    planName: "Plan",
-    taskName: req.taskId || "Task",
-    summary: req.question,
-    taskId: req.taskId,
     raw: req,
   };
 }

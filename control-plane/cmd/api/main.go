@@ -20,11 +20,9 @@ import (
 	"github.com/harpia/control-plane/gen/harpia/budget/v1/budgetv1connect"
 	"github.com/harpia/control-plane/gen/harpia/chat/v1/chatv1connect"
 	"github.com/harpia/control-plane/gen/harpia/executors/v1/executorsv1connect"
-	"github.com/harpia/control-plane/gen/harpia/feedback/v1/feedbackv1connect"
 	"github.com/harpia/control-plane/gen/harpia/identity/v1/identityv1connect"
 	"github.com/harpia/control-plane/gen/harpia/llm_config/v1/llm_configv1connect"
 	"github.com/harpia/control-plane/gen/harpia/plans/v1/plansv1connect"
-	"github.com/harpia/control-plane/gen/harpia/tasks/v1/tasksv1connect"
 	"github.com/harpia/control-plane/internal/agents"
 	"github.com/harpia/control-plane/internal/artifacts"
 	"github.com/harpia/control-plane/internal/budget"
@@ -35,7 +33,6 @@ import (
 	"github.com/harpia/control-plane/internal/database"
 	"github.com/harpia/control-plane/internal/executors"
 	"github.com/harpia/control-plane/internal/executors/bootstrap"
-	"github.com/harpia/control-plane/internal/feedback"
 	"github.com/harpia/control-plane/internal/identity"
 	"github.com/harpia/control-plane/internal/llm_config"
 	cryptoenv "github.com/harpia/control-plane/internal/llm_config/crypto"
@@ -43,7 +40,6 @@ import (
 	"github.com/harpia/control-plane/internal/plans"
 	"github.com/harpia/control-plane/internal/server"
 	"github.com/harpia/control-plane/internal/storage"
-	"github.com/harpia/control-plane/internal/tasks"
 	threadsvc "github.com/harpia/control-plane/internal/threads"
 	"github.com/harpia/control-plane/internal/workflow"
 )
@@ -229,7 +225,6 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	}
 	logger.Info("executor catalog, entitlements, and agent bootstrap ensured")
 
-	taskRepo := tasks.NewRepository(pool)
 	planRepo := plans.NewRepository(pool)
 	agentRepo := agents.NewRepository(pool)
 	executorRepo := executors.NewRepository(pool)
@@ -243,11 +238,6 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	temporalClient := setupTemporalClient(ctx, cfg, logger)
 	if temporalClient != nil {
 		defer temporalClient.Close()
-	}
-
-	taskHandler, err := tasks.NewTaskHandler(taskRepo, temporalClient, cacheResources.tenantStore, userID)
-	if err != nil {
-		fatal("create task handler failed", "error", err)
 	}
 
 	agentHandler, err := agents.NewAgentHandler(agentRepo, agents.NewNoopEmbedder(), cacheResources.agentCapabilityCache)
@@ -358,12 +348,10 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 
 	agentsPath, agentsHandler := agentsv1connect.NewAgentServiceHandler(agentHandler, requestContext)
 	executorsPath, executorsHandler := executorsv1connect.NewExecutorServiceHandler(executorHandler, requestContext)
-	tasksPath, tasksHandler := tasksv1connect.NewTaskServiceHandler(taskHandler, requestContext)
 	plansPath, plansHandler := plansv1connect.NewPlanServiceHandler(planHandler, requestContext)
 	threadsPath, threadsHandler := chatv1connect.NewThreadServiceHandler(threadHandler, requestContext)
 	artifactsPath, artifactsHandler := artifactsv1connect.NewArtifactServiceHandler(artifactHandler, requestContext)
 	identityPath, identityHandler := identityv1connect.NewIdentityServiceHandler(identity.NewIdentityHandler(), requestContext)
-	feedbackPath, feedbackHandler := feedbackv1connect.NewFeedbackServiceHandler(feedback.NewFeedbackHandler(), requestContext)
 	llmConfigPath, llmConfigHandler := llm_configv1connect.NewLLMConfigServiceHandler(llm_config.NewPublicHandler(llmHandler), requestContext)
 	budgetPath, budgetConnectHandler := budgetv1connect.NewBudgetPolicyServiceHandler(budgetHandler, requestContext)
 	internalLLMPath, internalLLMHandler := llm_config.NewInternalResolveHandler(
@@ -394,12 +382,10 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 
 	mux.Handle(agentsPath, agentsHandler)
 	mux.Handle(executorsPath, executorsHandler)
-	mux.Handle(tasksPath, tasksHandler)
 	mux.Handle(plansPath, plansHandler)
 	mux.Handle(threadsPath, threadsHandler)
 	mux.Handle(artifactsPath, artifactsHandler)
 	mux.Handle(identityPath, identityHandler)
-	mux.Handle(feedbackPath, feedbackHandler)
 	mux.Handle(llmConfigPath, llmConfigHandler)
 	mux.Handle(budgetPath, budgetConnectHandler)
 	mux.Handle(internalLLMPath, internalLLMHandler)

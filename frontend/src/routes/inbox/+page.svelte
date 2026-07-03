@@ -1,20 +1,24 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { getTenant } from "$lib/auth";
   import { locale, translate } from "$lib/i18n";
   import { watchInbox } from "$lib/inbox/aggregator";
-  import type { InboxItem, InboxItemKind } from "$lib/inbox/types";
+  import type { InboxItem } from "$lib/inbox/types";
   import InboxRow from "$lib/components/inbox/InboxRow.svelte";
   import InboxElicitationActions from "$lib/components/inbox/InboxElicitationActions.svelte";
-  import InboxFeedbackActions from "$lib/components/inbox/InboxFeedbackActions.svelte";
   import InboxApprovalEntry from "$lib/components/inbox/InboxApprovalEntry.svelte";
 
-  type Filter = "all" | InboxItemKind;
+  type Filter = "all" | "elicitation" | "approval";
+  type SupportedInboxItem = Extract<
+    InboxItem,
+    { kind: "elicitation" | "approval" }
+  >;
 
   let items = $state<InboxItem[]>([]);
   let filter = $state<Filter>("all");
   let loadError = $state(false);
 
-  $effect(() => {
+  onMount(() => {
     const tenant = getTenant();
     if (!tenant?.id) return;
     const controller = new AbortController();
@@ -36,15 +40,24 @@
     };
   });
 
+  const supportedItems = $derived(
+    items.filter(
+      (it): it is SupportedInboxItem =>
+        it.kind === "elicitation" || it.kind === "approval",
+    ),
+  );
+
   const visible = $derived(
-    filter === "all" ? items : items.filter((it) => it.kind === filter),
+    filter === "all"
+      ? supportedItems
+      : supportedItems.filter((it) => it.kind === filter),
   );
 
   const counts = $derived({
-    all: items.length,
-    elicitation: items.filter((it) => it.kind === "elicitation").length,
-    approval: items.filter((it) => it.kind === "approval").length,
-    feedback: items.filter((it) => it.kind === "feedback").length,
+    all: supportedItems.length,
+    elicitation: supportedItems.filter((it) => it.kind === "elicitation")
+      .length,
+    approval: supportedItems.filter((it) => it.kind === "approval").length,
   });
 
   // M2 ships only the live "needs you" list. The selectEarlierTodayItems
@@ -71,7 +84,7 @@
   </header>
 
   <div class="mb-5 flex flex-wrap gap-2">
-    {#each [{ key: "all" as Filter, label: "inbox.filters.all", count: counts.all }, { key: "elicitation" as Filter, label: "inbox.filters.elicitations", count: counts.elicitation }, { key: "approval" as Filter, label: "inbox.filters.approvals", count: counts.approval }, { key: "feedback" as Filter, label: "inbox.filters.feedback", count: counts.feedback }] as chip (chip.key)}
+    {#each [{ key: "all" as Filter, label: "inbox.filters.all", count: counts.all }, { key: "elicitation" as Filter, label: "inbox.filters.elicitations", count: counts.elicitation }, { key: "approval" as Filter, label: "inbox.filters.approvals", count: counts.approval }] as chip (chip.key)}
       <button
         type="button"
         onclick={() => (filter = chip.key)}
@@ -118,8 +131,6 @@
               {#snippet actions()}
                 {#if item.kind === "elicitation"}
                   <InboxElicitationActions {item} />
-                {:else if item.kind === "feedback"}
-                  <InboxFeedbackActions {item} />
                 {/if}
               {/snippet}
             </InboxRow>

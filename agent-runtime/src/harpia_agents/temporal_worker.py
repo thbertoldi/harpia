@@ -1,4 +1,4 @@
-"""Temporal worker runner — starts a worker that polls the harpia task queue."""
+"""Temporal worker runner for agent-runtime activities."""
 
 import asyncio
 import logging
@@ -13,10 +13,7 @@ from temporalio.worker.workflow_sandbox import (
 
 from harpia_agents.llm import LLMRegistry
 from harpia_agents.temporal.worker import (
-    HarpiaTaskWorkflow,
     configure_llm_registry,
-    decompose_task_activity,
-    execute_subtask_activity,
     run_agent_activity,
 )
 
@@ -24,9 +21,9 @@ logger = logging.getLogger("harpia_agents.temporal_worker")
 
 
 async def run_worker() -> None:
-    """Connect to Temporal server and run a worker for the harpia task queue."""
+    """Connect to Temporal server and run a worker for agent activities."""
     temporal_host = os.environ.get("TEMPORAL_HOST", "localhost:7233")
-    task_queue = os.environ.get("TEMPORAL_TASK_QUEUE", "harpia-task-queue")
+    task_queue = os.environ.get("TEMPORAL_TASK_QUEUE", "harpia-agent-task-queue")
     configure_llm_registry(LLMRegistry.default())
 
     client = await Client.connect(temporal_host)
@@ -45,8 +42,7 @@ async def run_worker() -> None:
     worker = Worker(
         client,
         task_queue=task_queue,
-        workflows=[HarpiaTaskWorkflow],
-        activities=[decompose_task_activity, execute_subtask_activity, run_agent_activity],
+        activities=[run_agent_activity],
         workflow_runner=runner,
     )
     logger.info("Temporal worker started", extra={"host": temporal_host, "queue": task_queue})

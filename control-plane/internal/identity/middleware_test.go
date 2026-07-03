@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 
 	identityv1 "github.com/harpia/control-plane/gen/harpia/identity/v1"
-	tasksv1 "github.com/harpia/control-plane/gen/harpia/tasks/v1"
 )
 
 func TestRequestContextInterceptorRejectsNoAuth(t *testing.T) {
@@ -21,7 +20,7 @@ func TestRequestContextInterceptorRejectsNoAuth(t *testing.T) {
 
 	_, err := interceptor.WrapUnary(next)(
 		context.Background(),
-		connect.NewRequest(&tasksv1.GetTaskRequest{TenantId: DevTenantAlias}),
+		connect.NewRequest(&identityv1.GetTenantRequest{TenantId: DevTenantAlias}),
 	)
 	if err == nil || connect.CodeOf(err) != connect.CodeUnauthenticated {
 		t.Fatalf("expected unauthenticated, got %v", err)
@@ -36,7 +35,7 @@ func TestRequestContextInterceptorRejectsTenantMismatch(t *testing.T) {
 		t.Fatal("next should not be called")
 		return nil, nil
 	})
-	req := connect.NewRequest(&tasksv1.GetTaskRequest{TenantId: tenantB.String()})
+	req := connect.NewRequest(&identityv1.GetTenantRequest{TenantId: tenantB.String()})
 	req.Header().Set("Authorization", "Bearer dev-token")
 	req.Header().Set("X-Tenant-ID", DevTenantAlias)
 
@@ -64,9 +63,9 @@ func TestRequestContextInterceptorPopulatesContext(t *testing.T) {
 		if _, err := uuid.Parse(rc.UserID); err != nil {
 			t.Fatalf("user ID is not a parseable UUID: %v", err)
 		}
-		return connect.NewResponse(&tasksv1.GetTaskResponse{}), nil
+		return connect.NewResponse(&identityv1.GetTenantResponse{}), nil
 	})
-	req := connect.NewRequest(&tasksv1.GetTaskRequest{TenantId: DevTenantAlias})
+	req := connect.NewRequest(&identityv1.GetTenantRequest{TenantId: DevTenantAlias})
 	req.Header().Set("Authorization", "Bearer dev-token")
 	req.Header().Set("X-Tenant-ID", DevTenantAlias)
 
@@ -82,7 +81,7 @@ func TestRequestContextInterceptorRejectsDevTokenWhenDisabled(t *testing.T) {
 		t.Fatal("next should not be called")
 		return nil, nil
 	})
-	req := connect.NewRequest(&tasksv1.GetTaskRequest{TenantId: DevTenantAlias})
+	req := connect.NewRequest(&identityv1.GetTenantRequest{TenantId: DevTenantAlias})
 	req.Header().Set("Authorization", "Bearer dev-token")
 	req.Header().Set("X-Tenant-ID", DevTenantAlias)
 
@@ -101,7 +100,7 @@ func TestRequestContextInterceptorRejectsNoTenantMembership(t *testing.T) {
 		t.Fatal("next should not be called")
 		return nil, nil
 	})
-	req := connect.NewRequest(&tasksv1.GetTaskRequest{})
+	req := connect.NewRequest(&identityv1.GetTenantRequest{})
 	req.Header().Set("Authorization", "Bearer valid-token")
 
 	_, err := interceptor.WrapUnary(next)(context.Background(), req)
@@ -154,7 +153,7 @@ func TestRequestContextInterceptorRequiresTenantMembership(t *testing.T) {
 		t.Fatal("next should not be called")
 		return nil, nil
 	})
-	req := connect.NewRequest(&tasksv1.GetTaskRequest{TenantId: tenantB.String()})
+	req := connect.NewRequest(&identityv1.GetTenantRequest{TenantId: tenantB.String()})
 	req.Header().Set("Authorization", "Bearer valid-token")
 	req.Header().Set("X-Tenant-ID", tenantB.String())
 
@@ -183,9 +182,9 @@ func TestRequestContextInterceptorAuthorizesTenantFromMembership(t *testing.T) {
 		if rc.UserID != wantUserID {
 			t.Fatalf("user ID = %q, want %q (derived from subject 'user-1')", rc.UserID, wantUserID)
 		}
-		return connect.NewResponse(&tasksv1.GetTaskResponse{}), nil
+		return connect.NewResponse(&identityv1.GetTenantResponse{}), nil
 	})
-	req := connect.NewRequest(&tasksv1.GetTaskRequest{TenantId: tenantID.String()})
+	req := connect.NewRequest(&identityv1.GetTenantRequest{TenantId: tenantID.String()})
 	req.Header().Set("Authorization", "Bearer valid-token")
 
 	_, err := interceptor.WrapUnary(next)(context.Background(), req)

@@ -1012,40 +1012,12 @@ async function installAgentCatalogFallbackStub(page: Page) {
   });
 }
 
-async function installFeedbackApiStub(page: Page) {
-  await page.route("**/harpia.feedback.v1.FeedbackService/*", async (route) => {
-    const url = new URL(route.request().url());
-    const method = url.pathname.split("/").at(-1) ?? "";
-
-    if (method === "ListPendingFeedback") {
-      const payload = new TextEncoder().encode(
-        JSON.stringify({ feedbackRequests: [], nextPageToken: "" }),
-      );
-      await route.fulfill({
-        status: 200,
-        headers: { "content-type": "application/connect+json" },
-        body: toStreamBody([encodeEnvelope(payload), endStreamEnvelope()]),
-      });
-      return;
-    }
-
-    await route.fulfill({
-      status: 404,
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        message: `Unhandled FeedbackService method: ${method}`,
-      }),
-    });
-  });
-}
-
 test("Platform Engineer can complete agent integration journey", async ({
   page,
   baseURL,
 }) => {
   await loginAsPlatformEngineer(page, baseURL);
   await installAgentCatalogFallbackStub(page);
-  await installFeedbackApiStub(page);
   const executorApi = await installExecutorApiStub(page);
   const llmApi = await installLLMConfigStub(page);
   const planApi = await installPlanServiceStub(page);

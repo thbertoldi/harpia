@@ -12,10 +12,6 @@ import (
 func StartWorker(ctx context.Context, temporalClient client.Client, taskQueue string, planActivities *PlanActivities) error {
 	w := worker.New(temporalClient, taskQueue, worker.Options{})
 
-	w.RegisterWorkflow(TaskOrchestration)
-	w.RegisterActivity(DecomposeTaskActivity)
-	w.RegisterActivity(ExecuteSubtaskActivity)
-
 	w.RegisterWorkflow(PlanWorkflow)
 	w.RegisterWorkflow(PlanScheduledExecution)
 	if planActivities != nil {
