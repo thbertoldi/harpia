@@ -189,8 +189,8 @@ func TestPreviewArtifactUsesRequestedVersion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PreviewArtifact: %v", err)
 	}
-	if got := resp.Msg.GetTextPreview(); got != "# Old\n\nOld body" {
-		t.Fatalf("text preview = %q, want old version preview", got)
+	if got := resp.Msg.GetMarkdownPreview(); got != "# Old\n\nOld body" {
+		t.Fatalf("markdown preview = %q, want old version preview", got)
 	}
 }
 

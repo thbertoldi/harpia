@@ -1945,6 +1945,68 @@ func (x *ArtifactListSummary) GetTitles() []string {
 	return nil
 }
 
+// ImagePreview carries either a resolved URL (e.g. a signed Garage URL) or
+// inline bytes (rendered as a data: URL fallback), plus alt text.
+type ImagePreview struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Url           string                 `protobuf:"bytes,1,opt,name=url,proto3" json:"url,omitempty"`
+	InlineData    []byte                 `protobuf:"bytes,2,opt,name=inline_data,json=inlineData,proto3" json:"inline_data,omitempty"`
+	AltText       string                 `protobuf:"bytes,3,opt,name=alt_text,json=altText,proto3" json:"alt_text,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ImagePreview) Reset() {
+	*x = ImagePreview{}
+	mi := &file_harpia_artifacts_v1_artifacts_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ImagePreview) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ImagePreview) ProtoMessage() {}
+
+func (x *ImagePreview) ProtoReflect() protoreflect.Message {
+	mi := &file_harpia_artifacts_v1_artifacts_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ImagePreview.ProtoReflect.Descriptor instead.
+func (*ImagePreview) Descriptor() ([]byte, []int) {
+	return file_harpia_artifacts_v1_artifacts_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *ImagePreview) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+func (x *ImagePreview) GetInlineData() []byte {
+	if x != nil {
+		return x.InlineData
+	}
+	return nil
+}
+
+func (x *ImagePreview) GetAltText() string {
+	if x != nil {
+		return x.AltText
+	}
+	return ""
+}
+
 type PreviewArtifactRequest struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	TenantId          string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
@@ -1956,7 +2018,7 @@ type PreviewArtifactRequest struct {
 
 func (x *PreviewArtifactRequest) Reset() {
 	*x = PreviewArtifactRequest{}
-	mi := &file_harpia_artifacts_v1_artifacts_proto_msgTypes[28]
+	mi := &file_harpia_artifacts_v1_artifacts_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1968,7 +2030,7 @@ func (x *PreviewArtifactRequest) String() string {
 func (*PreviewArtifactRequest) ProtoMessage() {}
 
 func (x *PreviewArtifactRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_artifacts_v1_artifacts_proto_msgTypes[28]
+	mi := &file_harpia_artifacts_v1_artifacts_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1981,7 +2043,7 @@ func (x *PreviewArtifactRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PreviewArtifactRequest.ProtoReflect.Descriptor instead.
 func (*PreviewArtifactRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_artifacts_v1_artifacts_proto_rawDescGZIP(), []int{28}
+	return file_harpia_artifacts_v1_artifacts_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *PreviewArtifactRequest) GetTenantId() string {
@@ -2012,6 +2074,9 @@ type PreviewArtifactResponse struct {
 	//	*PreviewArtifactResponse_TextPreview
 	//	*PreviewArtifactResponse_ListSummary
 	//	*PreviewArtifactResponse_JsonPreview
+	//	*PreviewArtifactResponse_HtmlPreview
+	//	*PreviewArtifactResponse_MarkdownPreview
+	//	*PreviewArtifactResponse_ImagePreview
 	Preview       isPreviewArtifactResponse_Preview `protobuf_oneof:"preview"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -2019,7 +2084,7 @@ type PreviewArtifactResponse struct {
 
 func (x *PreviewArtifactResponse) Reset() {
 	*x = PreviewArtifactResponse{}
-	mi := &file_harpia_artifacts_v1_artifacts_proto_msgTypes[29]
+	mi := &file_harpia_artifacts_v1_artifacts_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2031,7 +2096,7 @@ func (x *PreviewArtifactResponse) String() string {
 func (*PreviewArtifactResponse) ProtoMessage() {}
 
 func (x *PreviewArtifactResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_artifacts_v1_artifacts_proto_msgTypes[29]
+	mi := &file_harpia_artifacts_v1_artifacts_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2044,7 +2109,7 @@ func (x *PreviewArtifactResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PreviewArtifactResponse.ProtoReflect.Descriptor instead.
 func (*PreviewArtifactResponse) Descriptor() ([]byte, []int) {
-	return file_harpia_artifacts_v1_artifacts_proto_rawDescGZIP(), []int{29}
+	return file_harpia_artifacts_v1_artifacts_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *PreviewArtifactResponse) GetPreview() isPreviewArtifactResponse_Preview {
@@ -2081,6 +2146,33 @@ func (x *PreviewArtifactResponse) GetJsonPreview() string {
 	return ""
 }
 
+func (x *PreviewArtifactResponse) GetHtmlPreview() string {
+	if x != nil {
+		if x, ok := x.Preview.(*PreviewArtifactResponse_HtmlPreview); ok {
+			return x.HtmlPreview
+		}
+	}
+	return ""
+}
+
+func (x *PreviewArtifactResponse) GetMarkdownPreview() string {
+	if x != nil {
+		if x, ok := x.Preview.(*PreviewArtifactResponse_MarkdownPreview); ok {
+			return x.MarkdownPreview
+		}
+	}
+	return ""
+}
+
+func (x *PreviewArtifactResponse) GetImagePreview() *ImagePreview {
+	if x != nil {
+		if x, ok := x.Preview.(*PreviewArtifactResponse_ImagePreview); ok {
+			return x.ImagePreview
+		}
+	}
+	return nil
+}
+
 type isPreviewArtifactResponse_Preview interface {
 	isPreviewArtifactResponse_Preview()
 }
@@ -2097,11 +2189,29 @@ type PreviewArtifactResponse_JsonPreview struct {
 	JsonPreview string `protobuf:"bytes,3,opt,name=json_preview,json=jsonPreview,proto3,oneof"`
 }
 
+type PreviewArtifactResponse_HtmlPreview struct {
+	HtmlPreview string `protobuf:"bytes,4,opt,name=html_preview,json=htmlPreview,proto3,oneof"`
+}
+
+type PreviewArtifactResponse_MarkdownPreview struct {
+	MarkdownPreview string `protobuf:"bytes,5,opt,name=markdown_preview,json=markdownPreview,proto3,oneof"`
+}
+
+type PreviewArtifactResponse_ImagePreview struct {
+	ImagePreview *ImagePreview `protobuf:"bytes,6,opt,name=image_preview,json=imagePreview,proto3,oneof"`
+}
+
 func (*PreviewArtifactResponse_TextPreview) isPreviewArtifactResponse_Preview() {}
 
 func (*PreviewArtifactResponse_ListSummary) isPreviewArtifactResponse_Preview() {}
 
 func (*PreviewArtifactResponse_JsonPreview) isPreviewArtifactResponse_Preview() {}
+
+func (*PreviewArtifactResponse_HtmlPreview) isPreviewArtifactResponse_Preview() {}
+
+func (*PreviewArtifactResponse_MarkdownPreview) isPreviewArtifactResponse_Preview() {}
+
+func (*PreviewArtifactResponse_ImagePreview) isPreviewArtifactResponse_Preview() {}
 
 var File_harpia_artifacts_v1_artifacts_proto protoreflect.FileDescriptor
 
@@ -2261,17 +2371,25 @@ const file_harpia_artifacts_v1_artifacts_proto_rawDesc = "" +
 	"\fcontent_hash\x18\x02 \x01(\tR\vcontentHash\"R\n" +
 	"\x13ArtifactListSummary\x12#\n" +
 	"\rarticle_count\x18\x01 \x01(\x05R\farticleCount\x12\x16\n" +
-	"\x06titles\x18\x02 \x03(\tR\x06titles\"\xa3\x01\n" +
+	"\x06titles\x18\x02 \x03(\tR\x06titles\"\\\n" +
+	"\fImagePreview\x12\x10\n" +
+	"\x03url\x18\x01 \x01(\tR\x03url\x12\x1f\n" +
+	"\vinline_data\x18\x02 \x01(\fR\n" +
+	"inlineData\x12\x19\n" +
+	"\balt_text\x18\x03 \x01(\tR\aaltText\"\xa3\x01\n" +
 	"\x16PreviewArtifactRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1f\n" +
 	"\vartifact_id\x18\x02 \x01(\tR\n" +
 	"artifactId\x123\n" +
 	"\x13artifact_version_id\x18\x03 \x01(\tH\x00R\x11artifactVersionId\x88\x01\x01B\x16\n" +
-	"\x14_artifact_version_id\"\xbd\x01\n" +
+	"\x14_artifact_version_id\"\xd9\x02\n" +
 	"\x17PreviewArtifactResponse\x12#\n" +
 	"\ftext_preview\x18\x01 \x01(\tH\x00R\vtextPreview\x12M\n" +
 	"\flist_summary\x18\x02 \x01(\v2(.harpia.artifacts.v1.ArtifactListSummaryH\x00R\vlistSummary\x12#\n" +
-	"\fjson_preview\x18\x03 \x01(\tH\x00R\vjsonPreviewB\t\n" +
+	"\fjson_preview\x18\x03 \x01(\tH\x00R\vjsonPreview\x12#\n" +
+	"\fhtml_preview\x18\x04 \x01(\tH\x00R\vhtmlPreview\x12+\n" +
+	"\x10markdown_preview\x18\x05 \x01(\tH\x00R\x0fmarkdownPreview\x12H\n" +
+	"\rimage_preview\x18\x06 \x01(\v2!.harpia.artifacts.v1.ImagePreviewH\x00R\fimagePreviewB\t\n" +
 	"\apreview*\xe4\x01\n" +
 	"\x0eArtifactStatus\x12\x1f\n" +
 	"\x1bARTIFACT_STATUS_UNSPECIFIED\x10\x00\x12\x1d\n" +
@@ -2313,7 +2431,7 @@ func file_harpia_artifacts_v1_artifacts_proto_rawDescGZIP() []byte {
 }
 
 var file_harpia_artifacts_v1_artifacts_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_harpia_artifacts_v1_artifacts_proto_msgTypes = make([]protoimpl.MessageInfo, 30)
+var file_harpia_artifacts_v1_artifacts_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
 var file_harpia_artifacts_v1_artifacts_proto_goTypes = []any{
 	(ArtifactStatus)(0),                       // 0: harpia.artifacts.v1.ArtifactStatus
 	(ArtifactVersionCreatedByKind)(0),         // 1: harpia.artifacts.v1.ArtifactVersionCreatedByKind
@@ -2345,8 +2463,9 @@ var file_harpia_artifacts_v1_artifacts_proto_goTypes = []any{
 	(*GetArtifactPayloadRequest)(nil),         // 27: harpia.artifacts.v1.GetArtifactPayloadRequest
 	(*GetArtifactPayloadResponse)(nil),        // 28: harpia.artifacts.v1.GetArtifactPayloadResponse
 	(*ArtifactListSummary)(nil),               // 29: harpia.artifacts.v1.ArtifactListSummary
-	(*PreviewArtifactRequest)(nil),            // 30: harpia.artifacts.v1.PreviewArtifactRequest
-	(*PreviewArtifactResponse)(nil),           // 31: harpia.artifacts.v1.PreviewArtifactResponse
+	(*ImagePreview)(nil),                      // 30: harpia.artifacts.v1.ImagePreview
+	(*PreviewArtifactRequest)(nil),            // 31: harpia.artifacts.v1.PreviewArtifactRequest
+	(*PreviewArtifactResponse)(nil),           // 32: harpia.artifacts.v1.PreviewArtifactResponse
 }
 var file_harpia_artifacts_v1_artifacts_proto_depIdxs = []int32{
 	0,  // 0: harpia.artifacts.v1.Artifact.status:type_name -> harpia.artifacts.v1.ArtifactStatus
@@ -2362,31 +2481,32 @@ var file_harpia_artifacts_v1_artifacts_proto_depIdxs = []int32{
 	3,  // 10: harpia.artifacts.v1.SaveTextArtifactVersionResponse.artifact:type_name -> harpia.artifacts.v1.Artifact
 	4,  // 11: harpia.artifacts.v1.SaveTextArtifactVersionResponse.version:type_name -> harpia.artifacts.v1.ArtifactVersion
 	29, // 12: harpia.artifacts.v1.PreviewArtifactResponse.list_summary:type_name -> harpia.artifacts.v1.ArtifactListSummary
-	11, // 13: harpia.artifacts.v1.ArtifactService.RegisterArtifactType:input_type -> harpia.artifacts.v1.RegisterArtifactTypeRequest
-	13, // 14: harpia.artifacts.v1.ArtifactService.GetArtifactType:input_type -> harpia.artifacts.v1.GetArtifactTypeRequest
-	15, // 15: harpia.artifacts.v1.ArtifactService.CreateArtifact:input_type -> harpia.artifacts.v1.CreateArtifactRequest
-	17, // 16: harpia.artifacts.v1.ArtifactService.CreateArtifactWithPayload:input_type -> harpia.artifacts.v1.CreateArtifactWithPayloadRequest
-	19, // 17: harpia.artifacts.v1.ArtifactService.GetArtifact:input_type -> harpia.artifacts.v1.GetArtifactRequest
-	21, // 18: harpia.artifacts.v1.ArtifactService.ListArtifacts:input_type -> harpia.artifacts.v1.ListArtifactsRequest
-	23, // 19: harpia.artifacts.v1.ArtifactService.ListArtifactVersions:input_type -> harpia.artifacts.v1.ListArtifactVersionsRequest
-	25, // 20: harpia.artifacts.v1.ArtifactService.SaveTextArtifactVersion:input_type -> harpia.artifacts.v1.SaveTextArtifactVersionRequest
-	27, // 21: harpia.artifacts.v1.ArtifactService.GetArtifactPayload:input_type -> harpia.artifacts.v1.GetArtifactPayloadRequest
-	30, // 22: harpia.artifacts.v1.ArtifactService.PreviewArtifact:input_type -> harpia.artifacts.v1.PreviewArtifactRequest
-	12, // 23: harpia.artifacts.v1.ArtifactService.RegisterArtifactType:output_type -> harpia.artifacts.v1.RegisterArtifactTypeResponse
-	14, // 24: harpia.artifacts.v1.ArtifactService.GetArtifactType:output_type -> harpia.artifacts.v1.GetArtifactTypeResponse
-	16, // 25: harpia.artifacts.v1.ArtifactService.CreateArtifact:output_type -> harpia.artifacts.v1.CreateArtifactResponse
-	18, // 26: harpia.artifacts.v1.ArtifactService.CreateArtifactWithPayload:output_type -> harpia.artifacts.v1.CreateArtifactWithPayloadResponse
-	20, // 27: harpia.artifacts.v1.ArtifactService.GetArtifact:output_type -> harpia.artifacts.v1.GetArtifactResponse
-	22, // 28: harpia.artifacts.v1.ArtifactService.ListArtifacts:output_type -> harpia.artifacts.v1.ListArtifactsResponse
-	24, // 29: harpia.artifacts.v1.ArtifactService.ListArtifactVersions:output_type -> harpia.artifacts.v1.ListArtifactVersionsResponse
-	26, // 30: harpia.artifacts.v1.ArtifactService.SaveTextArtifactVersion:output_type -> harpia.artifacts.v1.SaveTextArtifactVersionResponse
-	28, // 31: harpia.artifacts.v1.ArtifactService.GetArtifactPayload:output_type -> harpia.artifacts.v1.GetArtifactPayloadResponse
-	31, // 32: harpia.artifacts.v1.ArtifactService.PreviewArtifact:output_type -> harpia.artifacts.v1.PreviewArtifactResponse
-	23, // [23:33] is the sub-list for method output_type
-	13, // [13:23] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	30, // 13: harpia.artifacts.v1.PreviewArtifactResponse.image_preview:type_name -> harpia.artifacts.v1.ImagePreview
+	11, // 14: harpia.artifacts.v1.ArtifactService.RegisterArtifactType:input_type -> harpia.artifacts.v1.RegisterArtifactTypeRequest
+	13, // 15: harpia.artifacts.v1.ArtifactService.GetArtifactType:input_type -> harpia.artifacts.v1.GetArtifactTypeRequest
+	15, // 16: harpia.artifacts.v1.ArtifactService.CreateArtifact:input_type -> harpia.artifacts.v1.CreateArtifactRequest
+	17, // 17: harpia.artifacts.v1.ArtifactService.CreateArtifactWithPayload:input_type -> harpia.artifacts.v1.CreateArtifactWithPayloadRequest
+	19, // 18: harpia.artifacts.v1.ArtifactService.GetArtifact:input_type -> harpia.artifacts.v1.GetArtifactRequest
+	21, // 19: harpia.artifacts.v1.ArtifactService.ListArtifacts:input_type -> harpia.artifacts.v1.ListArtifactsRequest
+	23, // 20: harpia.artifacts.v1.ArtifactService.ListArtifactVersions:input_type -> harpia.artifacts.v1.ListArtifactVersionsRequest
+	25, // 21: harpia.artifacts.v1.ArtifactService.SaveTextArtifactVersion:input_type -> harpia.artifacts.v1.SaveTextArtifactVersionRequest
+	27, // 22: harpia.artifacts.v1.ArtifactService.GetArtifactPayload:input_type -> harpia.artifacts.v1.GetArtifactPayloadRequest
+	31, // 23: harpia.artifacts.v1.ArtifactService.PreviewArtifact:input_type -> harpia.artifacts.v1.PreviewArtifactRequest
+	12, // 24: harpia.artifacts.v1.ArtifactService.RegisterArtifactType:output_type -> harpia.artifacts.v1.RegisterArtifactTypeResponse
+	14, // 25: harpia.artifacts.v1.ArtifactService.GetArtifactType:output_type -> harpia.artifacts.v1.GetArtifactTypeResponse
+	16, // 26: harpia.artifacts.v1.ArtifactService.CreateArtifact:output_type -> harpia.artifacts.v1.CreateArtifactResponse
+	18, // 27: harpia.artifacts.v1.ArtifactService.CreateArtifactWithPayload:output_type -> harpia.artifacts.v1.CreateArtifactWithPayloadResponse
+	20, // 28: harpia.artifacts.v1.ArtifactService.GetArtifact:output_type -> harpia.artifacts.v1.GetArtifactResponse
+	22, // 29: harpia.artifacts.v1.ArtifactService.ListArtifacts:output_type -> harpia.artifacts.v1.ListArtifactsResponse
+	24, // 30: harpia.artifacts.v1.ArtifactService.ListArtifactVersions:output_type -> harpia.artifacts.v1.ListArtifactVersionsResponse
+	26, // 31: harpia.artifacts.v1.ArtifactService.SaveTextArtifactVersion:output_type -> harpia.artifacts.v1.SaveTextArtifactVersionResponse
+	28, // 32: harpia.artifacts.v1.ArtifactService.GetArtifactPayload:output_type -> harpia.artifacts.v1.GetArtifactPayloadResponse
+	32, // 33: harpia.artifacts.v1.ArtifactService.PreviewArtifact:output_type -> harpia.artifacts.v1.PreviewArtifactResponse
+	24, // [24:34] is the sub-list for method output_type
+	14, // [14:24] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_harpia_artifacts_v1_artifacts_proto_init() }
@@ -2397,11 +2517,14 @@ func file_harpia_artifacts_v1_artifacts_proto_init() {
 	file_harpia_artifacts_v1_artifacts_proto_msgTypes[15].OneofWrappers = []any{}
 	file_harpia_artifacts_v1_artifacts_proto_msgTypes[19].OneofWrappers = []any{}
 	file_harpia_artifacts_v1_artifacts_proto_msgTypes[25].OneofWrappers = []any{}
-	file_harpia_artifacts_v1_artifacts_proto_msgTypes[28].OneofWrappers = []any{}
-	file_harpia_artifacts_v1_artifacts_proto_msgTypes[29].OneofWrappers = []any{
+	file_harpia_artifacts_v1_artifacts_proto_msgTypes[29].OneofWrappers = []any{}
+	file_harpia_artifacts_v1_artifacts_proto_msgTypes[30].OneofWrappers = []any{
 		(*PreviewArtifactResponse_TextPreview)(nil),
 		(*PreviewArtifactResponse_ListSummary)(nil),
 		(*PreviewArtifactResponse_JsonPreview)(nil),
+		(*PreviewArtifactResponse_HtmlPreview)(nil),
+		(*PreviewArtifactResponse_MarkdownPreview)(nil),
+		(*PreviewArtifactResponse_ImagePreview)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -2409,7 +2532,7 @@ func file_harpia_artifacts_v1_artifacts_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_harpia_artifacts_v1_artifacts_proto_rawDesc), len(file_harpia_artifacts_v1_artifacts_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   30,
+			NumMessages:   31,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

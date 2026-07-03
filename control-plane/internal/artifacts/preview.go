@@ -2,6 +2,7 @@ package artifacts
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -33,6 +34,20 @@ func BuildPreview(typeKey string, payload []byte) (*artifactsv1.PreviewArtifactR
 	case TypeKeyPublishConfirmation:
 		return buildJSONPreview(payload, &artifactsv1.PublishConfirmation{})
 	default:
+		// Forward-compatible fallback: artifact types not enumerated above can
+		// still preview if their payload carries html or image content. This
+		// lets future HtmlPage / image artifact types render without a code
+		// change here.
+		if resp, ok, err := buildHTMLPreview(payload); err != nil {
+			return nil, err
+		} else if ok {
+			return resp, nil
+		}
+		if resp, ok, err := buildImagePreview(payload); err != nil {
+			return nil, err
+		} else if ok {
+			return resp, nil
+		}
 		return nil, fmt.Errorf("%w: unsupported artifact type %q", ErrInvalidPayload, typeKey)
 	}
 }
@@ -74,8 +89,8 @@ func buildTextDraftPreview(payload []byte) (*artifactsv1.PreviewArtifactResponse
 	}
 
 	return &artifactsv1.PreviewArtifactResponse{
-		Preview: &artifactsv1.PreviewArtifactResponse_TextPreview{
-			TextPreview: fmt.Sprintf("# %s\n\n%s", title, body),
+		Preview: &artifactsv1.PreviewArtifactResponse_MarkdownPreview{
+			MarkdownPreview: fmt.Sprintf("# %s\n\n%s", title, body),
 		},
 	}, nil
 }
@@ -100,8 +115,8 @@ func buildLinkedInPostDraftPreview(payload []byte) (*artifactsv1.PreviewArtifact
 	}
 
 	return &artifactsv1.PreviewArtifactResponse{
-		Preview: &artifactsv1.PreviewArtifactResponse_TextPreview{
-			TextPreview: preview,
+		Preview: &artifactsv1.PreviewArtifactResponse_MarkdownPreview{
+			MarkdownPreview: preview,
 		},
 	}, nil
 }
@@ -159,4 +174,58 @@ func buildJSONPreview(payload []byte, msg proto.Message) (*artifactsv1.PreviewAr
 			JsonPreview: compact.String(),
 		},
 	}, nil
+}
+
+// buildHTMLPreview returns an html_preview when the payload is a JSON object
+// carrying a non-empty "html" string. ok is false (no error) when the shape
+// does not match, so the caller can fall through to other heuristics.
+func buildHTMLPreview(payload []byte) (*artifactsv1.PreviewArtifactResponse, bool, error) {
+	var shape struct {
+		HTML string `json:"html"`
+	}
+	if err := json.Unmarshal(payload, &shape); err != nil {
+		return nil, false, nil // not a JSON object — let caller decide
+	}
+	if strings.TrimSpace(shape.HTML) == "" {
+		return nil, false, nil
+	}
+	return &artifactsv1.PreviewArtifactResponse{
+		Preview: &artifactsv1.PreviewArtifactResponse_HtmlPreview{
+			HtmlPreview: shape.HTML,
+		},
+	}, true, nil
+}
+
+// buildImagePreview returns an image_preview when the payload carries an
+// image_url and/or image_base64 field. inline bytes are decoded from base64.
+func buildImagePreview(payload []byte) (*artifactsv1.PreviewArtifactResponse, bool, error) {
+	var shape struct {
+		ImageURL    string `json:"image_url"`
+		ImageBase64 string `json:"image_base64"`
+		AltText     string `json:"alt_text"`
+	}
+	if err := json.Unmarshal(payload, &shape); err != nil {
+		return nil, false, nil
+	}
+	url := strings.TrimSpace(shape.ImageURL)
+	b64 := strings.TrimSpace(shape.ImageBase64)
+	if url == "" && b64 == "" {
+		return nil, false, nil
+	}
+	resp := &artifactsv1.PreviewArtifactResponse{
+		Preview: &artifactsv1.PreviewArtifactResponse_ImagePreview{
+			ImagePreview: &artifactsv1.ImagePreview{
+				Url:     url,
+				AltText: strings.TrimSpace(shape.AltText),
+			},
+		},
+	}
+	if b64 != "" {
+		data, err := base64.StdEncoding.DecodeString(b64)
+		if err != nil {
+			return nil, false, fmt.Errorf("%w: invalid image_base64: %v", ErrInvalidPayload, err)
+		}
+		resp.GetImagePreview().InlineData = data
+	}
+	return resp, true, nil
 }

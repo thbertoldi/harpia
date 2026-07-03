@@ -219,6 +219,14 @@ message ArtifactListSummary {
   repeated string titles = 2;
 }
 
+// ImagePreview carries either a resolved URL (e.g. a signed Garage URL) or
+// inline bytes (rendered as a data: URL fallback), plus alt text.
+message ImagePreview {
+  string url = 1;
+  bytes inline_data = 2;
+  string alt_text = 3;
+}
+
 message PreviewArtifactRequest {
   string tenant_id = 1;
   string artifact_id = 2;
@@ -230,5 +238,8 @@ message PreviewArtifactResponse {
     string text_preview = 1;
     ArtifactListSummary list_summary = 2;
     string json_preview = 3;
+    string html_preview = 4;
+    string markdown_preview = 5;
+    ImagePreview image_preview = 6;
   }
 }

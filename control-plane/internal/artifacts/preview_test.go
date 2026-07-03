@@ -13,9 +13,12 @@ func TestBuildPreviewTextDraft(t *testing.T) {
 		t.Fatalf("BuildPreview: %v", err)
 	}
 
-	text := resp.GetTextPreview()
-	if text != "# Weekly Update\n\nHello team" {
-		t.Fatalf("text preview = %q", text)
+	md := resp.GetMarkdownPreview()
+	if md != "# Weekly Update\n\nHello team" {
+		t.Fatalf("markdown preview = %q", md)
+	}
+	if resp.GetTextPreview() != "" {
+		t.Fatal("expected markdown variant, not text")
 	}
 }
 
@@ -26,10 +29,10 @@ func TestBuildPreviewLinkedInPostDraft(t *testing.T) {
 		t.Fatalf("BuildPreview: %v", err)
 	}
 
-	text := resp.GetTextPreview()
+	md := resp.GetMarkdownPreview()
 	want := "Big news\n\nWe launched\n\n#launch #ai"
-	if text != want {
-		t.Fatalf("text preview = %q, want %q", text, want)
+	if md != want {
+		t.Fatalf("markdown preview = %q, want %q", md, want)
 	}
 }
 
@@ -118,5 +121,43 @@ func TestPreviewResponseOneofFields(t *testing.T) {
 	}
 	if resp.GetTextPreview() != "hello" {
 		t.Fatalf("GetTextPreview = %q", resp.GetTextPreview())
+	}
+}
+
+func TestBuildPreviewHTMLFallback(t *testing.T) {
+	payload := []byte(`{"html":"<h1>Hi</h1><p>rendered</p>"}`)
+	resp, err := BuildPreview("harpia.artifacts.v1.FutureHtmlPage", payload)
+	if err != nil {
+		t.Fatalf("BuildPreview: %v", err)
+	}
+	if resp.GetHtmlPreview() != "<h1>Hi</h1><p>rendered</p>" {
+		t.Fatalf("html preview = %q", resp.GetHtmlPreview())
+	}
+}
+
+func TestBuildPreviewImageURLFallback(t *testing.T) {
+	payload := []byte(`{"image_url":"https://example.com/a.png","alt_text":"diagram"}`)
+	resp, err := BuildPreview("harpia.artifacts.v1.FutureImage", payload)
+	if err != nil {
+		t.Fatalf("BuildPreview: %v", err)
+	}
+	img := resp.GetImagePreview()
+	if img == nil || img.Url != "https://example.com/a.png" || img.AltText != "diagram" {
+		t.Fatalf("image preview = %+v", img)
+	}
+	if len(img.InlineData) != 0 {
+		t.Fatalf("expected no inline data, got %d bytes", len(img.InlineData))
+	}
+}
+
+func TestBuildPreviewImageBase64Fallback(t *testing.T) {
+	payload := []byte(`{"image_base64":"aGVsbG8="}`) // "hello"
+	resp, err := BuildPreview("harpia.artifacts.v1.FutureImage", payload)
+	if err != nil {
+		t.Fatalf("BuildPreview: %v", err)
+	}
+	img := resp.GetImagePreview()
+	if img == nil || string(img.InlineData) != "hello" {
+		t.Fatalf("inline image data = %q", string(img.GetInlineData()))
 	}
 }

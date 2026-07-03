@@ -219,8 +219,8 @@ func TestPreviewArtifactTextDraft(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PreviewArtifact: %v", err)
 	}
-	if resp.Msg.GetTextPreview() != "# Draft\n\nPreview body" {
-		t.Fatalf("text preview = %q", resp.Msg.GetTextPreview())
+	if resp.Msg.GetMarkdownPreview() != "# Draft\n\nPreview body" {
+		t.Fatalf("markdown preview = %q", resp.Msg.GetMarkdownPreview())
 	}
 }
 

@@ -6,7 +6,14 @@ import {
 } from "$lib/gen/harpia/artifacts/v1/artifacts_pb";
 import { artifactClient } from "$lib/rpc";
 
-export type ArtifactPreviewKind = "text" | "list" | "json" | "empty";
+export type ArtifactPreviewKind =
+  | "text"
+  | "list"
+  | "json"
+  | "html"
+  | "markdown"
+  | "image"
+  | "empty";
 
 export type FormattedArtifactPreview = {
   kind: ArtifactPreviewKind;
@@ -14,6 +21,16 @@ export type FormattedArtifactPreview = {
   listSummary?: {
     articleCount: number;
     titles: string[];
+  };
+  /** HTML source when kind === "html" (rendered via a sandboxed iframe). */
+  html?: string;
+  /** Markdown source when kind === "markdown". */
+  markdown?: string;
+  /** Image preview when kind === "image". */
+  image?: {
+    url?: string;
+    inlineData?: Uint8Array;
+    altText?: string;
   };
 };
 
@@ -70,6 +87,31 @@ export function formatArtifactPreview(
         kind: "json",
         text: response.preview.value,
       };
+    case "htmlPreview":
+      return {
+        kind: "html",
+        text: response.preview.value,
+        html: response.preview.value,
+      };
+    case "markdownPreview":
+      return {
+        kind: "markdown",
+        text: response.preview.value,
+        markdown: response.preview.value,
+      };
+    case "imagePreview": {
+      const img = response.preview.value;
+      const altText = img.altText ?? "";
+      return {
+        kind: "image",
+        text: img.url ?? "",
+        image: {
+          url: img.url || undefined,
+          inlineData: img.inlineData?.length ? img.inlineData : undefined,
+          altText: altText || undefined,
+        },
+      };
+    }
     default:
       return {
         kind: "empty",
