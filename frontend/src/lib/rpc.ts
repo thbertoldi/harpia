@@ -68,9 +68,6 @@ export type {
   GetElicitationResponse,
   RespondToElicitationResponse,
   WatchElicitationsResponse,
-  ListPlanThreadMessagesResponse,
-  WatchPlanThreadMessagesResponse,
-  AppendPlanThreadMessageResponse,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
 export {
   PlanExecutionStatus,

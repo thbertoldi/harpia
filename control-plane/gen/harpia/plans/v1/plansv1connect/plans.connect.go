@@ -98,15 +98,6 @@ const (
 	// PlanServiceWatchApprovalRequestsProcedure is the fully-qualified name of the PlanService's
 	// WatchApprovalRequests RPC.
 	PlanServiceWatchApprovalRequestsProcedure = "/harpia.plans.v1.PlanService/WatchApprovalRequests"
-	// PlanServiceListPlanThreadMessagesProcedure is the fully-qualified name of the PlanService's
-	// ListPlanThreadMessages RPC.
-	PlanServiceListPlanThreadMessagesProcedure = "/harpia.plans.v1.PlanService/ListPlanThreadMessages"
-	// PlanServiceWatchPlanThreadMessagesProcedure is the fully-qualified name of the PlanService's
-	// WatchPlanThreadMessages RPC.
-	PlanServiceWatchPlanThreadMessagesProcedure = "/harpia.plans.v1.PlanService/WatchPlanThreadMessages"
-	// PlanServiceAppendPlanThreadMessageProcedure is the fully-qualified name of the PlanService's
-	// AppendPlanThreadMessage RPC.
-	PlanServiceAppendPlanThreadMessageProcedure = "/harpia.plans.v1.PlanService/AppendPlanThreadMessage"
 )
 
 // PlanServiceClient is a client for the harpia.plans.v1.PlanService service.
@@ -142,12 +133,6 @@ type PlanServiceClient interface {
 	GetApprovalRequest(context.Context, *connect.Request[v1.GetApprovalRequestRequest]) (*connect.Response[v1.GetApprovalRequestResponse], error)
 	RespondToApprovalRequest(context.Context, *connect.Request[v1.RespondToApprovalRequestRequest]) (*connect.Response[v1.RespondToApprovalRequestResponse], error)
 	WatchApprovalRequests(context.Context, *connect.Request[v1.WatchApprovalRequestsRequest]) (*connect.ServerStreamForClient[v1.WatchApprovalRequestsResponse], error)
-	// Deprecated: use harpia.chat.v1.ThreadService message RPCs. These methods
-	// remain during Path B migration and resolve plan_configuration_id to the
-	// owning thread_id.
-	ListPlanThreadMessages(context.Context, *connect.Request[v1.ListPlanThreadMessagesRequest]) (*connect.Response[v1.ListPlanThreadMessagesResponse], error)
-	WatchPlanThreadMessages(context.Context, *connect.Request[v1.WatchPlanThreadMessagesRequest]) (*connect.ServerStreamForClient[v1.WatchPlanThreadMessagesResponse], error)
-	AppendPlanThreadMessage(context.Context, *connect.Request[v1.AppendPlanThreadMessageRequest]) (*connect.Response[v1.AppendPlanThreadMessageResponse], error)
 }
 
 // NewPlanServiceClient constructs a client for the harpia.plans.v1.PlanService service. By default,
@@ -293,24 +278,6 @@ func NewPlanServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(planServiceMethods.ByName("WatchApprovalRequests")),
 			connect.WithClientOptions(opts...),
 		),
-		listPlanThreadMessages: connect.NewClient[v1.ListPlanThreadMessagesRequest, v1.ListPlanThreadMessagesResponse](
-			httpClient,
-			baseURL+PlanServiceListPlanThreadMessagesProcedure,
-			connect.WithSchema(planServiceMethods.ByName("ListPlanThreadMessages")),
-			connect.WithClientOptions(opts...),
-		),
-		watchPlanThreadMessages: connect.NewClient[v1.WatchPlanThreadMessagesRequest, v1.WatchPlanThreadMessagesResponse](
-			httpClient,
-			baseURL+PlanServiceWatchPlanThreadMessagesProcedure,
-			connect.WithSchema(planServiceMethods.ByName("WatchPlanThreadMessages")),
-			connect.WithClientOptions(opts...),
-		),
-		appendPlanThreadMessage: connect.NewClient[v1.AppendPlanThreadMessageRequest, v1.AppendPlanThreadMessageResponse](
-			httpClient,
-			baseURL+PlanServiceAppendPlanThreadMessageProcedure,
-			connect.WithSchema(planServiceMethods.ByName("AppendPlanThreadMessage")),
-			connect.WithClientOptions(opts...),
-		),
 	}
 }
 
@@ -338,9 +305,6 @@ type planServiceClient struct {
 	getApprovalRequest       *connect.Client[v1.GetApprovalRequestRequest, v1.GetApprovalRequestResponse]
 	respondToApprovalRequest *connect.Client[v1.RespondToApprovalRequestRequest, v1.RespondToApprovalRequestResponse]
 	watchApprovalRequests    *connect.Client[v1.WatchApprovalRequestsRequest, v1.WatchApprovalRequestsResponse]
-	listPlanThreadMessages   *connect.Client[v1.ListPlanThreadMessagesRequest, v1.ListPlanThreadMessagesResponse]
-	watchPlanThreadMessages  *connect.Client[v1.WatchPlanThreadMessagesRequest, v1.WatchPlanThreadMessagesResponse]
-	appendPlanThreadMessage  *connect.Client[v1.AppendPlanThreadMessageRequest, v1.AppendPlanThreadMessageResponse]
 }
 
 // GetPlanTemplate calls harpia.plans.v1.PlanService.GetPlanTemplate.
@@ -453,21 +417,6 @@ func (c *planServiceClient) WatchApprovalRequests(ctx context.Context, req *conn
 	return c.watchApprovalRequests.CallServerStream(ctx, req)
 }
 
-// ListPlanThreadMessages calls harpia.plans.v1.PlanService.ListPlanThreadMessages.
-func (c *planServiceClient) ListPlanThreadMessages(ctx context.Context, req *connect.Request[v1.ListPlanThreadMessagesRequest]) (*connect.Response[v1.ListPlanThreadMessagesResponse], error) {
-	return c.listPlanThreadMessages.CallUnary(ctx, req)
-}
-
-// WatchPlanThreadMessages calls harpia.plans.v1.PlanService.WatchPlanThreadMessages.
-func (c *planServiceClient) WatchPlanThreadMessages(ctx context.Context, req *connect.Request[v1.WatchPlanThreadMessagesRequest]) (*connect.ServerStreamForClient[v1.WatchPlanThreadMessagesResponse], error) {
-	return c.watchPlanThreadMessages.CallServerStream(ctx, req)
-}
-
-// AppendPlanThreadMessage calls harpia.plans.v1.PlanService.AppendPlanThreadMessage.
-func (c *planServiceClient) AppendPlanThreadMessage(ctx context.Context, req *connect.Request[v1.AppendPlanThreadMessageRequest]) (*connect.Response[v1.AppendPlanThreadMessageResponse], error) {
-	return c.appendPlanThreadMessage.CallUnary(ctx, req)
-}
-
 // PlanServiceHandler is an implementation of the harpia.plans.v1.PlanService service.
 type PlanServiceHandler interface {
 	// Template catalog (global, read-only for tenants).
@@ -501,12 +450,6 @@ type PlanServiceHandler interface {
 	GetApprovalRequest(context.Context, *connect.Request[v1.GetApprovalRequestRequest]) (*connect.Response[v1.GetApprovalRequestResponse], error)
 	RespondToApprovalRequest(context.Context, *connect.Request[v1.RespondToApprovalRequestRequest]) (*connect.Response[v1.RespondToApprovalRequestResponse], error)
 	WatchApprovalRequests(context.Context, *connect.Request[v1.WatchApprovalRequestsRequest], *connect.ServerStream[v1.WatchApprovalRequestsResponse]) error
-	// Deprecated: use harpia.chat.v1.ThreadService message RPCs. These methods
-	// remain during Path B migration and resolve plan_configuration_id to the
-	// owning thread_id.
-	ListPlanThreadMessages(context.Context, *connect.Request[v1.ListPlanThreadMessagesRequest]) (*connect.Response[v1.ListPlanThreadMessagesResponse], error)
-	WatchPlanThreadMessages(context.Context, *connect.Request[v1.WatchPlanThreadMessagesRequest], *connect.ServerStream[v1.WatchPlanThreadMessagesResponse]) error
-	AppendPlanThreadMessage(context.Context, *connect.Request[v1.AppendPlanThreadMessageRequest]) (*connect.Response[v1.AppendPlanThreadMessageResponse], error)
 }
 
 // NewPlanServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -648,24 +591,6 @@ func NewPlanServiceHandler(svc PlanServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(planServiceMethods.ByName("WatchApprovalRequests")),
 		connect.WithHandlerOptions(opts...),
 	)
-	planServiceListPlanThreadMessagesHandler := connect.NewUnaryHandler(
-		PlanServiceListPlanThreadMessagesProcedure,
-		svc.ListPlanThreadMessages,
-		connect.WithSchema(planServiceMethods.ByName("ListPlanThreadMessages")),
-		connect.WithHandlerOptions(opts...),
-	)
-	planServiceWatchPlanThreadMessagesHandler := connect.NewServerStreamHandler(
-		PlanServiceWatchPlanThreadMessagesProcedure,
-		svc.WatchPlanThreadMessages,
-		connect.WithSchema(planServiceMethods.ByName("WatchPlanThreadMessages")),
-		connect.WithHandlerOptions(opts...),
-	)
-	planServiceAppendPlanThreadMessageHandler := connect.NewUnaryHandler(
-		PlanServiceAppendPlanThreadMessageProcedure,
-		svc.AppendPlanThreadMessage,
-		connect.WithSchema(planServiceMethods.ByName("AppendPlanThreadMessage")),
-		connect.WithHandlerOptions(opts...),
-	)
 	return "/harpia.plans.v1.PlanService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PlanServiceGetPlanTemplateProcedure:
@@ -712,12 +637,6 @@ func NewPlanServiceHandler(svc PlanServiceHandler, opts ...connect.HandlerOption
 			planServiceRespondToApprovalRequestHandler.ServeHTTP(w, r)
 		case PlanServiceWatchApprovalRequestsProcedure:
 			planServiceWatchApprovalRequestsHandler.ServeHTTP(w, r)
-		case PlanServiceListPlanThreadMessagesProcedure:
-			planServiceListPlanThreadMessagesHandler.ServeHTTP(w, r)
-		case PlanServiceWatchPlanThreadMessagesProcedure:
-			planServiceWatchPlanThreadMessagesHandler.ServeHTTP(w, r)
-		case PlanServiceAppendPlanThreadMessageProcedure:
-			planServiceAppendPlanThreadMessageHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -813,16 +732,4 @@ func (UnimplementedPlanServiceHandler) RespondToApprovalRequest(context.Context,
 
 func (UnimplementedPlanServiceHandler) WatchApprovalRequests(context.Context, *connect.Request[v1.WatchApprovalRequestsRequest], *connect.ServerStream[v1.WatchApprovalRequestsResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("harpia.plans.v1.PlanService.WatchApprovalRequests is not implemented"))
-}
-
-func (UnimplementedPlanServiceHandler) ListPlanThreadMessages(context.Context, *connect.Request[v1.ListPlanThreadMessagesRequest]) (*connect.Response[v1.ListPlanThreadMessagesResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("harpia.plans.v1.PlanService.ListPlanThreadMessages is not implemented"))
-}
-
-func (UnimplementedPlanServiceHandler) WatchPlanThreadMessages(context.Context, *connect.Request[v1.WatchPlanThreadMessagesRequest], *connect.ServerStream[v1.WatchPlanThreadMessagesResponse]) error {
-	return connect.NewError(connect.CodeUnimplemented, errors.New("harpia.plans.v1.PlanService.WatchPlanThreadMessages is not implemented"))
-}
-
-func (UnimplementedPlanServiceHandler) AppendPlanThreadMessage(context.Context, *connect.Request[v1.AppendPlanThreadMessageRequest]) (*connect.Response[v1.AppendPlanThreadMessageResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("harpia.plans.v1.PlanService.AppendPlanThreadMessage is not implemented"))
 }

@@ -169,10 +169,6 @@ type PlanHandler struct {
 	signaler         PlanElicitationSignaler
 	approvals        ApprovalStore
 	approvalSignaler PlanApprovalSignaler
-
-	// resolveThreadIDForPlanConfiguration bridges legacy plan-thread RPCs to the
-	// owning threads.id during the Path B migration.
-	resolveThreadIDForPlanConfiguration func(ctx context.Context, tenantID, planConfigurationID uuid.UUID) (uuid.UUID, error)
 }
 
 type PlanWorkflowStarter interface {
@@ -206,7 +202,6 @@ func NewPlanHandler(repo *Repository, executors ExecutorLookup, schedule *Schedu
 		elicitations:    repo,
 		approvals:       repo,
 	}
-	handler.resolveThreadIDForPlanConfiguration = repo.GetThreadIDForConfiguration
 	if signaler, ok := starter.(PlanElicitationSignaler); ok {
 		handler.signaler = signaler
 	}
