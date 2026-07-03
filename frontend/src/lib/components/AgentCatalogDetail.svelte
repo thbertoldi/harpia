@@ -1,16 +1,5 @@
 <script lang="ts">
-  import {
-    ArrowUpCircle,
-    ExternalLink,
-    Eye,
-    EyeOff,
-    FlaskConical,
-    History,
-    Link2,
-    RotateCcw,
-    Trash2,
-    X,
-  } from "lucide-svelte";
+  import { ExternalLink, FlaskConical, History, Link2, X } from "lucide-svelte";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
   import Skeleton from "$lib/components/Skeleton.svelte";
   import {
@@ -58,16 +47,6 @@
       selectedToolId = "";
     }
   });
-
-  function confirmAction(
-    action: string,
-    message: string,
-    prompt: string,
-  ): void {
-    if (window.confirm(prompt)) {
-      onAction(action, message);
-    }
-  }
 
   function formattedDate(dateStr: string): string {
     try {
@@ -236,59 +215,6 @@
             <FlaskConical class="size-3.5" />
           {/if}
           {translate("agents.detail.runTestInvocation", $locale)}
-        </button>
-        {#if entry.canaryVersion}
-          <button
-            onclick={() =>
-              confirmAction(
-                "promote-canary",
-                `Promoted ${entry.canaryVersion} to active (stub)`,
-                `Promote canary ${entry.canaryVersion} to active for ${entry.agentType.displayName}?`,
-              )}
-            class="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-plumage px-3 py-1.5 font-body text-xs text-cream transition-colors hover:border-talon-gold hover:text-talon-gold"
-          >
-            <ArrowUpCircle class="size-3.5" />
-            {translate("agents.detail.promoteCanary", $locale)}
-          </button>
-        {/if}
-        <button
-          onclick={() =>
-            confirmAction(
-              "rollback",
-              `Rolled back to previous version (stub)`,
-              `Roll back ${entry.agentType.displayName} to the previous active version?`,
-            )}
-          class="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-plumage px-3 py-1.5 font-body text-xs text-cream transition-colors hover:border-talon-gold hover:text-talon-gold"
-        >
-          <RotateCcw class="size-3.5" />
-          {translate("agents.detail.rollback", $locale)}
-        </button>
-        <button
-          onclick={() =>
-            onAction(
-              "edit-visibility",
-              `Visibility editor opened (stub) — current: ${entry.tenantVisibility}`,
-            )}
-          class="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-plumage px-3 py-1.5 font-body text-xs text-cream transition-colors hover:border-talon-gold hover:text-talon-gold"
-        >
-          {#if entry.tenantVisibility === "global"}
-            <Eye class="size-3.5" />
-          {:else}
-            <EyeOff class="size-3.5" />
-          {/if}
-          {translate("agents.detail.editVisibility", $locale)}
-        </button>
-        <button
-          onclick={() =>
-            confirmAction(
-              "deprecate",
-              `${entry.agentType.displayName} marked deprecated (stub)`,
-              `Deprecate ${entry.agentType.displayName}? Existing invocations may still complete.`,
-            )}
-          class="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-red-500/30 px-3 py-1.5 font-body text-xs text-red-400 transition-colors hover:bg-red-500/10"
-        >
-          <Trash2 class="size-3.5" />
-          {translate("agents.detail.deprecate", $locale)}
         </button>
       </div>
     </section>

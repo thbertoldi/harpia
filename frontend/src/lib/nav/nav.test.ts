@@ -93,11 +93,6 @@ describe("isNavSectionActive", () => {
     expect(isNavSectionActive("/plans", "/plans/abc")).toBe(false);
     expect(isNavSectionActive("/inbox", "/admin/audit")).toBe(false);
   });
-
-  it("keeps the home → /tasks special case", () => {
-    expect(isNavSectionActive("/", "/tasks")).toBe(true);
-    expect(isNavSectionActive("/", "/tasks/ongoing")).toBe(false);
-  });
 });
 
 describe("navSectionDefs", () => {

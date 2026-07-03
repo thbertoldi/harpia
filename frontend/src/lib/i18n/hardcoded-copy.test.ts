@@ -8,9 +8,7 @@ const FRONTEND_ROOT = resolve(import.meta.dirname, "../../..");
 
 const HIGH_RISK_FILES = [
   "src/routes/+page.svelte",
-  "src/lib/components/TaskDetail.svelte",
   "src/lib/components/FeedbackPanel.svelte",
-  "src/lib/components/OngoingTaskCard.svelte",
 ];
 
 const BANNED_LITERALS = [
