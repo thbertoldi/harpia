@@ -112,7 +112,10 @@ func (c *Controller) emitCurrentPrompt(ctx context.Context, tenantID uuid.UUID, 
 	in := PromptInput{Template: tpl, Config: cfg}
 	if rc, ok := identity.RequestContextFrom(ctx); ok {
 		in.CurrentUserID = rc.UserID
-		in.CurrentUserLabel = rc.UserID
+		// The identity context carries only the user id (no display name), so
+		// use a human label here; the frontend overrides it with the real name
+		// when the session user is available. Never emit the raw id as a label.
+		in.CurrentUserLabel = "You"
 	}
 	if state.Kind == StateBindingStep || state.Kind == StateOverseerStep || state.Kind == StateBindingMatrix {
 		byStep := make(map[string][]ExecutorOption, len(tpl.GetSteps()))

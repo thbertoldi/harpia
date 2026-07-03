@@ -69,8 +69,6 @@ describe("createdActionIds", () => {
     expect(createdActionIds(PlanConfigurationStatus.RUNNABLE)).toEqual([
       "runNow",
       "schedule",
-      "reviewPlan",
-      "adjustConfiguration",
     ]);
   });
 
@@ -78,8 +76,6 @@ describe("createdActionIds", () => {
     expect(createdActionIds(PlanConfigurationStatus.DRAFT)).toEqual([
       "finishSetup",
       "schedule",
-      "reviewPlan",
-      "adjustConfiguration",
     ]);
   });
 });

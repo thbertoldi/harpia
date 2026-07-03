@@ -185,9 +185,12 @@ export function buildFinalConfirmation(
 export function createdActionIds(
   status: PlanConfigurationStatus,
 ): CreatedActionId[] {
+  // ADR-017: the conversation is the single work surface, so the created-card
+  // no longer offers navigate-away actions (review/adjust left the thread).
+  // Setup continues in-chat via finishSetup; schedule + runNow remain.
   const primary =
     status === PlanConfigurationStatus.RUNNABLE ? "runNow" : "finishSetup";
-  return [primary, "schedule", "reviewPlan", "adjustConfiguration"];
+  return [primary, "schedule"];
 }
 
 export function createdActionI18nKey(id: CreatedActionId): string {

@@ -85,6 +85,20 @@ deployment, and an end-to-end run of `weekly-newsletter-linkedin`. Generic agent
 
 ## UX
 
+### 🛠️ Navigation & plan-lifecycle model → decided (ADR-017)
+**Taxonomy:** Thread, PlanConfiguration (kind: ONE_SHOT/RECURRING), PlanExecution, Gallery,
+Runs. The journey was fragmented across ~3 inconsistent plan surfaces with a 1:1
+thread↔config link and no plan "kind." Decision: the **conversation is the single work
+surface** and can spawn **1:N plans** (chips/tabs at top); a plan has a **kind** that
+drives the flow (one-shot → "run now?"; recurring → "test then schedule"); every plan
+stores `origin_thread_id`; configuration is **hybrid conversational** (free text → defaults
++ ≤2 clarifying Qs → structured approval card); the **canvas is a read-only in-thread
+toggle**; the **Runs panel** (new top-level destination) groups recurring plans + all
+executions by plan and links back to the origin chat; recurring plans are edited inline in
+Runs; execution surfaces the **final artifact** in a side preview (intermediates
+suppressed). Amends ADR-012's 1:1 assumption. See
+**[ADR-017](../adr/ADR-017-navigation-and-plan-lifecycle.md)**.
+
 ### 🛠️ Chat-first plan lifecycle experience
 **Taxonomy:** PlanTemplate, PlanConfiguration, PlanExecution, Artifact, OverseerBinding,
 PlanSchedule.

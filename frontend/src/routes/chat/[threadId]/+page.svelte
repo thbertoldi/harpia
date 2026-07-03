@@ -1,7 +1,6 @@
 <script lang="ts">
   import { browser } from "$app/environment";
   import { invalidateAll } from "$app/navigation";
-  import { resolve } from "$app/paths";
   import { listArtifacts } from "$lib/artifacts/artifacts";
   import { getTenant } from "$lib/auth";
   import { locale, translate } from "$lib/i18n";
@@ -34,7 +33,6 @@
   import { buildPlanSummary } from "$lib/plans/config-summary";
   import { loadPlanExecutionDetail } from "$lib/plans/plan-execution-detail";
   import { planClient, threadClient } from "$lib/rpc";
-  import { Expand } from "lucide-svelte";
   import { chatEnter } from "$lib/motion/transitions";
 
   function chatEnterStaggered(node: HTMLElement, params: { delay?: number }) {
@@ -492,19 +490,13 @@
     </div>
 
     {#if data.template?.steps && data.template.steps.length > 0}
-      <div class="flex items-center justify-between gap-2">
+      <div
+        class="rounded border border-plumage/60 bg-obsidian-light/30 px-3 py-2"
+      >
         <PlanDagMiniMap
           steps={data.template.steps}
           edges={data.template.edges}
         />
-        <a
-          href={resolve(`/plans/configurations/${routeConfigurationId}/canvas`)}
-          class="flex items-center gap-1 rounded border border-plumage bg-transparent px-2 py-1 text-[10px] text-crown-ash hover:border-talon-gold hover:text-talon-gold"
-          aria-label={translate("canvas.expandLink", $locale)}
-        >
-          <Expand class="size-3" />
-          {translate("canvas.expandLink", $locale)}
-        </a>
       </div>
     {/if}
 
