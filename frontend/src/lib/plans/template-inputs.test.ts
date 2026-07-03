@@ -48,6 +48,18 @@ describe("genericInputInitialValues", () => {
     expect(got.date_range).toEqual(dateRange);
   });
 
+  it("does not prefill integration-selector params with suggested names (must be a real installation UUID)", () => {
+    const params = [
+      param("source_group", TemplateInputParameterType.INTEGRATION_SELECTOR),
+    ];
+    // The proposal suggests a *name* ("tech-blogs"); it must not leak in as the
+    // parameter value, or create fails with an invalid-UUID slot binding.
+    const got = genericInputInitialValues(params, {
+      source_group: "tech-blogs",
+    });
+    expect(got.source_group).toBe("");
+  });
+
   it("keeps a date range preset rolling instead of freezing concrete dates", () => {
     const params = [
       param(

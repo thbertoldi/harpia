@@ -37,6 +37,15 @@ export function genericInputInitialValues(
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const p of params) {
+    // Integration-selector values must be real installation UUIDs, chosen via
+    // the picker. The proposal's suggested source-group *names* are display
+    // hints, not ids — prefilling them as the parameter value produced an
+    // invalid (non-UUID) slot binding at create time. Leave these empty so the
+    // user picks an actual installation.
+    if (p.type === TemplateInputParameterType.INTEGRATION_SELECTOR) {
+      out[p.key] = "";
+      continue;
+    }
     if (p.key in extracted && extracted[p.key] != null) {
       out[p.key] = extracted[p.key];
       continue;
