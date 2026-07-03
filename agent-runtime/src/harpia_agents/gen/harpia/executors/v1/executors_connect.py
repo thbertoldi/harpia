@@ -45,6 +45,9 @@ class ExecutorService(Protocol):
     async def update_executor_installation(self, request: harpia_dot_executors_dot_v1_dot_executors__pb2.UpdateExecutorInstallationRequest, ctx: RequestContext) -> harpia_dot_executors_dot_v1_dot_executors__pb2.UpdateExecutorInstallationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def delete_executor_installation(self, request: harpia_dot_executors_dot_v1_dot_executors__pb2.DeleteExecutorInstallationRequest, ctx: RequestContext) -> harpia_dot_executors_dot_v1_dot_executors__pb2.DeleteExecutorInstallationResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
 
 class ExecutorServiceASGIApplication(ConnectASGIApplication[ExecutorService]):
     def __init__(self, service: ExecutorService | AsyncGenerator[ExecutorService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
@@ -140,6 +143,16 @@ class ExecutorServiceASGIApplication(ConnectASGIApplication[ExecutorService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_executor_installation,
+                ),
+                "/harpia.executors.v1.ExecutorService/DeleteExecutorInstallation": Endpoint.unary(
+                    method=MethodInfo(
+                        name="DeleteExecutorInstallation",
+                        service_name="harpia.executors.v1.ExecutorService",
+                        input=harpia_dot_executors_dot_v1_dot_executors__pb2.DeleteExecutorInstallationRequest,
+                        output=harpia_dot_executors_dot_v1_dot_executors__pb2.DeleteExecutorInstallationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.delete_executor_installation,
                 ),
             },
             interceptors=interceptors,
@@ -335,6 +348,26 @@ class ExecutorServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def delete_executor_installation(
+        self,
+        request: harpia_dot_executors_dot_v1_dot_executors__pb2.DeleteExecutorInstallationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_executors_dot_v1_dot_executors__pb2.DeleteExecutorInstallationResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="DeleteExecutorInstallation",
+                service_name="harpia.executors.v1.ExecutorService",
+                input=harpia_dot_executors_dot_v1_dot_executors__pb2.DeleteExecutorInstallationRequest,
+                output=harpia_dot_executors_dot_v1_dot_executors__pb2.DeleteExecutorInstallationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 
 
 
@@ -357,6 +390,8 @@ class ExecutorServiceSync(Protocol):
     def create_executor_installation(self, request: harpia_dot_executors_dot_v1_dot_executors__pb2.CreateExecutorInstallationRequest, ctx: RequestContext) -> harpia_dot_executors_dot_v1_dot_executors__pb2.CreateExecutorInstallationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def update_executor_installation(self, request: harpia_dot_executors_dot_v1_dot_executors__pb2.UpdateExecutorInstallationRequest, ctx: RequestContext) -> harpia_dot_executors_dot_v1_dot_executors__pb2.UpdateExecutorInstallationResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def delete_executor_installation(self, request: harpia_dot_executors_dot_v1_dot_executors__pb2.DeleteExecutorInstallationRequest, ctx: RequestContext) -> harpia_dot_executors_dot_v1_dot_executors__pb2.DeleteExecutorInstallationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -453,6 +488,16 @@ class ExecutorServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_executor_installation,
+                ),
+                "/harpia.executors.v1.ExecutorService/DeleteExecutorInstallation": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="DeleteExecutorInstallation",
+                        service_name="harpia.executors.v1.ExecutorService",
+                        input=harpia_dot_executors_dot_v1_dot_executors__pb2.DeleteExecutorInstallationRequest,
+                        output=harpia_dot_executors_dot_v1_dot_executors__pb2.DeleteExecutorInstallationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.delete_executor_installation,
                 ),
             },
             interceptors=interceptors,
@@ -642,6 +687,26 @@ class ExecutorServiceClientSync(ConnectClientSync):
                 service_name="harpia.executors.v1.ExecutorService",
                 input=harpia_dot_executors_dot_v1_dot_executors__pb2.UpdateExecutorInstallationRequest,
                 output=harpia_dot_executors_dot_v1_dot_executors__pb2.UpdateExecutorInstallationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def delete_executor_installation(
+        self,
+        request: harpia_dot_executors_dot_v1_dot_executors__pb2.DeleteExecutorInstallationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_executors_dot_v1_dot_executors__pb2.DeleteExecutorInstallationResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="DeleteExecutorInstallation",
+                service_name="harpia.executors.v1.ExecutorService",
+                input=harpia_dot_executors_dot_v1_dot_executors__pb2.DeleteExecutorInstallationRequest,
+                output=harpia_dot_executors_dot_v1_dot_executors__pb2.DeleteExecutorInstallationResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

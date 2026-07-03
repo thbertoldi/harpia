@@ -19,12 +19,13 @@ export type DemoIntegrationKind = "rss" | "linkedin";
 export type LinkedInIntegrationMode = "oauth" | "approval_only";
 export type IntegrationValidationCode =
   | "rssFeedsRequired"
+  | "rssFeedInvalidUrl"
   | "linkedinCredentialRequired";
 
 export interface DemoIntegrationFormValues {
   displayName: string;
   enabled: boolean;
-  feedsText: string;
+  feeds: string[];
   linkedinMode: LinkedInIntegrationMode;
   oauthCredentialId: string;
 }
@@ -166,9 +167,9 @@ export function formValuesFromCard(
     displayName:
       card.installation?.displayName || card.sku.displayName || card.sku.key,
     enabled: card.installation?.enabled ?? true,
-    feedsText: Array.isArray(config.feeds)
-      ? config.feeds.filter(isString).join("\n")
-      : "",
+    feeds: Array.isArray(config.feeds)
+      ? config.feeds.filter(isString).filter((f) => f.trim().length > 0)
+      : [],
     linkedinMode: mode,
     oauthCredentialId: isString(config.oauth_credential_id)
       ? config.oauth_credential_id
@@ -180,8 +181,14 @@ export function validateIntegrationForm(
   kind: DemoIntegrationKind,
   values: DemoIntegrationFormValues,
 ): IntegrationValidationCode | null {
-  if (kind === "rss" && parseFeedLines(values.feedsText).length === 0) {
-    return "rssFeedsRequired";
+  if (kind === "rss") {
+    const feeds = normalizedFeeds(values.feeds);
+    if (feeds.length === 0) {
+      return "rssFeedsRequired";
+    }
+    if (!feeds.every(isValidFeedUrl)) {
+      return "rssFeedInvalidUrl";
+    }
   }
   if (
     kind === "linkedin" &&
@@ -198,7 +205,7 @@ export function buildIntegrationConfigJSON(
   values: DemoIntegrationFormValues,
 ): string {
   if (kind === "rss") {
-    return JSON.stringify({ feeds: parseFeedLines(values.feedsText) });
+    return JSON.stringify({ feeds: normalizedFeeds(values.feeds) });
   }
 
   if (values.linkedinMode === "approval_only") {
@@ -208,6 +215,35 @@ export function buildIntegrationConfigJSON(
   return JSON.stringify({
     mode: "oauth",
     oauth_credential_id: values.oauthCredentialId.trim(),
+  });
+}
+
+/** Trim + drop empties, preserving order. */
+export function normalizedFeeds(feeds: string[]): string[] {
+  return feeds.map((f) => f.trim()).filter((f) => f.length > 0);
+}
+
+/** A valid RSS/Atom feed URL: http(s) with a host. */
+export function isValidFeedUrl(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  try {
+    const url = new URL(trimmed);
+    return (
+      (url.protocol === "http:" || url.protocol === "https:") && !!url.host
+    );
+  } catch {
+    return false;
+  }
+}
+
+export async function deleteDemoIntegrationInstallation(input: {
+  tenantId: string;
+  installationId: string;
+}): Promise<void> {
+  await executorClient.deleteExecutorInstallation({
+    tenantId: input.tenantId,
+    installationId: input.installationId,
   });
 }
 
@@ -296,13 +332,6 @@ function isInstallationConfigured(
     installation.enabled &&
     installation.detail.value.configJson.trim().length > 0
   );
-}
-
-function parseFeedLines(value: string): string[] {
-  return value
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
 }
 
 function parseConfigJSON(value: string | undefined): Record<string, unknown> {

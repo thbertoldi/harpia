@@ -324,6 +324,19 @@ func (r *Repository) UpdateInstallation(ctx context.Context, installation *Execu
 	return updated, nil
 }
 
+// DeleteInstallation removes a tenant-scoped installation. It is a no-op
+// (returns nil) if the installation does not exist.
+func (r *Repository) DeleteInstallation(ctx context.Context, tenantID, installationID uuid.UUID) error {
+	return database.WithTenant(ctx, r.pool, tenantID, func(q database.Querier) error {
+		_, err := q.Exec(ctx,
+			`DELETE FROM executor_installations WHERE tenant_id = $1 AND id = $2`,
+			tenantID,
+			installationID,
+		)
+		return err
+	})
+}
+
 func scanSKU(row pgx.Row) (*ExecutorSKU, error) {
 	var sku ExecutorSKU
 	var compatibilityJSON []byte

@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { TemplateInputParameter } from "$lib/gen/harpia/plans/v1/plans_pb";
   import { TemplateInputParameterType } from "$lib/gen/harpia/plans/v1/plans_pb";
+  import { resolve } from "$app/paths";
   import {
     isDateRangePreset,
     resolveDateRangePreset,
@@ -261,6 +262,12 @@
                   ? translate("thread.propose.loadingIntegrations", $locale)
                   : translate("thread.propose.noIntegrations", $locale)}
               </span>
+              <a
+                href={resolve("/admin/integrations")}
+                class="text-[11px] text-energy underline-offset-2 hover:underline"
+              >
+                {translate("thread.propose.createSourceGroup", $locale)}
+              </a>
             {:else}
               {#each sourceInstallations as inst (inst.id)}
                 {@const checked = selected.includes(inst.id)}

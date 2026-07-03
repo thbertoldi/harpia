@@ -487,6 +487,21 @@ func (h *Handler) UpdateExecutorInstallation(ctx context.Context, req *connect.R
 	}), nil
 }
 
+func (h *Handler) DeleteExecutorInstallation(ctx context.Context, req *connect.Request[executorsv1.DeleteExecutorInstallationRequest]) (*connect.Response[executorsv1.DeleteExecutorInstallationResponse], error) {
+	tenantID, err := identity.RequireTenant(ctx, req.Msg.TenantId)
+	if err != nil {
+		return nil, err
+	}
+	installationID, err := uuid.Parse(req.Msg.InstallationId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	if err := h.repo.DeleteInstallation(ctx, tenantID, installationID); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	return connect.NewResponse(&executorsv1.DeleteExecutorInstallationResponse{}), nil
+}
+
 func pageParams(pageSize int32, pageToken string) (limit int, offset int, err error) {
 	limit = int(pageSize)
 	if limit <= 0 || limit > 100 {

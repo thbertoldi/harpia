@@ -1778,6 +1778,94 @@ func (x *UpdateExecutorInstallationResponse) GetInstallation() *ExecutorInstalla
 	return nil
 }
 
+type DeleteExecutorInstallationRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	TenantId       string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	InstallationId string                 `protobuf:"bytes,2,opt,name=installation_id,json=installationId,proto3" json:"installation_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *DeleteExecutorInstallationRequest) Reset() {
+	*x = DeleteExecutorInstallationRequest{}
+	mi := &file_harpia_executors_v1_executors_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteExecutorInstallationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteExecutorInstallationRequest) ProtoMessage() {}
+
+func (x *DeleteExecutorInstallationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harpia_executors_v1_executors_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteExecutorInstallationRequest.ProtoReflect.Descriptor instead.
+func (*DeleteExecutorInstallationRequest) Descriptor() ([]byte, []int) {
+	return file_harpia_executors_v1_executors_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *DeleteExecutorInstallationRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *DeleteExecutorInstallationRequest) GetInstallationId() string {
+	if x != nil {
+		return x.InstallationId
+	}
+	return ""
+}
+
+type DeleteExecutorInstallationResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteExecutorInstallationResponse) Reset() {
+	*x = DeleteExecutorInstallationResponse{}
+	mi := &file_harpia_executors_v1_executors_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteExecutorInstallationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteExecutorInstallationResponse) ProtoMessage() {}
+
+func (x *DeleteExecutorInstallationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_harpia_executors_v1_executors_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteExecutorInstallationResponse.ProtoReflect.Descriptor instead.
+func (*DeleteExecutorInstallationResponse) Descriptor() ([]byte, []int) {
+	return file_harpia_executors_v1_executors_proto_rawDescGZIP(), []int{26}
+}
+
 var File_harpia_executors_v1_executors_proto protoreflect.FileDescriptor
 
 const file_harpia_executors_v1_executors_proto_rawDesc = "" +
@@ -1917,7 +2005,11 @@ const file_harpia_executors_v1_executors_proto_rawDesc = "" +
 	"\n" +
 	"\b_enabled\"s\n" +
 	"\"UpdateExecutorInstallationResponse\x12M\n" +
-	"\finstallation\x18\x01 \x01(\v2).harpia.executors.v1.ExecutorInstallationR\finstallation*e\n" +
+	"\finstallation\x18\x01 \x01(\v2).harpia.executors.v1.ExecutorInstallationR\finstallation\"i\n" +
+	"!DeleteExecutorInstallationRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12'\n" +
+	"\x0finstallation_id\x18\x02 \x01(\tR\x0einstallationId\"$\n" +
+	"\"DeleteExecutorInstallationResponse*e\n" +
 	"\fExecutorKind\x12\x1d\n" +
 	"\x19EXECUTOR_KIND_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19EXECUTOR_KIND_INTEGRATION\x10\x01\x12\x17\n" +
@@ -1927,7 +2019,8 @@ const file_harpia_executors_v1_executors_proto_rawDesc = "" +
 	"\x1eCONNECTION_STATUS_DISCONNECTED\x10\x01\x12 \n" +
 	"\x1cCONNECTION_STATUS_CONNECTING\x10\x02\x12\x1f\n" +
 	"\x1bCONNECTION_STATUS_CONNECTED\x10\x03\x12\x1b\n" +
-	"\x17CONNECTION_STATUS_ERROR\x10\x042\xc2\t\n" +
+	"\x17CONNECTION_STATUS_ERROR\x10\x042\xd2\n" +
+	"\n" +
 	"\x0fExecutorService\x12q\n" +
 	"\x10ListExecutorSKUs\x12,.harpia.executors.v1.ListExecutorSKUsRequest\x1a-.harpia.executors.v1.ListExecutorSKUsResponse0\x01\x12i\n" +
 	"\x0eGetExecutorSKU\x12*.harpia.executors.v1.GetExecutorSKURequest\x1a+.harpia.executors.v1.GetExecutorSKUResponse\x12\x89\x01\n" +
@@ -1937,7 +2030,8 @@ const file_harpia_executors_v1_executors_proto_rawDesc = "" +
 	"\x19ListExecutorInstallations\x125.harpia.executors.v1.ListExecutorInstallationsRequest\x1a6.harpia.executors.v1.ListExecutorInstallationsResponse0\x01\x12\x84\x01\n" +
 	"\x17GetExecutorInstallation\x123.harpia.executors.v1.GetExecutorInstallationRequest\x1a4.harpia.executors.v1.GetExecutorInstallationResponse\x12\x8d\x01\n" +
 	"\x1aCreateExecutorInstallation\x126.harpia.executors.v1.CreateExecutorInstallationRequest\x1a7.harpia.executors.v1.CreateExecutorInstallationResponse\x12\x8d\x01\n" +
-	"\x1aUpdateExecutorInstallation\x126.harpia.executors.v1.UpdateExecutorInstallationRequest\x1a7.harpia.executors.v1.UpdateExecutorInstallationResponseB\xdc\x01\n" +
+	"\x1aUpdateExecutorInstallation\x126.harpia.executors.v1.UpdateExecutorInstallationRequest\x1a7.harpia.executors.v1.UpdateExecutorInstallationResponse\x12\x8d\x01\n" +
+	"\x1aDeleteExecutorInstallation\x126.harpia.executors.v1.DeleteExecutorInstallationRequest\x1a7.harpia.executors.v1.DeleteExecutorInstallationResponseB\xdc\x01\n" +
 	"\x17com.harpia.executors.v1B\x0eExecutorsProtoP\x01ZCgithub.com/harpia/control-plane/gen/harpia/executors/v1;executorsv1\xa2\x02\x03HEX\xaa\x02\x13Harpia.Executors.V1\xca\x02\x13Harpia\\Executors\\V1\xe2\x02\x1fHarpia\\Executors\\V1\\GPBMetadata\xea\x02\x15Harpia::Executors::V1b\x06proto3"
 
 var (
@@ -1953,7 +2047,7 @@ func file_harpia_executors_v1_executors_proto_rawDescGZIP() []byte {
 }
 
 var file_harpia_executors_v1_executors_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_harpia_executors_v1_executors_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
+var file_harpia_executors_v1_executors_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
 var file_harpia_executors_v1_executors_proto_goTypes = []any{
 	(ExecutorKind)(0),                          // 0: harpia.executors.v1.ExecutorKind
 	(ConnectionStatus)(0),                      // 1: harpia.executors.v1.ConnectionStatus
@@ -1982,6 +2076,8 @@ var file_harpia_executors_v1_executors_proto_goTypes = []any{
 	(*CreateExecutorInstallationResponse)(nil), // 24: harpia.executors.v1.CreateExecutorInstallationResponse
 	(*UpdateExecutorInstallationRequest)(nil),  // 25: harpia.executors.v1.UpdateExecutorInstallationRequest
 	(*UpdateExecutorInstallationResponse)(nil), // 26: harpia.executors.v1.UpdateExecutorInstallationResponse
+	(*DeleteExecutorInstallationRequest)(nil),  // 27: harpia.executors.v1.DeleteExecutorInstallationRequest
+	(*DeleteExecutorInstallationResponse)(nil), // 28: harpia.executors.v1.DeleteExecutorInstallationResponse
 }
 var file_harpia_executors_v1_executors_proto_depIdxs = []int32{
 	0,  // 0: harpia.executors.v1.ExecutorSKU.kind:type_name -> harpia.executors.v1.ExecutorKind
@@ -2015,17 +2111,19 @@ var file_harpia_executors_v1_executors_proto_depIdxs = []int32{
 	21, // 28: harpia.executors.v1.ExecutorService.GetExecutorInstallation:input_type -> harpia.executors.v1.GetExecutorInstallationRequest
 	23, // 29: harpia.executors.v1.ExecutorService.CreateExecutorInstallation:input_type -> harpia.executors.v1.CreateExecutorInstallationRequest
 	25, // 30: harpia.executors.v1.ExecutorService.UpdateExecutorInstallation:input_type -> harpia.executors.v1.UpdateExecutorInstallationRequest
-	10, // 31: harpia.executors.v1.ExecutorService.ListExecutorSKUs:output_type -> harpia.executors.v1.ListExecutorSKUsResponse
-	12, // 32: harpia.executors.v1.ExecutorService.GetExecutorSKU:output_type -> harpia.executors.v1.GetExecutorSKUResponse
-	14, // 33: harpia.executors.v1.ExecutorService.ListExecutorEntitlements:output_type -> harpia.executors.v1.ListExecutorEntitlementsResponse
-	16, // 34: harpia.executors.v1.ExecutorService.GetExecutorEntitlement:output_type -> harpia.executors.v1.GetExecutorEntitlementResponse
-	18, // 35: harpia.executors.v1.ExecutorService.CreateExecutorEntitlement:output_type -> harpia.executors.v1.CreateExecutorEntitlementResponse
-	20, // 36: harpia.executors.v1.ExecutorService.ListExecutorInstallations:output_type -> harpia.executors.v1.ListExecutorInstallationsResponse
-	22, // 37: harpia.executors.v1.ExecutorService.GetExecutorInstallation:output_type -> harpia.executors.v1.GetExecutorInstallationResponse
-	24, // 38: harpia.executors.v1.ExecutorService.CreateExecutorInstallation:output_type -> harpia.executors.v1.CreateExecutorInstallationResponse
-	26, // 39: harpia.executors.v1.ExecutorService.UpdateExecutorInstallation:output_type -> harpia.executors.v1.UpdateExecutorInstallationResponse
-	31, // [31:40] is the sub-list for method output_type
-	22, // [22:31] is the sub-list for method input_type
+	27, // 31: harpia.executors.v1.ExecutorService.DeleteExecutorInstallation:input_type -> harpia.executors.v1.DeleteExecutorInstallationRequest
+	10, // 32: harpia.executors.v1.ExecutorService.ListExecutorSKUs:output_type -> harpia.executors.v1.ListExecutorSKUsResponse
+	12, // 33: harpia.executors.v1.ExecutorService.GetExecutorSKU:output_type -> harpia.executors.v1.GetExecutorSKUResponse
+	14, // 34: harpia.executors.v1.ExecutorService.ListExecutorEntitlements:output_type -> harpia.executors.v1.ListExecutorEntitlementsResponse
+	16, // 35: harpia.executors.v1.ExecutorService.GetExecutorEntitlement:output_type -> harpia.executors.v1.GetExecutorEntitlementResponse
+	18, // 36: harpia.executors.v1.ExecutorService.CreateExecutorEntitlement:output_type -> harpia.executors.v1.CreateExecutorEntitlementResponse
+	20, // 37: harpia.executors.v1.ExecutorService.ListExecutorInstallations:output_type -> harpia.executors.v1.ListExecutorInstallationsResponse
+	22, // 38: harpia.executors.v1.ExecutorService.GetExecutorInstallation:output_type -> harpia.executors.v1.GetExecutorInstallationResponse
+	24, // 39: harpia.executors.v1.ExecutorService.CreateExecutorInstallation:output_type -> harpia.executors.v1.CreateExecutorInstallationResponse
+	26, // 40: harpia.executors.v1.ExecutorService.UpdateExecutorInstallation:output_type -> harpia.executors.v1.UpdateExecutorInstallationResponse
+	28, // 41: harpia.executors.v1.ExecutorService.DeleteExecutorInstallation:output_type -> harpia.executors.v1.DeleteExecutorInstallationResponse
+	32, // [32:42] is the sub-list for method output_type
+	22, // [22:32] is the sub-list for method input_type
 	22, // [22:22] is the sub-list for extension type_name
 	22, // [22:22] is the sub-list for extension extendee
 	0,  // [0:22] is the sub-list for field type_name
@@ -2062,7 +2160,7 @@ func file_harpia_executors_v1_executors_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_harpia_executors_v1_executors_proto_rawDesc), len(file_harpia_executors_v1_executors_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   25,
+			NumMessages:   27,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

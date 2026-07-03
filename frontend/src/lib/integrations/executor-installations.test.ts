@@ -22,7 +22,7 @@ import {
 const BASE_VALUES: DemoIntegrationFormValues = {
   displayName: "Demo integration",
   enabled: true,
-  feedsText: "",
+  feeds: [],
   linkedinMode: "oauth",
   oauthCredentialId: "",
 };
@@ -34,10 +34,10 @@ describe("integration executor installations", () => {
     expect(integrationKindForSkuKey("generic-server")).toBeNull();
   });
 
-  it("builds RSS config JSON from trimmed feed lines", () => {
+  it("builds RSS config JSON from trimmed feed entries", () => {
     const config = buildIntegrationConfigJSON("rss", {
       ...BASE_VALUES,
-      feedsText: " https://example.com/feed.xml \n\nhttps://news.example/rss ",
+      feeds: [" https://example.com/feed.xml ", "", "https://news.example/rss"],
     });
 
     expect(JSON.parse(config)).toEqual({
@@ -85,9 +85,18 @@ describe("integration executor installations", () => {
     expect(
       validateIntegrationForm("rss", {
         ...BASE_VALUES,
-        feedsText: "https://example.com/feed.xml",
+        feeds: ["https://example.com/feed.xml"],
       }),
     ).toBeNull();
+  });
+
+  it("rejects malformed feed URLs", () => {
+    expect(
+      validateIntegrationForm("rss", {
+        ...BASE_VALUES,
+        feeds: ["not-a-url"],
+      }),
+    ).toBe("rssFeedInvalidUrl");
   });
 
   it("hydrates form fields from a persisted RSS installation", () => {
@@ -122,7 +131,7 @@ describe("integration executor installations", () => {
     expect(formValuesFromCard(card)).toEqual({
       displayName: "Morning feeds",
       enabled: true,
-      feedsText: "https://example.com/feed.xml\nhttps://news.example/rss",
+      feeds: ["https://example.com/feed.xml", "https://news.example/rss"],
       linkedinMode: "oauth",
       oauthCredentialId: "",
     });

@@ -31,6 +31,9 @@ service ExecutorService {
 
   // UpdateExecutorInstallation updates tenant-scoped executable configuration.
   rpc UpdateExecutorInstallation(UpdateExecutorInstallationRequest) returns (UpdateExecutorInstallationResponse);
+
+  // DeleteExecutorInstallation removes a tenant-scoped installation.
+  rpc DeleteExecutorInstallation(DeleteExecutorInstallationRequest) returns (DeleteExecutorInstallationResponse);
 }
 
 enum ExecutorKind {
@@ -208,3 +211,10 @@ message UpdateExecutorInstallationRequest {
 message UpdateExecutorInstallationResponse {
   ExecutorInstallation installation = 1;
 }
+
+message DeleteExecutorInstallationRequest {
+  string tenant_id = 1;
+  string installation_id = 2;
+}
+
+message DeleteExecutorInstallationResponse {}

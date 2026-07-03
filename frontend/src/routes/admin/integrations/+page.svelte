@@ -5,6 +5,7 @@
     Link2,
     Plug,
     ShieldAlert,
+    Trash2,
   } from "lucide-svelte";
   import { page } from "$app/state";
   import { resolve } from "$app/paths";
@@ -15,9 +16,11 @@
   import { ConnectionStatus } from "$lib/gen/harpia/executors/v1/executors_pb";
   import {
     connectionStatusLabelKey,
+    deleteDemoIntegrationInstallation,
     formKeyForCard,
     formKeyForNewCard,
     formValuesFromCard,
+    isValidFeedUrl,
     loadDemoIntegrationContext,
     saveDemoIntegrationInstallation,
     validateIntegrationForm,
@@ -114,6 +117,51 @@
     }
   }
 
+  async function handleDelete(card: DemoIntegrationCard) {
+    if (!tenantId) return;
+    // Unsaved new card: just drop it from the local group.
+    if (!card.installation) {
+      for (const group of groups) {
+        if (group.cards.includes(card)) {
+          group.cards = group.cards.filter((c) => c !== card);
+        }
+      }
+      forms = { ...forms };
+      groups = [...groups];
+      return;
+    }
+    actionError = null;
+    savingKey = formKeyForRenderedCard(card);
+    try {
+      await deleteDemoIntegrationInstallation({
+        tenantId,
+        installationId: card.installation.id,
+      });
+      await loadIntegrations();
+    } catch (error) {
+      actionError = translate("integrations.error.saveFailed", $locale, {
+        error: toUserMessage(error),
+      });
+    } finally {
+      savingKey = null;
+    }
+  }
+
+  function addFeed(card: DemoIntegrationCard) {
+    updateForm(card, { feeds: [...formFor(card).feeds, ""] });
+  }
+
+  function updateFeed(card: DemoIntegrationCard, index: number, value: string) {
+    const feeds = [...formFor(card).feeds];
+    feeds[index] = value;
+    updateForm(card, { feeds });
+  }
+
+  function removeFeed(card: DemoIntegrationCard, index: number) {
+    const feeds = formFor(card).feeds.filter((_, i) => i !== index);
+    updateForm(card, { feeds });
+  }
+
   function addFeedGroup(group: DemoIntegrationGroup) {
     const next = (newCardCounters[group.sku.key] ?? 0) + 1;
     newCardCounters = { ...newCardCounters, [group.sku.key]: next };
@@ -155,10 +203,6 @@
 
   function inputValue(event: Event): string {
     return (event.currentTarget as HTMLInputElement).value;
-  }
-
-  function textareaValue(event: Event): string {
-    return (event.currentTarget as HTMLTextAreaElement).value;
   }
 
   function checkedValue(event: Event): boolean {
@@ -358,34 +402,72 @@
 
                       {#if card.kind === "rss"}
                         <div>
-                          <label
-                            for={`feeds-${cardKey}`}
-                            class="mb-1 block font-mono text-[10px] tracking-widest text-text-muted-dark uppercase"
-                          >
-                            {translate("integrations.rss.feedUrls", $locale)}
-                          </label>
-                          <textarea
-                            id={`feeds-${cardKey}`}
-                            rows="5"
-                            value={form.feedsText}
-                            placeholder={translate(
-                              "integrations.rss.feedUrlsPlaceholder",
-                              $locale,
-                            )}
-                            oninput={(event) =>
-                              updateForm(card, {
-                                feedsText: textareaValue(event),
-                              })}
-                            class="w-full rounded-md border border-border bg-surface px-3 py-2 font-mono text-xs text-text outline-none focus:border-primary"
-                          ></textarea>
-                          <p
-                            class="mt-1 font-body text-xs text-text-muted-dark"
-                          >
-                            {translate(
-                              "integrations.rss.feedUrlsHelp",
-                              $locale,
-                            )}
-                          </p>
+                          <div class="mb-1 flex items-center justify-between">
+                            <span
+                              class="block font-mono text-[10px] tracking-widest text-text-muted-dark uppercase"
+                            >
+                              {translate("integrations.rss.feedUrls", $locale)}
+                            </span>
+                            <button
+                              type="button"
+                              onclick={() => addFeed(card)}
+                              class="text-[11px] text-primary hover:underline"
+                            >
+                              + {translate("integrations.rss.addFeed", $locale)}
+                            </button>
+                          </div>
+                          <div class="flex flex-col gap-2">
+                            {#each form.feeds as feed, feedIndex (`${cardKey}-${feedIndex}`)}
+                              <div class="flex items-center gap-2">
+                                <input
+                                  value={feed}
+                                  placeholder={translate(
+                                    "integrations.rss.feedUrlsPlaceholder",
+                                    $locale,
+                                  )}
+                                  oninput={(event) =>
+                                    updateFeed(
+                                      card,
+                                      feedIndex,
+                                      inputValue(event),
+                                    )}
+                                  class="flex-1 rounded-md border bg-surface px-3 py-2 font-mono text-xs text-text outline-none focus:border-primary
+                                    {feed.trim() && !isValidFeedUrl(feed)
+                                    ? 'border-danger'
+                                    : 'border-border'}"
+                                />
+                                <button
+                                  type="button"
+                                  onclick={() => removeFeed(card, feedIndex)}
+                                  aria-label={translate(
+                                    "integrations.rss.removeFeed",
+                                    $locale,
+                                  )}
+                                  class="shrink-0 text-text-muted-dark hover:text-danger"
+                                >
+                                  <Trash2 class="size-4" />
+                                </button>
+                              </div>
+                              {#if feed.trim() && !isValidFeedUrl(feed)}
+                                <p
+                                  class="-mt-1 font-body text-[11px] text-danger"
+                                >
+                                  {translate(
+                                    "integrations.error.rssFeedInvalidUrl",
+                                    $locale,
+                                  )}
+                                </p>
+                              {/if}
+                            {/each}
+                            {#if form.feeds.length === 0}
+                              <p class="font-body text-xs text-text-muted-dark">
+                                {translate(
+                                  "integrations.rss.feedUrlsHelp",
+                                  $locale,
+                                )}
+                              </p>
+                            {/if}
+                          </div>
                         </div>
                       {:else}
                         <div>
@@ -498,6 +580,15 @@
                             <CheckCircle2 class="size-4" />
                             {translate("integrations.save", $locale)}
                           {/if}
+                        </button>
+                        <button
+                          type="button"
+                          onclick={() => handleDelete(card)}
+                          disabled={savingKey === cardKey}
+                          class="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border px-3 py-2 font-body text-sm text-text-muted transition-colors hover:border-danger hover:text-danger disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <Trash2 class="size-4" />
+                          {translate("integrations.delete", $locale)}
                         </button>
                         {#if savedKey === cardKey}
                           <p
