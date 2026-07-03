@@ -1,4 +1,4 @@
-h1:eSWd8B0rttcMofmklPgxwXY6+MeZvimPwTW2u8v0jU4=
+h1:H6qq2JTf1v+lT9iKtcHqbEpAkKntNEpMY6BVX1IXEIQ=
 000001_initial_schema.sql h1:ftqC16BXTrfe3uzdOQErFk7uYG44t+M5PPhk0pRkHe4=
 000002_schema_sync.sql h1:M7nTp8ww9G1Dd+KzZdbYkaTqjMhbh2cp1reW3yGqE7Q=
 000003_tenant_rls_hardening.sql h1:SsBdrSPxoIsOkuT0yXRnVskct+H0fenhJZ/24Eu4F4k=
@@ -13,3 +13,4 @@ h1:eSWd8B0rttcMofmklPgxwXY6+MeZvimPwTW2u8v0jU4=
 000012_chat_messages.sql h1:Jnyn0nvFExD9SJvnk5HLhmDV69Dx/L4mitIbrxsD6k0=
 000013_template_inputs_artifact_versions.sql h1:B+6F0cydWpIJELcJ4AORNQPUchAOHuU3KX6vbcnbdk4=
 000014_threads.sql h1:1u6iwR3aiTvjHGBH49xfx08jDX+e7S3FkL1gdVxqb+I=
+000015_plan_configuration_lifecycle.sql h1:DAs0Ivr/wup+ywzpQoYil0HH13hF4OwSEktINlV6fM8=
