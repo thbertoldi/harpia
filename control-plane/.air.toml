@@ -10,7 +10,7 @@ tmp_dir = "tmp"
   cmd = "go build -o ./tmp/api ./cmd/api"
   bin = "./tmp/api"
   include_ext = ["go"]
-  include_dir = ["cmd", "internal"]
+  include_dir = ["cmd", "internal", "gen"]
   exclude_dir = ["tmp"]
   # Wait for a burst of synced files to settle before rebuilding.
   delay = 400

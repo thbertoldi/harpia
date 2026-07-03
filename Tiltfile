@@ -19,12 +19,13 @@ docker_build(
     # Build the golang `dev` stage (Go toolchain + air + tar) for local dev so
     # live_update can sync source and air rebuilds/restarts in-container. Prod
     # builds omit `target` and get the distroless final stage. The syncs match
-    # air's watched dirs (cmd, internal); air handles the rebuild + restart, so no
-    # in-container run step is needed.
+    # air's watched dirs (cmd, internal, gen — incl. generated protobuf Go, so
+    # proto changes hot-reload too); air handles the rebuild + restart.
     target='dev',
     live_update=[
         sync('./control-plane/cmd', '/app/cmd'),
         sync('./control-plane/internal', '/app/internal'),
+        sync('./control-plane/gen', '/app/gen'),
     ],
 )
 k8s_yaml('deploy/dev/kind/api.yaml')
