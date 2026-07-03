@@ -39,6 +39,9 @@ class PlanService(Protocol):
     def list_plan_configurations(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.ListPlanConfigurationsRequest, ctx: RequestContext) -> AsyncIterator[harpia_dot_plans_dot_v1_dot_plans__pb2.ListPlanConfigurationsResponse]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def next_turn(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.NextTurnRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.NextTurnResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def create_plan_execution(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.CreatePlanExecutionRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.CreatePlanExecutionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -165,6 +168,16 @@ class PlanServiceASGIApplication(ConnectASGIApplication[PlanService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.list_plan_configurations,
+                ),
+                "/harpia.plans.v1.PlanService/NextTurn": Endpoint.unary(
+                    method=MethodInfo(
+                        name="NextTurn",
+                        service_name="harpia.plans.v1.PlanService",
+                        input=harpia_dot_plans_dot_v1_dot_plans__pb2.NextTurnRequest,
+                        output=harpia_dot_plans_dot_v1_dot_plans__pb2.NextTurnResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.next_turn,
                 ),
                 "/harpia.plans.v1.PlanService/CreatePlanExecution": Endpoint.unary(
                     method=MethodInfo(
@@ -484,6 +497,26 @@ class PlanServiceClient(ConnectClient):
                 service_name="harpia.plans.v1.PlanService",
                 input=harpia_dot_plans_dot_v1_dot_plans__pb2.ListPlanConfigurationsRequest,
                 output=harpia_dot_plans_dot_v1_dot_plans__pb2.ListPlanConfigurationsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def next_turn(
+        self,
+        request: harpia_dot_plans_dot_v1_dot_plans__pb2.NextTurnRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_plans_dot_v1_dot_plans__pb2.NextTurnResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="NextTurn",
+                service_name="harpia.plans.v1.PlanService",
+                input=harpia_dot_plans_dot_v1_dot_plans__pb2.NextTurnRequest,
+                output=harpia_dot_plans_dot_v1_dot_plans__pb2.NextTurnResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -849,6 +882,8 @@ class PlanServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_plan_configurations(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.ListPlanConfigurationsRequest, ctx: RequestContext) -> Iterator[harpia_dot_plans_dot_v1_dot_plans__pb2.ListPlanConfigurationsResponse]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def next_turn(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.NextTurnRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.NextTurnResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def create_plan_execution(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.CreatePlanExecutionRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.CreatePlanExecutionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def retry_plan_execution(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.RetryPlanExecutionRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.RetryPlanExecutionResponse:
@@ -958,6 +993,16 @@ class PlanServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.list_plan_configurations,
+                ),
+                "/harpia.plans.v1.PlanService/NextTurn": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="NextTurn",
+                        service_name="harpia.plans.v1.PlanService",
+                        input=harpia_dot_plans_dot_v1_dot_plans__pb2.NextTurnRequest,
+                        output=harpia_dot_plans_dot_v1_dot_plans__pb2.NextTurnResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.next_turn,
                 ),
                 "/harpia.plans.v1.PlanService/CreatePlanExecution": EndpointSync.unary(
                     method=MethodInfo(
@@ -1277,6 +1322,26 @@ class PlanServiceClientSync(ConnectClientSync):
                 service_name="harpia.plans.v1.PlanService",
                 input=harpia_dot_plans_dot_v1_dot_plans__pb2.ListPlanConfigurationsRequest,
                 output=harpia_dot_plans_dot_v1_dot_plans__pb2.ListPlanConfigurationsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def next_turn(
+        self,
+        request: harpia_dot_plans_dot_v1_dot_plans__pb2.NextTurnRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_plans_dot_v1_dot_plans__pb2.NextTurnResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="NextTurn",
+                service_name="harpia.plans.v1.PlanService",
+                input=harpia_dot_plans_dot_v1_dot_plans__pb2.NextTurnRequest,
+                output=harpia_dot_plans_dot_v1_dot_plans__pb2.NextTurnResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

@@ -108,6 +108,34 @@ the same vocabulary and controls.
 **Links:** detailed backlog and investigation notes in
 `docs/superpowers/specs/2026-07-01-chat-first-ux-backlog.md`.
 
+### 🛠️ Fable-inspired execution + artifact chat UX
+**Taxonomy:** PlanExecution, StepExecution, Artifact, ArtifactType, PlanTemplate (catalog).
+A reference design (Fable "Forge Agent" mock) demonstrates the experience we want: a
+**collapsible live plan/step card** with progress + connector timeline, an **artifact preview
+slide-over** (preview/code tabs, version, copy, sandboxed HTML/markdown) launched from an
+inline artifact card, **catalog-driven suggestion chips**, and a live header **status pill**.
+Harpia already has the data — `STEP_STARTED`/`STEP_BOUND`(=step completed)/`RUN_*` events,
+`ARTIFACT_CREATED/UPDATED`, the `PlanTemplate` catalog (`ListPlanTemplates`), and a 5-layer
+surface token system — but renders them as flat `SystemEventCard` lines with only
+text/list/json preview renderers and a persistent rail, not the rich transient UX.
+
+**Direction decided:** adapt the *patterns* (not the violet palette) to our tokens; keep
+event-based streaming (no token stream). Visual refresh → **[ADR-016](../adr/ADR-016-design-token-refresh.md)**
+(Harpy Eclipse: gold identity + electric-teal energy accent, cooler obsidian, status tokens).
+
+**Decomposition (3 OpenSpec changes, ADR-016 first):**
+1. 🛠️ `live-execution-chat` — collapsible `PlanExecutionCard` (step status timeline, progress
+   bar), header "Executing…/Ready" pill, generating/typing polish. Frontend-only; reuses
+   existing events.
+2. 🛠️ `artifact-preview-panel` — transient slide-over (preview/code tabs, version, copy,
+   reload) + renderer registry (add `html`/`markdown`/`image`; keep `text/json/list`); inline
+   `ArtifactCard` message launching it. Adds proto preview variants.
+3. 🛠️ `catalog-driven-suggestions` — replace the 4 hardcoded home chips with
+   `PlanTemplate`-catalog-derived suggestions, also shown in the bare-thread empty state.
+   Frontend-only; reuses `ListPlanTemplates`.
+
+**Links:** ADR-016; `openspec/changes/{live-execution-chat,artifact-preview-panel,catalog-driven-suggestions}`.
+
 ### 💡 Proactive memory capture from conversational configuration
 **Taxonomy:** PlanConfiguration, PlanBehaviorPolicies, MemoryResource, MemoryBinding,
 Artifact.

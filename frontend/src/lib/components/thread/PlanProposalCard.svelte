@@ -97,7 +97,6 @@
   let scheduleOpen = $state(false);
   let busyAction = $state<CreatedActionId | null>(null);
   let refinementState = $state<RefinementState | undefined>();
-  let anythingElsePrompted = $state(false);
   // Tracks how the conversation progressed so the transcript keeps every turn
   // visible instead of swapping a card's contents in place.
   let confirmChoice = $state<"yes" | "adjust" | null>(null);
@@ -338,6 +337,13 @@
         return;
       }
       if (action === "finishSetup") {
+        // Advance the conversational configuration assistant so its next prompt
+        // (binding/overseer/policies) is present, then reload so the thread
+        // flips to the configured view showing that prompt.
+        await planClient.nextTurn({
+          tenantId,
+          planConfigurationId: createdConfig.id,
+        });
         await invalidateAll();
         return;
       }
@@ -346,18 +352,31 @@
         return;
       }
       if (action === "reviewPlan") {
-        await invalidateAll();
-        return;
-      }
-      if (action === "adjustConfiguration") {
         await goto(resolve(`/plans/configurations/${createdConfig.id}/canvas`));
         return;
       }
-      if (action === "anythingElse") {
-        anythingElsePrompted = true;
+      if (action === "adjustConfiguration") {
+        // Re-enter the conversational editor: advance the assistant so the
+        // next configurable step (binding/overseer/policies/matrix) appears
+        // in-thread, where editing actually happens. The canvas is a review
+        // surface, not an editor.
+        await planClient.nextTurn({
+          tenantId,
+          planConfigurationId: createdConfig.id,
+        });
+        await invalidateAll();
+        return;
       }
-    } catch {
-      errorMsg = translate("thread.runError", $locale);
+    } catch (e) {
+      // Surface the real error. The previous generic "runError" copy misled
+      // users (e.g. a NextTurn Unimplemented from a stale server looked like a
+      // workflow-engine failure). For runNow, keep the engine hint as context.
+      errorMsg =
+        action === "runNow"
+          ? translate("thread.runError", $locale)
+          : e instanceof Error
+            ? e.message
+            : translate("thread.saveError", $locale);
       showErrorShake = true;
     } finally {
       busyAction = null;
@@ -581,11 +600,6 @@
             </button>
           {/each}
         </div>
-        {#if anythingElsePrompted}
-          <p class="mt-2 text-[12px] leading-relaxed text-crown-ash">
-            {translate("thread.created.anythingElsePrompt", $locale)}
-          </p>
-        {/if}
       </div>
     {/if}
   {/if}

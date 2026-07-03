@@ -17,6 +17,9 @@ service PlanService {
   rpc GetPlanConfiguration(GetPlanConfigurationRequest) returns (GetPlanConfigurationResponse);
   rpc UpdatePlanConfiguration(UpdatePlanConfigurationRequest) returns (UpdatePlanConfigurationResponse);
   rpc ListPlanConfigurations(ListPlanConfigurationsRequest) returns (stream ListPlanConfigurationsResponse);
+  // Conversational configuration assistant: derive and append the next
+  // ASSISTANT_PROMPT for a configuration (binding/overseer/policies/matrix).
+  rpc NextTurn(NextTurnRequest) returns (NextTurnResponse);
 
   // Execution (MVP stubs — messages defined for downstream workflow wiring).
   rpc CreatePlanExecution(CreatePlanExecutionRequest) returns (CreatePlanExecutionResponse);
@@ -319,6 +322,13 @@ message UpdatePlanConfigurationRequest {
 message UpdatePlanConfigurationResponse {
   PlanConfiguration plan_configuration = 1;
 }
+
+message NextTurnRequest {
+  string tenant_id = 1;
+  string plan_configuration_id = 2;
+}
+
+message NextTurnResponse {}
 
 message ListPlanConfigurationsRequest {
   string tenant_id = 1;

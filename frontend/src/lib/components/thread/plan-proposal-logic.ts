@@ -187,13 +187,7 @@ export function createdActionIds(
 ): CreatedActionId[] {
   const primary =
     status === PlanConfigurationStatus.RUNNABLE ? "runNow" : "finishSetup";
-  return [
-    primary,
-    "schedule",
-    "reviewPlan",
-    "adjustConfiguration",
-    "anythingElse",
-  ];
+  return [primary, "schedule", "reviewPlan", "adjustConfiguration"];
 }
 
 export function createdActionI18nKey(id: CreatedActionId): string {

@@ -9,6 +9,7 @@
   "catalog.sku.linkedin-publish.description": "Publica um rascunho de post no LinkedIn usando a conexao OAuth do tenant.",
   "catalog.plan.weekly-newsletter-linkedin.name": "Newsletter Semanal (LinkedIn)",
   "catalog.plan.weekly-newsletter-linkedin.description": "Busca noticias, escreve rascunho, adapta para LinkedIn e publica.",
+  "catalog.plan.weekly-newsletter-linkedin.suggestion": "Monte uma newsletter semanal no LinkedIn com as últimas notícias",
   "catalog.plan.weekly-newsletter-linkedin.step.fetch-news.title": "Buscar Noticias",
   "catalog.plan.weekly-newsletter-linkedin.step.fetch-news.description": "Coleta artigos selecionados para o intervalo de datas configurado.",
   "catalog.plan.weekly-newsletter-linkedin.step.write-draft.title": "Escrever Rascunho",

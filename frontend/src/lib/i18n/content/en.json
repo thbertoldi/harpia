@@ -9,6 +9,7 @@
   "catalog.sku.linkedin-publish.description": "Publishes a LinkedIn post draft through the tenant OAuth connection.",
   "catalog.plan.weekly-newsletter-linkedin.name": "Weekly Newsletter (LinkedIn)",
   "catalog.plan.weekly-newsletter-linkedin.description": "Fetch news, write a draft, adapt for LinkedIn, and publish.",
+  "catalog.plan.weekly-newsletter-linkedin.suggestion": "Set up a weekly LinkedIn newsletter from the latest news",
   "catalog.plan.weekly-newsletter-linkedin.step.fetch-news.title": "Fetch News",
   "catalog.plan.weekly-newsletter-linkedin.step.fetch-news.description": "Collect curated articles for the configured date range.",
   "catalog.plan.weekly-newsletter-linkedin.step.write-draft.title": "Write Draft",

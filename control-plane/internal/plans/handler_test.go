@@ -41,6 +41,51 @@ func TestCreatePlanConfiguration_RequiresThreadID(t *testing.T) {
 	}
 }
 
+func TestNextTurn_InvalidConfigID(t *testing.T) {
+	tenantID := uuid.New()
+	h := &PlanHandler{}
+	ctx := identity.WithRequestContext(context.Background(), identity.RequestContext{
+		UserID:   uuid.New().String(),
+		TenantID: tenantID,
+		Roles:    []string{"Overseer"},
+	})
+
+	_, err := h.NextTurn(ctx, connect.NewRequest(&plansv1.NextTurnRequest{
+		TenantId:            tenantID.String(),
+		PlanConfigurationId: "not-a-uuid",
+	}))
+	if err == nil {
+		t.Fatal("expected error for invalid config id, got nil")
+	}
+	if got := connect.CodeOf(err); got != connect.CodeInvalidArgument {
+		t.Fatalf("error code = %v, want InvalidArgument", got)
+	}
+}
+
+// TestNextTurn_NilAssistantNoOps guards the dev path where no planassistant is
+// wired: a valid request returns success without panicking. The actual
+// prompt-emission logic is covered by internal/planassistant/controller_test.go.
+func TestNextTurn_NilAssistantNoOps(t *testing.T) {
+	tenantID := uuid.New()
+	h := &PlanHandler{}
+	ctx := identity.WithRequestContext(context.Background(), identity.RequestContext{
+		UserID:   uuid.New().String(),
+		TenantID: tenantID,
+		Roles:    []string{"Overseer"},
+	})
+
+	resp, err := h.NextTurn(ctx, connect.NewRequest(&plansv1.NextTurnRequest{
+		TenantId:            tenantID.String(),
+		PlanConfigurationId: uuid.New().String(),
+	}))
+	if err != nil {
+		t.Fatalf("NextTurn with nil assistant: %v", err)
+	}
+	if resp == nil || resp.Msg == nil {
+		t.Fatal("expected non-nil NextTurn response")
+	}
+}
+
 func TestPlanHandlerMaterializesConfigurationFromParameterValuesOnly(t *testing.T) {
 	tenantID := uuid.New()
 	templateID := uuid.New()

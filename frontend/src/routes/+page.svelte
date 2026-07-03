@@ -1,27 +1,21 @@
 <script lang="ts">
-  import { ArrowRight, Loader2 } from "lucide-svelte";
+  import { Loader2 } from "lucide-svelte";
   import { goto } from "$app/navigation";
   import { resolve } from "$app/paths";
   import TaskInput from "$lib/components/TaskInput.svelte";
   import BrandLockup from "$lib/components/BrandLockup.svelte";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
+  import SuggestionChips from "$lib/components/SuggestionChips.svelte";
+  import RecentConversations from "$lib/components/RecentConversations.svelte";
   import { requireTenantId } from "$lib/auth";
   import { toUserMessage } from "$lib/connect-errors";
   import { threadClient } from "$lib/rpc";
   import { locale, translate } from "$lib/i18n";
   import { activeTheme } from "$lib/themes";
   import { brandTranslateParams } from "$lib/themes/branding";
-  import { resolveLocalizedContent } from "$lib/i18n/content";
 
   let loading = $state(false);
   let error = $state<string | null>(null);
-
-  const exampleTasks = $derived([
-    resolveLocalizedContent("home.example.1", $locale),
-    resolveLocalizedContent("home.example.2", $locale),
-    resolveLocalizedContent("home.example.3", $locale),
-    resolveLocalizedContent("home.example.4", $locale),
-  ]);
 
   // The home screen is the chat-first entry: a prompt creates a thread and
   // routes to /chat/[threadId], where the plan proposal appears. Task listing
@@ -92,23 +86,11 @@
       {/if}
 
       <div class="mt-8 w-full max-w-2xl">
-        <p
-          class="mb-3 font-mono text-xs tracking-widest text-crown-ash uppercase"
-        >
-          {translate("home.tryAsking", $locale)}
-        </p>
-        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {#each exampleTasks as example (example)}
-            <button
-              onclick={() => handleSubmit(example)}
-              disabled={loading}
-              class="flex items-center gap-2 rounded-lg border border-plumage bg-obsidian-light/60 px-4 py-3 text-left font-body text-sm text-cream transition-all hover:border-talon-gold hover:bg-obsidian-light disabled:opacity-50"
-            >
-              <ArrowRight class="size-3.5 shrink-0 text-talon-gold" />
-              <span>{example}</span>
-            </button>
-          {/each}
-        </div>
+        <SuggestionChips onSelect={handleSubmit} disabled={loading} />
+      </div>
+
+      <div class="mt-10">
+        <RecentConversations tenantId={requireTenantId()} />
       </div>
     </div>
   </div>

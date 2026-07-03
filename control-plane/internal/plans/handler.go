@@ -525,6 +525,29 @@ func (h *PlanHandler) UpdatePlanConfiguration(ctx context.Context, req *connect.
 	}), nil
 }
 
+// NextTurn derives and appends the configuration assistant's next prompt
+// (binding/overseer/policies/matrix) for a configuration. This is the
+// client-callable trigger that keeps the conversational configuration flow
+// advancing after each step — see planassistant.Controller.NextTurn.
+func (h *PlanHandler) NextTurn(ctx context.Context, req *connect.Request[plansv1.NextTurnRequest]) (*connect.Response[plansv1.NextTurnResponse], error) {
+	tenantID, err := identity.RequireTenant(ctx, req.Msg.TenantId)
+	if err != nil {
+		return nil, err
+	}
+	configID, err := uuid.Parse(req.Msg.PlanConfigurationId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	if h.assistant == nil {
+		// No assistant wired (e.g. dev without planassistant); nothing to advance.
+		return connect.NewResponse(&plansv1.NextTurnResponse{}), nil
+	}
+	if err := h.assistant.NextTurn(ctx, tenantID, configID); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	return connect.NewResponse(&plansv1.NextTurnResponse{}), nil
+}
+
 func (h *PlanHandler) ListPlanConfigurations(ctx context.Context, req *connect.Request[plansv1.ListPlanConfigurationsRequest], stream *connect.ServerStream[plansv1.ListPlanConfigurationsResponse]) error {
 	tenantID, err := identity.RequireTenant(ctx, req.Msg.TenantId)
 	if err != nil {

@@ -2562,6 +2562,94 @@ func (x *UpdatePlanConfigurationResponse) GetPlanConfiguration() *PlanConfigurat
 	return nil
 }
 
+type NextTurnRequest struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	TenantId            string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	PlanConfigurationId string                 `protobuf:"bytes,2,opt,name=plan_configuration_id,json=planConfigurationId,proto3" json:"plan_configuration_id,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *NextTurnRequest) Reset() {
+	*x = NextTurnRequest{}
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NextTurnRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NextTurnRequest) ProtoMessage() {}
+
+func (x *NextTurnRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NextTurnRequest.ProtoReflect.Descriptor instead.
+func (*NextTurnRequest) Descriptor() ([]byte, []int) {
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *NextTurnRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *NextTurnRequest) GetPlanConfigurationId() string {
+	if x != nil {
+		return x.PlanConfigurationId
+	}
+	return ""
+}
+
+type NextTurnResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NextTurnResponse) Reset() {
+	*x = NextTurnResponse{}
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NextTurnResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NextTurnResponse) ProtoMessage() {}
+
+func (x *NextTurnResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NextTurnResponse.ProtoReflect.Descriptor instead.
+func (*NextTurnResponse) Descriptor() ([]byte, []int) {
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{27}
+}
+
 type ListPlanConfigurationsRequest struct {
 	state         protoimpl.MessageState   `protogen:"open.v1"`
 	TenantId      string                   `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
@@ -2575,7 +2663,7 @@ type ListPlanConfigurationsRequest struct {
 
 func (x *ListPlanConfigurationsRequest) Reset() {
 	*x = ListPlanConfigurationsRequest{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[26]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2587,7 +2675,7 @@ func (x *ListPlanConfigurationsRequest) String() string {
 func (*ListPlanConfigurationsRequest) ProtoMessage() {}
 
 func (x *ListPlanConfigurationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[26]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2600,7 +2688,7 @@ func (x *ListPlanConfigurationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPlanConfigurationsRequest.ProtoReflect.Descriptor instead.
 func (*ListPlanConfigurationsRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{26}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *ListPlanConfigurationsRequest) GetTenantId() string {
@@ -2648,7 +2736,7 @@ type ListPlanConfigurationsResponse struct {
 
 func (x *ListPlanConfigurationsResponse) Reset() {
 	*x = ListPlanConfigurationsResponse{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[27]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2660,7 +2748,7 @@ func (x *ListPlanConfigurationsResponse) String() string {
 func (*ListPlanConfigurationsResponse) ProtoMessage() {}
 
 func (x *ListPlanConfigurationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[27]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2673,7 +2761,7 @@ func (x *ListPlanConfigurationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPlanConfigurationsResponse.ProtoReflect.Descriptor instead.
 func (*ListPlanConfigurationsResponse) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{27}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *ListPlanConfigurationsResponse) GetPlanConfigurations() []*PlanConfiguration {
@@ -2700,7 +2788,7 @@ type CreatePlanExecutionRequest struct {
 
 func (x *CreatePlanExecutionRequest) Reset() {
 	*x = CreatePlanExecutionRequest{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[28]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2712,7 +2800,7 @@ func (x *CreatePlanExecutionRequest) String() string {
 func (*CreatePlanExecutionRequest) ProtoMessage() {}
 
 func (x *CreatePlanExecutionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[28]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2725,7 +2813,7 @@ func (x *CreatePlanExecutionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePlanExecutionRequest.ProtoReflect.Descriptor instead.
 func (*CreatePlanExecutionRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{28}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *CreatePlanExecutionRequest) GetTenantId() string {
@@ -2751,7 +2839,7 @@ type CreatePlanExecutionResponse struct {
 
 func (x *CreatePlanExecutionResponse) Reset() {
 	*x = CreatePlanExecutionResponse{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[29]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2763,7 +2851,7 @@ func (x *CreatePlanExecutionResponse) String() string {
 func (*CreatePlanExecutionResponse) ProtoMessage() {}
 
 func (x *CreatePlanExecutionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[29]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2776,7 +2864,7 @@ func (x *CreatePlanExecutionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePlanExecutionResponse.ProtoReflect.Descriptor instead.
 func (*CreatePlanExecutionResponse) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{29}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *CreatePlanExecutionResponse) GetPlanExecution() *PlanExecution {
@@ -2797,7 +2885,7 @@ type RetryPlanExecutionRequest struct {
 
 func (x *RetryPlanExecutionRequest) Reset() {
 	*x = RetryPlanExecutionRequest{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[30]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2809,7 +2897,7 @@ func (x *RetryPlanExecutionRequest) String() string {
 func (*RetryPlanExecutionRequest) ProtoMessage() {}
 
 func (x *RetryPlanExecutionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[30]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2822,7 +2910,7 @@ func (x *RetryPlanExecutionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RetryPlanExecutionRequest.ProtoReflect.Descriptor instead.
 func (*RetryPlanExecutionRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{30}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *RetryPlanExecutionRequest) GetTenantId() string {
@@ -2855,7 +2943,7 @@ type RetryPlanExecutionResponse struct {
 
 func (x *RetryPlanExecutionResponse) Reset() {
 	*x = RetryPlanExecutionResponse{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[31]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2867,7 +2955,7 @@ func (x *RetryPlanExecutionResponse) String() string {
 func (*RetryPlanExecutionResponse) ProtoMessage() {}
 
 func (x *RetryPlanExecutionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[31]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2880,7 +2968,7 @@ func (x *RetryPlanExecutionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RetryPlanExecutionResponse.ProtoReflect.Descriptor instead.
 func (*RetryPlanExecutionResponse) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{31}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *RetryPlanExecutionResponse) GetPlanExecution() *PlanExecution {
@@ -2900,7 +2988,7 @@ type GetPlanExecutionRequest struct {
 
 func (x *GetPlanExecutionRequest) Reset() {
 	*x = GetPlanExecutionRequest{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[32]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2912,7 +3000,7 @@ func (x *GetPlanExecutionRequest) String() string {
 func (*GetPlanExecutionRequest) ProtoMessage() {}
 
 func (x *GetPlanExecutionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[32]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2925,7 +3013,7 @@ func (x *GetPlanExecutionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPlanExecutionRequest.ProtoReflect.Descriptor instead.
 func (*GetPlanExecutionRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{32}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *GetPlanExecutionRequest) GetTenantId() string {
@@ -2951,7 +3039,7 @@ type GetPlanExecutionResponse struct {
 
 func (x *GetPlanExecutionResponse) Reset() {
 	*x = GetPlanExecutionResponse{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[33]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2963,7 +3051,7 @@ func (x *GetPlanExecutionResponse) String() string {
 func (*GetPlanExecutionResponse) ProtoMessage() {}
 
 func (x *GetPlanExecutionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[33]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2976,7 +3064,7 @@ func (x *GetPlanExecutionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPlanExecutionResponse.ProtoReflect.Descriptor instead.
 func (*GetPlanExecutionResponse) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{33}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *GetPlanExecutionResponse) GetPlanExecution() *PlanExecution {
@@ -2998,7 +3086,7 @@ type ListPlanExecutionsRequest struct {
 
 func (x *ListPlanExecutionsRequest) Reset() {
 	*x = ListPlanExecutionsRequest{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[34]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3010,7 +3098,7 @@ func (x *ListPlanExecutionsRequest) String() string {
 func (*ListPlanExecutionsRequest) ProtoMessage() {}
 
 func (x *ListPlanExecutionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[34]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3023,7 +3111,7 @@ func (x *ListPlanExecutionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPlanExecutionsRequest.ProtoReflect.Descriptor instead.
 func (*ListPlanExecutionsRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{34}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *ListPlanExecutionsRequest) GetTenantId() string {
@@ -3064,7 +3152,7 @@ type ListPlanExecutionsResponse struct {
 
 func (x *ListPlanExecutionsResponse) Reset() {
 	*x = ListPlanExecutionsResponse{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[35]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3076,7 +3164,7 @@ func (x *ListPlanExecutionsResponse) String() string {
 func (*ListPlanExecutionsResponse) ProtoMessage() {}
 
 func (x *ListPlanExecutionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[35]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3089,7 +3177,7 @@ func (x *ListPlanExecutionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPlanExecutionsResponse.ProtoReflect.Descriptor instead.
 func (*ListPlanExecutionsResponse) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{35}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *ListPlanExecutionsResponse) GetPlanExecutions() []*PlanExecution {
@@ -3116,7 +3204,7 @@ type GetStepExecutionRequest struct {
 
 func (x *GetStepExecutionRequest) Reset() {
 	*x = GetStepExecutionRequest{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[36]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3128,7 +3216,7 @@ func (x *GetStepExecutionRequest) String() string {
 func (*GetStepExecutionRequest) ProtoMessage() {}
 
 func (x *GetStepExecutionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[36]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3141,7 +3229,7 @@ func (x *GetStepExecutionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStepExecutionRequest.ProtoReflect.Descriptor instead.
 func (*GetStepExecutionRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{36}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *GetStepExecutionRequest) GetTenantId() string {
@@ -3167,7 +3255,7 @@ type GetStepExecutionResponse struct {
 
 func (x *GetStepExecutionResponse) Reset() {
 	*x = GetStepExecutionResponse{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[37]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3179,7 +3267,7 @@ func (x *GetStepExecutionResponse) String() string {
 func (*GetStepExecutionResponse) ProtoMessage() {}
 
 func (x *GetStepExecutionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[37]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3192,7 +3280,7 @@ func (x *GetStepExecutionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStepExecutionResponse.ProtoReflect.Descriptor instead.
 func (*GetStepExecutionResponse) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{37}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *GetStepExecutionResponse) GetStepExecution() *StepExecution {
@@ -3214,7 +3302,7 @@ type ListStepExecutionsRequest struct {
 
 func (x *ListStepExecutionsRequest) Reset() {
 	*x = ListStepExecutionsRequest{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[38]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3226,7 +3314,7 @@ func (x *ListStepExecutionsRequest) String() string {
 func (*ListStepExecutionsRequest) ProtoMessage() {}
 
 func (x *ListStepExecutionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[38]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3239,7 +3327,7 @@ func (x *ListStepExecutionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListStepExecutionsRequest.ProtoReflect.Descriptor instead.
 func (*ListStepExecutionsRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{38}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *ListStepExecutionsRequest) GetTenantId() string {
@@ -3280,7 +3368,7 @@ type ListStepExecutionsResponse struct {
 
 func (x *ListStepExecutionsResponse) Reset() {
 	*x = ListStepExecutionsResponse{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[39]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3292,7 +3380,7 @@ func (x *ListStepExecutionsResponse) String() string {
 func (*ListStepExecutionsResponse) ProtoMessage() {}
 
 func (x *ListStepExecutionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[39]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3305,7 +3393,7 @@ func (x *ListStepExecutionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListStepExecutionsResponse.ProtoReflect.Descriptor instead.
 func (*ListStepExecutionsResponse) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{39}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *ListStepExecutionsResponse) GetStepExecutions() []*StepExecution {
@@ -3353,7 +3441,7 @@ type ElicitationRequest struct {
 
 func (x *ElicitationRequest) Reset() {
 	*x = ElicitationRequest{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[40]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3365,7 +3453,7 @@ func (x *ElicitationRequest) String() string {
 func (*ElicitationRequest) ProtoMessage() {}
 
 func (x *ElicitationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[40]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3378,7 +3466,7 @@ func (x *ElicitationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ElicitationRequest.ProtoReflect.Descriptor instead.
 func (*ElicitationRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{40}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *ElicitationRequest) GetId() string {
@@ -3514,7 +3602,7 @@ type ThreadMessage struct {
 
 func (x *ThreadMessage) Reset() {
 	*x = ThreadMessage{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[41]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3526,7 +3614,7 @@ func (x *ThreadMessage) String() string {
 func (*ThreadMessage) ProtoMessage() {}
 
 func (x *ThreadMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[41]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3539,7 +3627,7 @@ func (x *ThreadMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ThreadMessage.ProtoReflect.Descriptor instead.
 func (*ThreadMessage) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{41}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *ThreadMessage) GetRole() ThreadMessageRole {
@@ -3592,7 +3680,7 @@ type ElicitationResponse struct {
 
 func (x *ElicitationResponse) Reset() {
 	*x = ElicitationResponse{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[42]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3604,7 +3692,7 @@ func (x *ElicitationResponse) String() string {
 func (*ElicitationResponse) ProtoMessage() {}
 
 func (x *ElicitationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[42]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3617,7 +3705,7 @@ func (x *ElicitationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ElicitationResponse.ProtoReflect.Descriptor instead.
 func (*ElicitationResponse) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{42}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *ElicitationResponse) GetRequestId() string {
@@ -3671,7 +3759,7 @@ type ListElicitationsRequest struct {
 
 func (x *ListElicitationsRequest) Reset() {
 	*x = ListElicitationsRequest{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[43]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3683,7 +3771,7 @@ func (x *ListElicitationsRequest) String() string {
 func (*ListElicitationsRequest) ProtoMessage() {}
 
 func (x *ListElicitationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[43]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3696,7 +3784,7 @@ func (x *ListElicitationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListElicitationsRequest.ProtoReflect.Descriptor instead.
 func (*ListElicitationsRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{43}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *ListElicitationsRequest) GetTenantId() string {
@@ -3758,7 +3846,7 @@ type ListElicitationsResponse struct {
 
 func (x *ListElicitationsResponse) Reset() {
 	*x = ListElicitationsResponse{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[44]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3770,7 +3858,7 @@ func (x *ListElicitationsResponse) String() string {
 func (*ListElicitationsResponse) ProtoMessage() {}
 
 func (x *ListElicitationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[44]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3783,7 +3871,7 @@ func (x *ListElicitationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListElicitationsResponse.ProtoReflect.Descriptor instead.
 func (*ListElicitationsResponse) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{44}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *ListElicitationsResponse) GetElicitations() []*ElicitationRequest {
@@ -3810,7 +3898,7 @@ type GetElicitationRequest struct {
 
 func (x *GetElicitationRequest) Reset() {
 	*x = GetElicitationRequest{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[45]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3822,7 +3910,7 @@ func (x *GetElicitationRequest) String() string {
 func (*GetElicitationRequest) ProtoMessage() {}
 
 func (x *GetElicitationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[45]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3835,7 +3923,7 @@ func (x *GetElicitationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetElicitationRequest.ProtoReflect.Descriptor instead.
 func (*GetElicitationRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{45}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *GetElicitationRequest) GetTenantId() string {
@@ -3861,7 +3949,7 @@ type GetElicitationResponse struct {
 
 func (x *GetElicitationResponse) Reset() {
 	*x = GetElicitationResponse{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[46]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3873,7 +3961,7 @@ func (x *GetElicitationResponse) String() string {
 func (*GetElicitationResponse) ProtoMessage() {}
 
 func (x *GetElicitationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[46]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3886,7 +3974,7 @@ func (x *GetElicitationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetElicitationResponse.ProtoReflect.Descriptor instead.
 func (*GetElicitationResponse) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{46}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *GetElicitationResponse) GetElicitation() *ElicitationRequest {
@@ -3909,7 +3997,7 @@ type RespondToElicitationRequest struct {
 
 func (x *RespondToElicitationRequest) Reset() {
 	*x = RespondToElicitationRequest{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[47]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3921,7 +4009,7 @@ func (x *RespondToElicitationRequest) String() string {
 func (*RespondToElicitationRequest) ProtoMessage() {}
 
 func (x *RespondToElicitationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[47]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3934,7 +4022,7 @@ func (x *RespondToElicitationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RespondToElicitationRequest.ProtoReflect.Descriptor instead.
 func (*RespondToElicitationRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{47}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *RespondToElicitationRequest) GetTenantId() string {
@@ -3974,7 +4062,7 @@ type RespondToElicitationResponse struct {
 
 func (x *RespondToElicitationResponse) Reset() {
 	*x = RespondToElicitationResponse{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[48]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3986,7 +4074,7 @@ func (x *RespondToElicitationResponse) String() string {
 func (*RespondToElicitationResponse) ProtoMessage() {}
 
 func (x *RespondToElicitationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[48]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3999,7 +4087,7 @@ func (x *RespondToElicitationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RespondToElicitationResponse.ProtoReflect.Descriptor instead.
 func (*RespondToElicitationResponse) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{48}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *RespondToElicitationResponse) GetElicitation() *ElicitationRequest {
@@ -4020,7 +4108,7 @@ type WatchElicitationsRequest struct {
 
 func (x *WatchElicitationsRequest) Reset() {
 	*x = WatchElicitationsRequest{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[49]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4032,7 +4120,7 @@ func (x *WatchElicitationsRequest) String() string {
 func (*WatchElicitationsRequest) ProtoMessage() {}
 
 func (x *WatchElicitationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[49]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4045,7 +4133,7 @@ func (x *WatchElicitationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchElicitationsRequest.ProtoReflect.Descriptor instead.
 func (*WatchElicitationsRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{49}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *WatchElicitationsRequest) GetTenantId() string {
@@ -4078,7 +4166,7 @@ type WatchElicitationsResponse struct {
 
 func (x *WatchElicitationsResponse) Reset() {
 	*x = WatchElicitationsResponse{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[50]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4090,7 +4178,7 @@ func (x *WatchElicitationsResponse) String() string {
 func (*WatchElicitationsResponse) ProtoMessage() {}
 
 func (x *WatchElicitationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[50]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4103,7 +4191,7 @@ func (x *WatchElicitationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchElicitationsResponse.ProtoReflect.Descriptor instead.
 func (*WatchElicitationsResponse) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{50}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *WatchElicitationsResponse) GetElicitations() []*ElicitationRequest {
@@ -4136,7 +4224,7 @@ type ApprovalRequest struct {
 
 func (x *ApprovalRequest) Reset() {
 	*x = ApprovalRequest{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[51]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4148,7 +4236,7 @@ func (x *ApprovalRequest) String() string {
 func (*ApprovalRequest) ProtoMessage() {}
 
 func (x *ApprovalRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[51]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4161,7 +4249,7 @@ func (x *ApprovalRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApprovalRequest.ProtoReflect.Descriptor instead.
 func (*ApprovalRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{51}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *ApprovalRequest) GetId() string {
@@ -4255,7 +4343,7 @@ type ListApprovalRequestsRequest struct {
 
 func (x *ListApprovalRequestsRequest) Reset() {
 	*x = ListApprovalRequestsRequest{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[52]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4267,7 +4355,7 @@ func (x *ListApprovalRequestsRequest) String() string {
 func (*ListApprovalRequestsRequest) ProtoMessage() {}
 
 func (x *ListApprovalRequestsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[52]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4280,7 +4368,7 @@ func (x *ListApprovalRequestsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListApprovalRequestsRequest.ProtoReflect.Descriptor instead.
 func (*ListApprovalRequestsRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{52}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *ListApprovalRequestsRequest) GetTenantId() string {
@@ -4335,7 +4423,7 @@ type ListApprovalRequestsResponse struct {
 
 func (x *ListApprovalRequestsResponse) Reset() {
 	*x = ListApprovalRequestsResponse{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[53]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4347,7 +4435,7 @@ func (x *ListApprovalRequestsResponse) String() string {
 func (*ListApprovalRequestsResponse) ProtoMessage() {}
 
 func (x *ListApprovalRequestsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[53]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4360,7 +4448,7 @@ func (x *ListApprovalRequestsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListApprovalRequestsResponse.ProtoReflect.Descriptor instead.
 func (*ListApprovalRequestsResponse) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{53}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *ListApprovalRequestsResponse) GetApprovalRequests() []*ApprovalRequest {
@@ -4387,7 +4475,7 @@ type GetApprovalRequestRequest struct {
 
 func (x *GetApprovalRequestRequest) Reset() {
 	*x = GetApprovalRequestRequest{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[54]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4399,7 +4487,7 @@ func (x *GetApprovalRequestRequest) String() string {
 func (*GetApprovalRequestRequest) ProtoMessage() {}
 
 func (x *GetApprovalRequestRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[54]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4412,7 +4500,7 @@ func (x *GetApprovalRequestRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetApprovalRequestRequest.ProtoReflect.Descriptor instead.
 func (*GetApprovalRequestRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{54}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *GetApprovalRequestRequest) GetTenantId() string {
@@ -4438,7 +4526,7 @@ type GetApprovalRequestResponse struct {
 
 func (x *GetApprovalRequestResponse) Reset() {
 	*x = GetApprovalRequestResponse{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[55]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4450,7 +4538,7 @@ func (x *GetApprovalRequestResponse) String() string {
 func (*GetApprovalRequestResponse) ProtoMessage() {}
 
 func (x *GetApprovalRequestResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[55]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4463,7 +4551,7 @@ func (x *GetApprovalRequestResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetApprovalRequestResponse.ProtoReflect.Descriptor instead.
 func (*GetApprovalRequestResponse) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{55}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *GetApprovalRequestResponse) GetApprovalRequest() *ApprovalRequest {
@@ -4486,7 +4574,7 @@ type RespondToApprovalRequestRequest struct {
 
 func (x *RespondToApprovalRequestRequest) Reset() {
 	*x = RespondToApprovalRequestRequest{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[56]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4498,7 +4586,7 @@ func (x *RespondToApprovalRequestRequest) String() string {
 func (*RespondToApprovalRequestRequest) ProtoMessage() {}
 
 func (x *RespondToApprovalRequestRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[56]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4511,7 +4599,7 @@ func (x *RespondToApprovalRequestRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RespondToApprovalRequestRequest.ProtoReflect.Descriptor instead.
 func (*RespondToApprovalRequestRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{56}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *RespondToApprovalRequestRequest) GetTenantId() string {
@@ -4551,7 +4639,7 @@ type RespondToApprovalRequestResponse struct {
 
 func (x *RespondToApprovalRequestResponse) Reset() {
 	*x = RespondToApprovalRequestResponse{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[57]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4563,7 +4651,7 @@ func (x *RespondToApprovalRequestResponse) String() string {
 func (*RespondToApprovalRequestResponse) ProtoMessage() {}
 
 func (x *RespondToApprovalRequestResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[57]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4576,7 +4664,7 @@ func (x *RespondToApprovalRequestResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RespondToApprovalRequestResponse.ProtoReflect.Descriptor instead.
 func (*RespondToApprovalRequestResponse) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{57}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *RespondToApprovalRequestResponse) GetApprovalRequest() *ApprovalRequest {
@@ -4597,7 +4685,7 @@ type WatchApprovalRequestsRequest struct {
 
 func (x *WatchApprovalRequestsRequest) Reset() {
 	*x = WatchApprovalRequestsRequest{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[58]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4609,7 +4697,7 @@ func (x *WatchApprovalRequestsRequest) String() string {
 func (*WatchApprovalRequestsRequest) ProtoMessage() {}
 
 func (x *WatchApprovalRequestsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[58]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4622,7 +4710,7 @@ func (x *WatchApprovalRequestsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchApprovalRequestsRequest.ProtoReflect.Descriptor instead.
 func (*WatchApprovalRequestsRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{58}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *WatchApprovalRequestsRequest) GetTenantId() string {
@@ -4655,7 +4743,7 @@ type WatchApprovalRequestsResponse struct {
 
 func (x *WatchApprovalRequestsResponse) Reset() {
 	*x = WatchApprovalRequestsResponse{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[59]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4667,7 +4755,7 @@ func (x *WatchApprovalRequestsResponse) String() string {
 func (*WatchApprovalRequestsResponse) ProtoMessage() {}
 
 func (x *WatchApprovalRequestsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[59]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4680,7 +4768,7 @@ func (x *WatchApprovalRequestsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchApprovalRequestsResponse.ProtoReflect.Descriptor instead.
 func (*WatchApprovalRequestsResponse) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{59}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *WatchApprovalRequestsResponse) GetApprovalRequests() []*ApprovalRequest {
@@ -4702,7 +4790,7 @@ type ListPlanThreadMessagesRequest struct {
 
 func (x *ListPlanThreadMessagesRequest) Reset() {
 	*x = ListPlanThreadMessagesRequest{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[60]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4714,7 +4802,7 @@ func (x *ListPlanThreadMessagesRequest) String() string {
 func (*ListPlanThreadMessagesRequest) ProtoMessage() {}
 
 func (x *ListPlanThreadMessagesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[60]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4727,7 +4815,7 @@ func (x *ListPlanThreadMessagesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPlanThreadMessagesRequest.ProtoReflect.Descriptor instead.
 func (*ListPlanThreadMessagesRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{60}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *ListPlanThreadMessagesRequest) GetTenantId() string {
@@ -4768,7 +4856,7 @@ type ListPlanThreadMessagesResponse struct {
 
 func (x *ListPlanThreadMessagesResponse) Reset() {
 	*x = ListPlanThreadMessagesResponse{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[61]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4780,7 +4868,7 @@ func (x *ListPlanThreadMessagesResponse) String() string {
 func (*ListPlanThreadMessagesResponse) ProtoMessage() {}
 
 func (x *ListPlanThreadMessagesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[61]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4793,7 +4881,7 @@ func (x *ListPlanThreadMessagesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPlanThreadMessagesResponse.ProtoReflect.Descriptor instead.
 func (*ListPlanThreadMessagesResponse) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{61}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *ListPlanThreadMessagesResponse) GetMessages() []*v1.ThreadMessage {
@@ -4821,7 +4909,7 @@ type WatchPlanThreadMessagesRequest struct {
 
 func (x *WatchPlanThreadMessagesRequest) Reset() {
 	*x = WatchPlanThreadMessagesRequest{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[62]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4833,7 +4921,7 @@ func (x *WatchPlanThreadMessagesRequest) String() string {
 func (*WatchPlanThreadMessagesRequest) ProtoMessage() {}
 
 func (x *WatchPlanThreadMessagesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[62]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4846,7 +4934,7 @@ func (x *WatchPlanThreadMessagesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchPlanThreadMessagesRequest.ProtoReflect.Descriptor instead.
 func (*WatchPlanThreadMessagesRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{62}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *WatchPlanThreadMessagesRequest) GetTenantId() string {
@@ -4879,7 +4967,7 @@ type WatchPlanThreadMessagesResponse struct {
 
 func (x *WatchPlanThreadMessagesResponse) Reset() {
 	*x = WatchPlanThreadMessagesResponse{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[63]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4891,7 +4979,7 @@ func (x *WatchPlanThreadMessagesResponse) String() string {
 func (*WatchPlanThreadMessagesResponse) ProtoMessage() {}
 
 func (x *WatchPlanThreadMessagesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[63]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4904,7 +4992,7 @@ func (x *WatchPlanThreadMessagesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchPlanThreadMessagesResponse.ProtoReflect.Descriptor instead.
 func (*WatchPlanThreadMessagesResponse) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{63}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *WatchPlanThreadMessagesResponse) GetMessages() []*v1.ThreadMessage {
@@ -4929,7 +5017,7 @@ type AppendPlanThreadMessageRequest struct {
 
 func (x *AppendPlanThreadMessageRequest) Reset() {
 	*x = AppendPlanThreadMessageRequest{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[64]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4941,7 +5029,7 @@ func (x *AppendPlanThreadMessageRequest) String() string {
 func (*AppendPlanThreadMessageRequest) ProtoMessage() {}
 
 func (x *AppendPlanThreadMessageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[64]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4954,7 +5042,7 @@ func (x *AppendPlanThreadMessageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppendPlanThreadMessageRequest.ProtoReflect.Descriptor instead.
 func (*AppendPlanThreadMessageRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{64}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *AppendPlanThreadMessageRequest) GetTenantId() string {
@@ -5015,7 +5103,7 @@ type AppendPlanThreadMessageResponse struct {
 
 func (x *AppendPlanThreadMessageResponse) Reset() {
 	*x = AppendPlanThreadMessageResponse{}
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[65]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5027,7 +5115,7 @@ func (x *AppendPlanThreadMessageResponse) String() string {
 func (*AppendPlanThreadMessageResponse) ProtoMessage() {}
 
 func (x *AppendPlanThreadMessageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_plans_v1_plans_proto_msgTypes[65]
+	mi := &file_harpia_plans_v1_plans_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5040,7 +5128,7 @@ func (x *AppendPlanThreadMessageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppendPlanThreadMessageResponse.ProtoReflect.Descriptor instead.
 func (*AppendPlanThreadMessageResponse) Descriptor() ([]byte, []int) {
-	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{65}
+	return file_harpia_plans_v1_plans_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *AppendPlanThreadMessageResponse) GetMessage() *v1.ThreadMessage {
@@ -5225,7 +5313,11 @@ const file_harpia_plans_v1_plans_proto_rawDesc = "" +
 	" \x01(\tR\x13parameterValuesJson\x12\x1b\n" +
 	"\tthread_id\x18\v \x01(\tR\bthreadId\"t\n" +
 	"\x1fUpdatePlanConfigurationResponse\x12Q\n" +
-	"\x12plan_configuration\x18\x01 \x01(\v2\".harpia.plans.v1.PlanConfigurationR\x11planConfiguration\"\x83\x02\n" +
+	"\x12plan_configuration\x18\x01 \x01(\v2\".harpia.plans.v1.PlanConfigurationR\x11planConfiguration\"b\n" +
+	"\x0fNextTurnRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x122\n" +
+	"\x15plan_configuration_id\x18\x02 \x01(\tR\x13planConfigurationId\"\x12\n" +
+	"\x10NextTurnResponse\"\x83\x02\n" +
 	"\x1dListPlanConfigurationsRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12&\n" +
 	"\fworkspace_id\x18\x02 \x01(\tH\x00R\vworkspaceId\x88\x01\x01\x12E\n" +
@@ -5484,7 +5576,7 @@ const file_harpia_plans_v1_plans_proto_rawDesc = "" +
 	"#APPROVAL_REQUEST_STATUS_UNSPECIFIED\x10\x00\x12#\n" +
 	"\x1fAPPROVAL_REQUEST_STATUS_PENDING\x10\x01\x12$\n" +
 	" APPROVAL_REQUEST_STATUS_APPROVED\x10\x02\x12$\n" +
-	" APPROVAL_REQUEST_STATUS_REJECTED\x10\x032\xe0\x15\n" +
+	" APPROVAL_REQUEST_STATUS_REJECTED\x10\x032\xb1\x16\n" +
 	"\vPlanService\x12d\n" +
 	"\x0fGetPlanTemplate\x12'.harpia.plans.v1.GetPlanTemplateRequest\x1a(.harpia.plans.v1.GetPlanTemplateResponse\x12s\n" +
 	"\x14GetPlanTemplateByKey\x12,.harpia.plans.v1.GetPlanTemplateByKeyRequest\x1a-.harpia.plans.v1.GetPlanTemplateByKeyResponse\x12l\n" +
@@ -5492,7 +5584,8 @@ const file_harpia_plans_v1_plans_proto_rawDesc = "" +
 	"\x17CreatePlanConfiguration\x12/.harpia.plans.v1.CreatePlanConfigurationRequest\x1a0.harpia.plans.v1.CreatePlanConfigurationResponse\x12s\n" +
 	"\x14GetPlanConfiguration\x12,.harpia.plans.v1.GetPlanConfigurationRequest\x1a-.harpia.plans.v1.GetPlanConfigurationResponse\x12|\n" +
 	"\x17UpdatePlanConfiguration\x12/.harpia.plans.v1.UpdatePlanConfigurationRequest\x1a0.harpia.plans.v1.UpdatePlanConfigurationResponse\x12{\n" +
-	"\x16ListPlanConfigurations\x12..harpia.plans.v1.ListPlanConfigurationsRequest\x1a/.harpia.plans.v1.ListPlanConfigurationsResponse0\x01\x12p\n" +
+	"\x16ListPlanConfigurations\x12..harpia.plans.v1.ListPlanConfigurationsRequest\x1a/.harpia.plans.v1.ListPlanConfigurationsResponse0\x01\x12O\n" +
+	"\bNextTurn\x12 .harpia.plans.v1.NextTurnRequest\x1a!.harpia.plans.v1.NextTurnResponse\x12p\n" +
 	"\x13CreatePlanExecution\x12+.harpia.plans.v1.CreatePlanExecutionRequest\x1a,.harpia.plans.v1.CreatePlanExecutionResponse\x12m\n" +
 	"\x12RetryPlanExecution\x12*.harpia.plans.v1.RetryPlanExecutionRequest\x1a+.harpia.plans.v1.RetryPlanExecutionResponse\x12g\n" +
 	"\x10GetPlanExecution\x12(.harpia.plans.v1.GetPlanExecutionRequest\x1a).harpia.plans.v1.GetPlanExecutionResponse\x12o\n" +
@@ -5526,7 +5619,7 @@ func file_harpia_plans_v1_plans_proto_rawDescGZIP() []byte {
 }
 
 var file_harpia_plans_v1_plans_proto_enumTypes = make([]protoimpl.EnumInfo, 11)
-var file_harpia_plans_v1_plans_proto_msgTypes = make([]protoimpl.MessageInfo, 66)
+var file_harpia_plans_v1_plans_proto_msgTypes = make([]protoimpl.MessageInfo, 68)
 var file_harpia_plans_v1_plans_proto_goTypes = []any{
 	(TemplateInputParameterType)(0),          // 0: harpia.plans.v1.TemplateInputParameterType
 	(TemplateInputRuntimeTarget)(0),          // 1: harpia.plans.v1.TemplateInputRuntimeTarget
@@ -5565,49 +5658,51 @@ var file_harpia_plans_v1_plans_proto_goTypes = []any{
 	(*GetPlanConfigurationResponse)(nil),     // 34: harpia.plans.v1.GetPlanConfigurationResponse
 	(*UpdatePlanConfigurationRequest)(nil),   // 35: harpia.plans.v1.UpdatePlanConfigurationRequest
 	(*UpdatePlanConfigurationResponse)(nil),  // 36: harpia.plans.v1.UpdatePlanConfigurationResponse
-	(*ListPlanConfigurationsRequest)(nil),    // 37: harpia.plans.v1.ListPlanConfigurationsRequest
-	(*ListPlanConfigurationsResponse)(nil),   // 38: harpia.plans.v1.ListPlanConfigurationsResponse
-	(*CreatePlanExecutionRequest)(nil),       // 39: harpia.plans.v1.CreatePlanExecutionRequest
-	(*CreatePlanExecutionResponse)(nil),      // 40: harpia.plans.v1.CreatePlanExecutionResponse
-	(*RetryPlanExecutionRequest)(nil),        // 41: harpia.plans.v1.RetryPlanExecutionRequest
-	(*RetryPlanExecutionResponse)(nil),       // 42: harpia.plans.v1.RetryPlanExecutionResponse
-	(*GetPlanExecutionRequest)(nil),          // 43: harpia.plans.v1.GetPlanExecutionRequest
-	(*GetPlanExecutionResponse)(nil),         // 44: harpia.plans.v1.GetPlanExecutionResponse
-	(*ListPlanExecutionsRequest)(nil),        // 45: harpia.plans.v1.ListPlanExecutionsRequest
-	(*ListPlanExecutionsResponse)(nil),       // 46: harpia.plans.v1.ListPlanExecutionsResponse
-	(*GetStepExecutionRequest)(nil),          // 47: harpia.plans.v1.GetStepExecutionRequest
-	(*GetStepExecutionResponse)(nil),         // 48: harpia.plans.v1.GetStepExecutionResponse
-	(*ListStepExecutionsRequest)(nil),        // 49: harpia.plans.v1.ListStepExecutionsRequest
-	(*ListStepExecutionsResponse)(nil),       // 50: harpia.plans.v1.ListStepExecutionsResponse
-	(*ElicitationRequest)(nil),               // 51: harpia.plans.v1.ElicitationRequest
-	(*ThreadMessage)(nil),                    // 52: harpia.plans.v1.ThreadMessage
-	(*ElicitationResponse)(nil),              // 53: harpia.plans.v1.ElicitationResponse
-	(*ListElicitationsRequest)(nil),          // 54: harpia.plans.v1.ListElicitationsRequest
-	(*ListElicitationsResponse)(nil),         // 55: harpia.plans.v1.ListElicitationsResponse
-	(*GetElicitationRequest)(nil),            // 56: harpia.plans.v1.GetElicitationRequest
-	(*GetElicitationResponse)(nil),           // 57: harpia.plans.v1.GetElicitationResponse
-	(*RespondToElicitationRequest)(nil),      // 58: harpia.plans.v1.RespondToElicitationRequest
-	(*RespondToElicitationResponse)(nil),     // 59: harpia.plans.v1.RespondToElicitationResponse
-	(*WatchElicitationsRequest)(nil),         // 60: harpia.plans.v1.WatchElicitationsRequest
-	(*WatchElicitationsResponse)(nil),        // 61: harpia.plans.v1.WatchElicitationsResponse
-	(*ApprovalRequest)(nil),                  // 62: harpia.plans.v1.ApprovalRequest
-	(*ListApprovalRequestsRequest)(nil),      // 63: harpia.plans.v1.ListApprovalRequestsRequest
-	(*ListApprovalRequestsResponse)(nil),     // 64: harpia.plans.v1.ListApprovalRequestsResponse
-	(*GetApprovalRequestRequest)(nil),        // 65: harpia.plans.v1.GetApprovalRequestRequest
-	(*GetApprovalRequestResponse)(nil),       // 66: harpia.plans.v1.GetApprovalRequestResponse
-	(*RespondToApprovalRequestRequest)(nil),  // 67: harpia.plans.v1.RespondToApprovalRequestRequest
-	(*RespondToApprovalRequestResponse)(nil), // 68: harpia.plans.v1.RespondToApprovalRequestResponse
-	(*WatchApprovalRequestsRequest)(nil),     // 69: harpia.plans.v1.WatchApprovalRequestsRequest
-	(*WatchApprovalRequestsResponse)(nil),    // 70: harpia.plans.v1.WatchApprovalRequestsResponse
-	(*ListPlanThreadMessagesRequest)(nil),    // 71: harpia.plans.v1.ListPlanThreadMessagesRequest
-	(*ListPlanThreadMessagesResponse)(nil),   // 72: harpia.plans.v1.ListPlanThreadMessagesResponse
-	(*WatchPlanThreadMessagesRequest)(nil),   // 73: harpia.plans.v1.WatchPlanThreadMessagesRequest
-	(*WatchPlanThreadMessagesResponse)(nil),  // 74: harpia.plans.v1.WatchPlanThreadMessagesResponse
-	(*AppendPlanThreadMessageRequest)(nil),   // 75: harpia.plans.v1.AppendPlanThreadMessageRequest
-	(*AppendPlanThreadMessageResponse)(nil),  // 76: harpia.plans.v1.AppendPlanThreadMessageResponse
-	(*v1.ThreadMessage)(nil),                 // 77: harpia.chat.v1.ThreadMessage
-	(v1.ThreadMessageRole)(0),                // 78: harpia.chat.v1.ThreadMessageRole
-	(v1.ThreadMessageKind)(0),                // 79: harpia.chat.v1.ThreadMessageKind
+	(*NextTurnRequest)(nil),                  // 37: harpia.plans.v1.NextTurnRequest
+	(*NextTurnResponse)(nil),                 // 38: harpia.plans.v1.NextTurnResponse
+	(*ListPlanConfigurationsRequest)(nil),    // 39: harpia.plans.v1.ListPlanConfigurationsRequest
+	(*ListPlanConfigurationsResponse)(nil),   // 40: harpia.plans.v1.ListPlanConfigurationsResponse
+	(*CreatePlanExecutionRequest)(nil),       // 41: harpia.plans.v1.CreatePlanExecutionRequest
+	(*CreatePlanExecutionResponse)(nil),      // 42: harpia.plans.v1.CreatePlanExecutionResponse
+	(*RetryPlanExecutionRequest)(nil),        // 43: harpia.plans.v1.RetryPlanExecutionRequest
+	(*RetryPlanExecutionResponse)(nil),       // 44: harpia.plans.v1.RetryPlanExecutionResponse
+	(*GetPlanExecutionRequest)(nil),          // 45: harpia.plans.v1.GetPlanExecutionRequest
+	(*GetPlanExecutionResponse)(nil),         // 46: harpia.plans.v1.GetPlanExecutionResponse
+	(*ListPlanExecutionsRequest)(nil),        // 47: harpia.plans.v1.ListPlanExecutionsRequest
+	(*ListPlanExecutionsResponse)(nil),       // 48: harpia.plans.v1.ListPlanExecutionsResponse
+	(*GetStepExecutionRequest)(nil),          // 49: harpia.plans.v1.GetStepExecutionRequest
+	(*GetStepExecutionResponse)(nil),         // 50: harpia.plans.v1.GetStepExecutionResponse
+	(*ListStepExecutionsRequest)(nil),        // 51: harpia.plans.v1.ListStepExecutionsRequest
+	(*ListStepExecutionsResponse)(nil),       // 52: harpia.plans.v1.ListStepExecutionsResponse
+	(*ElicitationRequest)(nil),               // 53: harpia.plans.v1.ElicitationRequest
+	(*ThreadMessage)(nil),                    // 54: harpia.plans.v1.ThreadMessage
+	(*ElicitationResponse)(nil),              // 55: harpia.plans.v1.ElicitationResponse
+	(*ListElicitationsRequest)(nil),          // 56: harpia.plans.v1.ListElicitationsRequest
+	(*ListElicitationsResponse)(nil),         // 57: harpia.plans.v1.ListElicitationsResponse
+	(*GetElicitationRequest)(nil),            // 58: harpia.plans.v1.GetElicitationRequest
+	(*GetElicitationResponse)(nil),           // 59: harpia.plans.v1.GetElicitationResponse
+	(*RespondToElicitationRequest)(nil),      // 60: harpia.plans.v1.RespondToElicitationRequest
+	(*RespondToElicitationResponse)(nil),     // 61: harpia.plans.v1.RespondToElicitationResponse
+	(*WatchElicitationsRequest)(nil),         // 62: harpia.plans.v1.WatchElicitationsRequest
+	(*WatchElicitationsResponse)(nil),        // 63: harpia.plans.v1.WatchElicitationsResponse
+	(*ApprovalRequest)(nil),                  // 64: harpia.plans.v1.ApprovalRequest
+	(*ListApprovalRequestsRequest)(nil),      // 65: harpia.plans.v1.ListApprovalRequestsRequest
+	(*ListApprovalRequestsResponse)(nil),     // 66: harpia.plans.v1.ListApprovalRequestsResponse
+	(*GetApprovalRequestRequest)(nil),        // 67: harpia.plans.v1.GetApprovalRequestRequest
+	(*GetApprovalRequestResponse)(nil),       // 68: harpia.plans.v1.GetApprovalRequestResponse
+	(*RespondToApprovalRequestRequest)(nil),  // 69: harpia.plans.v1.RespondToApprovalRequestRequest
+	(*RespondToApprovalRequestResponse)(nil), // 70: harpia.plans.v1.RespondToApprovalRequestResponse
+	(*WatchApprovalRequestsRequest)(nil),     // 71: harpia.plans.v1.WatchApprovalRequestsRequest
+	(*WatchApprovalRequestsResponse)(nil),    // 72: harpia.plans.v1.WatchApprovalRequestsResponse
+	(*ListPlanThreadMessagesRequest)(nil),    // 73: harpia.plans.v1.ListPlanThreadMessagesRequest
+	(*ListPlanThreadMessagesResponse)(nil),   // 74: harpia.plans.v1.ListPlanThreadMessagesResponse
+	(*WatchPlanThreadMessagesRequest)(nil),   // 75: harpia.plans.v1.WatchPlanThreadMessagesRequest
+	(*WatchPlanThreadMessagesResponse)(nil),  // 76: harpia.plans.v1.WatchPlanThreadMessagesResponse
+	(*AppendPlanThreadMessageRequest)(nil),   // 77: harpia.plans.v1.AppendPlanThreadMessageRequest
+	(*AppendPlanThreadMessageResponse)(nil),  // 78: harpia.plans.v1.AppendPlanThreadMessageResponse
+	(*v1.ThreadMessage)(nil),                 // 79: harpia.chat.v1.ThreadMessage
+	(v1.ThreadMessageRole)(0),                // 80: harpia.chat.v1.ThreadMessageRole
+	(v1.ThreadMessageKind)(0),                // 81: harpia.chat.v1.ThreadMessageKind
 }
 var file_harpia_plans_v1_plans_proto_depIdxs = []int32{
 	14, // 0: harpia.plans.v1.PlanTemplate.steps:type_name -> harpia.plans.v1.PlanStep
@@ -5659,74 +5754,76 @@ var file_harpia_plans_v1_plans_proto_depIdxs = []int32{
 	24, // 46: harpia.plans.v1.ListStepExecutionsResponse.step_executions:type_name -> harpia.plans.v1.StepExecution
 	8,  // 47: harpia.plans.v1.ElicitationRequest.status:type_name -> harpia.plans.v1.ElicitationStatus
 	4,  // 48: harpia.plans.v1.ElicitationRequest.timeout_behavior:type_name -> harpia.plans.v1.ElicitationTimeoutBehavior
-	52, // 49: harpia.plans.v1.ElicitationRequest.thread:type_name -> harpia.plans.v1.ThreadMessage
+	54, // 49: harpia.plans.v1.ElicitationRequest.thread:type_name -> harpia.plans.v1.ThreadMessage
 	9,  // 50: harpia.plans.v1.ThreadMessage.role:type_name -> harpia.plans.v1.ThreadMessageRole
 	8,  // 51: harpia.plans.v1.ListElicitationsRequest.status:type_name -> harpia.plans.v1.ElicitationStatus
-	51, // 52: harpia.plans.v1.ListElicitationsResponse.elicitations:type_name -> harpia.plans.v1.ElicitationRequest
-	51, // 53: harpia.plans.v1.GetElicitationResponse.elicitation:type_name -> harpia.plans.v1.ElicitationRequest
-	51, // 54: harpia.plans.v1.RespondToElicitationResponse.elicitation:type_name -> harpia.plans.v1.ElicitationRequest
-	51, // 55: harpia.plans.v1.WatchElicitationsResponse.elicitations:type_name -> harpia.plans.v1.ElicitationRequest
+	53, // 52: harpia.plans.v1.ListElicitationsResponse.elicitations:type_name -> harpia.plans.v1.ElicitationRequest
+	53, // 53: harpia.plans.v1.GetElicitationResponse.elicitation:type_name -> harpia.plans.v1.ElicitationRequest
+	53, // 54: harpia.plans.v1.RespondToElicitationResponse.elicitation:type_name -> harpia.plans.v1.ElicitationRequest
+	53, // 55: harpia.plans.v1.WatchElicitationsResponse.elicitations:type_name -> harpia.plans.v1.ElicitationRequest
 	10, // 56: harpia.plans.v1.ApprovalRequest.status:type_name -> harpia.plans.v1.ApprovalRequestStatus
 	10, // 57: harpia.plans.v1.ListApprovalRequestsRequest.status:type_name -> harpia.plans.v1.ApprovalRequestStatus
-	62, // 58: harpia.plans.v1.ListApprovalRequestsResponse.approval_requests:type_name -> harpia.plans.v1.ApprovalRequest
-	62, // 59: harpia.plans.v1.GetApprovalRequestResponse.approval_request:type_name -> harpia.plans.v1.ApprovalRequest
-	62, // 60: harpia.plans.v1.RespondToApprovalRequestResponse.approval_request:type_name -> harpia.plans.v1.ApprovalRequest
-	62, // 61: harpia.plans.v1.WatchApprovalRequestsResponse.approval_requests:type_name -> harpia.plans.v1.ApprovalRequest
-	77, // 62: harpia.plans.v1.ListPlanThreadMessagesResponse.messages:type_name -> harpia.chat.v1.ThreadMessage
-	77, // 63: harpia.plans.v1.WatchPlanThreadMessagesResponse.messages:type_name -> harpia.chat.v1.ThreadMessage
-	78, // 64: harpia.plans.v1.AppendPlanThreadMessageRequest.role:type_name -> harpia.chat.v1.ThreadMessageRole
-	79, // 65: harpia.plans.v1.AppendPlanThreadMessageRequest.kind:type_name -> harpia.chat.v1.ThreadMessageKind
-	77, // 66: harpia.plans.v1.AppendPlanThreadMessageResponse.message:type_name -> harpia.chat.v1.ThreadMessage
+	64, // 58: harpia.plans.v1.ListApprovalRequestsResponse.approval_requests:type_name -> harpia.plans.v1.ApprovalRequest
+	64, // 59: harpia.plans.v1.GetApprovalRequestResponse.approval_request:type_name -> harpia.plans.v1.ApprovalRequest
+	64, // 60: harpia.plans.v1.RespondToApprovalRequestResponse.approval_request:type_name -> harpia.plans.v1.ApprovalRequest
+	64, // 61: harpia.plans.v1.WatchApprovalRequestsResponse.approval_requests:type_name -> harpia.plans.v1.ApprovalRequest
+	79, // 62: harpia.plans.v1.ListPlanThreadMessagesResponse.messages:type_name -> harpia.chat.v1.ThreadMessage
+	79, // 63: harpia.plans.v1.WatchPlanThreadMessagesResponse.messages:type_name -> harpia.chat.v1.ThreadMessage
+	80, // 64: harpia.plans.v1.AppendPlanThreadMessageRequest.role:type_name -> harpia.chat.v1.ThreadMessageRole
+	81, // 65: harpia.plans.v1.AppendPlanThreadMessageRequest.kind:type_name -> harpia.chat.v1.ThreadMessageKind
+	79, // 66: harpia.plans.v1.AppendPlanThreadMessageResponse.message:type_name -> harpia.chat.v1.ThreadMessage
 	25, // 67: harpia.plans.v1.PlanService.GetPlanTemplate:input_type -> harpia.plans.v1.GetPlanTemplateRequest
 	27, // 68: harpia.plans.v1.PlanService.GetPlanTemplateByKey:input_type -> harpia.plans.v1.GetPlanTemplateByKeyRequest
 	29, // 69: harpia.plans.v1.PlanService.ListPlanTemplates:input_type -> harpia.plans.v1.ListPlanTemplatesRequest
 	31, // 70: harpia.plans.v1.PlanService.CreatePlanConfiguration:input_type -> harpia.plans.v1.CreatePlanConfigurationRequest
 	33, // 71: harpia.plans.v1.PlanService.GetPlanConfiguration:input_type -> harpia.plans.v1.GetPlanConfigurationRequest
 	35, // 72: harpia.plans.v1.PlanService.UpdatePlanConfiguration:input_type -> harpia.plans.v1.UpdatePlanConfigurationRequest
-	37, // 73: harpia.plans.v1.PlanService.ListPlanConfigurations:input_type -> harpia.plans.v1.ListPlanConfigurationsRequest
-	39, // 74: harpia.plans.v1.PlanService.CreatePlanExecution:input_type -> harpia.plans.v1.CreatePlanExecutionRequest
-	41, // 75: harpia.plans.v1.PlanService.RetryPlanExecution:input_type -> harpia.plans.v1.RetryPlanExecutionRequest
-	43, // 76: harpia.plans.v1.PlanService.GetPlanExecution:input_type -> harpia.plans.v1.GetPlanExecutionRequest
-	45, // 77: harpia.plans.v1.PlanService.ListPlanExecutions:input_type -> harpia.plans.v1.ListPlanExecutionsRequest
-	47, // 78: harpia.plans.v1.PlanService.GetStepExecution:input_type -> harpia.plans.v1.GetStepExecutionRequest
-	49, // 79: harpia.plans.v1.PlanService.ListStepExecutions:input_type -> harpia.plans.v1.ListStepExecutionsRequest
-	54, // 80: harpia.plans.v1.PlanService.ListElicitations:input_type -> harpia.plans.v1.ListElicitationsRequest
-	56, // 81: harpia.plans.v1.PlanService.GetElicitation:input_type -> harpia.plans.v1.GetElicitationRequest
-	58, // 82: harpia.plans.v1.PlanService.RespondToElicitation:input_type -> harpia.plans.v1.RespondToElicitationRequest
-	60, // 83: harpia.plans.v1.PlanService.WatchElicitations:input_type -> harpia.plans.v1.WatchElicitationsRequest
-	63, // 84: harpia.plans.v1.PlanService.ListApprovalRequests:input_type -> harpia.plans.v1.ListApprovalRequestsRequest
-	65, // 85: harpia.plans.v1.PlanService.GetApprovalRequest:input_type -> harpia.plans.v1.GetApprovalRequestRequest
-	67, // 86: harpia.plans.v1.PlanService.RespondToApprovalRequest:input_type -> harpia.plans.v1.RespondToApprovalRequestRequest
-	69, // 87: harpia.plans.v1.PlanService.WatchApprovalRequests:input_type -> harpia.plans.v1.WatchApprovalRequestsRequest
-	71, // 88: harpia.plans.v1.PlanService.ListPlanThreadMessages:input_type -> harpia.plans.v1.ListPlanThreadMessagesRequest
-	73, // 89: harpia.plans.v1.PlanService.WatchPlanThreadMessages:input_type -> harpia.plans.v1.WatchPlanThreadMessagesRequest
-	75, // 90: harpia.plans.v1.PlanService.AppendPlanThreadMessage:input_type -> harpia.plans.v1.AppendPlanThreadMessageRequest
-	26, // 91: harpia.plans.v1.PlanService.GetPlanTemplate:output_type -> harpia.plans.v1.GetPlanTemplateResponse
-	28, // 92: harpia.plans.v1.PlanService.GetPlanTemplateByKey:output_type -> harpia.plans.v1.GetPlanTemplateByKeyResponse
-	30, // 93: harpia.plans.v1.PlanService.ListPlanTemplates:output_type -> harpia.plans.v1.ListPlanTemplatesResponse
-	32, // 94: harpia.plans.v1.PlanService.CreatePlanConfiguration:output_type -> harpia.plans.v1.CreatePlanConfigurationResponse
-	34, // 95: harpia.plans.v1.PlanService.GetPlanConfiguration:output_type -> harpia.plans.v1.GetPlanConfigurationResponse
-	36, // 96: harpia.plans.v1.PlanService.UpdatePlanConfiguration:output_type -> harpia.plans.v1.UpdatePlanConfigurationResponse
-	38, // 97: harpia.plans.v1.PlanService.ListPlanConfigurations:output_type -> harpia.plans.v1.ListPlanConfigurationsResponse
-	40, // 98: harpia.plans.v1.PlanService.CreatePlanExecution:output_type -> harpia.plans.v1.CreatePlanExecutionResponse
-	42, // 99: harpia.plans.v1.PlanService.RetryPlanExecution:output_type -> harpia.plans.v1.RetryPlanExecutionResponse
-	44, // 100: harpia.plans.v1.PlanService.GetPlanExecution:output_type -> harpia.plans.v1.GetPlanExecutionResponse
-	46, // 101: harpia.plans.v1.PlanService.ListPlanExecutions:output_type -> harpia.plans.v1.ListPlanExecutionsResponse
-	48, // 102: harpia.plans.v1.PlanService.GetStepExecution:output_type -> harpia.plans.v1.GetStepExecutionResponse
-	50, // 103: harpia.plans.v1.PlanService.ListStepExecutions:output_type -> harpia.plans.v1.ListStepExecutionsResponse
-	55, // 104: harpia.plans.v1.PlanService.ListElicitations:output_type -> harpia.plans.v1.ListElicitationsResponse
-	57, // 105: harpia.plans.v1.PlanService.GetElicitation:output_type -> harpia.plans.v1.GetElicitationResponse
-	59, // 106: harpia.plans.v1.PlanService.RespondToElicitation:output_type -> harpia.plans.v1.RespondToElicitationResponse
-	61, // 107: harpia.plans.v1.PlanService.WatchElicitations:output_type -> harpia.plans.v1.WatchElicitationsResponse
-	64, // 108: harpia.plans.v1.PlanService.ListApprovalRequests:output_type -> harpia.plans.v1.ListApprovalRequestsResponse
-	66, // 109: harpia.plans.v1.PlanService.GetApprovalRequest:output_type -> harpia.plans.v1.GetApprovalRequestResponse
-	68, // 110: harpia.plans.v1.PlanService.RespondToApprovalRequest:output_type -> harpia.plans.v1.RespondToApprovalRequestResponse
-	70, // 111: harpia.plans.v1.PlanService.WatchApprovalRequests:output_type -> harpia.plans.v1.WatchApprovalRequestsResponse
-	72, // 112: harpia.plans.v1.PlanService.ListPlanThreadMessages:output_type -> harpia.plans.v1.ListPlanThreadMessagesResponse
-	74, // 113: harpia.plans.v1.PlanService.WatchPlanThreadMessages:output_type -> harpia.plans.v1.WatchPlanThreadMessagesResponse
-	76, // 114: harpia.plans.v1.PlanService.AppendPlanThreadMessage:output_type -> harpia.plans.v1.AppendPlanThreadMessageResponse
-	91, // [91:115] is the sub-list for method output_type
-	67, // [67:91] is the sub-list for method input_type
+	39, // 73: harpia.plans.v1.PlanService.ListPlanConfigurations:input_type -> harpia.plans.v1.ListPlanConfigurationsRequest
+	37, // 74: harpia.plans.v1.PlanService.NextTurn:input_type -> harpia.plans.v1.NextTurnRequest
+	41, // 75: harpia.plans.v1.PlanService.CreatePlanExecution:input_type -> harpia.plans.v1.CreatePlanExecutionRequest
+	43, // 76: harpia.plans.v1.PlanService.RetryPlanExecution:input_type -> harpia.plans.v1.RetryPlanExecutionRequest
+	45, // 77: harpia.plans.v1.PlanService.GetPlanExecution:input_type -> harpia.plans.v1.GetPlanExecutionRequest
+	47, // 78: harpia.plans.v1.PlanService.ListPlanExecutions:input_type -> harpia.plans.v1.ListPlanExecutionsRequest
+	49, // 79: harpia.plans.v1.PlanService.GetStepExecution:input_type -> harpia.plans.v1.GetStepExecutionRequest
+	51, // 80: harpia.plans.v1.PlanService.ListStepExecutions:input_type -> harpia.plans.v1.ListStepExecutionsRequest
+	56, // 81: harpia.plans.v1.PlanService.ListElicitations:input_type -> harpia.plans.v1.ListElicitationsRequest
+	58, // 82: harpia.plans.v1.PlanService.GetElicitation:input_type -> harpia.plans.v1.GetElicitationRequest
+	60, // 83: harpia.plans.v1.PlanService.RespondToElicitation:input_type -> harpia.plans.v1.RespondToElicitationRequest
+	62, // 84: harpia.plans.v1.PlanService.WatchElicitations:input_type -> harpia.plans.v1.WatchElicitationsRequest
+	65, // 85: harpia.plans.v1.PlanService.ListApprovalRequests:input_type -> harpia.plans.v1.ListApprovalRequestsRequest
+	67, // 86: harpia.plans.v1.PlanService.GetApprovalRequest:input_type -> harpia.plans.v1.GetApprovalRequestRequest
+	69, // 87: harpia.plans.v1.PlanService.RespondToApprovalRequest:input_type -> harpia.plans.v1.RespondToApprovalRequestRequest
+	71, // 88: harpia.plans.v1.PlanService.WatchApprovalRequests:input_type -> harpia.plans.v1.WatchApprovalRequestsRequest
+	73, // 89: harpia.plans.v1.PlanService.ListPlanThreadMessages:input_type -> harpia.plans.v1.ListPlanThreadMessagesRequest
+	75, // 90: harpia.plans.v1.PlanService.WatchPlanThreadMessages:input_type -> harpia.plans.v1.WatchPlanThreadMessagesRequest
+	77, // 91: harpia.plans.v1.PlanService.AppendPlanThreadMessage:input_type -> harpia.plans.v1.AppendPlanThreadMessageRequest
+	26, // 92: harpia.plans.v1.PlanService.GetPlanTemplate:output_type -> harpia.plans.v1.GetPlanTemplateResponse
+	28, // 93: harpia.plans.v1.PlanService.GetPlanTemplateByKey:output_type -> harpia.plans.v1.GetPlanTemplateByKeyResponse
+	30, // 94: harpia.plans.v1.PlanService.ListPlanTemplates:output_type -> harpia.plans.v1.ListPlanTemplatesResponse
+	32, // 95: harpia.plans.v1.PlanService.CreatePlanConfiguration:output_type -> harpia.plans.v1.CreatePlanConfigurationResponse
+	34, // 96: harpia.plans.v1.PlanService.GetPlanConfiguration:output_type -> harpia.plans.v1.GetPlanConfigurationResponse
+	36, // 97: harpia.plans.v1.PlanService.UpdatePlanConfiguration:output_type -> harpia.plans.v1.UpdatePlanConfigurationResponse
+	40, // 98: harpia.plans.v1.PlanService.ListPlanConfigurations:output_type -> harpia.plans.v1.ListPlanConfigurationsResponse
+	38, // 99: harpia.plans.v1.PlanService.NextTurn:output_type -> harpia.plans.v1.NextTurnResponse
+	42, // 100: harpia.plans.v1.PlanService.CreatePlanExecution:output_type -> harpia.plans.v1.CreatePlanExecutionResponse
+	44, // 101: harpia.plans.v1.PlanService.RetryPlanExecution:output_type -> harpia.plans.v1.RetryPlanExecutionResponse
+	46, // 102: harpia.plans.v1.PlanService.GetPlanExecution:output_type -> harpia.plans.v1.GetPlanExecutionResponse
+	48, // 103: harpia.plans.v1.PlanService.ListPlanExecutions:output_type -> harpia.plans.v1.ListPlanExecutionsResponse
+	50, // 104: harpia.plans.v1.PlanService.GetStepExecution:output_type -> harpia.plans.v1.GetStepExecutionResponse
+	52, // 105: harpia.plans.v1.PlanService.ListStepExecutions:output_type -> harpia.plans.v1.ListStepExecutionsResponse
+	57, // 106: harpia.plans.v1.PlanService.ListElicitations:output_type -> harpia.plans.v1.ListElicitationsResponse
+	59, // 107: harpia.plans.v1.PlanService.GetElicitation:output_type -> harpia.plans.v1.GetElicitationResponse
+	61, // 108: harpia.plans.v1.PlanService.RespondToElicitation:output_type -> harpia.plans.v1.RespondToElicitationResponse
+	63, // 109: harpia.plans.v1.PlanService.WatchElicitations:output_type -> harpia.plans.v1.WatchElicitationsResponse
+	66, // 110: harpia.plans.v1.PlanService.ListApprovalRequests:output_type -> harpia.plans.v1.ListApprovalRequestsResponse
+	68, // 111: harpia.plans.v1.PlanService.GetApprovalRequest:output_type -> harpia.plans.v1.GetApprovalRequestResponse
+	70, // 112: harpia.plans.v1.PlanService.RespondToApprovalRequest:output_type -> harpia.plans.v1.RespondToApprovalRequestResponse
+	72, // 113: harpia.plans.v1.PlanService.WatchApprovalRequests:output_type -> harpia.plans.v1.WatchApprovalRequestsResponse
+	74, // 114: harpia.plans.v1.PlanService.ListPlanThreadMessages:output_type -> harpia.plans.v1.ListPlanThreadMessagesResponse
+	76, // 115: harpia.plans.v1.PlanService.WatchPlanThreadMessages:output_type -> harpia.plans.v1.WatchPlanThreadMessagesResponse
+	78, // 116: harpia.plans.v1.PlanService.AppendPlanThreadMessage:output_type -> harpia.plans.v1.AppendPlanThreadMessageResponse
+	92, // [92:117] is the sub-list for method output_type
+	67, // [67:92] is the sub-list for method input_type
 	67, // [67:67] is the sub-list for extension type_name
 	67, // [67:67] is the sub-list for extension extendee
 	0,  // [0:67] is the sub-list for field type_name
@@ -5738,19 +5835,19 @@ func file_harpia_plans_v1_plans_proto_init() {
 		return
 	}
 	file_harpia_plans_v1_plans_proto_msgTypes[18].OneofWrappers = []any{}
-	file_harpia_plans_v1_plans_proto_msgTypes[26].OneofWrappers = []any{}
-	file_harpia_plans_v1_plans_proto_msgTypes[34].OneofWrappers = []any{}
-	file_harpia_plans_v1_plans_proto_msgTypes[43].OneofWrappers = []any{}
-	file_harpia_plans_v1_plans_proto_msgTypes[49].OneofWrappers = []any{}
-	file_harpia_plans_v1_plans_proto_msgTypes[52].OneofWrappers = []any{}
-	file_harpia_plans_v1_plans_proto_msgTypes[58].OneofWrappers = []any{}
+	file_harpia_plans_v1_plans_proto_msgTypes[28].OneofWrappers = []any{}
+	file_harpia_plans_v1_plans_proto_msgTypes[36].OneofWrappers = []any{}
+	file_harpia_plans_v1_plans_proto_msgTypes[45].OneofWrappers = []any{}
+	file_harpia_plans_v1_plans_proto_msgTypes[51].OneofWrappers = []any{}
+	file_harpia_plans_v1_plans_proto_msgTypes[54].OneofWrappers = []any{}
+	file_harpia_plans_v1_plans_proto_msgTypes[60].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_harpia_plans_v1_plans_proto_rawDesc), len(file_harpia_plans_v1_plans_proto_rawDesc)),
 			NumEnums:      11,
-			NumMessages:   66,
+			NumMessages:   68,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

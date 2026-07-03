@@ -292,6 +292,34 @@ async function fetchExecutorContextFromApi(
   return { skus, entitlements, installations };
 }
 
+/**
+ * Loads and localizes plan templates only (no executor lock state). Lighter
+ * than loadPlanCatalog; used for suggestion chips. Returns [] on empty catalog
+ * when no mock fallback is available.
+ */
+export async function loadPlanTemplates(
+  locale: Locale = "en",
+): Promise<PlanTemplate[]> {
+  let templates: PlanTemplate[];
+  try {
+    templates = await fetchPlanTemplatesFromApi();
+    if (templates.length === 0) {
+      if (allowsMockFallback()) {
+        templates = mockPlanTemplates(locale);
+      } else {
+        return [];
+      }
+    }
+  } catch (err) {
+    if (allowsMockFallback()) {
+      templates = mockPlanTemplates(locale);
+    } else {
+      throw err;
+    }
+  }
+  return templates.map((t) => localizePlanTemplate(t, locale));
+}
+
 /** Loads plan templates and computes tenant lock state from executor entitlements/installations. */
 export async function loadPlanCatalog(
   locale: Locale = "en",

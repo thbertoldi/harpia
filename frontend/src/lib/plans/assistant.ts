@@ -14,6 +14,26 @@ import {
   type PlanTemplate,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
 
+/**
+ * Advance the configuration assistant so it derives and appends its next
+ * prompt (binding/overseer/policies/matrix). Best-effort: a conversational
+ * selection has already persisted by the time this runs, so a failure here
+ * must not undo it — the next interaction or a manual refresh re-derives.
+ */
+async function advanceAssistant(
+  tenantId: string,
+  configurationId: string,
+): Promise<void> {
+  try {
+    await planClient.nextTurn({
+      tenantId,
+      planConfigurationId: configurationId,
+    });
+  } catch {
+    /* best-effort: selection already persisted */
+  }
+}
+
 export async function selectChip(args: {
   tenantId: string;
   configurationId: string;
@@ -181,6 +201,7 @@ export async function selectBindingOption(args: {
     label: args.label,
   });
 
+  await advanceAssistant(args.tenantId, args.configurationId);
   return next;
 }
 
@@ -225,6 +246,7 @@ export async function selectOverseerOption(args: {
     label: args.label,
   });
 
+  await advanceAssistant(args.tenantId, args.configurationId);
   return next;
 }
 
@@ -275,6 +297,7 @@ export async function selectPolicyOption(args: {
     label: args.label,
   });
 
+  await advanceAssistant(args.tenantId, args.configurationId);
   return next;
 }
 

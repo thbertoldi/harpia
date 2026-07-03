@@ -71,7 +71,6 @@ describe("createdActionIds", () => {
       "schedule",
       "reviewPlan",
       "adjustConfiguration",
-      "anythingElse",
     ]);
   });
 
@@ -81,7 +80,6 @@ describe("createdActionIds", () => {
       "schedule",
       "reviewPlan",
       "adjustConfiguration",
-      "anythingElse",
     ]);
   });
 });

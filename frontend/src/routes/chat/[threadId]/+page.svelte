@@ -4,14 +4,19 @@
   import { listArtifacts } from "$lib/artifacts/artifacts";
   import { getTenant } from "$lib/auth";
   import { locale, translate } from "$lib/i18n";
-  import { loadThreadMessages } from "$lib/chat/client";
+  import { loadThreadMessages, appendThreadMessage } from "$lib/chat/client";
   import { watchThreadMessages } from "$lib/chat/watch";
   import type { ChatMessage } from "$lib/chat/types";
   import { buildThreadSections } from "$lib/plans/thread";
+  import { buildExecutionViewModel } from "$lib/plans/execution-view";
   import PlanDagMiniMap from "$lib/components/PlanDagMiniMap.svelte";
   import ConversationalWorkspace from "$lib/components/thread/ConversationalWorkspace.svelte";
   import ThreadComposer from "$lib/components/thread/ThreadComposer.svelte";
   import PlanProposalCard from "$lib/components/thread/PlanProposalCard.svelte";
+  import PlanExecutionCard from "$lib/components/thread/PlanExecutionCard.svelte";
+  import ArtifactCard from "$lib/components/artifacts/ArtifactCard.svelte";
+  import ArtifactPreviewSheet from "$lib/components/artifacts/ArtifactPreviewSheet.svelte";
+  import SuggestionChips from "$lib/components/SuggestionChips.svelte";
   import HintBanner from "$lib/components/thread/HintBanner.svelte";
   import PlanThreadTopBar from "$lib/components/PlanThreadTopBar.svelte";
   import ScheduleDialog from "$lib/components/canvas/ScheduleDialog.svelte";
@@ -58,6 +63,15 @@
   let workspaceArtifacts = $state<Artifact[]>([]);
   let workspaceActivityItems = $state<PlanActivityItem[]>([]);
   let workspaceLoadError = $state(false);
+  let previewArtifact = $state<Artifact | null>(null);
+  let previewOpen = $state(false);
+
+  function openPreviewById(id: string) {
+    const found = workspaceArtifacts.find((a) => a.id === id) ?? null;
+    if (!found) return;
+    previewArtifact = found;
+    previewOpen = true;
+  }
 
   $effect(() => {
     const configurationId = routeConfigurationId;
@@ -106,6 +120,25 @@
     if (!unansweredUserMessageId) return;
     void triggerProposal();
   });
+
+  // An empty config-less thread is actionable: a suggestion chip seeds the
+  // opening user message on the current thread (same path the composer uses),
+  // then the auto-propose effect fires once it arrives.
+  async function sendOpeningPrompt(prompt: string) {
+    const trimmed = prompt.trim();
+    if (!tenantId || !routeThreadId || trimmed.length === 0) return;
+    try {
+      await appendThreadMessage(
+        tenantId,
+        routeThreadId,
+        "OVERSEER",
+        "USER_TEXT",
+        trimmed,
+      );
+    } catch {
+      // best-effort; the composer remains available for manual entry
+    }
+  }
 
   const pricing: ExecutorPriceLookup = (id) =>
     data.executorCatalog?.get(id) ?? null;
@@ -210,6 +243,26 @@
   });
 
   const sections = $derived(buildThreadSections(messages));
+
+  // ADR-016 / live-execution-chat — ordered template steps feed the execution
+  // view model; execution sections render as live progress cards.
+  const orderedSteps = $derived(
+    (data.template?.steps ?? []).map((s) => ({ key: s.key, title: s.title })),
+  );
+  const executionGroups = $derived(
+    sections.flatMap((section) =>
+      section.kind === "execution" ? [section.group] : [],
+    ),
+  );
+  const executionViewModels = $derived(
+    executionGroups.map((group) =>
+      buildExecutionViewModel(group, orderedSteps),
+    ),
+  );
+  const anyExecutionRunning = $derived(
+    executionViewModels.some((vm) => vm.state === "running"),
+  );
+
   const mostRecentExecutionId = $derived.by(() => {
     for (let i = sections.length - 1; i >= 0; i--) {
       const s = sections[i];
@@ -325,6 +378,8 @@
   {#if !routeConfigurationId}
     <div class="flex flex-col gap-3">
       {#if messages.length === 0}
+        <SuggestionChips onSelect={(p) => void sendOpeningPrompt(p)} />
+      {:else}
         <div
           class="rounded border border-plumage bg-obsidian-light px-4 py-3 text-sm text-crown-ash"
         >
@@ -347,10 +402,15 @@
       {/each}
       {#if proposing}
         <div
-          class="thinking-indicator text-[12px] text-crown-ash-dark"
+          class="flex items-center gap-2 text-[12px] text-crown-ash-dark"
           aria-live="polite"
         >
-          {translate("thread.propose.thinking", $locale)}
+          <span class="typing-dots flex items-center gap-1">
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+          </span>
+          <span>{translate("thread.propose.thinking", $locale)}</span>
         </div>
       {/if}
       <ThreadComposer
@@ -368,6 +428,20 @@
         onOpenSchedule={() => (scheduleOpen = true)}
       />
     {/if}
+
+    <div class="flex items-center gap-1.5 text-[11px]">
+      <span
+        class="h-1.5 w-1.5 rounded-full
+          {anyExecutionRunning
+          ? 'animate-pulse bg-energy'
+          : 'bg-status-done/70'}"
+      ></span>
+      <span class={anyExecutionRunning ? "text-energy" : "text-crown-ash"}>
+        {anyExecutionRunning
+          ? translate("thread.status.executing", $locale)
+          : translate("thread.status.ready", $locale)}
+      </span>
+    </div>
 
     {#if data.template?.steps && data.template.steps.length > 0}
       <div class="flex items-center justify-between gap-2">
@@ -418,6 +492,39 @@
       />
     {/if}
 
+    {#if executionViewModels.length > 0}
+      <div class="flex flex-col gap-2">
+        {#each executionViewModels as vm, i (vm.executionId)}
+          <div in:chatEnterStaggered={{ delay: 0 }}>
+            <PlanExecutionCard
+              {vm}
+              initiallyCollapsed={i !== executionViewModels.length - 1}
+            />
+          </div>
+        {/each}
+      </div>
+    {/if}
+
+    {#if workspaceArtifacts.length > 0}
+      <div class="flex flex-col gap-2">
+        <p
+          class="font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
+        >
+          {translate("thread.artifacts.produced", $locale)}
+        </p>
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {#each workspaceArtifacts as art (art.id)}
+            <ArtifactCard
+              {tenantId}
+              artifact={art}
+              compact
+              onOpen={openPreviewById}
+            />
+          {/each}
+        </div>
+      </div>
+    {/if}
+
     <ThreadComposer
       {tenantId}
       configurationId={routeThreadId}
@@ -434,6 +541,13 @@
   />
 {/if}
 
+<ArtifactPreviewSheet
+  open={previewOpen}
+  onClose={() => (previewOpen = false)}
+  {tenantId}
+  artifact={previewArtifact}
+/>
+
 <style>
   :global(.harpia-pulse-anchor) {
     animation: harpia-pulse 1.5s ease-out;
@@ -446,22 +560,36 @@
       box-shadow: 0 0 0 8px rgba(212, 175, 55, 0);
     }
   }
-  .thinking-indicator {
-    animation: thinking-pulse 1.4s ease-in-out infinite;
+  .typing-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 9999px;
+    background-color: var(--token-energy);
+    opacity: 0.4;
+    animation: typing-bounce 1.1s ease-in-out infinite;
   }
-  @keyframes thinking-pulse {
+  .typing-dot:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+  .typing-dot:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+  @keyframes typing-bounce {
     0%,
+    60%,
     100% {
-      opacity: 0.45;
+      transform: translateY(0);
+      opacity: 0.4;
     }
-    50% {
+    30% {
+      transform: translateY(-3px);
       opacity: 1;
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    .thinking-indicator {
+    .typing-dot {
       animation: none;
-      opacity: 0.75;
+      opacity: 0.7;
     }
   }
 </style>
