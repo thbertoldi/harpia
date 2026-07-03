@@ -1,6 +1,7 @@
 <script lang="ts">
   import { browser } from "$app/environment";
   import { invalidateAll } from "$app/navigation";
+  import { page } from "$app/stores";
   import { resolve } from "$app/paths";
   import { listArtifacts } from "$lib/artifacts/artifacts";
   import { getTenant } from "$lib/auth";
@@ -10,13 +11,14 @@
   import type { ChatMessage } from "$lib/chat/types";
   import { buildThreadSections } from "$lib/plans/thread";
   import { buildExecutionViewModel } from "$lib/plans/execution-view";
+  import { finalArtifactTypeKeys } from "$lib/plans/artifact-flow";
+  import { PanelRightOpen } from "lucide-svelte";
   import PlanDagMiniMap from "$lib/components/PlanDagMiniMap.svelte";
   import ConversationalWorkspace from "$lib/components/thread/ConversationalWorkspace.svelte";
   import ThreadComposer from "$lib/components/thread/ThreadComposer.svelte";
   import PlanProposalCard from "$lib/components/thread/PlanProposalCard.svelte";
   import PlanExecutionCard from "$lib/components/thread/PlanExecutionCard.svelte";
-  import ArtifactCard from "$lib/components/artifacts/ArtifactCard.svelte";
-  import ArtifactPreviewSheet from "$lib/components/artifacts/ArtifactPreviewSheet.svelte";
+  import ArtifactDetailPanel from "$lib/components/artifacts/ArtifactDetailPanel.svelte";
   import SuggestionChips from "$lib/components/SuggestionChips.svelte";
   import HintBanner from "$lib/components/thread/HintBanner.svelte";
   import PlanThreadTopBar from "$lib/components/PlanThreadTopBar.svelte";
@@ -63,8 +65,12 @@
   const routeThreadId = $derived(data.threadId);
   let selectedConfigurationId = $state("");
   const activeConfigurationId = $derived.by(() => {
+    // The chat route is the canonical place for structural edits, and deep
+    // links from the Runs panel (and elsewhere) carry a `?plan=` query param
+    // to preselect the matching plan tab.
+    const queryPlanId = $page.url.searchParams.get("plan");
     const candidateConfigurationId =
-      selectedConfigurationId || data.configurationId;
+      selectedConfigurationId || queryPlanId || data.configurationId;
     if (
       candidateConfigurationId &&
       data.configurations.some(
@@ -100,15 +106,40 @@
   let workspaceArtifacts = $state<Artifact[]>([]);
   let workspaceActivityItems = $state<PlanActivityItem[]>([]);
   let workspaceLoadError = $state(false);
-  let previewArtifact = $state<Artifact | null>(null);
-  let previewOpen = $state(false);
 
-  function openPreviewById(id: string) {
-    const found = workspaceArtifacts.find((a) => a.id === id) ?? null;
-    if (!found) return;
-    previewArtifact = found;
-    previewOpen = true;
+  // Side preview (split-pane) shows the FINAL artifact of the active plan run.
+  // Intermediate artifacts are never promoted here (spec: artifact-side-preview).
+  // The pane auto-opens whenever a new final artifact arrives, unless the user
+  // has dismissed it for that specific artifact; closing reclaims the chat width.
+  let sidePreviewOpen = $state(false);
+  let sidePreviewDismissedArtifactId = $state<string | null>(null);
+
+  const finalArtifactTypeKeySet = $derived(
+    focusedTemplate
+      ? finalArtifactTypeKeys(focusedTemplate.steps, focusedTemplate.edges)
+      : new Set<string>(),
+  );
+  // workspaceArtifacts is sorted newest-first (see listArtifacts), so the first
+  // match is the most recent final artifact produced by the run.
+  const finalArtifact = $derived(
+    workspaceArtifacts.find((artifact) =>
+      finalArtifactTypeKeySet.has(artifact.artifactTypeKey),
+    ) ?? null,
+  );
+
+  function closeSidePreview() {
+    sidePreviewOpen = false;
+    sidePreviewDismissedArtifactId = finalArtifact?.id ?? null;
   }
+
+  // Re-open the pane automatically when a new final artifact appears (e.g. a
+  // fresh run completes). Stays dismissed for the artifact the user closed.
+  $effect(() => {
+    const artifactId = finalArtifact?.id ?? null;
+    if (artifactId && artifactId !== sidePreviewDismissedArtifactId) {
+      sidePreviewOpen = true;
+    }
+  });
 
   const tenantId = $derived(getTenant()?.id ?? "");
 
@@ -183,8 +214,8 @@
     workspaceArtifacts = [];
     workspaceActivityItems = [];
     workspaceLoadError = false;
-    previewArtifact = null;
-    previewOpen = false;
+    sidePreviewOpen = false;
+    sidePreviewDismissedArtifactId = null;
   }
 
   function selectConfiguration(configurationId: string) {
@@ -524,160 +555,168 @@
       />
     </div>
   {:else}
-    {#if data.configurations.length > 1}
-      <div
-        class="flex flex-wrap gap-2 rounded border border-plumage/60 bg-obsidian-light/30 p-2"
-      >
-        {#each data.configurations as configuration (configuration.id)}
-          {@const template = data.templateByConfigurationId.get(
-            configuration.id,
-          )}
-          {@const selected = configuration.id === activeConfigurationId}
-          <button
-            type="button"
-            class="rounded border px-3 py-2 text-left {selected
-              ? 'border-talon-gold/60 bg-talon-gold/10 text-cream'
-              : 'border-plumage/60 bg-obsidian text-crown-ash hover:border-talon-gold/40 hover:text-cream'}"
-            aria-current={selected ? "true" : undefined}
-            onclick={() => selectConfiguration(configuration.id)}
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-start">
+      <section class="flex min-w-0 flex-1 flex-col gap-3">
+        {#if data.configurations.length > 1}
+          <div
+            class="flex flex-wrap gap-2 rounded border border-plumage/60 bg-obsidian-light/30 p-2"
           >
-            <span class="block text-[12px] font-medium">
-              {template?.name ?? shortConfigurationId(configuration.id)}
-            </span>
-            <span class="mt-0.5 block text-[10px] text-crown-ash-dark">
-              {statusTextForConfiguration(configuration)} · {shortConfigurationId(
+            {#each data.configurations as configuration (configuration.id)}
+              {@const template = data.templateByConfigurationId.get(
                 configuration.id,
               )}
-            </span>
-          </button>
-        {/each}
-      </div>
-    {/if}
-
-    {#if focusedTemplate && focusedConfiguration}
-      <PlanThreadTopBar
-        planName={planSummary?.intent || focusedTemplate.name}
-        {statusLabel}
-        {cost}
-        onOpenSchedule={() => (scheduleOpen = true)}
-        canRun={focusedConfiguration.status ===
-          PlanConfigurationStatus.RUNNABLE}
-        running={anyExecutionRunning}
-        onRun={startRun}
-      />
-    {/if}
-
-    {#if runError}
-      <div
-        class="flex flex-wrap items-center gap-2 rounded border border-danger/40 bg-danger/10 px-3 py-2 text-[12px] text-danger"
-      >
-        <span class="flex-1">{runError}</span>
-        {#if runErrorNeedsIntegration}
-          <a
-            href={resolve("/admin/integrations")}
-            class="shrink-0 underline-offset-2 hover:underline"
-          >
-            {translate("nav.integrations", $locale)}
-          </a>
+              {@const selected = configuration.id === activeConfigurationId}
+              <button
+                type="button"
+                class="rounded border px-3 py-2 text-left {selected
+                  ? 'border-talon-gold/60 bg-talon-gold/10 text-cream'
+                  : 'border-plumage/60 bg-obsidian text-crown-ash hover:border-talon-gold/40 hover:text-cream'}"
+                aria-current={selected ? "true" : undefined}
+                onclick={() => selectConfiguration(configuration.id)}
+              >
+                <span class="block text-[12px] font-medium">
+                  {template?.name ?? shortConfigurationId(configuration.id)}
+                </span>
+                <span class="mt-0.5 block text-[10px] text-crown-ash-dark">
+                  {statusTextForConfiguration(configuration)} · {shortConfigurationId(
+                    configuration.id,
+                  )}
+                </span>
+              </button>
+            {/each}
+          </div>
         {/if}
-      </div>
-    {/if}
 
-    <div class="flex items-center gap-1.5 text-[11px]">
-      <span
-        class="h-1.5 w-1.5 rounded-full
-          {anyExecutionRunning
-          ? 'animate-pulse bg-energy'
-          : 'bg-status-done/70'}"
-      ></span>
-      <span class={anyExecutionRunning ? "text-energy" : "text-crown-ash"}>
-        {anyExecutionRunning
-          ? translate("thread.status.executing", $locale)
-          : translate("thread.status.ready", $locale)}
-      </span>
-    </div>
+        {#if focusedTemplate && focusedConfiguration}
+          <PlanThreadTopBar
+            planName={planSummary?.intent || focusedTemplate.name}
+            {statusLabel}
+            {cost}
+            onOpenSchedule={() => (scheduleOpen = true)}
+            canRun={focusedConfiguration.status ===
+              PlanConfigurationStatus.RUNNABLE}
+            running={anyExecutionRunning}
+            onRun={startRun}
+          />
+        {/if}
 
-    {#if focusedTemplate?.steps && focusedTemplate.steps.length > 0}
-      <div
-        class="rounded border border-plumage/60 bg-obsidian-light/30 px-3 py-2"
-      >
-        <PlanDagMiniMap
-          steps={focusedTemplate.steps}
-          edges={focusedTemplate.edges}
-        />
-      </div>
-    {/if}
+        {#if runError}
+          <div
+            class="flex flex-wrap items-center gap-2 rounded border border-danger/40 bg-danger/10 px-3 py-2 text-[12px] text-danger"
+          >
+            <span class="flex-1">{runError}</span>
+            {#if runErrorNeedsIntegration}
+              <a
+                href={resolve("/admin/integrations")}
+                class="shrink-0 underline-offset-2 hover:underline"
+              >
+                {translate("nav.integrations", $locale)}
+              </a>
+            {/if}
+          </div>
+        {/if}
 
-    <HintBanner threadId={routeThreadId} />
+        <div class="flex flex-wrap items-center gap-1.5 text-[11px]">
+          <span
+            class="h-1.5 w-1.5 rounded-full
+              {anyExecutionRunning
+              ? 'animate-pulse bg-energy'
+              : 'bg-status-done/70'}"
+          ></span>
+          <span class={anyExecutionRunning ? "text-energy" : "text-crown-ash"}>
+            {anyExecutionRunning
+              ? translate("thread.status.executing", $locale)
+              : translate("thread.status.ready", $locale)}
+          </span>
+          {#if finalArtifact && !sidePreviewOpen}
+            <button
+              type="button"
+              class="ml-auto inline-flex items-center gap-1.5 rounded-md border border-plumage px-2.5 py-1 text-[11px] text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
+              onclick={() => (sidePreviewOpen = true)}
+            >
+              <PanelRightOpen class="size-3.5" />
+              {translate("thread.sidePreview.open", $locale)}
+            </button>
+          {/if}
+        </div>
 
-    {#if workspaceLoadError}
-      <p
-        class="rounded border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300"
-      >
-        {translate("artifacts.loadError", $locale)}
-      </p>
-    {/if}
-
-    {#if loadError}
-      <p
-        class="rounded border border-plumage bg-obsidian-light px-4 py-3 text-sm text-crown-ash"
-      >
-        {translate("thread.loadError", $locale)}
-      </p>
-    {:else if sections.length === 0}
-      <p
-        class="rounded border border-plumage bg-obsidian-light px-4 py-3 text-sm text-crown-ash"
-      >
-        {translate("thread.empty", $locale)}
-      </p>
-    {:else}
-      <ConversationalWorkspace
-        {tenantId}
-        configurationId={activeConfigurationId}
-        messages={planScopeMessages}
-        activityItems={workspaceActivityItems}
-        artifacts={workspaceArtifacts}
-      />
-    {/if}
-
-    {#if executionViewModels.length > 0}
-      <div class="flex flex-col gap-2">
-        {#each executionViewModels as vm, i (vm.executionId)}
-          <div in:chatEnterStaggered={{ delay: 0 }}>
-            <PlanExecutionCard
-              {vm}
-              initiallyCollapsed={i !== executionViewModels.length - 1}
+        {#if focusedTemplate?.steps && focusedTemplate.steps.length > 0}
+          <div
+            class="rounded border border-plumage/60 bg-obsidian-light/30 px-3 py-2"
+          >
+            <PlanDagMiniMap
+              steps={focusedTemplate.steps}
+              edges={focusedTemplate.edges}
             />
           </div>
-        {/each}
-      </div>
-    {/if}
+        {/if}
 
-    {#if workspaceArtifacts.length > 0}
-      <div class="flex flex-col gap-2">
-        <p
-          class="font-mono text-[10px] tracking-widest text-crown-ash-dark uppercase"
+        <HintBanner threadId={routeThreadId} />
+
+        {#if workspaceLoadError}
+          <p
+            class="rounded border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+          >
+            {translate("artifacts.loadError", $locale)}
+          </p>
+        {/if}
+
+        {#if loadError}
+          <p
+            class="rounded border border-plumage bg-obsidian-light px-4 py-3 text-sm text-crown-ash"
+          >
+            {translate("thread.loadError", $locale)}
+          </p>
+        {:else if sections.length === 0}
+          <p
+            class="rounded border border-plumage bg-obsidian-light px-4 py-3 text-sm text-crown-ash"
+          >
+            {translate("thread.empty", $locale)}
+          </p>
+        {:else}
+          <ConversationalWorkspace
+            {tenantId}
+            configurationId={activeConfigurationId}
+            messages={planScopeMessages}
+            activityItems={workspaceActivityItems}
+            artifacts={workspaceArtifacts}
+          />
+        {/if}
+
+        {#if executionViewModels.length > 0}
+          <div class="flex flex-col gap-2">
+            {#each executionViewModels as vm, i (vm.executionId)}
+              <div in:chatEnterStaggered={{ delay: 0 }}>
+                <PlanExecutionCard
+                  {vm}
+                  initiallyCollapsed={i !== executionViewModels.length - 1}
+                />
+              </div>
+            {/each}
+          </div>
+        {/if}
+
+        <ThreadComposer
+          {tenantId}
+          configurationId={routeThreadId}
+          onSent={triggerProposal}
+        />
+      </section>
+
+      {#if sidePreviewOpen && finalArtifact}
+        <aside
+          class="w-full shrink-0 lg:w-[400px]"
+          aria-label={translate("thread.sidePreview.title", $locale)}
         >
-          {translate("thread.artifacts.produced", $locale)}
-        </p>
-        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {#each workspaceArtifacts as art (art.id)}
-            <ArtifactCard
-              {tenantId}
-              artifact={art}
-              compact
-              onOpen={openPreviewById}
-            />
-          {/each}
-        </div>
-      </div>
-    {/if}
-
-    <ThreadComposer
-      {tenantId}
-      configurationId={routeThreadId}
-      onSent={triggerProposal}
-    />
+          <ArtifactDetailPanel
+            {tenantId}
+            artifact={finalArtifact}
+            closeLabel={translate("thread.sidePreview.close", $locale)}
+            onClose={closeSidePreview}
+          />
+        </aside>
+      {/if}
+    </div>
   {/if}
 </div>
 
@@ -688,13 +727,6 @@
     onClose={() => (scheduleOpen = false)}
   />
 {/if}
-
-<ArtifactPreviewSheet
-  open={previewOpen}
-  onClose={() => (previewOpen = false)}
-  {tenantId}
-  artifact={previewArtifact}
-/>
 
 <style>
   :global(.harpia-pulse-anchor) {

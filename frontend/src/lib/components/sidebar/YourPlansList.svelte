@@ -86,7 +86,9 @@
     <div class="mt-1 space-y-0.5">
       {#each plans as plan (plan.id)}
         <a
-          href={resolve(`/plans/configurations/${plan.id}`)}
+          href={plan.originThreadId
+            ? resolve(`/chat/${plan.originThreadId}`)
+            : resolve("/runs")}
           class="flex items-center gap-2 rounded-md px-3 py-1.5 text-[12px] text-crown-ash hover:bg-obsidian-light hover:text-cream"
         >
           <span class="flex-1 truncate">{plan.id.slice(0, 8)}</span>
@@ -100,7 +102,7 @@
       {/each}
     </div>
     <a
-      href={resolve(`/plans/configurations`)}
+      href={resolve("/runs")}
       class="mt-1 block px-3 py-1 text-[10px] text-crown-ash-dark hover:text-talon-gold"
     >
       {translate("sidebar.yourPlans.seeAll", $locale)}

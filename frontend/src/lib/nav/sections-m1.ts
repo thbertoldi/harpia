@@ -1,11 +1,8 @@
 import {
   Activity,
+  BookOpen,
   Bot,
-  Compass,
-  Files,
-  Inbox,
   Plug,
-  Plus,
   ScrollText,
   Settings,
 } from "lucide-svelte";
@@ -19,12 +16,14 @@ interface M1Section {
   icon: NavIcon;
 }
 
+/**
+ * Operator persona navigation is locked to the ADR-017 conversational
+ * journey: Gallery (`/plans`) and Runs (`/runs`). Home is the brand
+ * lockup and Conversation (`/chat/[threadId]`) is reached in-context.
+ */
 const OPERATOR_SECTIONS: M1Section[] = [
-  { i18nKey: "nav.needsYou", href: "/inbox", icon: Inbox },
-  { i18nKey: "nav.discover", href: "/discover", icon: Compass },
-  { i18nKey: "nav.newPlan", href: "/new", icon: Plus },
-  { i18nKey: "nav.artifacts", href: "/artifacts", icon: Files },
-  { i18nKey: "nav.executions", href: "/plans/executions", icon: Activity },
+  { i18nKey: "nav.plans", href: "/plans", icon: BookOpen },
+  { i18nKey: "nav.runs", href: "/runs", icon: Activity },
 ];
 
 const ADMIN_SECTIONS: Array<

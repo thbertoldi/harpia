@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { resolve } from "$app/paths";
-  import { ArrowLeft, ExternalLink } from "lucide-svelte";
+  import { ArrowLeft } from "lucide-svelte";
   import ArtifactPreview from "$lib/components/ArtifactPreview.svelte";
   import { locale, translate } from "$lib/i18n";
   import { formatLocaleDateTime } from "$lib/i18n/format";
@@ -11,11 +10,22 @@
     tenantId,
     artifact,
     onClose,
+    closeLabel,
   }: {
     tenantId: string;
     artifact: Artifact;
     onClose: () => void;
+    /**
+     * Label for the close affordance. Defaults to the rail's "back to rail"
+     * copy; callers embedding the panel as a closable side preview pass their
+     * own label (e.g. "Close preview").
+     */
+    closeLabel?: string;
   } = $props();
+
+  const closeLabelResolved = $derived(
+    closeLabel ?? translate("artifacts.rail.backToRail", $locale),
+  );
 
   const title = $derived(artifactTitle(artifact));
 
@@ -34,7 +44,7 @@
     onclick={onClose}
   >
     <ArrowLeft class="size-4" />
-    {translate("artifacts.rail.backToRail", $locale)}
+    {closeLabelResolved}
   </button>
 
   <header class="rounded-lg border border-plumage bg-obsidian-light/30 p-3">
@@ -45,14 +55,6 @@
           {artifactStatusLabel(artifact.status)}
         </p>
       </div>
-      <a
-        href={resolve(`/artifacts/${artifact.id}`)}
-        class="inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-plumage text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
-        aria-label={translate("artifacts.actions.open", $locale)}
-        title={translate("artifacts.actions.open", $locale)}
-      >
-        <ExternalLink class="size-4" />
-      </a>
     </div>
     <p class="mt-2 truncate font-mono text-[10px] text-crown-ash-dark">
       {artifact.id}

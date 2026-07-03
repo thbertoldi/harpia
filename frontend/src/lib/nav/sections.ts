@@ -2,8 +2,6 @@ import {
   Activity,
   BookOpen,
   Bot,
-  Files,
-  Inbox,
   Plug,
   ScrollText,
   Settings,
@@ -14,14 +12,14 @@ import type { NavSectionDef, ResolvedNavSection } from "./types";
 /**
  * Shell navigation registry. Feature PRs append entries here instead of
  * editing +layout.svelte — reduces merge conflicts on the app shell.
+ *
+ * Per ADR-017 the main navigation is locked to the conversational user
+ * journey: Home (`/`, rendered via the brand lockup), Gallery (`/plans`),
+ * and Runs (`/runs`). Conversation lives at `/chat/[threadId]` and is only
+ * reachable in-context, so it is not a static nav entry. Permission-gated
+ * admin tooling is appended below for platform engineers.
  */
 export const navSectionDefs: NavSectionDef[] = [
-  {
-    i18nKey: "nav.needsYou",
-    href: "/inbox",
-    icon: Inbox,
-    visibleTo: "all",
-  },
   {
     i18nKey: "nav.plans",
     href: "/plans",
@@ -29,14 +27,8 @@ export const navSectionDefs: NavSectionDef[] = [
     visibleTo: "all",
   },
   {
-    i18nKey: "nav.artifacts",
-    href: "/artifacts",
-    icon: Files,
-    visibleTo: "all",
-  },
-  {
-    i18nKey: "nav.executions",
-    href: "/plans/executions",
+    i18nKey: "nav.runs",
+    href: "/runs",
     icon: Activity,
     visibleTo: "all",
   },

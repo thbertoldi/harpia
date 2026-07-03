@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { goto, invalidateAll } from "$app/navigation";
+  import { invalidateAll } from "$app/navigation";
   import { resolve } from "$app/paths";
   import { cubicOut } from "svelte/easing";
   import type { ChatMessage } from "$lib/chat/types";
@@ -352,7 +352,11 @@
         return;
       }
       if (action === "reviewPlan") {
-        await goto(resolve(`/plans/configurations/${createdConfig.id}/canvas`));
+        // The standalone canvas review surface was removed (stabilize-user-journey).
+        // Review now happens in-conversation: reload the thread so the configured
+        // plan and its final artifact render inline. goto() to the current URL is a
+        // no-op, so invalidateAll() is the correct primitive.
+        await invalidateAll();
         return;
       }
       if (action === "adjustConfiguration") {

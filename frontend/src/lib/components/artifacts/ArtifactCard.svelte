@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { resolve } from "$app/paths";
-  import { Edit3, Eye } from "lucide-svelte";
+  import { Eye } from "lucide-svelte";
   import ArtifactPreview from "$lib/components/ArtifactPreview.svelte";
   import { locale, translate } from "$lib/i18n";
   import { artifactStatusLabel, artifactTitle } from "$lib/artifacts/text";
@@ -19,10 +18,6 @@
   } = $props();
 
   const title = $derived(artifactTitle(artifact));
-  const editable = $derived(
-    artifact.artifactTypeKey === "harpia.artifacts.v1.TextDraft" ||
-      artifact.artifactTypeKey === "harpia.artifacts.v1.LinkedInPostDraft",
-  );
 </script>
 
 <article class="rounded-lg border border-plumage bg-obsidian-light/30 p-3">
@@ -46,25 +41,6 @@
         >
           <Eye class="size-4" />
         </button>
-      {:else}
-        <a
-          href={resolve(`/artifacts/${artifact.id}`)}
-          class="inline-flex size-8 items-center justify-center rounded-md border border-plumage text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
-          aria-label={translate("artifacts.actions.open", $locale)}
-          title={translate("artifacts.actions.open", $locale)}
-        >
-          <Eye class="size-4" />
-        </a>
-      {/if}
-      {#if editable}
-        <a
-          href={resolve(`/artifacts/${artifact.id}?edit=1`)}
-          class="inline-flex size-8 items-center justify-center rounded-md border border-plumage text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
-          aria-label={translate("artifacts.actions.edit", $locale)}
-          title={translate("artifacts.actions.edit", $locale)}
-        >
-          <Edit3 class="size-4" />
-        </a>
       {/if}
     </div>
   </div>

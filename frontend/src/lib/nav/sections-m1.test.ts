@@ -8,39 +8,21 @@ describe("resolveNavSectionsM1 — operator persona", () => {
     const hrefs = resolveNavSectionsM1("operator", "Leader", translate).map(
       (s) => s.href,
     );
-    expect(hrefs).toEqual([
-      "/inbox",
-      "/discover",
-      "/new",
-      "/artifacts",
-      "/plans/executions",
-    ]);
+    expect(hrefs).toEqual(["/plans", "/runs"]);
   });
 
   it("returns operator sections even for an unknown role", () => {
     const hrefs = resolveNavSectionsM1("operator", "member", translate).map(
       (s) => s.href,
     );
-    expect(hrefs).toEqual([
-      "/inbox",
-      "/discover",
-      "/new",
-      "/artifacts",
-      "/plans/executions",
-    ]);
+    expect(hrefs).toEqual(["/plans", "/runs"]);
   });
 
   it("translates labels via the callback", () => {
     const labels = resolveNavSectionsM1("operator", "Leader", translate).map(
       (s) => s.label,
     );
-    expect(labels).toEqual([
-      "t:nav.needsYou",
-      "t:nav.discover",
-      "t:nav.newPlan",
-      "t:nav.artifacts",
-      "t:nav.executions",
-    ]);
+    expect(labels).toEqual(["t:nav.plans", "t:nav.runs"]);
   });
 });
 

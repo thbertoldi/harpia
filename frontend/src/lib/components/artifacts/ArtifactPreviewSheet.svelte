@@ -1,11 +1,9 @@
 <script lang="ts">
-  import { resolve } from "$app/paths";
   import {
     X,
     Copy,
     Check,
     RefreshCw,
-    ExternalLink,
     FileText,
     Code,
     Image as ImageIcon,
@@ -149,14 +147,6 @@
             <Copy class="size-4" />
           {/if}
         </button>
-        <a
-          href={resolve(`/artifacts/${artifact.id}`)}
-          aria-label={translate("artifactPreview.openFull", $locale)}
-          title={translate("artifactPreview.openFull", $locale)}
-          class="flex size-8 items-center justify-center rounded-md text-crown-ash hover:bg-plumage/40 hover:text-cream"
-        >
-          <ExternalLink class="size-4" />
-        </a>
         <button
           type="button"
           onclick={onClose}

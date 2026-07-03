@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   buildLinearDagEdges,
   extractArtifactTypeKey,
+  finalArtifactTypeKeys,
   formatArtifactTypeLabel,
   orderPlanStepsLinear,
+  terminalStepKeys,
 } from "$lib/plans/artifact-flow";
 import { mockWeeklyNewsletterLinkedInTemplate } from "$lib/plans/plan-template";
 
@@ -55,5 +57,26 @@ describe("artifact flow helpers", () => {
       "Text Draft",
       "LinkedIn Post Draft",
     ]);
+  });
+
+  it("identifies the terminal step of the plan DAG", () => {
+    expect(terminalStepKeys(template.steps, template.edges)).toEqual(
+      new Set(["publish-linkedin"]),
+    );
+  });
+
+  it("treats every step as terminal when there are no edges", () => {
+    const keys = terminalStepKeys(template.steps, []);
+    expect(keys.size).toBe(template.steps.length);
+  });
+
+  it("resolves terminal steps to their final artifact type keys", () => {
+    expect(finalArtifactTypeKeys(template.steps, template.edges)).toEqual(
+      new Set(["harpia.artifacts.v1.PublishConfirmation"]),
+    );
+  });
+
+  it("returns no final artifact type keys for an empty DAG", () => {
+    expect(finalArtifactTypeKeys([], [])).toEqual(new Set());
   });
 });

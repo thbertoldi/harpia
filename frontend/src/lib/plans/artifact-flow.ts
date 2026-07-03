@@ -117,3 +117,38 @@ export function buildLinearDagEdges(
     })
     .filter((edge): edge is PlanDagEdge => edge !== null);
 }
+
+/**
+ * Returns the set of step keys that are terminal in the plan DAG — i.e. their
+ * output is not consumed by any downstream step. Terminal steps produce the
+ * plan's "final" artifacts; everything else is an intermediate.
+ */
+export function terminalStepKeys(
+  steps: PlanStep[],
+  edges: PlanStepDependency[],
+): Set<string> {
+  const downstream = new Set(edges.map((edge) => edge.fromStepKey));
+  return new Set(
+    steps.filter((step) => !downstream.has(step.key)).map((step) => step.key),
+  );
+}
+
+/**
+ * The fully-qualified artifact type keys produced by terminal steps. An
+ * `Artifact` whose `artifactTypeKey` is in this set is a final output; all
+ * others are intermediate. Returns the empty set when the DAG has no steps.
+ */
+export function finalArtifactTypeKeys(
+  steps: PlanStep[],
+  edges: PlanStepDependency[],
+): Set<string> {
+  const lookup = stepByKey(steps);
+  const keys = new Set<string>();
+  for (const key of terminalStepKeys(steps, edges)) {
+    const step = lookup.get(key);
+    if (step?.outputArtifactTypeId) {
+      keys.add(step.outputArtifactTypeId);
+    }
+  }
+  return keys;
+}

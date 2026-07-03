@@ -82,7 +82,9 @@
       });
       const configId = response.planConfiguration?.id;
       if (!configId) throw new Error("createPlanConfiguration returned no id");
-      await goto(resolve(`/plans/configurations/${configId}`));
+      // The standalone configuration surface was removed (stabilize-user-journey);
+      // plans are configured in-conversation, so land on the freshly created thread.
+      await goto(resolve(`/chat/${threadId}`));
     } catch (e) {
       createError = e instanceof Error ? e.message : "Failed to create plan";
     } finally {

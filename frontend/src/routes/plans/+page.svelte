@@ -87,10 +87,10 @@
     </div>
     <div class="flex items-center gap-2">
       <a
-        href={resolve("/plans/executions")}
+        href={resolve("/runs")}
         class="rounded-md border border-border px-3 py-1.5 font-body text-xs text-text-muted transition-colors hover:bg-surface-hover hover:text-text"
       >
-        {translate("executions.list.heading", $locale)}
+        {translate("nav.runs", $locale)}
       </a>
       {#if dataSource === "api"}
         <span

@@ -130,7 +130,7 @@
             <InboxRow {item}>
               {#snippet actions()}
                 {#if item.kind === "elicitation"}
-                  <InboxElicitationActions {item} />
+                  <InboxElicitationActions />
                 {/if}
               {/snippet}
             </InboxRow>
