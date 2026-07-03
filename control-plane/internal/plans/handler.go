@@ -573,6 +573,14 @@ func (h *PlanHandler) ListPlanConfigurations(ctx context.Context, req *connect.R
 		}
 		workspaceID = &parsed
 	}
+	var originThreadID *uuid.UUID
+	if req.Msg.OriginThreadId != nil && *req.Msg.OriginThreadId != "" {
+		parsed, parseErr := uuid.Parse(*req.Msg.OriginThreadId)
+		if parseErr != nil {
+			return connect.NewError(connect.CodeInvalidArgument, parseErr)
+		}
+		originThreadID = &parsed
+	}
 
 	limit := int(req.Msg.PageSize)
 	if limit <= 0 || limit > 100 {
@@ -587,7 +595,7 @@ func (h *PlanHandler) ListPlanConfigurations(ctx context.Context, req *connect.R
 		offset = parsed
 	}
 
-	configs, err := h.repo.ListConfigurations(ctx, tenantID, workspaceID, status, limit+1, offset)
+	configs, err := h.repo.ListConfigurations(ctx, tenantID, workspaceID, originThreadID, status, limit+1, offset)
 	if err != nil {
 		return connect.NewError(connect.CodeInternal, err)
 	}

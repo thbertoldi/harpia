@@ -2,6 +2,10 @@ import { error } from "@sveltejs/kit";
 import type { PageLoad } from "./$types";
 import { getTenant } from "$lib/auth";
 import { executorClient, planClient, threadClient } from "$lib/rpc";
+import type {
+  PlanConfiguration,
+  PlanTemplate,
+} from "$lib/gen/harpia/plans/v1/plans_pb";
 
 export const ssr = false;
 
@@ -15,27 +19,52 @@ export const load: PageLoad = async ({ params }) => {
   });
   const thread = threadResponse.thread;
   if (!thread) throw error(404, "Thread not found");
-  if (!thread.activePlanConfigurationId) {
+
+  const configurations: PlanConfiguration[] = [];
+  for await (const page of planClient.listPlanConfigurations({
+    tenantId: tenant.id,
+    originThreadId: params.threadId,
+    pageSize: 50,
+    pageToken: "",
+  })) {
+    configurations.push(...page.planConfigurations);
+  }
+
+  if (configurations.length === 0) {
     return {
       thread,
       threadId: params.threadId,
       configurationId: "",
       configuration: undefined,
+      configurations,
       template: undefined,
+      templateByConfigurationId: new Map<string, PlanTemplate>(),
       executorCatalog: new Map(),
     };
   }
 
-  const configResponse = await planClient.getPlanConfiguration({
-    tenantId: tenant.id,
-    planConfigurationId: thread.activePlanConfigurationId,
-  });
-  const configuration = configResponse.planConfiguration;
+  const configuration =
+    configurations.find(
+      (config) => config.id === thread.activePlanConfigurationId,
+    ) ?? configurations[0];
   if (!configuration) throw error(404, "Plan configuration not found");
 
-  const templateResponse = await planClient.getPlanTemplate({
-    planTemplateId: configuration.planTemplateId,
-  });
+  const templateById = new Map<string, PlanTemplate>();
+  for (const templateId of new Set(
+    configurations.map((config) => config.planTemplateId),
+  )) {
+    const templateResponse = await planClient.getPlanTemplate({
+      planTemplateId: templateId,
+    });
+    if (templateResponse.planTemplate) {
+      templateById.set(templateId, templateResponse.planTemplate);
+    }
+  }
+  const templateByConfigurationId = new Map<string, PlanTemplate>();
+  for (const config of configurations) {
+    const template = templateById.get(config.planTemplateId);
+    if (template) templateByConfigurationId.set(config.id, template);
+  }
 
   const executorCatalog = new Map<
     string,
@@ -73,7 +102,9 @@ export const load: PageLoad = async ({ params }) => {
     threadId: params.threadId,
     configurationId: configuration.id,
     configuration,
-    template: templateResponse.planTemplate,
+    configurations,
+    template: templateByConfigurationId.get(configuration.id),
+    templateByConfigurationId,
     executorCatalog,
   };
 };

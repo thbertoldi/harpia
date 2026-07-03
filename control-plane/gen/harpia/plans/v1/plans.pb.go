@@ -2731,14 +2731,15 @@ func (*NextTurnResponse) Descriptor() ([]byte, []int) {
 }
 
 type ListPlanConfigurationsRequest struct {
-	state         protoimpl.MessageState   `protogen:"open.v1"`
-	TenantId      string                   `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	WorkspaceId   *string                  `protobuf:"bytes,2,opt,name=workspace_id,json=workspaceId,proto3,oneof" json:"workspace_id,omitempty"`
-	Status        *PlanConfigurationStatus `protobuf:"varint,3,opt,name=status,proto3,enum=harpia.plans.v1.PlanConfigurationStatus,oneof" json:"status,omitempty"`
-	PageSize      int32                    `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	PageToken     string                   `protobuf:"bytes,5,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState   `protogen:"open.v1"`
+	TenantId       string                   `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	WorkspaceId    *string                  `protobuf:"bytes,2,opt,name=workspace_id,json=workspaceId,proto3,oneof" json:"workspace_id,omitempty"`
+	Status         *PlanConfigurationStatus `protobuf:"varint,3,opt,name=status,proto3,enum=harpia.plans.v1.PlanConfigurationStatus,oneof" json:"status,omitempty"`
+	PageSize       int32                    `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	PageToken      string                   `protobuf:"bytes,5,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	OriginThreadId *string                  `protobuf:"bytes,6,opt,name=origin_thread_id,json=originThreadId,proto3,oneof" json:"origin_thread_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ListPlanConfigurationsRequest) Reset() {
@@ -2802,6 +2803,13 @@ func (x *ListPlanConfigurationsRequest) GetPageSize() int32 {
 func (x *ListPlanConfigurationsRequest) GetPageToken() string {
 	if x != nil {
 		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListPlanConfigurationsRequest) GetOriginThreadId() string {
+	if x != nil && x.OriginThreadId != nil {
+		return *x.OriginThreadId
 	}
 	return ""
 }
@@ -5041,16 +5049,18 @@ const file_harpia_plans_v1_plans_proto_rawDesc = "" +
 	"\x0fNextTurnRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x122\n" +
 	"\x15plan_configuration_id\x18\x02 \x01(\tR\x13planConfigurationId\"\x12\n" +
-	"\x10NextTurnResponse\"\x83\x02\n" +
+	"\x10NextTurnResponse\"\xc7\x02\n" +
 	"\x1dListPlanConfigurationsRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12&\n" +
 	"\fworkspace_id\x18\x02 \x01(\tH\x00R\vworkspaceId\x88\x01\x01\x12E\n" +
 	"\x06status\x18\x03 \x01(\x0e2(.harpia.plans.v1.PlanConfigurationStatusH\x01R\x06status\x88\x01\x01\x12\x1b\n" +
 	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
-	"page_token\x18\x05 \x01(\tR\tpageTokenB\x0f\n" +
+	"page_token\x18\x05 \x01(\tR\tpageToken\x12-\n" +
+	"\x10origin_thread_id\x18\x06 \x01(\tH\x02R\x0eoriginThreadId\x88\x01\x01B\x0f\n" +
 	"\r_workspace_idB\t\n" +
-	"\a_status\"\x9d\x01\n" +
+	"\a_statusB\x13\n" +
+	"\x11_origin_thread_id\"\x9d\x01\n" +
 	"\x1eListPlanConfigurationsResponse\x12S\n" +
 	"\x13plan_configurations\x18\x01 \x03(\v2\".harpia.plans.v1.PlanConfigurationR\x12planConfigurations\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"m\n" +

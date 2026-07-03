@@ -1,6 +1,7 @@
 <script lang="ts">
   import { browser } from "$app/environment";
   import { invalidateAll } from "$app/navigation";
+  import { resolve } from "$app/paths";
   import { listArtifacts } from "$lib/artifacts/artifacts";
   import { getTenant } from "$lib/auth";
   import { locale, translate } from "$lib/i18n";
@@ -24,6 +25,7 @@
   import {
     PlanConfigurationStatus,
     type PlanConfiguration,
+    type PlanTemplate,
   } from "$lib/gen/harpia/plans/v1/plans_pb";
   import type { Artifact } from "$lib/gen/harpia/artifacts/v1/artifacts_pb";
   import {
@@ -39,14 +41,40 @@
     return { ...chatEnter(node), delay: params.delay ?? 0 };
   }
 
-  let { data } = $props();
+  type ChatPageData = {
+    threadId: string;
+    configurationId: string;
+    configuration?: PlanConfiguration;
+    configurations: PlanConfiguration[];
+    template?: PlanTemplate;
+    templateByConfigurationId: Map<string, PlanTemplate>;
+    executorCatalog?: Map<
+      string,
+      { displayName: string; pricePerRunBrl: number | null }
+    >;
+  };
+
+  let { data }: { data: ChatPageData } = $props();
 
   // Path B: the chat route is thread-first. Message history, live watch, and the
   // composer are keyed by the thread id, while plan-scoped surfaces (config,
-  // executions, artifacts, canvas links) remain keyed by the attached
-  // configuration id during this foundation slice.
+  // executions, artifacts, canvas links) are keyed by the selected plan
+  // configuration for this thread.
   const routeThreadId = $derived(data.threadId);
-  const routeConfigurationId = $derived(data.configurationId);
+  let selectedConfigurationId = $state("");
+  const activeConfigurationId = $derived.by(() => {
+    const candidateConfigurationId =
+      selectedConfigurationId || data.configurationId;
+    if (
+      candidateConfigurationId &&
+      data.configurations.some(
+        (config) => config.id === candidateConfigurationId,
+      )
+    ) {
+      return candidateConfigurationId;
+    }
+    return data.configurationId;
+  });
 
   let messages = $state<ChatMessage[]>([]);
   let proposing = $state(false);
@@ -56,8 +84,18 @@
   // the assistant. Use load-time data until an incoming chat message indicates
   // a mutation happened, then keep the refetched snapshot as an override.
   let liveConfigurationOverride = $state<PlanConfiguration | undefined>();
-  const liveConfiguration = $derived(
-    liveConfigurationOverride ?? data.configuration,
+  const focusedConfiguration = $derived.by(() => {
+    if (liveConfigurationOverride?.id === activeConfigurationId) {
+      return liveConfigurationOverride;
+    }
+    return (
+      data.configurations.find(
+        (config) => config.id === activeConfigurationId,
+      ) ?? data.configuration
+    );
+  });
+  const focusedTemplate = $derived(
+    data.templateByConfigurationId.get(activeConfigurationId) ?? data.template,
   );
   let workspaceArtifacts = $state<Artifact[]>([]);
   let workspaceActivityItems = $state<PlanActivityItem[]>([]);
@@ -71,12 +109,6 @@
     previewArtifact = found;
     previewOpen = true;
   }
-
-  $effect(() => {
-    const configurationId = routeConfigurationId;
-    liveConfigurationOverride = undefined;
-    void configurationId;
-  });
 
   const tenantId = $derived(getTenant()?.id ?? "");
 
@@ -115,7 +147,7 @@
 
   // Auto-propose when a config-less thread has an unanswered opening message.
   $effect(() => {
-    if (routeConfigurationId) return;
+    if (activeConfigurationId) return;
     if (!unansweredUserMessageId) return;
     void triggerProposal();
   });
@@ -142,28 +174,69 @@
   // Execute the configured plan from within the chat. The PlanExecutionCard
   // and the artifact grid pick up the run as RUN_*/STEP_* events stream in.
   let runError = $state<string | null>(null);
-  async function startRun() {
-    if (!tenantId || !routeConfigurationId || anyExecutionRunning) return;
+  let runErrorNeedsIntegration = $state(false);
+
+  function clearFocusedPlanUi() {
+    scheduleOpen = false;
     runError = null;
+    runErrorNeedsIntegration = false;
+    workspaceArtifacts = [];
+    workspaceActivityItems = [];
+    workspaceLoadError = false;
+    previewArtifact = null;
+    previewOpen = false;
+  }
+
+  function selectConfiguration(configurationId: string) {
+    selectedConfigurationId = configurationId;
+    liveConfigurationOverride = undefined;
+    clearFocusedPlanUi();
+  }
+
+  function shortConfigurationId(id: string) {
+    return id.length <= 8 ? id : id.slice(0, 8);
+  }
+
+  function statusTextForConfiguration(configuration?: PlanConfiguration) {
+    return configuration?.status === PlanConfigurationStatus.RUNNABLE
+      ? translate("plans.configure.status.runnable", $locale)
+      : configuration?.status === PlanConfigurationStatus.SCHEDULED
+        ? translate("plans.configure.status.scheduled", $locale)
+        : translate("plans.configure.status.draft", $locale);
+  }
+
+  async function startRun() {
+    if (!tenantId || !activeConfigurationId || anyExecutionRunning) return;
+    runError = null;
+    runErrorNeedsIntegration = false;
     try {
       await planClient.createPlanExecution({
         tenantId,
-        planConfigurationId: routeConfigurationId,
+        planConfigurationId: activeConfigurationId,
       });
       await invalidateAll();
       requestAnimationFrame(() =>
         window.scrollTo(0, document.body.scrollHeight),
       );
     } catch (e) {
-      runError = e instanceof Error ? e.message : String(e);
+      const raw = e instanceof Error ? e.message : String(e);
+      if (/requires enabled executor installation/i.test(raw)) {
+        runErrorNeedsIntegration = true;
+        runError = translate("thread.run.missingExecutor", $locale, {
+          detail: raw,
+          sku: raw.match(/sku "([^"]+)"/)?.[1] ?? "",
+        });
+      } else {
+        runError = raw;
+      }
     }
   }
 
   const pricing: ExecutorPriceLookup = (id) =>
     data.executorCatalog?.get(id) ?? null;
   const cost = $derived(
-    data.template && liveConfiguration
-      ? computeRunCost(data.template, liveConfiguration, pricing)
+    focusedTemplate && focusedConfiguration
+      ? computeRunCost(focusedTemplate, focusedConfiguration, pricing)
       : {
           totalPerRunBrl: 0,
           currency: "BRL" as const,
@@ -172,15 +245,11 @@
         },
   );
   const statusLabel = $derived(
-    liveConfiguration?.status === PlanConfigurationStatus.RUNNABLE
-      ? translate("plans.configure.status.runnable", $locale)
-      : liveConfiguration?.status === PlanConfigurationStatus.SCHEDULED
-        ? translate("plans.configure.status.scheduled", $locale)
-        : translate("plans.configure.status.draft", $locale),
+    statusTextForConfiguration(focusedConfiguration),
   );
   const planSummary = $derived(
-    data.template && liveConfiguration
-      ? buildPlanSummary(data.template, liveConfiguration)
+    focusedTemplate && focusedConfiguration
+      ? buildPlanSummary(focusedTemplate, focusedConfiguration)
       : null,
   );
 
@@ -241,12 +310,12 @@
     if (maxSeq !== refetchSeq) refetchSeq = maxSeq;
   });
   $effect(() => {
-    if (!tenantId || !routeConfigurationId || refetchSeq === 0n) return;
+    if (!tenantId || !activeConfigurationId || refetchSeq === 0n) return;
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
         const res = await planClient.getPlanConfiguration(
-          { tenantId, planConfigurationId: routeConfigurationId },
+          { tenantId, planConfigurationId: activeConfigurationId },
           { signal: controller.signal },
         );
         if (res.planConfiguration)
@@ -266,7 +335,7 @@
   // ADR-016 / live-execution-chat — ordered template steps feed the execution
   // view model; execution sections render as live progress cards.
   const orderedSteps = $derived(
-    (data.template?.steps ?? []).map((s) => ({ key: s.key, title: s.title })),
+    (focusedTemplate?.steps ?? []).map((s) => ({ key: s.key, title: s.title })),
   );
   const executionGroups = $derived(
     sections.flatMap((section) =>
@@ -410,7 +479,7 @@
 </svelte:head>
 
 <div class="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-6">
-  {#if !routeConfigurationId}
+  {#if !activeConfigurationId}
     <div class="flex flex-col gap-3">
       {#if messages.length === 0}
         <SuggestionChips onSelect={(p) => void sendOpeningPrompt(p)} />
@@ -455,24 +524,63 @@
       />
     </div>
   {:else}
-    {#if data.template && liveConfiguration}
+    {#if data.configurations.length > 1}
+      <div
+        class="flex flex-wrap gap-2 rounded border border-plumage/60 bg-obsidian-light/30 p-2"
+      >
+        {#each data.configurations as configuration (configuration.id)}
+          {@const template = data.templateByConfigurationId.get(
+            configuration.id,
+          )}
+          {@const selected = configuration.id === activeConfigurationId}
+          <button
+            type="button"
+            class="rounded border px-3 py-2 text-left {selected
+              ? 'border-talon-gold/60 bg-talon-gold/10 text-cream'
+              : 'border-plumage/60 bg-obsidian text-crown-ash hover:border-talon-gold/40 hover:text-cream'}"
+            aria-current={selected ? "true" : undefined}
+            onclick={() => selectConfiguration(configuration.id)}
+          >
+            <span class="block text-[12px] font-medium">
+              {template?.name ?? shortConfigurationId(configuration.id)}
+            </span>
+            <span class="mt-0.5 block text-[10px] text-crown-ash-dark">
+              {statusTextForConfiguration(configuration)} · {shortConfigurationId(
+                configuration.id,
+              )}
+            </span>
+          </button>
+        {/each}
+      </div>
+    {/if}
+
+    {#if focusedTemplate && focusedConfiguration}
       <PlanThreadTopBar
-        planName={planSummary?.intent || data.template.name}
+        planName={planSummary?.intent || focusedTemplate.name}
         {statusLabel}
         {cost}
         onOpenSchedule={() => (scheduleOpen = true)}
-        canRun={liveConfiguration.status === PlanConfigurationStatus.RUNNABLE}
+        canRun={focusedConfiguration.status ===
+          PlanConfigurationStatus.RUNNABLE}
         running={anyExecutionRunning}
         onRun={startRun}
       />
     {/if}
 
     {#if runError}
-      <p
-        class="rounded border border-danger/40 bg-danger/10 px-3 py-2 text-[12px] text-danger"
+      <div
+        class="flex flex-wrap items-center gap-2 rounded border border-danger/40 bg-danger/10 px-3 py-2 text-[12px] text-danger"
       >
-        {runError}
-      </p>
+        <span class="flex-1">{runError}</span>
+        {#if runErrorNeedsIntegration}
+          <a
+            href={resolve("/admin/integrations")}
+            class="shrink-0 underline-offset-2 hover:underline"
+          >
+            {translate("nav.integrations", $locale)}
+          </a>
+        {/if}
+      </div>
     {/if}
 
     <div class="flex items-center gap-1.5 text-[11px]">
@@ -489,13 +597,13 @@
       </span>
     </div>
 
-    {#if data.template?.steps && data.template.steps.length > 0}
+    {#if focusedTemplate?.steps && focusedTemplate.steps.length > 0}
       <div
         class="rounded border border-plumage/60 bg-obsidian-light/30 px-3 py-2"
       >
         <PlanDagMiniMap
-          steps={data.template.steps}
-          edges={data.template.edges}
+          steps={focusedTemplate.steps}
+          edges={focusedTemplate.edges}
         />
       </div>
     {/if}
@@ -525,7 +633,7 @@
     {:else}
       <ConversationalWorkspace
         {tenantId}
-        configurationId={routeConfigurationId}
+        configurationId={activeConfigurationId}
         messages={planScopeMessages}
         activityItems={workspaceActivityItems}
         artifacts={workspaceArtifacts}
@@ -573,10 +681,10 @@
   {/if}
 </div>
 
-{#if routeConfigurationId && liveConfiguration}
+{#if activeConfigurationId && focusedConfiguration}
   <ScheduleDialog
     open={scheduleOpen}
-    configuration={liveConfiguration}
+    configuration={focusedConfiguration}
     onClose={() => (scheduleOpen = false)}
   />
 {/if}

@@ -337,6 +337,7 @@ message ListPlanConfigurationsRequest {
   optional PlanConfigurationStatus status = 3;
   int32 page_size = 4;
   string page_token = 5;
+  optional string origin_thread_id = 6;
 }
 
 message ListPlanConfigurationsResponse {

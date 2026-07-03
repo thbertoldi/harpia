@@ -362,57 +362,34 @@ func (r *Repository) UpdateConfigurationStatus(ctx context.Context, tenantID, co
 	})
 }
 
-func (r *Repository) ListConfigurations(ctx context.Context, tenantID uuid.UUID, workspaceID *uuid.UUID, status string, limit, offset int) ([]PlanConfiguration, error) {
+func (r *Repository) ListConfigurations(ctx context.Context, tenantID uuid.UUID, workspaceID, originThreadID *uuid.UUID, status string, limit, offset int) ([]PlanConfiguration, error) {
 	configs := make([]PlanConfiguration, 0)
 	err := database.WithTenant(ctx, r.pool, tenantID, func(q database.Querier) error {
-		var rows pgx.Rows
-		var err error
-		switch {
-		case workspaceID != nil && status != "":
-			rows, err = q.Query(ctx,
-				`SELECT id, tenant_id, workspace_id, plan_template_id, plan_template_version, status, kind,
-				        seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
-				        parameter_values, thread_id, origin_thread_id, created_at, updated_at
-				 FROM plan_configurations
-				 WHERE tenant_id = $1 AND workspace_id = $2 AND status = $3
-				 ORDER BY created_at DESC
-				 LIMIT $4 OFFSET $5`,
-				tenantID, *workspaceID, status, limit, offset,
-			)
-		case workspaceID != nil:
-			rows, err = q.Query(ctx,
-				`SELECT id, tenant_id, workspace_id, plan_template_id, plan_template_version, status, kind,
-				        seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
-				        parameter_values, thread_id, origin_thread_id, created_at, updated_at
-				 FROM plan_configurations
-				 WHERE tenant_id = $1 AND workspace_id = $2
-				 ORDER BY created_at DESC
-				 LIMIT $3 OFFSET $4`,
-				tenantID, *workspaceID, limit, offset,
-			)
-		case status != "":
-			rows, err = q.Query(ctx,
-				`SELECT id, tenant_id, workspace_id, plan_template_id, plan_template_version, status, kind,
-				        seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
-				        parameter_values, thread_id, origin_thread_id, created_at, updated_at
-				 FROM plan_configurations
-				 WHERE tenant_id = $1 AND status = $2
-				 ORDER BY created_at DESC
-				 LIMIT $3 OFFSET $4`,
-				tenantID, status, limit, offset,
-			)
-		default:
-			rows, err = q.Query(ctx,
-				`SELECT id, tenant_id, workspace_id, plan_template_id, plan_template_version, status, kind,
-				        seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
-				        parameter_values, thread_id, origin_thread_id, created_at, updated_at
-				 FROM plan_configurations
-				 WHERE tenant_id = $1
-				 ORDER BY created_at DESC
-				 LIMIT $2 OFFSET $3`,
-				tenantID, limit, offset,
-			)
+		where := []string{"tenant_id = $1"}
+		args := []any{tenantID}
+		if workspaceID != nil {
+			args = append(args, *workspaceID)
+			where = append(where, fmt.Sprintf("workspace_id = $%d", len(args)))
 		}
+		if originThreadID != nil {
+			args = append(args, *originThreadID)
+			where = append(where, fmt.Sprintf("origin_thread_id = $%d", len(args)))
+		}
+		if status != "" {
+			args = append(args, status)
+			where = append(where, fmt.Sprintf("status = $%d", len(args)))
+		}
+		args = append(args, limit, offset)
+		rows, err := q.Query(ctx,
+			fmt.Sprintf(`SELECT id, tenant_id, workspace_id, plan_template_id, plan_template_version, status, kind,
+			        seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
+			        parameter_values, thread_id, origin_thread_id, created_at, updated_at
+			 FROM plan_configurations
+			 WHERE %s
+			 ORDER BY created_at DESC
+			 LIMIT $%d OFFSET $%d`, strings.Join(where, " AND "), len(args)-1, len(args)),
+			args...,
+		)
 		if err != nil {
 			return fmt.Errorf("list plan configurations: %w", err)
 		}
