@@ -1,6 +1,6 @@
 <script lang="ts">
   import { browser } from "$app/environment";
-  import { invalidateAll } from "$app/navigation";
+  import { invalidateAll, replaceState } from "$app/navigation";
   import { page } from "$app/stores";
   import { resolve } from "$app/paths";
   import { listArtifacts, getArtifact } from "$lib/artifacts/artifacts";
@@ -226,9 +226,12 @@
   // An empty config-less thread is actionable: a suggestion chip seeds the
   // opening user message on the current thread (same path the composer uses),
   // then the auto-propose effect fires once it arrives.
+  let openingPromptError = $state<string | null>(null);
+
   async function sendOpeningPrompt(prompt: string) {
     const trimmed = prompt.trim();
     if (!tenantId || !routeThreadId || trimmed.length === 0) return;
+    openingPromptError = null;
     try {
       await appendThreadMessage(
         tenantId,
@@ -238,7 +241,9 @@
         trimmed,
       );
     } catch {
-      // best-effort; the composer remains available for manual entry
+      // The composer remains available for manual entry either way, but the
+      // user needs to know the chip's message didn't actually go through.
+      openingPromptError = translate("thread.propose.sendError", $locale);
     }
   }
 
@@ -264,6 +269,20 @@
     selectedConfigurationId = configurationId;
     liveConfigurationOverride = undefined;
     clearFocusedPlanUi();
+    // Keep the URL's ?plan= param in sync with the selected chip so a reload
+    // or bookmark lands back on the plan the user actually switched to,
+    // instead of whichever plan the page was first opened with.
+    if (browser) {
+      replaceState(
+        resolve(
+          `/chat/[threadId]?plan=${encodeURIComponent(configurationId)}`,
+          {
+            threadId: routeThreadId,
+          },
+        ),
+        {},
+      );
+    }
   }
 
   function shortConfigurationId(id: string) {
@@ -589,6 +608,13 @@
           </span>
           <span>{translate("thread.propose.thinking", $locale)}</span>
         </div>
+      {/if}
+      {#if openingPromptError}
+        <p
+          class="rounded border border-danger/40 bg-danger/10 px-3 py-2 text-[12px] text-danger"
+        >
+          {openingPromptError}
+        </p>
       {/if}
       <ThreadComposer
         {tenantId}

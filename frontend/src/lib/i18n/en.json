@@ -83,6 +83,7 @@
   "thread.propose.creating": "Creating…",
   "thread.propose.loadingTemplate": "Loading template…",
   "thread.propose.loadFailed": "Failed to load template.",
+  "thread.propose.sendError": "Couldn't send that message. Try again.",
   "thread.propose.browseTemplates": "Browse templates",
   "thread.propose.homeHint": "Tell Aiuna what you want to create, then a plan will appear here.",
   "thread.propose.finalConfirmation": "I'll create {plan} for {audience}, focused on {themes}, using {sourceGroups} as source groups, with articles published from {startDate} to {endDate}.",

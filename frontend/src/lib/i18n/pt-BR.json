@@ -83,6 +83,7 @@
   "thread.propose.creating": "Criando…",
   "thread.propose.loadingTemplate": "Carregando modelo…",
   "thread.propose.loadFailed": "Não foi possível carregar o modelo.",
+  "thread.propose.sendError": "Não foi possível enviar essa mensagem. Tente novamente.",
   "thread.propose.browseTemplates": "Ver modelos",
   "thread.propose.homeHint": "Diga à Aiuna o que você quer criar e um plano aparecerá aqui.",
   "thread.propose.finalConfirmation": "Vou criar {plan} para {audience}, com foco em {themes}, usando {sourceGroups} como grupos de fontes, com artigos publicados de {startDate} a {endDate}.",
