@@ -4,12 +4,13 @@
   "permission": {
     "bash": { "*": "ask", "git *": "allow" }
   },
+  "plugin": ["@sveltejs/opencode"],
   "mcp": {
     "github": {
       "type": "remote",
       "url": "https://api.githubcopilot.com/mcp/",
       "headers": {
-        "Authorization": "Bearer ${GITHUB_TOKEN}"
+        "Authorization": "Bearer {env:GITHUB_TOKEN}"
       }
     }
   }
