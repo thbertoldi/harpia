@@ -217,6 +217,9 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	if err := executors.EnsureTenantRSSPresetInstallations(ctx, pool, tenantID); err != nil {
 		fatal("seed rss preset installations failed", "error", err)
 	}
+	if err := executors.EnsureTenantDummyLinkedInInstallation(ctx, pool, tenantID); err != nil {
+		fatal("seed dummy linkedin installation failed", "error", err)
+	}
 	if err := agents.EnsureAgentTypesForTenant(ctx, pool, tenantID); err != nil {
 		fatal("seed agent types failed", "error", err)
 	}

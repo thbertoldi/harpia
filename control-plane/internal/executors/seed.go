@@ -228,6 +228,44 @@ func EnsureDevEntitlements(ctx context.Context, pool *pgxpool.Pool, tenantID uui
 	return nil
 }
 
+func EnsureTenantDummyLinkedInInstallation(ctx context.Context, pool *pgxpool.Pool, tenantID uuid.UUID) error {
+	return database.WithTenant(ctx, pool, tenantID, func(q database.Querier) error {
+		if tenantID == uuid.Nil {
+			return fmt.Errorf("tenant id is required")
+		}
+		if _, err := q.Exec(ctx, "SELECT set_config('harpia.tenant_id', $1, true)", tenantID.String()); err != nil {
+			return fmt.Errorf("set tenant context: %w", err)
+		}
+
+		var skuID uuid.UUID
+		if err := q.QueryRow(ctx, `SELECT id FROM executor_skus WHERE key = $1`, SKULinkedInPublish).Scan(&skuID); err != nil {
+			return fmt.Errorf("load linkedin executor sku: %w", err)
+		}
+
+		// Always seeds approval_only: OAuth mode requires a real
+		// oauth_credential_id (see linkedin.InstallationConfig), and there is no
+		// dev-seedable stand-in for a real LinkedIn OAuth credential today. A
+		// plan step that specifically requires OAuth mode will not run against
+		// this dummy installation until it's reconnected through the real
+		// LinkedIn OAuth flow.
+		configJSON := []byte(`{"mode": "approval_only"}`)
+
+		_, err := q.Exec(ctx, `
+			INSERT INTO executor_installations (
+				tenant_id, executor_sku_id, display_name, config_json
+			) VALUES (
+				$1, $2, $3, $4
+			)
+			ON CONFLICT (tenant_id, executor_sku_id, display_name) DO NOTHING
+		`, tenantID, skuID, "LinkedIn (Dev Sandbox)", configJSON)
+		if err != nil {
+			return fmt.Errorf("insert dummy linkedin installation: %w", err)
+		}
+
+		return nil
+	})
+}
+
 // EnsureTenantAgentInstallations provisions default agent executor installations for
 // entitled agent SKUs when none exist yet. Integrations remain user-configured.
 func EnsureTenantAgentInstallations(ctx context.Context, pool *pgxpool.Pool, tenantID uuid.UUID) error {
