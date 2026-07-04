@@ -1,12 +1,7 @@
 <script lang="ts">
   import { resolve } from "$app/paths";
   import { invalidateAll } from "$app/navigation";
-  import {
-    MessageSquare,
-    Pencil,
-    CalendarClock,
-    Activity,
-  } from "lucide-svelte";
+  import { Pencil, CalendarClock, Activity } from "lucide-svelte";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
   import ScheduleDialog from "$lib/components/canvas/ScheduleDialog.svelte";
   import { locale, translate } from "$lib/i18n";
@@ -71,7 +66,7 @@
     const configuration = group.configuration;
     if (!configuration) return translate("runs.plan.untitled", $locale);
     const template = templateByConfigurationId.get(configuration.id);
-    return template?.name || configuration.id.slice(0, 8);
+    return template?.name || translate("runs.plan.untitled", $locale);
   }
 
   function executionStatusClass(status: number): string {
@@ -167,7 +162,7 @@
     </div>
   {:else}
     <ul class="flex flex-col gap-3">
-      {#each groups as group (group.configuration?.id ?? crypto.randomUUID())}
+      {#each groups as group (group.configuration?.id ?? group.executions[0]?.id ?? "orphan-fallback")}
         {@const configuration = group.configuration}
         {@const inline = canInlineEdit(configuration)}
         {@const active = countActiveExecutions(group)}
@@ -256,13 +251,6 @@
                 </button>
               {/if}
               {#if threadId}
-                <a
-                  href={resolve(`/chat/${threadId}${planParam}`)}
-                  class="flex cursor-pointer items-center gap-1 rounded-md border border-border px-2.5 py-1.5 text-[11px] text-text-muted transition hover:bg-surface-hover hover:text-text"
-                >
-                  <MessageSquare class="size-3.5" />
-                  {translate("runs.plan.originThread", $locale)}
-                </a>
                 <a
                   href={resolve(`/chat/${threadId}${planParam}`)}
                   class="flex cursor-pointer items-center gap-1 rounded-md border border-primary px-2.5 py-1.5 text-[11px] font-semibold text-primary transition hover:bg-primary/10"

@@ -197,7 +197,6 @@
   "runs.plan.untitled": "Plano sem título",
   "runs.plan.orphan": "Plano não encontrado",
   "runs.plan.orphanHint": "Não foi possível carregar a configuração deste plano. Abra a conversa de origem para inspecionar.",
-  "runs.plan.originThread": "Abrir conversa",
   "runs.plan.configure": "Configurar",
   "runs.plan.schedule": "Agendamento",
   "runs.plan.scheduleHint": "Atualize a cadência deste plano recorrente.",

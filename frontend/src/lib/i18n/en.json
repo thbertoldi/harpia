@@ -197,7 +197,6 @@
   "runs.plan.untitled": "Untitled plan",
   "runs.plan.orphan": "Plan not found",
   "runs.plan.orphanHint": "This plan's configuration could not be loaded. Open its origin thread to inspect.",
-  "runs.plan.originThread": "Open conversation",
   "runs.plan.configure": "Configure",
   "runs.plan.schedule": "Schedule",
   "runs.plan.scheduleHint": "Update the cadence for this recurring plan.",
