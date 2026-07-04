@@ -150,6 +150,40 @@ event-based streaming (no token stream). Visual refresh → **[ADR-016](../adr/A
 
 **Links:** ADR-016; `openspec/changes/{live-execution-chat,artifact-preview-panel,catalog-driven-suggestions}`.
 
+**Regression found (2026-07-03):** `artifact-preview-panel`'s own deliverable,
+`ArtifactPreviewSheet.svelte` (tabs, code view, copy, reload, footer status —
+every task checked off), is orphaned. It is never imported anywhere. ADR-017's
+later stabilization pass wired the side-preview flow (`chat/[threadId]/+page.svelte`'s
+`sidePreviewOpen`) and `ConversationalWorkspace.svelte`'s artifact rail to the
+older, thinner `ArtifactDetailPanel.svelte` instead (no tabs/code view/copy/reload),
+without removing the sheet. The two components also mean two independent,
+non-communicating panel-owning state machines for the same concept (preview an
+artifact) — a user could plausibly have both open at once.
+
+Separately, item 4 of `artifact-preview-panel`'s own tasks.md already documented
+that the inline artifact launcher is a workaround: `STEP_BOUND` already carries
+`output_artifact_id` on every step completion (`control-plane/internal/plans/runtime.go`,
+`chat.BuildStepBoundPayload`) over the same watch stream the frontend already
+consumes for execution progress — no backend/proto work needed — but
+`SystemEventCard.svelte` still renders it as a flat "Step X completed" log line
+instead of a clickable inline artifact card, so the frontend does a separate
+`listArtifacts`/`loadPlanExecutionDetail` fetch to reconstruct a "produced
+artifacts" grid that duplicates data already sitting in messages it has in hand.
+
+**Decided (visual comparison via the brainstorming skill's companion, 2026-07-03):**
+`ArtifactPreviewSheet` is canonical. Scope for the fix:
+1. Fix the sheet's hardcoded `fixed inset-y-0 right-0 w-full` overlay — no
+   responsive max-width today, unlike the mockup's `lg:w-[52%]` constraint.
+2. Delete `ArtifactDetailPanel.svelte`; rewire `+page.svelte`'s `sidePreviewOpen`
+   flow and `ConversationalWorkspace.svelte`'s `selectedPreviewArtifactId`/`ArtifactRail`
+   flow onto one shared panel-owning state (`activeArtifactId`/`panelState`) that
+   opens the sheet.
+3. Wire `STEP_BOUND` (when `output_artifact_id` is non-empty) to render as an
+   inline `ArtifactCard` in the message stream via `SystemEventCard`/`ThreadMessage`,
+   and drop the redundant produced-artifacts fetch once the rail can derive from
+   messages already in memory.
+Frontend-only; no proto/backend changes required for any of the three.
+
 ### 💡 Proactive memory capture from conversational configuration
 **Taxonomy:** PlanConfiguration, PlanBehaviorPolicies, MemoryResource, MemoryBinding,
 Artifact.
