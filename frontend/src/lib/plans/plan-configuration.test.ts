@@ -125,6 +125,7 @@ describe("plan configuration persistence", () => {
         workspaceId: "",
         planTemplateId: template.id,
         status: PlanConfigurationStatus.DRAFT,
+        threadId: "test-thread",
         parameterValuesJson: '{"theme":"sports"}',
       }),
     );
@@ -138,6 +139,44 @@ describe("plan configuration persistence", () => {
       createPlanConfiguration.mock.calls[0][0].behaviorPolicies,
     ).toBeUndefined();
     expect(result.id).toBe("created");
+  });
+
+  it("creates a new thread-backed configuration instead of reusing a template match", async () => {
+    const existing = create(PlanConfigurationSchema, {
+      id: "existing",
+      tenantId: "dev",
+      planTemplateId: template.id,
+      status: PlanConfigurationStatus.RUNNABLE,
+      updatedAt: "2026-01-01T00:00:00Z",
+    });
+    const saved = create(PlanConfigurationSchema, {
+      id: "created-for-thread",
+      tenantId: "dev",
+      workspaceId: "",
+      planTemplateId: template.id,
+      status: PlanConfigurationStatus.DRAFT,
+      threadId: "thread-a",
+    });
+    listPlanConfigurations.mockReturnValue(listConfigurations([existing]));
+    createPlanConfiguration.mockResolvedValue({ planConfiguration: saved });
+
+    const result = await savePlanConfigurationRecord({
+      template,
+      status: PlanConfigurationStatus.DRAFT,
+      threadId: "thread-a",
+    });
+
+    expect(listPlanConfigurations).not.toHaveBeenCalled();
+    expect(updatePlanConfiguration).not.toHaveBeenCalled();
+    expect(createPlanConfiguration).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: "dev",
+        planTemplateId: template.id,
+        status: PlanConfigurationStatus.DRAFT,
+        threadId: "thread-a",
+      }),
+    );
+    expect(result.id).toBe("created-for-thread");
   });
 
   it("updates a backend configuration without dropping unchanged fields", async () => {

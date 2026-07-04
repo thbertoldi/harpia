@@ -109,7 +109,9 @@ export async function savePlanConfigurationRecord({
 }: PlanConfigurationSaveInput): Promise<PlanConfiguration> {
   const existing =
     existingConfiguration ??
-    (await loadPlanConfigurationForTemplate(template.id, tenantId));
+    (threadId
+      ? null
+      : await loadPlanConfigurationForTemplate(template.id, tenantId));
 
   if (!existing?.id && !threadId) {
     throw new Error("threadId is required when creating a plan configuration.");
