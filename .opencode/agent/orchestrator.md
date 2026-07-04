@@ -1,7 +1,7 @@
 ---
 description: Primary orchestrator — decomposes work, writes executor-cold briefs, routes to subagents, and drives the cross-review loop. Does little writing itself.
 mode: primary
-model: google/gemini-3.1-pro-preview
+model: zai-coding-plan/glm-5.2
 temperature: 0.2
 permission:
   edit: ask
