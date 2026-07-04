@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Harpia — System Design</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=DM+Sans:ital,wght@0,100..1000;1,100..1000&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    :root {
+      --obsidian: #121318;
+      --obsidian-light: #1A1B24;
+      --obsidian-mid: #22242F;
+      --plumage: #2A2D3A;
+      --crown-ash: #9DA1AB;
+      --crown-ash-dark: #6B7080;
+      --talon-gold: #C8920F;
+      --talon-gold-bright: #E0A512;
+      --cream: #F5F2EB;
+      --paper: #FFFDF8;
+      --line: rgba(18, 19, 24, 0.14);
+      --teal: #2D8A8A;
+      --green: #4E8C5A;
+      --red: #A34A42;
+      --font-heading: 'Bodoni Moda', serif;
+      --font-body: 'DM Sans', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at top left, rgba(224, 165, 18, 0.14), transparent 28rem),
+        linear-gradient(180deg, var(--cream), #ede8de 72%);
+      color: var(--obsidian);
+      font-family: var(--font-body);
+      line-height: 1.55;
+    }
+
+    a { color: inherit; }
+
+    .page {
+      width: min(1440px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 48px 0 72px;
+    }
+
+    .hero {
+      border: 1px solid rgba(200, 146, 15, 0.24);
+      border-radius: 32px;
+      background: linear-gradient(135deg, var(--obsidian), var(--obsidian-light) 58%, #271f11);
+      color: var(--cream);
+      padding: clamp(32px, 5vw, 72px);
+      box-shadow: 0 28px 80px rgba(18, 19, 24, 0.22);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(90deg, transparent, rgba(224, 165, 18, 0.14), transparent),
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 64px);
+      opacity: 0.55;
+    }
+
+    .hero > * { position: relative; z-index: 1; }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      color: var(--talon-gold-bright);
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      font-size: 0.76rem;
+      margin: 0 0 12px;
+    }
+
+    h1, h2, h3, h4 { margin: 0; }
+
+    h1 {
+      font-family: var(--font-heading);
+      font-size: clamp(3rem, 7vw, 6.8rem);
+      line-height: 0.9;
+      letter-spacing: -0.05em;
+      max-width: 980px;
+    }
+
+    .lead {
+      max-width: 900px;
+      margin: 28px 0 0;
+      color: rgba(245, 242, 235, 0.82);
+      font-size: clamp(1rem, 2vw, 1.3rem);
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 36px;
+    }
+
+    .hero-card {
+      border: 1px solid rgba(245, 242, 235, 0.14);
+      border-radius: 18px;
+      padding: 18px;
+      background: rgba(245, 242, 235, 0.06);
+      min-height: 130px;
+    }
+
+    .hero-card strong {
+      display: block;
+      font-size: 1.5rem;
+      color: var(--talon-gold-bright);
+      font-family: var(--font-heading);
+      line-height: 1;
+    }
+
+    .hero-card span {
+      display: block;
+      margin-top: 10px;
+      color: rgba(245, 242, 235, 0.76);
+      font-size: 0.9rem;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      gap: 24px;
+      margin-top: 24px;
+      align-items: start;
+    }
+
+    nav {
+      position: sticky;
+      top: 16px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: rgba(255, 253, 248, 0.86);
+      backdrop-filter: blur(16px);
+      padding: 18px;
+      box-shadow: 0 18px 48px rgba(18, 19, 24, 0.08);
+    }
+
+    nav .nav-title {
+      font-family: var(--font-mono);
+      color: var(--crown-ash-dark);
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-size: 0.68rem;
+      margin-bottom: 10px;
+    }
+
+    nav a {
+      display: block;
+      text-decoration: none;
+      padding: 9px 10px;
+      border-radius: 10px;
+      font-size: 0.92rem;
+      color: var(--plumage);
+    }
+
+    nav a:hover { background: rgba(200, 146, 15, 0.12); }
+
+    main { display: grid; gap: 24px; }
+
+    section {
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: rgba(255, 253, 248, 0.9);
+      padding: clamp(24px, 4vw, 40px);
+      box-shadow: 0 22px 70px rgba(18, 19, 24, 0.08);
+      overflow: hidden;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      align-items: end;
+      margin-bottom: 24px;
+    }
+
+    .section-head h2 {
+      font-family: var(--font-heading);
+      font-size: clamp(2rem, 4vw, 3.4rem);
+      line-height: 0.95;
+      letter-spacing: -0.04em;
+    }
+
+    .section-head p {
+      max-width: 560px;
+      margin: 0;
+      color: var(--crown-ash-dark);
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid rgba(200, 146, 15, 0.25);
+      border-radius: 999px;
+      padding: 6px 10px;
+      color: var(--talon-gold);
+      background: rgba(200, 146, 15, 0.08);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+    }
+
+    .grid { display: grid; gap: 14px; }
+    .cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.56);
+      padding: 18px;
+    }
+
+    .card.dark {
+      background: var(--obsidian-light);
+      color: var(--cream);
+      border-color: rgba(245, 242, 235, 0.12);
+    }
+
+    .card h3, .card h4 {
+      font-size: 1.05rem;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+
+    .card p { margin: 0; color: var(--crown-ash-dark); }
+    .card.dark p { color: rgba(245, 242, 235, 0.7); }
+
+    .mono, code {
+      font-family: var(--font-mono);
+      font-size: 0.88em;
+    }
+
+    code {
+      background: rgba(18, 19, 24, 0.06);
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(120px, 1fr));
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .node {
+      position: relative;
+      border: 1px solid rgba(200, 146, 15, 0.28);
+      border-radius: 18px;
+      padding: 16px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(245, 242, 235, 0.82));
+      min-height: 118px;
+    }
+
+    .node::after {
+      content: "→";
+      position: absolute;
+      right: -13px;
+      top: 44%;
+      color: var(--talon-gold);
+      font-family: var(--font-mono);
+      font-weight: 700;
+      z-index: 2;
+    }
+
+    .node:last-child::after { display: none; }
+
+    .node strong { display: block; line-height: 1.15; }
+    .node span { display: block; margin-top: 8px; color: var(--crown-ash-dark); font-size: 0.86rem; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--paper);
+    }
+
+    th, td {
+      text-align: left;
+      vertical-align: top;
+      padding: 13px 14px;
+      border-bottom: 1px solid var(--line);
+      font-size: 0.93rem;
+    }
+
+    th {
+      background: rgba(18, 19, 24, 0.05);
+      color: var(--obsidian);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .matrix {
+      display: grid;
+      grid-template-columns: 1.1fr 1.2fr 1.2fr;
+      gap: 12px;
+    }
+
+    .lane {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.58);
+    }
+
+    .lane h3 {
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-size: 0.78rem;
+      color: var(--talon-gold);
+      margin-bottom: 12px;
+    }
+
+    .pill-list { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .pill {
+      display: inline-flex;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 5px 9px;
+      background: rgba(245, 242, 235, 0.7);
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      color: var(--plumage);
+    }
+
+    .list { margin: 0; padding-left: 18px; }
+    .list li { margin: 7px 0; }
+
+    .timeline {
+      display: grid;
+      gap: 10px;
+      counter-reset: step;
+    }
+
+    .timeline-item {
+      display: grid;
+      grid-template-columns: 42px 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .timeline-item::before {
+      counter-increment: step;
+      content: counter(step);
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: var(--obsidian);
+      color: var(--talon-gold-bright);
+      font-family: var(--font-mono);
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    .timeline-item div {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 13px 15px;
+      background: rgba(255, 255, 255, 0.6);
+    }
+
+    .diagram-wrap {
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: linear-gradient(180deg, #fffdf8, #f4efe5);
+      padding: 18px;
+      overflow-x: auto;
+    }
+
+    svg { max-width: 100%; height: auto; display: block; }
+    svg text { font-family: var(--font-body); fill: var(--obsidian); }
+    svg .svg-title { font-family: var(--font-heading); font-weight: 800; font-size: 24px; }
+    svg .svg-label { font-size: 13px; font-weight: 700; }
+    svg .svg-small { font-size: 11px; fill: var(--crown-ash-dark); }
+    svg .svg-mono { font-family: var(--font-mono); font-size: 10px; fill: var(--plumage); }
+
+    .callout {
+      border-left: 4px solid var(--talon-gold);
+      border-radius: 16px;
+      background: rgba(200, 146, 15, 0.09);
+      padding: 16px 18px;
+    }
+
+    .callout p { margin: 0; }
+
+    .status-good { color: var(--green); }
+    .status-risk { color: var(--red); }
+
+    @media (max-width: 1060px) {
+      .layout { grid-template-columns: 1fr; }
+      nav { position: static; }
+      .hero-grid, .cols-4, .cols-3, .cols-2, .matrix { grid-template-columns: 1fr; }
+      .flow { grid-template-columns: 1fr; }
+      .node::after { content: "↓"; right: 16px; top: auto; bottom: -17px; }
+      .section-head { display: block; }
+      .section-head p { margin-top: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <p class="eyebrow">Harpia system design map</p>
+      <h1>Arquitetura do sistema, bounded contexts e fluxos de produto</h1>
+      <p class="lead">Leitura consolidada do repositório em 2026-07-03. O modelo central é plan-centric: a experiência começa em chat, configura um <code>PlanConfiguration</code>, executa um DAG de <code>PlanSteps</code> e produz <code>Artifacts</code> tipados.</p>
+      <div class="hero-grid">
+        <div class="hero-card"><strong>5+</strong><span>bounded contexts explícitos mais capacidades transversais de artifact, budget e executor registry.</span></div>
+        <div class="hero-card"><strong>RPC</strong><span>ConnectRPC + protobuf como fronteira pública entre UI, control-plane e agent-runtime.</span></div>
+        <div class="hero-card"><strong>DAG</strong><span>PlanTemplate define contratos step-a-step; PlanExecution percorre o grafo via Temporal.</span></div>
+        <div class="hero-card"><strong>RLS</strong><span>PostgreSQL é o ponto forte de isolamento multi-tenant, com Valkey e Garage encapsulados.</span></div>
+      </div>
+    </header>
+
+    <div class="layout">
+      <nav aria-label="Navegação">
+        <div class="nav-title">Mapa</div>
+        <a href="#overview">1. Visão Geral</a>
+        <a href="#contexts">2. Bounded Contexts</a>
+        <a href="#domain">3. Abstrações Centrais</a>
+        <a href="#control-plane">4. Control Plane Go</a>
+        <a href="#agent-runtime">5. Agent Runtime Python</a>
+        <a href="#frontend">6. Frontend e Jornadas</a>
+        <a href="#contracts-data">7. Contratos, Dados e Infra</a>
+        <a href="#flows">8. Fluxos End-to-End</a>
+        <a href="#patterns">9. Padrões de Design</a>
+        <a href="#files">10. Arquivos de Referência</a>
+        <a href="#gaps">11. Gaps Observados</a>
+      </nav>
+
+      <main>
+        <section id="overview">
+          <div class="section-head">
+            <div>
+              <span class="tag">executive view</span>
+              <h2>Visão Geral</h2>
+            </div>
+            <p>Harpia é uma plataforma operacional multi-tenant e agentic. O usuário não cria tarefas soltas: ele conversa com uma assistant de configuração que seleciona e parametriza planos reutilizáveis.</p>
+          </div>
+
+          <div class="diagram-wrap" aria-label="Diagrama de arquitetura macro">
+            <svg viewBox="0 0 1120 620" role="img">
+              <defs>
+                <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#C8920F"></path>
+                </marker>
+                <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feDropShadow dx="0" dy="8" stdDeviation="8" flood-opacity="0.16"></feDropShadow>
+                </filter>
+              </defs>
+              <text x="24" y="38" class="svg-title">Harpia em camadas</text>
+
+              <rect x="30" y="72" width="210" height="132" rx="18" fill="#FFFDF8" stroke="#C8920F" filter="url(#shadow)"></rect>
+              <text x="52" y="108" class="svg-label">Frontend</text>
+              <text x="52" y="132" class="svg-small">SvelteKit + Svelte 5</text>
+              <text x="52" y="154" class="svg-mono">thread UI</text>
+              <text x="52" y="174" class="svg-mono">plans/artifacts/admin</text>
+
+              <rect x="318" y="72" width="250" height="132" rx="18" fill="#FFFDF8" stroke="#C8920F" filter="url(#shadow)"></rect>
+              <text x="342" y="108" class="svg-label">Control Plane</text>
+              <text x="342" y="132" class="svg-small">Go + ConnectRPC</text>
+              <text x="342" y="154" class="svg-mono">handlers + repositories</text>
+              <text x="342" y="174" class="svg-mono">PlanService / ThreadService</text>
+
+              <rect x="646" y="72" width="210" height="132" rx="18" fill="#FFFDF8" stroke="#C8920F" filter="url(#shadow)"></rect>
+              <text x="670" y="108" class="svg-label">Temporal</text>
+              <text x="670" y="132" class="svg-small">durable execution</text>
+              <text x="670" y="154" class="svg-mono">PlanWorkflow</text>
+              <text x="670" y="174" class="svg-mono">signals + activities</text>
+
+              <rect x="930" y="72" width="160" height="132" rx="18" fill="#FFFDF8" stroke="#C8920F" filter="url(#shadow)"></rect>
+              <text x="952" y="108" class="svg-label">Agent Runtime</text>
+              <text x="952" y="132" class="svg-small">Python + LangGraph</text>
+              <text x="952" y="154" class="svg-mono">manifest agents</text>
+              <text x="952" y="174" class="svg-mono">LLM providers</text>
+
+              <path d="M240 138 H318" stroke="#C8920F" stroke-width="2" marker-end="url(#arrow)"></path>
+              <path d="M568 138 H646" stroke="#C8920F" stroke-width="2" marker-end="url(#arrow)"></path>
+              <path d="M856 138 H930" stroke="#C8920F" stroke-width="2" marker-end="url(#arrow)"></path>
+
+              <rect x="30" y="282" width="250" height="116" rx="18" fill="#F5F2EB" stroke="#121318"></rect>
+              <text x="54" y="318" class="svg-label">PostgreSQL 16</text>
+              <text x="54" y="342" class="svg-small">RLS, pgvector, plan/artifact/chat state</text>
+              <text x="54" y="366" class="svg-mono">source of truth metadata</text>
+
+              <rect x="324" y="282" width="220" height="116" rx="18" fill="#F5F2EB" stroke="#121318"></rect>
+              <text x="348" y="318" class="svg-label">Garage</text>
+              <text x="348" y="342" class="svg-small">S3-compatible object store</text>
+              <text x="348" y="366" class="svg-mono">artifact payloads</text>
+
+              <rect x="588" y="282" width="220" height="116" rx="18" fill="#F5F2EB" stroke="#121318"></rect>
+              <text x="612" y="318" class="svg-label">Valkey</text>
+              <text x="612" y="342" class="svg-small">cache + rate limit</text>
+              <text x="612" y="366" class="svg-mono">tenant-scoped wrappers</text>
+
+              <rect x="852" y="282" width="238" height="116" rx="18" fill="#F5F2EB" stroke="#121318"></rect>
+              <text x="876" y="318" class="svg-label">Identity/AuthZ</text>
+              <text x="876" y="342" class="svg-small">Zitadel + OpenFGA</text>
+              <text x="876" y="366" class="svg-mono">request context + RBAC/ReBAC</text>
+
+              <path d="M442 204 V282" stroke="#6B7080" stroke-dasharray="7 5" stroke-width="2" marker-end="url(#arrow)"></path>
+              <path d="M704 204 C704 244 434 242 434 282" stroke="#6B7080" stroke-dasharray="7 5" stroke-width="2" marker-end="url(#arrow)"></path>
+              <path d="M1010 204 C1010 250 434 238 434 282" stroke="#6B7080" stroke-dasharray="7 5" stroke-width="2" marker-end="url(#arrow)"></path>
+              <path d="M450 204 C450 252 155 240 155 282" stroke="#6B7080" stroke-dasharray="7 5" stroke-width="2" marker-end="url(#arrow)"></path>
+              <path d="M485 204 C485 252 698 240 698 282" stroke="#6B7080" stroke-dasharray="7 5" stroke-width="2" marker-end="url(#arrow)"></path>
+              <path d="M472 204 C472 252 970 240 970 282" stroke="#6B7080" stroke-dasharray="7 5" stroke-width="2" marker-end="url(#arrow)"></path>
+
+              <rect x="30" y="462" width="1060" height="100" rx="22" fill="#1A1B24"></rect>
+              <text x="56" y="498" fill="#F5F2EB" class="svg-label">Contrato dominante</text>
+              <text x="56" y="526" fill="#F5F2EB" class="svg-small">proto/harpia/*/v1 define serviços e mensagens; Buf gera Go, Python e TypeScript. Domínio passa por DTOs tipados, não JSON livre.</text>
+            </svg>
+          </div>
+
+          <div class="grid cols-3" style="margin-top: 18px;">
+            <div class="card"><h3>Produto</h3><p>Chat-first PlanConfiguration assistant. A UI é navegador sobre threads, execuções e artifact stream.</p></div>
+            <div class="card"><h3>Execução</h3><p>Temporal coordena durabilidade, retries, sinais humanos e StepExecutions; LangGraph fica no raciocínio agentic.</p></div>
+            <div class="card"><h3>Isolamento</h3><p>Tenant é resolvido no interceptor, propagado para RLS, clients internos e object-store/cache wrappers.</p></div>
+          </div>
+        </section>
+
+        <section id="contexts">
+          <div class="section-head">
+            <div>
+              <span class="tag">DDD</span>
+              <h2>Bounded Contexts</h2>
+            </div>
+            <p>Os ADRs definem cinco contexts principais. O repositório atual acrescenta capacidades de suporte que cruzam contexts sem virar domínio vertical.</p>
+          </div>
+
+          <table>
+            <thead>
+              <tr><th>Context</th><th>Responsabilidade</th><th>Implementação</th><th>Contrato</th><th>Padrão de integração</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><strong>Plan / Task Management</strong></td><td>PlanTemplate, PlanConfiguration, execução DAG, retries, schedule, approvals e elicitations.</td><td><code>control-plane/internal/plans</code>, <code>internal/workflow</code></td><td><code>harpia.plans.v1.PlanService</code></td><td>Core domain; parceria com Agent Orchestration.</td></tr>
+              <tr><td><strong>Agent Orchestration</strong></td><td>Manifest-backed agents, matching, execução agentic, LLM providers, budget policy.</td><td><code>agent-runtime/src/harpia_agents</code>, <code>control-plane/internal/agents</code>, <code>internal/budget</code></td><td><code>harpia.agents.v1</code>, <code>harpia.budget.v1</code></td><td>Domain Model em Python; registry/adapter no Go.</td></tr>
+              <tr><td><strong>Human Interaction</strong></td><td>Feedback legado, aprovações, elicitations, inbox e decisões humanas auditáveis.</td><td><code>control-plane/internal/feedback</code>, <code>internal/plans/*approval*</code>, <code>*elicitation*</code>, frontend inbox.</td><td><code>harpia.feedback.v1</code>, PlanService gates</td><td>Event-sourced flavor; ACL planejada para Slack.</td></tr>
+              <tr><td><strong>Identity & Tenants</strong></td><td>Usuário atual, tenant memberships, request context, dev auth, RLS scope.</td><td><code>control-plane/internal/identity</code>, <code>internal/tenants</code></td><td><code>harpia.identity.v1</code></td><td>Conformist a Zitadel; OpenFGA para AuthZ.</td></tr>
+              <tr><td><strong>Workflow Engine</strong></td><td>Durabilidade, retry, timeout, schedule e signals.</td><td><code>control-plane/internal/workflow</code>, <code>agent-runtime/.../temporal</code></td><td>Temporal SDK</td><td>Open Host Service.</td></tr>
+              <tr><td><strong>Artifact Stream</strong></td><td>Metadados, versões, payloads, preview e navegação de outputs tipados.</td><td><code>control-plane/internal/artifacts</code>, <code>frontend/src/lib/artifacts</code></td><td><code>harpia.artifacts.v1</code></td><td>Supporting capability transversal.</td></tr>
+              <tr><td><strong>Executor Registry</strong></td><td>SKU vendido, entitlement concedido, installation configurada e slot binding executável.</td><td><code>control-plane/internal/executors</code></td><td><code>harpia.executors.v1</code></td><td>Catalog + repository + runtime registry.</td></tr>
+              <tr><td><strong>LLM Config</strong></td><td>BYOK, platform keys, key rotation, internal credential resolver.</td><td><code>control-plane/internal/llm_config</code>, <code>agent-runtime/.../llm</code></td><td><code>harpia.llm_config.v1</code></td><td>Port/adapter com secret redaction.</td></tr>
+            </tbody>
+          </table>
+
+          <div class="callout" style="margin-top: 18px;">
+            <p><strong>Regra de domínio mais importante:</strong> <code>PlanTemplate</code> descreve o que deve acontecer; <code>ExecutorInstallation</code> descreve quem executa em um tenant; <code>SlotBinding</code> liga um step a uma installation, nunca a um SKU global.</p>
+          </div>
+        </section>
+
+        <section id="domain">
+          <div class="section-head">
+            <div>
+              <span class="tag">domain model</span>
+              <h2>Abstrações Centrais</h2>
+            </div>
+            <p>As abstrações abaixo são o vocabulário ubíquo do sistema. Elas aparecem em proto, banco, Go, Python e UI.</p>
+          </div>
+
+          <div class="flow">
+            <div class="node"><strong>PlanTemplate</strong><span>Catálogo reutilizável; DAG de PlanSteps e parâmetros de entrada.</span></div>
+            <div class="node"><strong>PlanConfiguration</strong><span>Instância tenant-scoped com seed inputs, SlotBindings, OverseerBindings, policies e schedule.</span></div>
+            <div class="node"><strong>PlanExecution</strong><span>Snapshot imutável da configuração e template no momento da execução.</span></div>
+            <div class="node"><strong>StepExecution</strong><span>Uma tentativa de executar um PlanStep com installation snapshot e artifacts.</span></div>
+            <div class="node"><strong>Artifact</strong><span>Payload tipado versionado em Garage, metadado em Postgres.</span></div>
+            <div class="node"><strong>ThreadMessage</strong><span>Eventos e prompts que tornam a execução navegável no chat.</span></div>
+          </div>
+
+          <div class="matrix" style="margin-top: 22px;">
+            <div class="lane">
+              <h3>Planos</h3>
+              <div class="pill-list">
+                <span class="pill">PlanTemplate</span><span class="pill">PlanStep</span><span class="pill">PlanStepDependency</span><span class="pill">TemplateInputParameter</span><span class="pill">SeedArtifactBinding</span>
+              </div>
+            </div>
+            <div class="lane">
+              <h3>Execução</h3>
+              <div class="pill-list">
+                <span class="pill">PlanConfiguration</span><span class="pill">SlotBinding</span><span class="pill">OverseerBinding</span><span class="pill">PlanBehaviorPolicies</span><span class="pill">PlanSchedule</span><span class="pill">PlanExecution</span><span class="pill">StepExecution</span>
+              </div>
+            </div>
+            <div class="lane">
+              <h3>Capacidades</h3>
+              <div class="pill-list">
+                <span class="pill">ExecutorSKU</span><span class="pill">ExecutorEntitlement</span><span class="pill">ExecutorInstallation</span><span class="pill">ArtifactType</span><span class="pill">ArtifactVersion</span><span class="pill">AgentManifest</span><span class="pill">BudgetReservation</span>
+              </div>
+            </div>
+          </div>
+
+          <table style="margin-top: 22px;">
+            <thead><tr><th>Abstração</th><th>Onde vive</th><th>Como se conecta</th></tr></thead>
+            <tbody>
+              <tr><td><code>PlanHandler</code></td><td><code>control-plane/internal/plans/handler.go</code></td><td>Implementa PlanService, valida tenant, persiste configs, dispara Temporal e emite turnos do assistant.</td></tr>
+              <tr><td><code>RuntimeRepository</code></td><td><code>control-plane/internal/plans/runtime.go</code></td><td>Adapter entre Temporal activities e Postgres/chat store; cria StepExecutions e mensagens de progresso.</td></tr>
+              <tr><td><code>PlanWorkflow</code></td><td><code>control-plane/internal/workflow/plans.go</code></td><td>Percorre topologicamente o DAG, chama integration/agent activities, espera approvals/elicitations.</td></tr>
+              <tr><td><code>Controller</code></td><td><code>control-plane/internal/planassistant/controller.go</code></td><td>State machine determinística da configuração conversacional; emite <code>ASSISTANT_PROMPT</code>.</td></tr>
+              <tr><td><code>Handler</code> de Threads</td><td><code>control-plane/internal/threads/handler.go</code></td><td>Cria threads, lista mensagens, watch por long polling e propõe plano via classifier.</td></tr>
+              <tr><td><code>AgentServiceImpl</code></td><td><code>agent-runtime/src/harpia_agents/services.py</code></td><td>Serve AgentService; executa manifest-backed agents ou fallback LangGraph supervisor.</td></tr>
+              <tr><td><code>LLMRegistry</code></td><td><code>agent-runtime/src/harpia_agents/llm/registry.py</code></td><td>Porta de providers; adapters OpenAI, DeepSeek, Anthropic e Ollama.</td></tr>
+              <tr><td><code>BudgetedLLMRegistry</code></td><td><code>agent-runtime/src/harpia_agents/budget/client.py</code></td><td>Decorator que reserva orçamento antes da chamada e registra uso depois.</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="control-plane">
+          <div class="section-head">
+            <div>
+              <span class="tag">go</span>
+              <h2>Control Plane</h2>
+            </div>
+            <p>O binário Go tem dois modos: API HTTP/ConnectRPC e worker Temporal. A camada de domínio é pragmaticamente organizada por packages internos com handlers, repositories e adapters.</p>
+          </div>
+
+          <div class="grid cols-2">
+            <div class="card dark">
+              <h3>API mode</h3>
+              <p><code>cmd/api/main.go</code> carrega config, conecta Postgres, semeia catálogo/dev data, cria handlers, instala interceptors de identidade/rate limit e registra serviços ConnectRPC.</p>
+            </div>
+            <div class="card dark">
+              <h3>Worker mode</h3>
+              <p><code>HARPIA_ROLE=worker</code> inicializa repositories, Garage, executor runtime e registra workflows/activities no Temporal task queue.</p>
+            </div>
+          </div>
+
+          <div class="diagram-wrap" style="margin-top: 18px;">
+            <svg viewBox="0 0 1120 520" role="img">
+              <defs>
+                <marker id="arrow2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#C8920F"></path></marker>
+              </defs>
+              <text x="24" y="36" class="svg-title">Control-plane package map</text>
+              <rect x="28" y="68" width="220" height="130" rx="18" fill="#1A1B24"></rect>
+              <text x="52" y="104" fill="#F5F2EB" class="svg-label">cmd/api</text>
+              <text x="52" y="130" fill="#F5F2EB" class="svg-small">composition root</text>
+              <text x="52" y="154" fill="#F5F2EB" class="svg-mono">API + worker</text>
+
+              <rect x="320" y="54" width="250" height="164" rx="18" fill="#FFFDF8" stroke="#C8920F"></rect>
+              <text x="344" y="88" class="svg-label">Handlers ConnectRPC</text>
+              <text x="344" y="114" class="svg-mono">plans, threads, artifacts</text>
+              <text x="344" y="134" class="svg-mono">executors, agents, budget</text>
+              <text x="344" y="154" class="svg-mono">identity, llm_config</text>
+              <text x="344" y="174" class="svg-mono">tasks/feedback legado</text>
+
+              <rect x="650" y="54" width="220" height="164" rx="18" fill="#FFFDF8" stroke="#121318"></rect>
+              <text x="674" y="88" class="svg-label">Repositories</text>
+              <text x="674" y="114" class="svg-mono">pgxpool + SQL</text>
+              <text x="674" y="134" class="svg-mono">tenant RLS</text>
+              <text x="674" y="154" class="svg-mono">JSON snapshots</text>
+
+              <rect x="930" y="54" width="160" height="164" rx="18" fill="#F5F2EB" stroke="#121318"></rect>
+              <text x="954" y="88" class="svg-label">Infra</text>
+              <text x="954" y="114" class="svg-mono">Postgres</text>
+              <text x="954" y="134" class="svg-mono">Garage</text>
+              <text x="954" y="154" class="svg-mono">Valkey</text>
+              <text x="954" y="174" class="svg-mono">Temporal</text>
+
+              <path d="M248 132 H320" stroke="#C8920F" stroke-width="2" marker-end="url(#arrow2)"></path>
+              <path d="M570 132 H650" stroke="#C8920F" stroke-width="2" marker-end="url(#arrow2)"></path>
+              <path d="M870 132 H930" stroke="#C8920F" stroke-width="2" marker-end="url(#arrow2)"></path>
+
+              <rect x="28" y="292" width="270" height="142" rx="18" fill="#FFFDF8" stroke="#C8920F"></rect>
+              <text x="52" y="328" class="svg-label">Plan assistant</text>
+              <text x="52" y="354" class="svg-mono">DeriveState</text>
+              <text x="52" y="374" class="svg-mono">BuildPrompt</text>
+              <text x="52" y="394" class="svg-mono">Append ThreadMessage</text>
+
+              <rect x="342" y="292" width="270" height="142" rx="18" fill="#FFFDF8" stroke="#C8920F"></rect>
+              <text x="366" y="328" class="svg-label">Plan runtime</text>
+              <text x="366" y="354" class="svg-mono">RuntimeRepository</text>
+              <text x="366" y="374" class="svg-mono">StepExecution lifecycle</text>
+              <text x="366" y="394" class="svg-mono">chat progress events</text>
+
+              <rect x="656" y="292" width="220" height="142" rx="18" fill="#FFFDF8" stroke="#C8920F"></rect>
+              <text x="680" y="328" class="svg-label">Executor runtime</text>
+              <text x="680" y="354" class="svg-mono">RSS handler</text>
+              <text x="680" y="374" class="svg-mono">LinkedIn handler</text>
+              <text x="680" y="394" class="svg-mono">ArtifactStore port</text>
+
+              <rect x="920" y="292" width="170" height="142" rx="18" fill="#FFFDF8" stroke="#C8920F"></rect>
+              <text x="944" y="328" class="svg-label">Temporal</text>
+              <text x="944" y="354" class="svg-mono">PlanWorkflow</text>
+              <text x="944" y="374" class="svg-mono">signals</text>
+              <text x="944" y="394" class="svg-mono">activities</text>
+
+              <path d="M476 218 V292" stroke="#6B7080" stroke-dasharray="7 5" stroke-width="2" marker-end="url(#arrow2)"></path>
+              <path d="M476 218 C476 260 163 252 163 292" stroke="#6B7080" stroke-dasharray="7 5" stroke-width="2" marker-end="url(#arrow2)"></path>
+              <path d="M760 218 C760 254 766 254 766 292" stroke="#6B7080" stroke-dasharray="7 5" stroke-width="2" marker-end="url(#arrow2)"></path>
+              <path d="M476 434 C476 478 1005 478 1005 434" stroke="#C8920F" stroke-width="2" marker-end="url(#arrow2)"></path>
+            </svg>
+          </div>
+
+          <table style="margin-top: 18px;">
+            <thead><tr><th>Package</th><th>Principais structs/interfaces</th><th>Responsabilidade</th></tr></thead>
+            <tbody>
+              <tr><td><code>internal/plans</code></td><td><code>PlanHandler</code>, <code>Repository</code>, <code>RuntimeRepository</code>, <code>BindingValidator</code>, <code>ScheduleManager</code></td><td>Catálogo, configuração, status, schedule, execução, retry, approvals e elicitations.</td></tr>
+              <tr><td><code>internal/workflow</code></td><td><code>PlanWorkflow</code>, <code>PlanActivities</code>, <code>PlanRuntimeStore</code>, <code>ExecutorActivityInput</code></td><td>Orquestração Temporal do DAG, signals humanas e dispatch para integração/agente.</td></tr>
+              <tr><td><code>internal/executors</code></td><td><code>ExecutorSKU</code>, <code>ExecutorEntitlement</code>, <code>ExecutorInstallation</code>, <code>IntegrationRegistry</code></td><td>Catálogo comercial, instalações tenant-configured e runtime de integrações.</td></tr>
+              <tr><td><code>internal/artifacts</code></td><td><code>ArtifactType</code>, <code>Artifact</code>, <code>ArtifactVersion</code>, <code>PayloadStore</code>, <code>GarageStore</code></td><td>Metadados em Postgres, payload em Garage, versionamento e preview.</td></tr>
+              <tr><td><code>internal/threads</code> + <code>internal/chat</code></td><td><code>Thread</code>, <code>Store</code>, <code>AppendInput</code>, payload builders</td><td>Thread lifecycle, message stream, proposal payloads e eventos de execução.</td></tr>
+              <tr><td><code>internal/planassistant</code></td><td><code>Controller</code>, <code>AssistantState</code>, <code>ExecutorCatalog</code></td><td>Máquina de estado determinística: binding step, overseer step, policies, matrix e landing.</td></tr>
+              <tr><td><code>internal/copilot</code></td><td><code>PlanClassifier</code>, <code>LLMClassifier</code>, <code>TemplateSummary</code>, <code>Candidate</code></td><td>Roteia linguagem natural para PlanTemplates e extrai input values.</td></tr>
+              <tr><td><code>internal/llm_config</code></td><td><code>Resolver</code>, <code>Config</code>, <code>Keyring</code>, <code>PlatformKeyStore</code></td><td>BYOK, chaves criptografadas, fallback platform key e endpoint interno para agentes.</td></tr>
+              <tr><td><code>internal/identity</code></td><td><code>RequestContextInterceptor</code>, <code>RequestContext</code>, <code>MembershipRepository</code></td><td>Autenticação Bearer/Zitadel/dev-token, tenant membership e autorização por request.</td></tr>
+              <tr><td><code>internal/budget</code></td><td><code>Handler</code>, <code>Repository</code>, <code>Reservation</code>, <code>UsageEvent</code></td><td>Quotas, reservas e ledger de uso LLM.</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="agent-runtime">
+          <div class="section-head">
+            <div>
+              <span class="tag">python</span>
+              <h2>Agent Runtime</h2>
+            </div>
+            <p>O runtime Python separa raciocínio agentic, providers LLM e activities de agente. Ele também serve AgentService via ConnectRPC ASGI.</p>
+          </div>
+
+          <div class="grid cols-3">
+            <div class="card"><h3>Entrypoints</h3><p><code>main.py</code> roda server ou worker via <code>HARPIA_ROLE</code>; <code>temporal_worker.py</code> registra o worker Python.</p></div>
+            <div class="card"><h3>LangGraph</h3><p><code>graph.py</code> define supervisor genérico planner → router → worker/human_feedback.</p></div>
+            <div class="card"><h3>Manifest agents</h3><p><code>newsletter_writer.py</code> e <code>linkedin_voice.py</code> executam artifacts tipados a partir de manifests YAML.</p></div>
+          </div>
+
+          <table style="margin-top: 18px;">
+            <thead><tr><th>Área</th><th>Classes/funções</th><th>Conexões</th></tr></thead>
+            <tbody>
+              <tr><td>ConnectRPC</td><td><code>AgentServiceImpl</code></td><td>Implementa <code>RegisterAgentType</code>, <code>ListAgentTypes</code>, <code>MatchAgent</code>, streaming <code>ExecuteTask</code> e <code>ContinueExecution</code>.</td></tr>
+              <tr><td>Graph genérico</td><td><code>TaskState</code>, <code>TaskPlan</code>, <code>Subtask</code>, <code>build_graph()</code></td><td>Fallback supervisor com Pydantic state e LangGraph StateGraph.</td></tr>
+              <tr><td>Manifest registry</td><td><code>AgentType</code>, <code>ManifestReferenceRegistry</code>, <code>run_registered_agent</code></td><td>Valida manifests e mapeia <code>manifest_id</code> para runners concretos.</td></tr>
+              <tr><td>LLM</td><td><code>LLMProvider</code>, <code>LLMRegistry</code>, <code>CompletionResult</code>, <code>RedactedSecret</code></td><td>Porta de provider com adapters OpenAI, DeepSeek, Anthropic e Ollama.</td></tr>
+              <tr><td>Budget</td><td><code>BudgetedLLMRegistry</code></td><td>Decorator que chama BudgetPolicyService antes/depois de completar ou streamar.</td></tr>
+              <tr><td>Artifacts</td><td><code>ArtifactPayloadClient</code></td><td>Client interno para <code>GetArtifactPayload</code> e <code>CreateArtifactWithPayload</code>.</td></tr>
+              <tr><td>Temporal</td><td><code>HarpiaTaskWorkflow</code>, <code>run_agent_activity</code></td><td>Atividade Python consome snapshots de installation, resolve artifacts, chama agent e salva output.</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="frontend">
+          <div class="section-head">
+            <div>
+              <span class="tag">sveltekit</span>
+              <h2>Frontend e Jornadas</h2>
+            </div>
+            <p>A UI é client-heavy, usa Svelte 5 runes, Connect-Web e generated protobufs. A superfície principal é o chat de configuração de planos.</p>
+          </div>
+
+          <div class="grid cols-4">
+            <div class="card"><h3>/new e /chat</h3><p>Proposta, refinamento, seleção, binding, policies e run/schedule.</p></div>
+            <div class="card"><h3>/plans</h3><p>Catálogo, detalhes, configurações, canvas e execuções.</p></div>
+            <div class="card"><h3>/inbox</h3><p>Aprovações e elicitations em aberto.</p></div>
+            <div class="card"><h3>/artifacts</h3><p>Browser de artifacts e previews tipados.</p></div>
+          </div>
+
+          <table style="margin-top: 18px;">
+            <thead><tr><th>Camada</th><th>Arquivos</th><th>Papel</th></tr></thead>
+            <tbody>
+              <tr><td>Shell/Auth</td><td><code>src/routes/+layout.svelte</code>, <code>+layout.server.ts</code>, <code>src/lib/auth.ts</code></td><td>Proteção de rotas, sessão, tenant selector, persona/dev login, locale e app shell.</td></tr>
+              <tr><td>RPC</td><td><code>src/lib/transport.ts</code>, <code>src/lib/rpc.ts</code></td><td>Connect-Web transport com auth/tenant headers, retries e clients tipados.</td></tr>
+              <tr><td>Thread UI</td><td><code>src/lib/components/thread/**</code></td><td>Composer, message cards, prompt cards, plan proposal, landing e execution progress.</td></tr>
+              <tr><td>Plans</td><td><code>src/lib/plans/**</code>, <code>src/routes/plans/**</code></td><td>Catalog browser, configuration matrix/canvas, executions e detail pages.</td></tr>
+              <tr><td>I18n</td><td><code>src/lib/i18n/en.json</code>, <code>pt-BR.json</code></td><td>Flat translate keys; catalog content sob <code>catalog.plan.*</code> e <code>plans.inputs.*.label</code>.</td></tr>
+              <tr><td>Design</td><td><code>src/app.css</code>, <code>src/lib/themes/**</code></td><td>Tokens semânticos, Harpy Eclipse, Tailwind v4 e componentes internos.</td></tr>
+            </tbody>
+          </table>
+
+          <div class="timeline" style="margin-top: 20px;">
+            <div class="timeline-item"><div><strong>Login/session</strong><br>Usuário entra por <code>/login</code>, cookie <code>harpia_session</code> protege rotas, tenant vem do contexto da sessão.</div></div>
+            <div class="timeline-item"><div><strong>Chat-first configuration</strong><br>Usuário descreve intenção; ThreadService propõe plano; PlanService cria configuração; assistant guia SlotBindings, OverseerBindings e policies.</div></div>
+            <div class="timeline-item"><div><strong>Runnable plan</strong><br>Matrix confirma que todos os steps têm executor, overseer e behavior policies; status sai de DRAFT.</div></div>
+            <div class="timeline-item"><div><strong>Execution monitoring</strong><br>PlanExecution emite mensagens <code>RUN_STARTED</code>, <code>STEP_STARTED</code>, <code>STEP_BOUND</code>, <code>RUN_COMPLETED</code> no chat e nas rotas de execução.</div></div>
+            <div class="timeline-item"><div><strong>Artifact stream</strong><br>Artifacts gerados aparecem em cards, preview panel e browser dedicado.</div></div>
+          </div>
+        </section>
+
+        <section id="contracts-data">
+          <div class="section-head">
+            <div>
+              <span class="tag">contracts + data</span>
+              <h2>Contratos, Dados e Infra</h2>
+            </div>
+            <p>O sistema é contract-first. Proto é a fonte de verdade de serviços; Postgres é a fonte de verdade de estado; Tilt/mise/Helm descrevem operação local e deploy.</p>
+          </div>
+
+          <div class="grid cols-3">
+            <div class="card"><h3>Proto</h3><p><code>proto/harpia/*/v1</code>; Buf gera TS, Go e Python. Principais services: Plan, Thread, Artifact, Executor, Agent, Budget, LLMConfig, Identity.</p></div>
+            <div class="card"><h3>Database</h3><p>14 migrations atuais: tenants/users, legacy tasks, plans, executors, artifacts, approvals, elicitations, LLM budget/config e threads.</p></div>
+            <div class="card"><h3>Deploy</h3><p><code>mise.toml</code> orquestra comandos; <code>Tiltfile</code> sobe kind dev; Helm chart em <code>deploy/harpia</code>.</p></div>
+          </div>
+
+          <table style="margin-top: 18px;">
+            <thead><tr><th>Grupo de tabelas</th><th>Tabelas principais</th><th>Observação</th></tr></thead>
+            <tbody>
+              <tr><td>Tenant/identity</td><td><code>tenants</code>, <code>users</code>, <code>workspaces</code></td><td>RLS via helper <code>current_tenant_id()</code>.</td></tr>
+              <tr><td>Plans</td><td><code>plan_templates</code>, <code>plan_template_steps</code>, <code>plan_configurations</code>, <code>plan_executions</code>, <code>step_executions</code></td><td>Templates globais; configurations/executions tenant-scoped.</td></tr>
+              <tr><td>Executors</td><td><code>executor_skus</code>, <code>executor_entitlements</code>, <code>executor_installations</code></td><td>SKU é catálogo; installation carrega config OAuth/feed/manifest.</td></tr>
+              <tr><td>Artifacts</td><td><code>artifact_types</code>, <code>artifacts</code>, <code>artifact_versions</code></td><td>Payload fora do banco em Garage; metadados e versões no banco.</td></tr>
+              <tr><td>Human gates</td><td><code>plan_approval_requests</code>, <code>plan_elicitations</code></td><td>Temporal signals resolvem decisões/answers.</td></tr>
+              <tr><td>LLM/budget</td><td><code>tenant_llm_configs</code>, <code>tenant_quotas</code>, <code>llm_budget_reservations</code>, <code>llm_usage_events</code></td><td>Uso LLM mensurado e particionado por mês.</td></tr>
+              <tr><td>Chat</td><td><code>threads</code>, <code>chat_messages</code></td><td>Thread é a superfície conversacional e log de eventos da execução.</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="flows">
+          <div class="section-head">
+            <div>
+              <span class="tag">journeys</span>
+              <h2>Fluxos End-to-End</h2>
+            </div>
+            <p>Os fluxos abaixo conectam UI, contracts, control-plane, Temporal, agent-runtime e storage.</p>
+          </div>
+
+          <div class="grid cols-2">
+            <div class="card">
+              <h3>1. Conversa → PlanConfiguration</h3>
+              <ol class="list">
+                <li>Usuário envia mensagem em <code>/new</code> ou <code>/chat/:threadId</code>.</li>
+                <li><code>ThreadService.ProposePlan</code> usa <code>PlanClassifier</code> contra summaries do catálogo.</li>
+                <li>Thread recebe <code>PLAN_PROPOSED</code> com candidatos e defaults.</li>
+                <li>Ao confirmar, <code>CreatePlanConfiguration</code> persiste configuração DRAFT.</li>
+                <li><code>planassistant.Controller.SeedThread</code> emite <code>CONFIGURATION_STARTED</code> e primeiro <code>ASSISTANT_PROMPT</code>.</li>
+                <li>Usuário escolhe executors, overseers e policies até virar RUNNABLE/SCHEDULED.</li>
+              </ol>
+            </div>
+
+            <div class="card">
+              <h3>2. Run now / schedule → PlanExecution</h3>
+              <ol class="list">
+                <li><code>CreatePlanExecution</code> valida bindings e seed readiness.</li>
+                <li>Control-plane cria snapshot de config/template/installations.</li>
+                <li>Temporal inicia <code>PlanWorkflow</code>.</li>
+                <li>Workflow ordena o DAG topologicamente e cria <code>StepExecution</code>.</li>
+                <li>Step chama <code>RunIntegrationActivity</code> ou <code>RunAgentActivity</code>.</li>
+                <li>Output artifact é persistido; chat recebe eventos de progresso.</li>
+              </ol>
+            </div>
+
+            <div class="card">
+              <h3>3. Human-in-the-loop</h3>
+              <ol class="list">
+                <li>Policy pode exigir approval antes de publicação.</li>
+                <li>Workflow cria <code>plan_approval_requests</code> e aguarda signal <code>plan-approval-decision</code>.</li>
+                <li>Agente pode retornar <code>elicitation_requested</code>.</li>
+                <li>Runtime persiste elicitation, UI mostra Inbox/card e resposta volta como signal <code>plan-elicitation-response</code>.</li>
+                <li>Timeout segue <code>PlanBehaviorPolicies</code>.</li>
+              </ol>
+            </div>
+
+            <div class="card">
+              <h3>4. Artifact browsing</h3>
+              <ol class="list">
+                <li>Executor cria artifact via <code>CreateArtifactWithPayload</code>.</li>
+                <li>Payload vai para Garage com path tenant-scoped; metadata/version vai para Postgres.</li>
+                <li>Frontend chama <code>PreviewArtifact</code> ou <code>GetArtifactPayload</code>.</li>
+                <li>Artifacts aparecem no thread, execution detail e browser <code>/artifacts</code>.</li>
+              </ol>
+            </div>
+          </div>
+        </section>
+
+        <section id="patterns">
+          <div class="section-head">
+            <div>
+              <span class="tag">patterns</span>
+              <h2>Padrões de Design</h2>
+            </div>
+            <p>O código mistura DDD pragmático, ports/adapters e workflow orchestration. A maior parte das fronteiras está em interfaces pequenas e contratos protobuf.</p>
+          </div>
+
+          <div class="grid cols-3">
+            <div class="card"><h3>Repository pattern</h3><p>Packages Go expõem repositories por aggregate/capability com SQL explícito e pgxpool.</p></div>
+            <div class="card"><h3>Ports & adapters</h3><p><code>PayloadStore</code>, <code>PlanRuntimeStore</code>, <code>LLMProvider</code>, <code>ExecutorCatalog</code>, <code>PlanClassifier</code>.</p></div>
+            <div class="card"><h3>Workflow orchestration</h3><p>Temporal é o orchestrator técnico de longa duração; domínio evita orquestrador agentic.</p></div>
+            <div class="card"><h3>State machine</h3><p><code>planassistant.DeriveState</code> e status de config/execution/step controlam a jornada.</p></div>
+            <div class="card"><h3>Registry/strategy</h3><p>Executor registry, integration handlers, agent manifest registry e LLM provider registry.</p></div>
+            <div class="card"><h3>Decorator</h3><p><code>BudgetedLLMRegistry</code> envolve provider calls com reserve/record usage.</p></div>
+            <div class="card"><h3>Generated contract boundary</h3><p>Go, Python e TypeScript consomem stubs gerados; evita serialização manual fora das bordas.</p></div>
+            <div class="card"><h3>Tenant-safe wrappers</h3><p>Object store/cache são encapsulados para impedir chaves globais sem tenant.</p></div>
+            <div class="card"><h3>Anti-corruption layer</h3><p>Planejada para Slack/human interaction; hoje aparece em adapters de integração e external providers.</p></div>
+          </div>
+        </section>
+
+        <section id="files">
+          <div class="section-head">
+            <div>
+              <span class="tag">source map</span>
+              <h2>Arquivos de Referência</h2>
+            </div>
+            <p>Entradas rápidas para navegar o design no código.</p>
+          </div>
+
+          <table>
+            <thead><tr><th>Área</th><th>Arquivos</th></tr></thead>
+            <tbody>
+              <tr><td>ADRs</td><td><code>docs/adr/ADR-012-plan-centric-task-model.md</code>, <code>ADR-006-domain-driven-design.md</code>, <code>ADR-008-tenant-safe-generic-infra-boundaries.md</code>, <code>ADR-015-plan-template-authoring.md</code></td></tr>
+              <tr><td>Composition root</td><td><code>control-plane/cmd/api/main.go</code></td></tr>
+              <tr><td>Plan domain</td><td><code>control-plane/internal/plans/handler.go</code>, <code>repository.go</code>, <code>runtime.go</code>, <code>materialize.go</code>, <code>validation.go</code></td></tr>
+              <tr><td>Temporal</td><td><code>control-plane/internal/workflow/plans.go</code>, <code>worker.go</code>, <code>integration_adapter.go</code>, <code>agent-runtime/src/harpia_agents/temporal/worker.py</code></td></tr>
+              <tr><td>Assistant/chat</td><td><code>control-plane/internal/planassistant/*</code>, <code>internal/threads/*</code>, <code>internal/chat/*</code></td></tr>
+              <tr><td>Executors/artifacts</td><td><code>control-plane/internal/executors/**</code>, <code>control-plane/internal/artifacts/**</code></td></tr>
+              <tr><td>Agent runtime</td><td><code>agent-runtime/src/harpia_agents/services.py</code>, <code>graph.py</code>, <code>agents/registry.py</code>, <code>llm/**</code></td></tr>
+              <tr><td>Frontend</td><td><code>frontend/src/lib/components/thread/**</code>, <code>src/lib/rpc.ts</code>, <code>src/lib/transport.ts</code>, <code>src/routes/plans/**</code></td></tr>
+              <tr><td>Contracts/data</td><td><code>proto/harpia/**/v1/*.proto</code>, <code>database/migrations/*.sql</code>, <code>deploy/harpia</code>, <code>Tiltfile</code>, <code>mise.toml</code></td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="gaps">
+          <div class="section-head">
+            <div>
+              <span class="tag">observações</span>
+              <h2>Gaps e Riscos Observados</h2>
+            </div>
+            <p>Itens úteis para orientar próximas discussões arquiteturais. Não são necessariamente bugs; vários são estágios naturais de pré-v1.</p>
+          </div>
+
+          <div class="grid cols-2">
+            <div class="card"><h3 class="status-risk">Agent runtime fallback ainda é simulado</h3><p><code>graph.py</code> tem worker genérico simulado; execução real está nos manifest-backed agents.</p></div>
+            <div class="card"><h3 class="status-risk">Match/list agent types incompleto no runtime</h3><p><code>AgentServiceImpl.ListAgentTypes</code> e <code>MatchAgent</code> ainda retornam vazios em partes do fluxo.</p></div>
+            <div class="card"><h3 class="status-risk">Streaming LLM limitado</h3><p>Providers Python implementam stream como wrapper de complete em alguns adapters.</p></div>
+            <div class="card"><h3 class="status-risk">OpenSpec com smoke checks pendentes</h3><p>Há mudanças ativas com verificação manual/live smoke ainda não concluída.</p></div>
+            <div class="card"><h3 class="status-good">Boa fronteira de contratos</h3><p>Proto + Buf e generated clients reduzem drift entre frontend, Go e Python.</p></div>
+            <div class="card"><h3 class="status-good">Boa proteção multi-tenant</h3><p>RLS, interceptors e clients internos com <code>X-Tenant-ID</code> deixam tenant no caminho crítico.</p></div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+</body>
+</html>
