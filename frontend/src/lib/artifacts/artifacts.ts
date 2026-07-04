@@ -26,6 +26,18 @@ export async function listArtifacts(args: {
   );
 }
 
+export async function getArtifact(
+  tenantId: string,
+  artifactId: string,
+): Promise<Artifact | null> {
+  try {
+    const res = await artifactClient.getArtifact({ tenantId, artifactId });
+    return res.artifact ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function listArtifactVersions(
   tenantId: string,
   artifactId: string,

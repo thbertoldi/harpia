@@ -636,8 +636,6 @@
   "artifactPreview.generating": "Generating…",
   "artifactPreview.ready": "Ready",
   "thread.artifacts.produced": "Produced artifacts",
-  "thread.sidePreview.title": "Final result",
-  "thread.sidePreview.close": "Close preview",
   "thread.sidePreview.open": "Show final result",
   "artifacts.actions.open": "Open artifact",
   "artifacts.actions.edit": "Edit artifact",

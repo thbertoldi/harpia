@@ -89,7 +89,7 @@
     class="fixed inset-0 z-40 bg-black/40"
   ></div>
   <aside
-    class="fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-plumage bg-obsidian shadow-lg"
+    class="fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-plumage bg-obsidian shadow-lg lg:w-[52%] lg:max-w-[860px] lg:min-w-[440px]"
   >
     <!-- Header -->
     <header

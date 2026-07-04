@@ -3,7 +3,7 @@
   import { invalidateAll } from "$app/navigation";
   import { page } from "$app/stores";
   import { resolve } from "$app/paths";
-  import { listArtifacts } from "$lib/artifacts/artifacts";
+  import { listArtifacts, getArtifact } from "$lib/artifacts/artifacts";
   import { getTenant } from "$lib/auth";
   import { locale, translate } from "$lib/i18n";
   import { loadThreadMessages, appendThreadMessage } from "$lib/chat/client";
@@ -18,7 +18,7 @@
   import ThreadComposer from "$lib/components/thread/ThreadComposer.svelte";
   import PlanProposalCard from "$lib/components/thread/PlanProposalCard.svelte";
   import PlanExecutionCard from "$lib/components/thread/PlanExecutionCard.svelte";
-  import ArtifactDetailPanel from "$lib/components/artifacts/ArtifactDetailPanel.svelte";
+  import ArtifactPreviewSheet from "$lib/components/artifacts/ArtifactPreviewSheet.svelte";
   import SuggestionChips from "$lib/components/SuggestionChips.svelte";
   import HintBanner from "$lib/components/thread/HintBanner.svelte";
   import PlanThreadTopBar from "$lib/components/PlanThreadTopBar.svelte";
@@ -107,12 +107,19 @@
   let workspaceActivityItems = $state<PlanActivityItem[]>([]);
   let workspaceLoadError = $state(false);
 
-  // Side preview (split-pane) shows the FINAL artifact of the active plan run.
-  // Intermediate artifacts are never promoted here (spec: artifact-side-preview).
-  // The pane auto-opens whenever a new final artifact arrives, unless the user
-  // has dismissed it for that specific artifact; closing reclaims the chat width.
-  let sidePreviewOpen = $state(false);
-  let sidePreviewDismissedArtifactId = $state<string | null>(null);
+  // Canonical artifact preview state — single source of truth for BOTH the
+  // auto-surfaced final artifact and any manually-opened artifact (final-
+  // artifact button, ArtifactRail, PlanActivityTimeline, inline STEP_BOUND
+  // cards). Intermediate artifacts are never auto-promoted here (spec:
+  // artifact-side-preview) — only opened explicitly by the user.
+  let previewArtifactId = $state<string | null>(null);
+  let previewOpen = $state(false);
+  // Populated on demand when the id isn't in workspaceArtifacts (e.g. an
+  // artifact from an older execution in this thread).
+  let previewFallbackArtifact = $state<Artifact | null>(null);
+  // Dismissal memory scoped ONLY to the final-artifact auto-open flow below —
+  // never touched by manually opening/closing an unrelated artifact.
+  let previewDismissedFinalArtifactId = $state<string | null>(null);
 
   const finalArtifactTypeKeySet = $derived(
     focusedTemplate
@@ -127,17 +134,50 @@
     ) ?? null,
   );
 
-  function closeSidePreview() {
-    sidePreviewOpen = false;
-    sidePreviewDismissedArtifactId = finalArtifact?.id ?? null;
+  const previewArtifact = $derived(
+    previewArtifactId
+      ? (workspaceArtifacts.find((a) => a.id === previewArtifactId) ??
+          (previewFallbackArtifact?.id === previewArtifactId
+            ? previewFallbackArtifact
+            : null))
+      : null,
+  );
+
+  // The one callback threaded down through ConversationalWorkspace to
+  // ArtifactRail, PlanActivityTimeline, and inline STEP_BOUND artifact cards.
+  function openArtifact(artifactId: string) {
+    previewArtifactId = artifactId;
+    previewOpen = true;
+    previewFallbackArtifact = null;
+    if (workspaceArtifacts.some((a) => a.id === artifactId)) return;
+    void (async () => {
+      const artifact = await getArtifact(tenantId, artifactId);
+      if (previewArtifactId === artifactId) previewFallbackArtifact = artifact;
+    })();
   }
 
-  // Re-open the pane automatically when a new final artifact appears (e.g. a
+  function closePreview() {
+    // Only feed the dismissal memory when the thing being closed IS the final
+    // artifact — closing a manually-opened, unrelated artifact must never
+    // suppress the next final-artifact auto-open.
+    if (
+      previewArtifact &&
+      finalArtifact &&
+      previewArtifact.id === finalArtifact.id
+    ) {
+      previewDismissedFinalArtifactId = finalArtifact.id;
+    }
+    previewOpen = false;
+  }
+
+  // Re-open the panel automatically when a new final artifact appears (e.g. a
   // fresh run completes). Stays dismissed for the artifact the user closed.
   $effect(() => {
     const artifactId = finalArtifact?.id ?? null;
-    if (artifactId && artifactId !== sidePreviewDismissedArtifactId) {
-      sidePreviewOpen = true;
+    if (artifactId && artifactId !== previewDismissedFinalArtifactId) {
+      previewArtifactId = artifactId;
+      previewFallbackArtifact = null;
+      previewOpen = true;
     }
   });
 
@@ -214,8 +254,10 @@
     workspaceArtifacts = [];
     workspaceActivityItems = [];
     workspaceLoadError = false;
-    sidePreviewOpen = false;
-    sidePreviewDismissedArtifactId = null;
+    previewOpen = false;
+    previewArtifactId = null;
+    previewFallbackArtifact = null;
+    previewDismissedFinalArtifactId = null;
   }
 
   function selectConfiguration(configurationId: string) {
@@ -555,7 +597,7 @@
       />
     </div>
   {:else}
-    <div class="flex flex-col gap-3 lg:flex-row lg:items-start">
+    <div class="flex flex-col gap-3">
       <section class="flex min-w-0 flex-1 flex-col gap-3">
         {#if data.configurations.length > 1}
           <div
@@ -628,11 +670,11 @@
               ? translate("thread.status.executing", $locale)
               : translate("thread.status.ready", $locale)}
           </span>
-          {#if finalArtifact && !sidePreviewOpen}
+          {#if finalArtifact && !(previewOpen && previewArtifact?.id === finalArtifact.id)}
             <button
               type="button"
               class="ml-auto inline-flex items-center gap-1.5 rounded-md border border-plumage px-2.5 py-1 text-[11px] text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
-              onclick={() => (sidePreviewOpen = true)}
+              onclick={() => openArtifact(finalArtifact.id)}
             >
               <PanelRightOpen class="size-3.5" />
               {translate("thread.sidePreview.open", $locale)}
@@ -680,6 +722,7 @@
             messages={planScopeMessages}
             activityItems={workspaceActivityItems}
             artifacts={workspaceArtifacts}
+            onOpenArtifact={openArtifact}
           />
         {/if}
 
@@ -702,23 +745,16 @@
           onSent={triggerProposal}
         />
       </section>
-
-      {#if sidePreviewOpen && finalArtifact}
-        <aside
-          class="w-full shrink-0 lg:w-[400px]"
-          aria-label={translate("thread.sidePreview.title", $locale)}
-        >
-          <ArtifactDetailPanel
-            {tenantId}
-            artifact={finalArtifact}
-            closeLabel={translate("thread.sidePreview.close", $locale)}
-            onClose={closeSidePreview}
-          />
-        </aside>
-      {/if}
     </div>
   {/if}
 </div>
+
+<ArtifactPreviewSheet
+  open={previewOpen}
+  artifact={previewArtifact}
+  {tenantId}
+  onClose={closePreview}
+/>
 
 {#if activeConfigurationId && focusedConfiguration}
   <ScheduleDialog
