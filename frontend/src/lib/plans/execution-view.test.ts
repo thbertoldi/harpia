@@ -3,6 +3,7 @@ import type { ChatMessage } from "$lib/chat/types";
 import {
   buildExecutionViewModel,
   parseStepKey,
+  parseOutputArtifactId,
 } from "$lib/plans/execution-view";
 import type { OrderedStep } from "$lib/plans/execution-view";
 
@@ -61,6 +62,28 @@ describe("parseStepKey", () => {
   });
   it("returns null for empty input", () => {
     expect(parseStepKey("")).toBeNull();
+  });
+});
+
+describe("parseOutputArtifactId", () => {
+  it("reads output_artifact_id from a well-formed STEP_BOUND payload", () => {
+    expect(
+      parseOutputArtifactId(
+        '{"step_key":"draft","output_artifact_id":"art-1"}',
+      ),
+    ).toBe("art-1");
+  });
+  it("returns null for malformed json", () => {
+    expect(parseOutputArtifactId("{not json")).toBeNull();
+  });
+  it("returns null when output_artifact_id is absent", () => {
+    expect(parseOutputArtifactId('{"step_key":"draft"}')).toBeNull();
+  });
+  it("returns null when output_artifact_id is empty", () => {
+    expect(parseOutputArtifactId('{"output_artifact_id":""}')).toBeNull();
+  });
+  it("returns null for empty input", () => {
+    expect(parseOutputArtifactId("")).toBeNull();
   });
 });
 

@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { ChatMessage } from "$lib/chat/types";
+  import type { Artifact } from "$lib/gen/harpia/artifacts/v1/artifacts_pb";
   import { locale } from "$lib/i18n";
   import { formatRelativeTime } from "$lib/i18n/format";
   import SystemEventCard from "./SystemEventCard.svelte";
@@ -17,6 +18,8 @@
     message: ChatMessage;
     configurationId?: string;
     tenantId?: string;
+    artifacts?: Artifact[];
+    onOpenArtifact?: (artifactId: string) => void;
     isLive?: boolean;
     isAnswered?: boolean;
   }
@@ -24,6 +27,8 @@
     message,
     configurationId = "",
     tenantId = "",
+    artifacts = [],
+    onOpenArtifact,
     isLive = false,
     isAnswered = false,
   }: Props = $props();
@@ -99,5 +104,5 @@
 {:else if message.kind === "APPROVAL_RAISED" || message.kind === "APPROVAL_DECIDED"}
   <ApprovalRefCard {message} />
 {:else}
-  <SystemEventCard {message} />
+  <SystemEventCard {message} {tenantId} {artifacts} {onOpenArtifact} />
 {/if}

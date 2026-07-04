@@ -48,6 +48,29 @@ export function parseStepKey(payloadJson: string): string | null {
 }
 
 /**
+ * Parse `output_artifact_id` from a STEP_BOUND payload. Returns null on
+ * malformed JSON or missing key so callers can degrade to non-artifact
+ * rendering.
+ */
+export function parseOutputArtifactId(payloadJson: string): string | null {
+  if (!payloadJson) return null;
+  try {
+    const parsed = JSON.parse(payloadJson) as unknown;
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      "output_artifact_id" in parsed
+    ) {
+      const id = (parsed as Record<string, unknown>).output_artifact_id;
+      return typeof id === "string" && id.length > 0 ? id : null;
+    }
+  } catch {
+    // malformed payload — degrade gracefully
+  }
+  return null;
+}
+
+/**
  * Fold an execution group's message stream (already grouped by executionId via
  * buildThreadSections) into a per-step status view model. Events are processed
  * in sequence-number order. Folding rules (ADR/live-execution-chat design §2):
