@@ -149,14 +149,18 @@ func (h *PlanHandler) RespondToElicitation(ctx context.Context, req *connect.Req
 		execID := updated.PlanExecutionID
 		configID, lookupErr := h.repo.GetPlanConfigurationIDForExecution(ctx, tenantID, updated.PlanExecutionID)
 		if lookupErr == nil {
-			_, _ = h.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
-				ThreadID:    configID.String(),
-				ExecutionID: &execID,
-				Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
-				Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_ELICITATION_ANSWERED,
-				Text:        "Question on step " + updated.PlanStepKey + " was answered.",
-				PayloadJSON: chat.BuildElicitationAnsweredPayload(updated.ID, "answered"),
-			})
+			config, configErr := h.repo.GetConfiguration(ctx, tenantID, configID)
+			threadID := configurationThreadID(config)
+			if configErr == nil && threadID != uuid.Nil {
+				_, _ = h.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
+					ThreadID:    threadID.String(),
+					ExecutionID: &execID,
+					Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
+					Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_ELICITATION_ANSWERED,
+					Text:        "Question on step " + updated.PlanStepKey + " was answered.",
+					PayloadJSON: chat.BuildElicitationAnsweredPayload(updated.ID, "answered"),
+				})
+			}
 		}
 	}
 

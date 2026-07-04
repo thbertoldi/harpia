@@ -86,6 +86,62 @@ func TestNextTurn_NilAssistantNoOps(t *testing.T) {
 	}
 }
 
+func TestConfigurationThreadIDPrefersOriginThread(t *testing.T) {
+	threadID := uuid.New()
+	originThreadID := uuid.New()
+
+	got := configurationThreadID(&PlanConfiguration{
+		ThreadID:       threadID,
+		OriginThreadID: originThreadID,
+	})
+	if got != originThreadID {
+		t.Fatalf("configurationThreadID() = %s, want origin thread %s", got, originThreadID)
+	}
+}
+
+func TestConfigurationThreadIDFallsBackToThread(t *testing.T) {
+	threadID := uuid.New()
+
+	got := configurationThreadID(&PlanConfiguration{ThreadID: threadID})
+	if got != threadID {
+		t.Fatalf("configurationThreadID() = %s, want thread %s", got, threadID)
+	}
+}
+
+func TestConfigurationFromProtoPreservesADR017Fields(t *testing.T) {
+	threadID := uuid.New()
+	originThreadID := uuid.New()
+	existing := &PlanConfiguration{
+		ID:                  uuid.New(),
+		TenantID:            uuid.New(),
+		PlanTemplateID:      uuid.New(),
+		PlanTemplateVersion: 1,
+		Kind:                ConfigurationKindRecurring,
+		ThreadID:            threadID,
+		OriginThreadID:      originThreadID,
+	}
+
+	got, err := configurationFromProto(&plansv1.PlanConfiguration{
+		Status:              plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
+		Kind:                plansv1.PlanConfigurationKind_PLAN_CONFIGURATION_KIND_ONE_SHOT,
+		ThreadId:            uuid.New().String(),
+		OriginThreadId:      uuid.New().String(),
+		ParameterValuesJson: `{}`,
+	}, existing)
+	if err != nil {
+		t.Fatalf("configurationFromProto() error = %v", err)
+	}
+	if got.Kind != existing.Kind {
+		t.Fatalf("Kind = %q, want %q", got.Kind, existing.Kind)
+	}
+	if got.ThreadID != existing.ThreadID {
+		t.Fatalf("ThreadID = %s, want %s", got.ThreadID, existing.ThreadID)
+	}
+	if got.OriginThreadID != existing.OriginThreadID {
+		t.Fatalf("OriginThreadID = %s, want %s", got.OriginThreadID, existing.OriginThreadID)
+	}
+}
+
 func TestPlanHandlerMaterializesConfigurationFromParameterValuesOnly(t *testing.T) {
 	tenantID := uuid.New()
 	templateID := uuid.New()

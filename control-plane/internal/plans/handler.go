@@ -78,12 +78,15 @@ func configurationFromProto(proto *plansv1.PlanConfiguration, existing *PlanConf
 		PlanTemplateID:      existing.PlanTemplateID,
 		PlanTemplateVersion: existing.PlanTemplateVersion,
 		Status:              statusStr,
+		Kind:                existing.Kind,
 		SeedArtifacts:       seedJSON,
 		SlotBindings:        slotJSON,
 		OverseerBindings:    overseerJSON,
 		BehaviorPolicies:    policiesJSON,
 		Schedule:            scheduleJSON,
 		ParameterValues:     parameterValuesJSON,
+		ThreadID:            existing.ThreadID,
+		OriginThreadID:      existing.OriginThreadID,
 		CreatedAt:           existing.CreatedAt,
 		UpdatedAt:           existing.UpdatedAt,
 	}, nil
@@ -489,13 +492,16 @@ func (h *PlanHandler) UpdatePlanConfiguration(ctx context.Context, req *connect.
 			}
 		}
 		if h.chat != nil {
-			_, _ = h.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
-				ThreadID:    updated.ID.String(),
-				Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
-				Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_SCHEDULE_SET,
-				Text:        "Schedule updated.",
-				PayloadJSON: chat.BuildScheduleSetPayload(newCron, newTz),
-			})
+			threadID := configurationThreadID(updated)
+			if threadID != uuid.Nil {
+				_, _ = h.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
+					ThreadID:    threadID.String(),
+					Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
+					Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_SCHEDULE_SET,
+					Text:        "Schedule updated.",
+					PayloadJSON: chat.BuildScheduleSetPayload(newCron, newTz),
+				})
+			}
 		}
 	}
 
@@ -503,13 +509,16 @@ func (h *PlanHandler) UpdatePlanConfiguration(ctx context.Context, req *connect.
 	// binding picks, Suggest) set announce_saved=false to avoid flooding the
 	// thread with a saved message on every change.
 	if h.chat != nil && req.Msg.AnnounceSaved {
-		_, _ = h.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
-			ThreadID:    updated.ID.String(),
-			Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
-			Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_CONFIGURATION_SAVED,
-			Text:        "Configuration updated.",
-			PayloadJSON: chat.BuildConfigurationSavedPayload(),
-		})
+		threadID := configurationThreadID(updated)
+		if threadID != uuid.Nil {
+			_, _ = h.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
+				ThreadID:    threadID.String(),
+				Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
+				Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_CONFIGURATION_SAVED,
+				Text:        "Configuration updated.",
+				PayloadJSON: chat.BuildConfigurationSavedPayload(),
+			})
+		}
 	}
 
 	// M6 (spec §2.1): when the matrix card's Save promotes status out of
@@ -564,6 +573,14 @@ func (h *PlanHandler) ListPlanConfigurations(ctx context.Context, req *connect.R
 			return connect.NewError(connect.CodeInvalidArgument, statusErr)
 		}
 	}
+	kind := ""
+	if req.Msg.Kind != nil && *req.Msg.Kind != plansv1.PlanConfigurationKind_PLAN_CONFIGURATION_KIND_UNSPECIFIED {
+		var kindErr error
+		kind, kindErr = configurationKindToString(*req.Msg.Kind, nil)
+		if kindErr != nil {
+			return connect.NewError(connect.CodeInvalidArgument, kindErr)
+		}
+	}
 
 	var workspaceID *uuid.UUID
 	if req.Msg.WorkspaceId != nil && *req.Msg.WorkspaceId != "" {
@@ -595,7 +612,7 @@ func (h *PlanHandler) ListPlanConfigurations(ctx context.Context, req *connect.R
 		offset = parsed
 	}
 
-	configs, err := h.repo.ListConfigurations(ctx, tenantID, workspaceID, originThreadID, status, limit+1, offset)
+	configs, err := h.repo.ListConfigurations(ctx, tenantID, workspaceID, originThreadID, status, kind, limit+1, offset)
 	if err != nil {
 		return connect.NewError(connect.CodeInternal, err)
 	}
@@ -1173,6 +1190,16 @@ func (h *PlanHandler) syncSchedule(ctx context.Context, config *PlanConfiguratio
 		return nil
 	}
 	return h.schedule.Sync(ctx, config)
+}
+
+func configurationThreadID(config *PlanConfiguration) uuid.UUID {
+	if config == nil {
+		return uuid.Nil
+	}
+	if config.OriginThreadID != uuid.Nil {
+		return config.OriginThreadID
+	}
+	return config.ThreadID
 }
 
 func configurationStatusToString(status plansv1.PlanConfigurationStatus) (string, error) {

@@ -150,18 +150,22 @@ func (h *PlanHandler) RespondToApprovalRequest(
 		execID := updated.PlanExecutionID
 		configID, lookupErr := h.repo.GetPlanConfigurationIDForExecution(ctx, tenantID, updated.PlanExecutionID)
 		if lookupErr == nil {
-			text := "Approval rejected."
-			if req.Msg.GetApproved() {
-				text = "Approval granted."
+			config, configErr := h.repo.GetConfiguration(ctx, tenantID, configID)
+			threadID := configurationThreadID(config)
+			if configErr == nil && threadID != uuid.Nil {
+				text := "Approval rejected."
+				if req.Msg.GetApproved() {
+					text = "Approval granted."
+				}
+				_, _ = h.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
+					ThreadID:    threadID.String(),
+					ExecutionID: &execID,
+					Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
+					Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_APPROVAL_DECIDED,
+					Text:        text,
+					PayloadJSON: chat.BuildApprovalDecidedPayload(updated.ID, req.Msg.GetApproved()),
+				})
 			}
-			_, _ = h.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
-				ThreadID:    configID.String(),
-				ExecutionID: &execID,
-				Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
-				Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_APPROVAL_DECIDED,
-				Text:        text,
-				PayloadJSON: chat.BuildApprovalDecidedPayload(updated.ID, req.Msg.GetApproved()),
-			})
 		}
 	}
 

@@ -362,34 +362,11 @@ func (r *Repository) UpdateConfigurationStatus(ctx context.Context, tenantID, co
 	})
 }
 
-func (r *Repository) ListConfigurations(ctx context.Context, tenantID uuid.UUID, workspaceID, originThreadID *uuid.UUID, status string, limit, offset int) ([]PlanConfiguration, error) {
+func (r *Repository) ListConfigurations(ctx context.Context, tenantID uuid.UUID, workspaceID, originThreadID *uuid.UUID, status, kind string, limit, offset int) ([]PlanConfiguration, error) {
 	configs := make([]PlanConfiguration, 0)
 	err := database.WithTenant(ctx, r.pool, tenantID, func(q database.Querier) error {
-		where := []string{"tenant_id = $1"}
-		args := []any{tenantID}
-		if workspaceID != nil {
-			args = append(args, *workspaceID)
-			where = append(where, fmt.Sprintf("workspace_id = $%d", len(args)))
-		}
-		if originThreadID != nil {
-			args = append(args, *originThreadID)
-			where = append(where, fmt.Sprintf("origin_thread_id = $%d", len(args)))
-		}
-		if status != "" {
-			args = append(args, status)
-			where = append(where, fmt.Sprintf("status = $%d", len(args)))
-		}
-		args = append(args, limit, offset)
-		rows, err := q.Query(ctx,
-			fmt.Sprintf(`SELECT id, tenant_id, workspace_id, plan_template_id, plan_template_version, status, kind,
-			        seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
-			        parameter_values, thread_id, origin_thread_id, created_at, updated_at
-			 FROM plan_configurations
-			 WHERE %s
-			 ORDER BY created_at DESC
-			 LIMIT $%d OFFSET $%d`, strings.Join(where, " AND "), len(args)-1, len(args)),
-			args...,
-		)
+		query, args := listConfigurationsQuery(tenantID, workspaceID, originThreadID, status, kind, limit, offset)
+		rows, err := q.Query(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("list plan configurations: %w", err)
 		}
@@ -413,6 +390,35 @@ func (r *Repository) ListConfigurations(ctx context.Context, tenantID uuid.UUID,
 		return nil, err
 	}
 	return configs, nil
+}
+
+func listConfigurationsQuery(tenantID uuid.UUID, workspaceID, originThreadID *uuid.UUID, status, kind string, limit, offset int) (string, []any) {
+	where := []string{"tenant_id = $1"}
+	args := []any{tenantID}
+	if workspaceID != nil {
+		args = append(args, *workspaceID)
+		where = append(where, fmt.Sprintf("workspace_id = $%d", len(args)))
+	}
+	if originThreadID != nil {
+		args = append(args, *originThreadID)
+		where = append(where, fmt.Sprintf("origin_thread_id = $%d", len(args)))
+	}
+	if status != "" {
+		args = append(args, status)
+		where = append(where, fmt.Sprintf("status = $%d", len(args)))
+	}
+	if kind != "" {
+		args = append(args, kind)
+		where = append(where, fmt.Sprintf("kind = $%d", len(args)))
+	}
+	args = append(args, limit, offset)
+	return fmt.Sprintf(`SELECT id, tenant_id, workspace_id, plan_template_id, plan_template_version, status, kind,
+			        seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
+			        parameter_values, thread_id, origin_thread_id, created_at, updated_at
+			 FROM plan_configurations
+			 WHERE %s
+			 ORDER BY created_at DESC
+			 LIMIT $%d OFFSET $%d`, strings.Join(where, " AND "), len(args)-1, len(args)), args
 }
 
 func (r *Repository) CreateExecution(ctx context.Context, execution *PlanExecution) (*PlanExecution, error) {
