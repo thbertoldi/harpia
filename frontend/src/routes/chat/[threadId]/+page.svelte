@@ -496,7 +496,11 @@
           { planTemplateId: templateId },
           { signal: controller.signal },
         );
-        if (res.planTemplate) liveTemplateOverride = res.planTemplate;
+        // Guard against a resolve racing with a config switch (the cleanup
+        // aborts the controller); otherwise a stale template from the previous
+        // config could overwrite this one's.
+        if (!controller.signal.aborted && res.planTemplate)
+          liveTemplateOverride = res.planTemplate;
       } catch {
         // best-effort; top bar still renders with the fallback name
       }

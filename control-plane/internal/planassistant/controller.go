@@ -175,7 +175,10 @@ func (c *Controller) landingAlreadyEmitted(ctx context.Context, tenantID uuid.UU
 		if m.GetKind() != chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_ASSISTANT_PROMPT {
 			continue
 		}
-		cid, st, _ := promptFingerprint(m.GetPayloadJson())
+		cid, st, _, ok := promptFingerprint(m.GetPayloadJson())
+		if !ok {
+			continue
+		}
 		if cid == configurationID && st == "landing" {
 			return true, nil
 		}
@@ -194,12 +197,20 @@ func (c *Controller) isDuplicateAssistantPrompt(ctx context.Context, tenantID uu
 	if err != nil {
 		return false, fmt.Errorf("planassistant: list messages: %w", err)
 	}
-	wantCid, wantState, wantStep := promptFingerprint(payload)
+	wantCid, wantState, wantStep, wantOk := promptFingerprint(payload)
+	// A candidate we can't fingerprint is always emitted (never suppressed),
+	// so a malformed payload can't accidentally dedup against another.
+	if !wantOk {
+		return false, nil
+	}
 	for _, m := range msgs {
 		if m.GetKind() != chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_ASSISTANT_PROMPT {
 			continue
 		}
-		cid, st, sk := promptFingerprint(m.GetPayloadJson())
+		cid, st, sk, ok := promptFingerprint(m.GetPayloadJson())
+		if !ok {
+			continue
+		}
 		if cid == wantCid && st == wantState && sk == wantStep {
 			return true, nil
 		}
@@ -210,17 +221,19 @@ func (c *Controller) isDuplicateAssistantPrompt(ctx context.Context, tenantID uu
 // promptFingerprint extracts the semantic identity of an ASSISTANT_PROMPT
 // payload: the owning configuration, the assistant state, and (for step
 // prompts) the focused step key. Two payloads with the same fingerprint are
-// the same turn to the user. Missing fields compare as "".
-func promptFingerprint(payloadJSON string) (configurationID, state, stepKey string) {
+// the same turn to the user. ok is false if the payload is unparseable, so
+// callers can decide: a candidate that can't be fingerprinted is always
+// emitted (never suppressed), and an unparseable stored message is skipped.
+func promptFingerprint(payloadJSON string) (configurationID, state, stepKey string, ok bool) {
 	var p struct {
 		ConfigurationID string `json:"configuration_id"`
 		State           string `json:"state"`
 		StepKey         string `json:"step_key"`
 	}
 	if json.Unmarshal([]byte(payloadJSON), &p) != nil {
-		return "", "", ""
+		return "", "", "", false
 	}
-	return p.ConfigurationID, p.State, p.StepKey
+	return p.ConfigurationID, p.State, p.StepKey, true
 }
 
 // stampConfigurationID merges configuration_id into the prompt payload. The
