@@ -40,6 +40,10 @@
     type PlanActivityItem,
   } from "$lib/plans/activity";
   import { buildPlanSummary } from "$lib/plans/config-summary";
+  import {
+    localizedPlanName,
+    localizedStepTitle,
+  } from "$lib/plans/catalog-i18n";
   import { loadPlanExecutionDetail } from "$lib/plans/plan-execution-detail";
   import { planClient, threadClient } from "$lib/rpc";
   import { chatEnter } from "$lib/motion/transitions";
@@ -123,10 +127,13 @@
   );
   // Maps a step_key to its human template title for STEP_STARTED / STEP_BOUND
   // system events. Threads down to SystemEventCard so the event text reads
-  // "Step Write draft started." rather than the raw step id.
-  const stepTitleFor = $derived(
-    (stepKey: string) =>
-      focusedTemplate?.steps.find((s) => s.key === stepKey)?.title ?? stepKey,
+  // "Step Write draft started." rather than the raw step id. Resolved via the
+  // catalog content keys (catalog.plan.<key>.step.<stepKey>.title) so Brazilian
+  // users see pt-BR titles; falls back to the stepKey when no template is loaded.
+  const stepTitleFor = $derived((stepKey: string) =>
+    focusedTemplate
+      ? localizedStepTitle(focusedTemplate, stepKey, $locale)
+      : stepKey,
   );
   let workspaceArtifacts = $state<Artifact[]>([]);
   let workspaceActivityItems = $state<PlanActivityItem[]>([]);
@@ -563,9 +570,16 @@
   const sections = $derived(buildThreadSections(messages));
 
   // ADR-016 / live-execution-chat — ordered template steps feed the execution
-  // view model; execution sections render as live progress cards.
+  // view model; execution sections render as live progress cards. Step titles
+  // are resolved through the catalog content keys so the timeline renders in
+  // the active locale.
   const orderedSteps = $derived(
-    (focusedTemplate?.steps ?? []).map((s) => ({ key: s.key, title: s.title })),
+    focusedTemplate
+      ? focusedTemplate.steps.map((s) => ({
+          key: s.key,
+          title: localizedStepTitle(focusedTemplate, s.key, $locale),
+        }))
+      : [],
   );
   const executionGroups = $derived(
     sections.flatMap((section) =>
@@ -786,7 +800,9 @@
                 onclick={() => selectConfiguration(configuration.id)}
               >
                 <span class="block text-[12px] font-medium">
-                  {template?.name ?? shortConfigurationId(configuration.id)}
+                  {template
+                    ? localizedPlanName(template, $locale)
+                    : shortConfigurationId(configuration.id)}
                 </span>
                 <span class="mt-0.5 block text-[10px] text-crown-ash-dark">
                   {statusTextForConfiguration(configuration)} · {shortConfigurationId(
@@ -801,7 +817,9 @@
         {#if focusedConfiguration}
           <PlanThreadTopBar
             planName={planSummary?.intent ||
-              focusedTemplate?.name ||
+              (focusedTemplate
+                ? localizedPlanName(focusedTemplate, $locale)
+                : "") ||
               shortConfigurationId(focusedConfiguration.id)}
             {statusLabel}
             {cost}
@@ -860,6 +878,7 @@
             <PlanDagMiniMap
               steps={focusedTemplate.steps}
               edges={focusedTemplate.edges}
+              template={focusedTemplate}
             />
           </div>
         {/if}

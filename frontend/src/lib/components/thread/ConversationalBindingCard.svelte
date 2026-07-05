@@ -17,6 +17,7 @@
   } from "$lib/plans/matrix";
   import { chipFlash } from "$lib/motion/transitions";
   import { planClient } from "$lib/rpc";
+  import { localizedStepTitle } from "$lib/plans/catalog-i18n";
   import type {
     PlanConfiguration,
     PlanTemplate,
@@ -112,6 +113,17 @@
     return option.sublabel
       ? `${option.label} · ${option.sublabel}`
       : option.label;
+  }
+
+  /**
+   * Localize a step title for display. The backend payload carries English
+   * `step_title`; resolve through the catalog content keys when the template
+   * is loaded so pt-BR users see localized headings, falling back to the
+   * backend title (and finally the stepKey) when no entry exists.
+   */
+  function stepLabel(stepKey: string, fallbackTitle: string): string {
+    if (template) return localizedStepTitle(template, stepKey, $locale);
+    return fallbackTitle || stepKey;
   }
 
   function policiesComplete(config: PlanConfiguration): boolean {
@@ -219,7 +231,10 @@
       <div class="min-w-0">
         <p class="font-body text-[13px] text-cream">
           {translate("assistant.prompt.bindingStep", $locale, {
-            step: focusedRow.step_title || payload.step_key || "",
+            step: stepLabel(
+              focusedRow.step_key,
+              focusedRow.step_title || payload.step_key || "",
+            ),
           })}
         </p>
         <div
@@ -321,7 +336,7 @@
                 <tr class="border-b border-obsidian-light">
                   <td class="py-2 pr-3 align-top">
                     <p class="text-[12px] font-medium text-cream">
-                      {row.step_title}
+                      {stepLabel(row.step_key, row.step_title)}
                     </p>
                     <p class="mt-0.5 font-mono text-[10px] text-crown-ash-dark">
                       {row.contracts.input || "—"} → {row.contracts.output ||
