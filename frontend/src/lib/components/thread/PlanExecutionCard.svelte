@@ -84,7 +84,7 @@
 </script>
 
 <div
-  class="rounded-md border border-plumage/60 bg-obsidian-light/80 px-3 py-2 text-[12px]"
+  class="max-w-[85%] rounded-md border border-plumage/60 bg-obsidian-light/80 px-2.5 py-1.5 text-[12px]"
 >
   <button
     type="button"
@@ -114,25 +114,22 @@
       {/if}
     </span>
 
-    <span class="min-w-0 flex-1">
-      <span class="flex items-center gap-1.5">
-        <span class="truncate font-body font-medium text-cream">
-          {translate("thread.execution.runLabel", $locale, { n: vm.runNumber })}
-        </span>
-        {#if vm.total > 0}
-          <span
-            class="shrink-0 rounded-full bg-plumage/60 px-1.5 py-px text-[10px] font-medium text-crown-ash tabular-nums"
-            aria-label={translate("thread.execution.steps", $locale, {
-              done: vm.doneCount,
-              total: vm.total,
-            })}
-          >
-            {vm.doneCount}/{vm.total}
-          </span>
-        {/if}
+    <span class="flex min-w-0 flex-1 items-center gap-1.5">
+      <span class="shrink-0 font-body font-medium text-cream">
+        {translate("thread.execution.runLabel", $locale, { n: vm.runNumber })}
       </span>
-      <span class="mt-px block truncate text-[11px] text-crown-ash"
-        >{subtitle}</span
+      {#if vm.total > 0}
+        <span
+          class="shrink-0 rounded-full bg-plumage/60 px-1.5 py-px text-[10px] font-medium text-crown-ash tabular-nums"
+          aria-label={translate("thread.execution.steps", $locale, {
+            done: vm.doneCount,
+            total: vm.total,
+          })}
+        >
+          {vm.doneCount}/{vm.total}
+        </span>
+      {/if}
+      <span class="min-w-0 truncate text-[11px] text-crown-ash">{subtitle}</span
       >
     </span>
 
@@ -144,7 +141,7 @@
   </button>
 
   {#if vm.total > 0}
-    <div class="mt-1.5 h-0.5 w-full overflow-hidden rounded-full bg-plumage/50">
+    <div class="mt-1 h-0.5 w-full overflow-hidden rounded-full bg-plumage/50">
       <div
         class="h-full transition-all duration-500 ease-out"
         style={barStyle}
@@ -155,7 +152,7 @@
   {#if !collapsed && vm.total > 0}
     <ol
       use:keepActiveStepVisible={vm.steps}
-      class="mt-2 flex max-h-60 flex-col gap-0 overflow-y-auto pr-1"
+      class="mt-1.5 flex max-h-60 flex-col gap-0 overflow-y-auto pr-1"
     >
       {#each vm.steps as step, i (step.key)}
         {@const notLast = i < vm.steps.length - 1}

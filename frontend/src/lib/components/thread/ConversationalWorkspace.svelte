@@ -1,18 +1,15 @@
 <script lang="ts">
   import ArtifactRail from "$lib/components/artifacts/ArtifactRail.svelte";
-  import PlanActivityTimeline from "$lib/components/thread/PlanActivityTimeline.svelte";
   import ThreadMessage from "$lib/components/thread/ThreadMessage.svelte";
   import type { ChatMessage } from "$lib/chat/types";
   import type { StepTitleResolver } from "$lib/chat/event-text";
   import type { Artifact } from "$lib/gen/harpia/artifacts/v1/artifacts_pb";
   import type { PlanConfiguration } from "$lib/gen/harpia/plans/v1/plans_pb";
-  import type { PlanActivityItem } from "$lib/plans/activity";
 
   let {
     tenantId,
     configurationId,
     messages,
-    activityItems,
     artifacts,
     onOpenArtifact,
     /**
@@ -32,7 +29,6 @@
     tenantId: string;
     configurationId: string;
     messages: ChatMessage[];
-    activityItems: PlanActivityItem[];
     artifacts: Artifact[];
     onOpenArtifact: (artifactId: string) => void;
     existingConfigurationFor?: (
@@ -69,9 +65,6 @@
 
 <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
   <main class="min-w-0 space-y-4">
-    {#if activityItems.length > 0}
-      <PlanActivityTimeline items={activityItems} {onOpenArtifact} />
-    {/if}
     <div class="flex flex-col gap-2">
       {#each messages as message (message.id)}
         {@const livePrompt = isLastAssistantPrompt(message)}

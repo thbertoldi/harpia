@@ -35,16 +35,11 @@
     type PlanTemplate,
   } from "$lib/gen/harpia/plans/v1/plans_pb";
   import type { Artifact } from "$lib/gen/harpia/artifacts/v1/artifacts_pb";
-  import {
-    mapStepRowsToActivity,
-    type PlanActivityItem,
-  } from "$lib/plans/activity";
   import { buildPlanSummary } from "$lib/plans/config-summary";
   import {
     localizedPlanName,
     localizedStepTitle,
   } from "$lib/plans/catalog-i18n";
-  import { loadPlanExecutionDetail } from "$lib/plans/plan-execution-detail";
   import { planClient, threadClient } from "$lib/rpc";
   import { chatEnter } from "$lib/motion/transitions";
 
@@ -136,14 +131,13 @@
       : stepKey,
   );
   let workspaceArtifacts = $state<Artifact[]>([]);
-  let workspaceActivityItems = $state<PlanActivityItem[]>([]);
   let workspaceLoadError = $state(false);
 
   // Canonical artifact preview state — single source of truth for BOTH the
   // auto-surfaced final artifact and any manually-opened artifact (final-
-  // artifact button, ArtifactRail, PlanActivityTimeline, inline STEP_BOUND
-  // cards). Intermediate artifacts are never auto-promoted here (spec:
-  // artifact-side-preview) — only opened explicitly by the user.
+  // artifact button, ArtifactRail, inline STEP_BOUND cards). Intermediate
+  // artifacts are never auto-promoted here (spec: artifact-side-preview) —
+  // only opened explicitly by the user.
   let previewArtifactId = $state<string | null>(null);
   let previewOpen = $state(false);
   // Populated on demand when the id isn't in workspaceArtifacts (e.g. an
@@ -176,7 +170,7 @@
   );
 
   // The one callback threaded down through ConversationalWorkspace to
-  // ArtifactRail, PlanActivityTimeline, and inline STEP_BOUND artifact cards.
+  // ArtifactRail and inline STEP_BOUND artifact cards.
   function openArtifact(artifactId: string) {
     previewArtifactId = artifactId;
     previewOpen = true;
@@ -329,7 +323,6 @@
     runError = null;
     runErrorNeedsIntegration = false;
     workspaceArtifacts = [];
-    workspaceActivityItems = [];
     workspaceLoadError = false;
     previewOpen = false;
     previewArtifactId = null;
@@ -627,7 +620,6 @@
     void executionSequence;
     if (!tenantId || !executionId) {
       workspaceArtifacts = [];
-      workspaceActivityItems = [];
       workspaceLoadError = false;
       return;
     }
@@ -635,12 +627,11 @@
     workspaceLoadError = false;
     (async () => {
       try {
-        const [detail, artifacts] = await Promise.all([
-          loadPlanExecutionDetail(tenantId, executionId),
-          listArtifacts({ tenantId, planExecutionId: executionId }),
-        ]);
+        const artifacts = await listArtifacts({
+          tenantId,
+          planExecutionId: executionId,
+        });
         if (controller.signal.aborted) return;
-        workspaceActivityItems = mapStepRowsToActivity(detail.rows);
         workspaceArtifacts = artifacts;
       } catch {
         if (controller.signal.aborted) return;
@@ -780,7 +771,7 @@
       />
     </div>
   {:else}
-    <div class="flex flex-col gap-3">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:gap-4">
       <section class="flex min-w-0 flex-1 flex-col gap-3">
         {#if data.configurations.length > 1}
           <div
@@ -910,7 +901,6 @@
             {tenantId}
             configurationId={activeConfigurationId}
             messages={planScopeMessages}
-            activityItems={workspaceActivityItems}
             artifacts={workspaceArtifacts}
             onOpenArtifact={openArtifact}
             {existingConfigurationFor}
@@ -920,12 +910,9 @@
 
         {#if executionViewModels.length > 0}
           <div class="flex flex-col gap-2">
-            {#each executionViewModels as vm, i (vm.executionId)}
+            {#each executionViewModels as vm (vm.executionId)}
               <div in:chatEnterStaggered={{ delay: 0 }}>
-                <PlanExecutionCard
-                  {vm}
-                  initiallyCollapsed={i !== executionViewModels.length - 1}
-                />
+                <PlanExecutionCard {vm} initiallyCollapsed />
               </div>
             {/each}
           </div>
@@ -937,16 +924,16 @@
           onSent={triggerProposal}
         />
       </section>
+
+      <ArtifactPreviewSheet
+        open={previewOpen}
+        artifact={previewArtifact}
+        {tenantId}
+        onClose={closePreview}
+      />
     </div>
   {/if}
 </div>
-
-<ArtifactPreviewSheet
-  open={previewOpen}
-  artifact={previewArtifact}
-  {tenantId}
-  onClose={closePreview}
-/>
 
 {#if activeConfigurationId && focusedConfiguration}
   <ScheduleDialog

@@ -14,6 +14,7 @@
   import { artifactTitle } from "$lib/artifacts/text";
   import type { FormattedArtifactPreview } from "$lib/artifacts/preview";
   import type { Artifact } from "$lib/gen/harpia/artifacts/v1/artifacts_pb";
+  import { fade } from "svelte/transition";
 
   let {
     open,
@@ -83,13 +84,18 @@
 </script>
 
 {#if open && artifact}
+  <!-- Mobile-only scrim: below lg the panel is a full overlay; on lg+ it
+       shares space with the chat (split view), so no backdrop is needed. -->
   <div
     role="presentation"
     onclick={onClose}
-    class="fixed inset-0 z-40 bg-black/40"
+    transition:fade={{ duration: 150 }}
+    class="fixed inset-0 z-40 bg-black/40 lg:hidden"
   ></div>
   <aside
-    class="fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-plumage bg-obsidian shadow-lg lg:w-[52%] lg:max-w-[860px] lg:min-w-[440px]"
+    transition:fade={{ duration: 150 }}
+    class="fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-plumage bg-obsidian shadow-lg
+      lg:sticky lg:top-6 lg:right-auto lg:bottom-auto lg:z-auto lg:h-[calc(100vh-3rem)] lg:w-[52%] lg:max-w-[860px] lg:min-w-[440px] lg:rounded-md"
   >
     <!-- Header -->
     <header
