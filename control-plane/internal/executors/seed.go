@@ -252,12 +252,13 @@ func EnsureTenantDummyLinkedInInstallation(ctx context.Context, pool *pgxpool.Po
 
 		_, err := q.Exec(ctx, `
 			INSERT INTO executor_installations (
-				tenant_id, executor_sku_id, display_name, config_json
+				tenant_id, executor_sku_id, kind, display_name, enabled,
+				connection_status, config_json
 			) VALUES (
-				$1, $2, $3, $4
+				$1, $2, $3, $4, true, 'connected', $5
 			)
 			ON CONFLICT (tenant_id, executor_sku_id, display_name) DO NOTHING
-		`, tenantID, skuID, "LinkedIn (Dev Sandbox)", configJSON)
+		`, tenantID, skuID, KindIntegration, "LinkedIn (Dev Sandbox)", configJSON)
 		if err != nil {
 			return fmt.Errorf("insert dummy linkedin installation: %w", err)
 		}
