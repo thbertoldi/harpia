@@ -81,6 +81,7 @@
           {configurationId}
           {artifacts}
           {onOpenArtifact}
+          {messages}
           isLive={livePrompt}
           isAnswered={message.kind === "ASSISTANT_PROMPT" && !livePrompt}
           existingConfiguration={existingConfigurationFor?.(message)}

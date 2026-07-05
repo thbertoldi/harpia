@@ -34,6 +34,12 @@
      * STEP_BOUND system events. Optional; defaults to the raw key.
      */
     stepTitleFor?: StepTitleResolver;
+    /**
+     * Full thread message stream. Forwarded to ApprovalRefCard so an
+     * APPROVAL_RAISED card can detect a matching APPROVAL_DECIDED that
+     * arrived later and flip to its terminal state.
+     */
+    messages?: ChatMessage[];
   }
   let {
     message,
@@ -45,6 +51,7 @@
     isAnswered = false,
     existingConfiguration,
     stepTitleFor,
+    messages = [],
   }: Props = $props();
 
   const promptState = $derived.by<string | null>(() => {
@@ -121,7 +128,7 @@
 {:else if message.kind === "ELICITATION_RAISED" || message.kind === "ELICITATION_ANSWERED"}
   <ElicitationRefCard {message} />
 {:else if message.kind === "APPROVAL_RAISED" || message.kind === "APPROVAL_DECIDED"}
-  <ApprovalRefCard {message} />
+  <ApprovalRefCard {message} {tenantId} {messages} />
 {:else}
   <SystemEventCard
     {message}
