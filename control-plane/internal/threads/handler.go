@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 	"time"
@@ -230,15 +231,43 @@ func (h *Handler) WatchThreadMessages(
 		return err
 	}
 	sinceSeq := req.Msg.GetSinceSequenceNumber()
+
+	// Lifecycle logs: the request-logging middleware only logs once the
+	// handler returns, so an open stream produces no request-log entry.
+	// Emit START/END here so future debugging can't misread the missing
+	// request log as "the stream never opened." `reason` is captured by the
+	// deferred END log so every exit point reports why the watch ended.
+	reason := "context_done"
+	slog.Info("watch thread messages: start",
+		"tenant_id", tenantID,
+		"thread_id", threadID,
+		"since_seq", sinceSeq)
+	defer func() {
+		slog.Info("watch thread messages: end",
+			"tenant_id", tenantID,
+			"thread_id", threadID,
+			"reason", reason,
+			"since_seq", sinceSeq)
+	}()
+
 	initial, err := h.chat.ListMessages(ctx, tenantID, threadID.String(), sinceSeq, 0)
 	if err != nil {
+		reason = "list_error"
+		slog.Warn("watch thread messages: list error on initial load",
+			"tenant_id", tenantID, "thread_id", threadID, "error", err)
 		return connect.NewError(connect.CodeInternal, err)
 	}
 	if len(initial) > 0 {
 		if err := stream.Send(&chatv1.WatchThreadMessagesResponse{Messages: initial}); err != nil {
+			reason = "send_error"
+			slog.Warn("watch thread messages: send error on initial batch",
+				"tenant_id", tenantID, "thread_id", threadID, "error", err)
 			return err
 		}
 		sinceSeq = initial[len(initial)-1].GetSequenceNumber()
+		slog.Info("watch thread messages: sent initial batch",
+			"tenant_id", tenantID, "thread_id", threadID,
+			"count", len(initial), "last_seq", sinceSeq)
 	}
 
 	ticker := time.NewTicker(watchThreadMessagesInterval)
@@ -250,15 +279,37 @@ func (h *Handler) WatchThreadMessages(
 		case <-ticker.C:
 			next, err := h.chat.ListMessages(ctx, tenantID, threadID.String(), sinceSeq, 0)
 			if err != nil {
+				reason = "list_error"
+				slog.Warn("watch thread messages: list error",
+					"tenant_id", tenantID, "thread_id", threadID, "error", err)
 				return connect.NewError(connect.CodeInternal, err)
 			}
 			if len(next) == 0 {
+				// Heartbeat: an empty batch keeps the stream alive so idle
+				// connections don't silently half-die behind a proxy/load
+				// balancer, and a dead client fails the Send promptly
+				// instead of the next mutation writing into a void. The
+				// resume cursor is intentionally NOT advanced.
+				if err := stream.Send(&chatv1.WatchThreadMessagesResponse{Messages: nil}); err != nil {
+					reason = "send_error"
+					slog.Warn("watch thread messages: heartbeat send error",
+						"tenant_id", tenantID, "thread_id", threadID, "error", err)
+					return err
+				}
+				slog.Debug("watch thread messages: heartbeat",
+					"tenant_id", tenantID, "thread_id", threadID, "since_seq", sinceSeq)
 				continue
 			}
 			if err := stream.Send(&chatv1.WatchThreadMessagesResponse{Messages: next}); err != nil {
+				reason = "send_error"
+				slog.Warn("watch thread messages: send error",
+					"tenant_id", tenantID, "thread_id", threadID, "error", err)
 				return err
 			}
 			sinceSeq = next[len(next)-1].GetSequenceNumber()
+			slog.Info("watch thread messages: sent batch",
+				"tenant_id", tenantID, "thread_id", threadID,
+				"count", len(next), "last_seq", sinceSeq)
 		}
 	}
 }

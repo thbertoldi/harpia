@@ -398,12 +398,21 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	var wrapped http.Handler = mux
 	wrapped = withLogging(logger)(wrapped)
 
+	// ConnectRPC server streams (WatchThreadMessages, WatchElicitations,
+	// WatchApprovalRequests) stay open for the lifetime of a chat session and
+	// must outlive any write deadline. A non-zero WriteTimeout bounds the
+	// whole response write, so it silently half-kills idle streams once the
+	// deadline lapses — messages appended later land on a dead connection and
+	// never reach the client until a reload. WriteTimeout is therefore 0.
+	// Slowloris is still guarded by ReadHeaderTimeout (the targeted header
+	// deadline); ReadTimeout additionally bounds slow request bodies.
 	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.Port),
-		Handler:      wrapped,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		Addr:              fmt.Sprintf(":%d", cfg.Port),
+		Handler:           wrapped,
+		ReadHeaderTimeout: 15 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      0,
+		IdleTimeout:       60 * time.Second,
 	}
 
 	go func() {

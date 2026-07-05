@@ -67,7 +67,12 @@
   // composer are keyed by the thread id, while plan-scoped surfaces (config,
   // executions, artifacts, canvas links) are keyed by the selected plan
   // configuration for this thread.
-  const routeThreadId = $derived(data.threadId);
+  // routeThreadId is derived from the ROUTE PARAM, not load `data`, so that
+  // invalidateAll() (which replaces `data` after mutations) can never re-key
+  // or restart the message watch / composer mid-session. The load function
+  // sets data.threadId = params.threadId, so this is behaviorally identical
+  // but free of any data dependency.
+  const routeThreadId = $derived($page.params.threadId ?? "");
   let selectedConfigurationId = $state("");
   const activeConfigurationId = $derived.by(() => {
     // The chat route is the canonical place for structural edits, and deep

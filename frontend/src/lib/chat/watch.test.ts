@@ -265,6 +265,40 @@ describe("watchThreadMessages — auto-reconnect", () => {
     ).toHaveBeenCalledTimes(1);
   });
 
+  it("ignores empty heartbeat batches without yielding to the caller", async () => {
+    // The server sends empty `messages: []` events as heartbeats to keep
+    // the stream alive. The generator must swallow them — never surface an
+    // empty batch to the UI — and stay open on the SAME stream for the
+    // real batch that follows.
+    threadClientMock.threadClient.watchThreadMessages
+      .mockReturnValueOnce(
+        finiteStream([
+          { messages: [] }, // heartbeat — must be skipped
+          { messages: [{ id: "m1", sequenceNumber: 10n }] }, // real batch
+        ]),
+      )
+      .mockReturnValue(finiteStream([]));
+
+    const controller = new AbortController();
+    const gen = start("t", "th", { signal: controller.signal });
+
+    // First pull: the heartbeat is skipped, so the FIRST yielded value is
+    // the real batch (not an empty array). The generator never terminated
+    // on the heartbeat.
+    const r1 = await gen.next();
+    expect(r1.done).toBe(false);
+    expect(batch(r1)).toHaveLength(1);
+    expect(batch(r1)[0].id).toBe("m1");
+
+    await teardown(gen, controller);
+
+    // Exactly one stream call: the heartbeat did not end the stream and did
+    // not trigger a reconnect. The generator stayed alive in-place.
+    expect(
+      threadClientMock.threadClient.watchThreadMessages,
+    ).toHaveBeenCalledTimes(1);
+  });
+
   it("preserves bigint sequence numbers beyond Number.MAX_SAFE_INTEGER", async () => {
     // 2^65 — well past the 2^53 Number precision cliff.
     const huge = 2n ** 65n;

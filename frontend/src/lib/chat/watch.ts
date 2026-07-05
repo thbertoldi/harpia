@@ -65,6 +65,12 @@ export async function* watchThreadMessages(
             cursor = message.sequenceNumber;
           }
         }
+        // Skip empty batches: the server sends them as heartbeats to keep
+        // the stream alive. Yielding an empty array would needlessly
+        // reassign `messages` and retrigger derived UI state without
+        // surfacing anything new. The generator stays open on the same
+        // stream and waits for the next (non-empty) batch.
+        if (batch.length === 0) continue;
         yield batch;
       }
     } catch {
