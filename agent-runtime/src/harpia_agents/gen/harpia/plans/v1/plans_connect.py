@@ -42,6 +42,9 @@ class PlanService(Protocol):
     async def next_turn(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.NextTurnRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.NextTurnResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def submit_configuration_selection(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.SubmitConfigurationSelectionRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.SubmitConfigurationSelectionResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def create_plan_execution(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.CreatePlanExecutionRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.CreatePlanExecutionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -169,6 +172,16 @@ class PlanServiceASGIApplication(ConnectASGIApplication[PlanService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.next_turn,
+                ),
+                "/harpia.plans.v1.PlanService/SubmitConfigurationSelection": Endpoint.unary(
+                    method=MethodInfo(
+                        name="SubmitConfigurationSelection",
+                        service_name="harpia.plans.v1.PlanService",
+                        input=harpia_dot_plans_dot_v1_dot_plans__pb2.SubmitConfigurationSelectionRequest,
+                        output=harpia_dot_plans_dot_v1_dot_plans__pb2.SubmitConfigurationSelectionResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.submit_configuration_selection,
                 ),
                 "/harpia.plans.v1.PlanService/CreatePlanExecution": Endpoint.unary(
                     method=MethodInfo(
@@ -484,6 +497,26 @@ class PlanServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def submit_configuration_selection(
+        self,
+        request: harpia_dot_plans_dot_v1_dot_plans__pb2.SubmitConfigurationSelectionRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_plans_dot_v1_dot_plans__pb2.SubmitConfigurationSelectionResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SubmitConfigurationSelection",
+                service_name="harpia.plans.v1.PlanService",
+                input=harpia_dot_plans_dot_v1_dot_plans__pb2.SubmitConfigurationSelectionRequest,
+                output=harpia_dot_plans_dot_v1_dot_plans__pb2.SubmitConfigurationSelectionResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def create_plan_execution(
         self,
         request: harpia_dot_plans_dot_v1_dot_plans__pb2.CreatePlanExecutionRequest,
@@ -785,6 +818,8 @@ class PlanServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def next_turn(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.NextTurnRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.NextTurnResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def submit_configuration_selection(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.SubmitConfigurationSelectionRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.SubmitConfigurationSelectionResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def create_plan_execution(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.CreatePlanExecutionRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.CreatePlanExecutionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def retry_plan_execution(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.RetryPlanExecutionRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.RetryPlanExecutionResponse:
@@ -898,6 +933,16 @@ class PlanServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.next_turn,
+                ),
+                "/harpia.plans.v1.PlanService/SubmitConfigurationSelection": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="SubmitConfigurationSelection",
+                        service_name="harpia.plans.v1.PlanService",
+                        input=harpia_dot_plans_dot_v1_dot_plans__pb2.SubmitConfigurationSelectionRequest,
+                        output=harpia_dot_plans_dot_v1_dot_plans__pb2.SubmitConfigurationSelectionResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.submit_configuration_selection,
                 ),
                 "/harpia.plans.v1.PlanService/CreatePlanExecution": EndpointSync.unary(
                     method=MethodInfo(
@@ -1207,6 +1252,26 @@ class PlanServiceClientSync(ConnectClientSync):
                 service_name="harpia.plans.v1.PlanService",
                 input=harpia_dot_plans_dot_v1_dot_plans__pb2.NextTurnRequest,
                 output=harpia_dot_plans_dot_v1_dot_plans__pb2.NextTurnResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def submit_configuration_selection(
+        self,
+        request: harpia_dot_plans_dot_v1_dot_plans__pb2.SubmitConfigurationSelectionRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_plans_dot_v1_dot_plans__pb2.SubmitConfigurationSelectionResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SubmitConfigurationSelection",
+                service_name="harpia.plans.v1.PlanService",
+                input=harpia_dot_plans_dot_v1_dot_plans__pb2.SubmitConfigurationSelectionRequest,
+                output=harpia_dot_plans_dot_v1_dot_plans__pb2.SubmitConfigurationSelectionResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

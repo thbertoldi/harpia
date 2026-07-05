@@ -17,7 +17,9 @@ import (
 
 	chatv1 "github.com/harpia/control-plane/gen/harpia/chat/v1"
 	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
+	plansv1connect "github.com/harpia/control-plane/gen/harpia/plans/v1/plansv1connect"
 	"github.com/harpia/control-plane/internal/chat"
+	"github.com/harpia/control-plane/internal/database"
 	"github.com/harpia/control-plane/internal/identity"
 	"github.com/harpia/control-plane/internal/planassistant"
 	"github.com/harpia/control-plane/internal/workflow"
@@ -160,6 +162,10 @@ func (a *AssistantCatalog) CandidatesForStep(ctx context.Context, tenantID uuid.
 }
 
 type PlanHandler struct {
+	// Embeds the generated stub so newly added RPCs compile before their
+	// handler is wired; existing methods on PlanHandler shadow these. Remove
+	// once SubmitConfigurationSelection is implemented.
+	plansv1connect.UnimplementedPlanServiceHandler
 	chat             chat.Store
 	assistant        *planassistant.Controller
 	repo             *Repository
@@ -399,6 +405,9 @@ func (h *PlanHandler) UpdatePlanConfiguration(ctx context.Context, req *connect.
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
+	// Pre-load to resolve the template and to drive the post-mutation
+	// schedule/status diffs. applyConfigurationUpdate re-reads the row inside
+	// its own transaction so the persisted projection stays consistent.
 	existing, err := h.repo.GetConfiguration(ctx, tenantID, configID)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, err)
@@ -409,53 +418,21 @@ func (h *PlanHandler) UpdatePlanConfiguration(ctx context.Context, req *connect.
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	updatedInput := &plansv1.CreatePlanConfigurationRequest{
-		WorkspaceId:      existing.WorkspaceID.UUID.String(),
-		Status:           req.Msg.Status,
-		OverseerBindings: req.Msg.OverseerBindings,
-		Schedule:         req.Msg.Schedule,
-	}
-	if !existing.WorkspaceID.Valid {
-		updatedInput.WorkspaceId = ""
-	}
-	parameterValues, err := parameterValuesForUpdate(req.Msg.ParameterValuesJson, existing.ParameterValues)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
-
-	seedArtifacts, slotBindings, behaviorPolicies, err := h.materializeConfigurationProjection(ctx, tenantID, template, string(parameterValues))
+	var updated *PlanConfiguration
+	err = database.WithTenant(ctx, h.repo.pool, tenantID, func(q database.Querier) error {
+		var updateErr error
+		updated, updateErr = h.applyConfigurationUpdate(
+			ctx, q, tenantID, configID, template,
+			req.Msg.ParameterValuesJson,
+			req.Msg.OverseerBindings,
+			req.Msg.Status,
+			req.Msg.Kind,
+			req.Msg.Schedule,
+		)
+		return updateErr
+	})
 	if err != nil {
 		return nil, err
-	}
-
-	if err := h.validator.ValidateSlotBindings(ctx, tenantID, template, updatedInput.Status, slotBindings); err != nil {
-		return nil, connectErrorFromBinding(err)
-	}
-	if err := h.validator.ValidateOverseerBindings(template, updatedInput.Status, updatedInput.OverseerBindings); err != nil {
-		return nil, connectErrorFromBinding(err)
-	}
-
-	kind := req.Msg.Kind
-	if kind == plansv1.PlanConfigurationKind_PLAN_CONFIGURATION_KIND_UNSPECIFIED {
-		kind = stringToConfigurationKind(existing.Kind)
-	}
-	config, err := h.buildConfigurationFromRequest(tenantID, template, updatedInput.WorkspaceId, updatedInput.Status, kind,
-		seedArtifacts, slotBindings, updatedInput.OverseerBindings,
-		behaviorPolicies, updatedInput.Schedule, string(parameterValues))
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
-	config.ID = existing.ID
-	config.PlanTemplateID = existing.PlanTemplateID
-	config.PlanTemplateVersion = existing.PlanTemplateVersion
-	config.WorkspaceID = existing.WorkspaceID
-	config.ParameterValues = parameterValues
-	config.ThreadID = existing.ThreadID
-	config.OriginThreadID = existing.OriginThreadID
-
-	updated, err := h.repo.UpdateConfiguration(ctx, config)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
 	if err := h.syncSchedule(ctx, updated); err != nil {
@@ -476,9 +453,9 @@ func (h *PlanHandler) UpdatePlanConfiguration(ctx context.Context, req *connect.
 	}
 	newCron := ""
 	newTz := ""
-	if updatedInput.Schedule != nil {
-		newCron = updatedInput.Schedule.CronExpression
-		newTz = updatedInput.Schedule.Timezone
+	if req.Msg.Schedule != nil {
+		newCron = req.Msg.Schedule.CronExpression
+		newTz = req.Msg.Schedule.Timezone
 	}
 	if newCron != prevCron || newTz != prevTz {
 		if newCron != "" {

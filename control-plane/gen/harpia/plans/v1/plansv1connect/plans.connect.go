@@ -56,6 +56,9 @@ const (
 	PlanServiceListPlanConfigurationsProcedure = "/harpia.plans.v1.PlanService/ListPlanConfigurations"
 	// PlanServiceNextTurnProcedure is the fully-qualified name of the PlanService's NextTurn RPC.
 	PlanServiceNextTurnProcedure = "/harpia.plans.v1.PlanService/NextTurn"
+	// PlanServiceSubmitConfigurationSelectionProcedure is the fully-qualified name of the PlanService's
+	// SubmitConfigurationSelection RPC.
+	PlanServiceSubmitConfigurationSelectionProcedure = "/harpia.plans.v1.PlanService/SubmitConfigurationSelection"
 	// PlanServiceCreatePlanExecutionProcedure is the fully-qualified name of the PlanService's
 	// CreatePlanExecution RPC.
 	PlanServiceCreatePlanExecutionProcedure = "/harpia.plans.v1.PlanService/CreatePlanExecution"
@@ -114,6 +117,13 @@ type PlanServiceClient interface {
 	// Conversational configuration assistant: derive and append the next
 	// ASSISTANT_PROMPT for a configuration (binding/overseer/policies/matrix).
 	NextTurn(context.Context, *connect.Request[v1.NextTurnRequest]) (*connect.Response[v1.NextTurnResponse], error)
+	// Submit a user's selection for the current ASSISTANT_PROMPT. The server
+	// infers the mutation kind from the prompt's payload and applies it
+	// atomically, then returns the updated configuration plus the messages
+	// appended this turn (USER_SELECTION, optional STEP_REBOUND, next
+	// ASSISTANT_PROMPT). Replaces the browser's 4-RPC configuration-selection
+	// orchestration with a single server-authoritative call.
+	SubmitConfigurationSelection(context.Context, *connect.Request[v1.SubmitConfigurationSelectionRequest]) (*connect.Response[v1.SubmitConfigurationSelectionResponse], error)
 	// Execution (MVP stubs — messages defined for downstream workflow wiring).
 	CreatePlanExecution(context.Context, *connect.Request[v1.CreatePlanExecutionRequest]) (*connect.Response[v1.CreatePlanExecutionResponse], error)
 	RetryPlanExecution(context.Context, *connect.Request[v1.RetryPlanExecutionRequest]) (*connect.Response[v1.RetryPlanExecutionResponse], error)
@@ -192,6 +202,12 @@ func NewPlanServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			httpClient,
 			baseURL+PlanServiceNextTurnProcedure,
 			connect.WithSchema(planServiceMethods.ByName("NextTurn")),
+			connect.WithClientOptions(opts...),
+		),
+		submitConfigurationSelection: connect.NewClient[v1.SubmitConfigurationSelectionRequest, v1.SubmitConfigurationSelectionResponse](
+			httpClient,
+			baseURL+PlanServiceSubmitConfigurationSelectionProcedure,
+			connect.WithSchema(planServiceMethods.ByName("SubmitConfigurationSelection")),
 			connect.WithClientOptions(opts...),
 		),
 		createPlanExecution: connect.NewClient[v1.CreatePlanExecutionRequest, v1.CreatePlanExecutionResponse](
@@ -283,28 +299,29 @@ func NewPlanServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 
 // planServiceClient implements PlanServiceClient.
 type planServiceClient struct {
-	getPlanTemplate          *connect.Client[v1.GetPlanTemplateRequest, v1.GetPlanTemplateResponse]
-	getPlanTemplateByKey     *connect.Client[v1.GetPlanTemplateByKeyRequest, v1.GetPlanTemplateByKeyResponse]
-	listPlanTemplates        *connect.Client[v1.ListPlanTemplatesRequest, v1.ListPlanTemplatesResponse]
-	createPlanConfiguration  *connect.Client[v1.CreatePlanConfigurationRequest, v1.CreatePlanConfigurationResponse]
-	getPlanConfiguration     *connect.Client[v1.GetPlanConfigurationRequest, v1.GetPlanConfigurationResponse]
-	updatePlanConfiguration  *connect.Client[v1.UpdatePlanConfigurationRequest, v1.UpdatePlanConfigurationResponse]
-	listPlanConfigurations   *connect.Client[v1.ListPlanConfigurationsRequest, v1.ListPlanConfigurationsResponse]
-	nextTurn                 *connect.Client[v1.NextTurnRequest, v1.NextTurnResponse]
-	createPlanExecution      *connect.Client[v1.CreatePlanExecutionRequest, v1.CreatePlanExecutionResponse]
-	retryPlanExecution       *connect.Client[v1.RetryPlanExecutionRequest, v1.RetryPlanExecutionResponse]
-	getPlanExecution         *connect.Client[v1.GetPlanExecutionRequest, v1.GetPlanExecutionResponse]
-	listPlanExecutions       *connect.Client[v1.ListPlanExecutionsRequest, v1.ListPlanExecutionsResponse]
-	getStepExecution         *connect.Client[v1.GetStepExecutionRequest, v1.GetStepExecutionResponse]
-	listStepExecutions       *connect.Client[v1.ListStepExecutionsRequest, v1.ListStepExecutionsResponse]
-	listElicitations         *connect.Client[v1.ListElicitationsRequest, v1.ListElicitationsResponse]
-	getElicitation           *connect.Client[v1.GetElicitationRequest, v1.GetElicitationResponse]
-	respondToElicitation     *connect.Client[v1.RespondToElicitationRequest, v1.RespondToElicitationResponse]
-	watchElicitations        *connect.Client[v1.WatchElicitationsRequest, v1.WatchElicitationsResponse]
-	listApprovalRequests     *connect.Client[v1.ListApprovalRequestsRequest, v1.ListApprovalRequestsResponse]
-	getApprovalRequest       *connect.Client[v1.GetApprovalRequestRequest, v1.GetApprovalRequestResponse]
-	respondToApprovalRequest *connect.Client[v1.RespondToApprovalRequestRequest, v1.RespondToApprovalRequestResponse]
-	watchApprovalRequests    *connect.Client[v1.WatchApprovalRequestsRequest, v1.WatchApprovalRequestsResponse]
+	getPlanTemplate              *connect.Client[v1.GetPlanTemplateRequest, v1.GetPlanTemplateResponse]
+	getPlanTemplateByKey         *connect.Client[v1.GetPlanTemplateByKeyRequest, v1.GetPlanTemplateByKeyResponse]
+	listPlanTemplates            *connect.Client[v1.ListPlanTemplatesRequest, v1.ListPlanTemplatesResponse]
+	createPlanConfiguration      *connect.Client[v1.CreatePlanConfigurationRequest, v1.CreatePlanConfigurationResponse]
+	getPlanConfiguration         *connect.Client[v1.GetPlanConfigurationRequest, v1.GetPlanConfigurationResponse]
+	updatePlanConfiguration      *connect.Client[v1.UpdatePlanConfigurationRequest, v1.UpdatePlanConfigurationResponse]
+	listPlanConfigurations       *connect.Client[v1.ListPlanConfigurationsRequest, v1.ListPlanConfigurationsResponse]
+	nextTurn                     *connect.Client[v1.NextTurnRequest, v1.NextTurnResponse]
+	submitConfigurationSelection *connect.Client[v1.SubmitConfigurationSelectionRequest, v1.SubmitConfigurationSelectionResponse]
+	createPlanExecution          *connect.Client[v1.CreatePlanExecutionRequest, v1.CreatePlanExecutionResponse]
+	retryPlanExecution           *connect.Client[v1.RetryPlanExecutionRequest, v1.RetryPlanExecutionResponse]
+	getPlanExecution             *connect.Client[v1.GetPlanExecutionRequest, v1.GetPlanExecutionResponse]
+	listPlanExecutions           *connect.Client[v1.ListPlanExecutionsRequest, v1.ListPlanExecutionsResponse]
+	getStepExecution             *connect.Client[v1.GetStepExecutionRequest, v1.GetStepExecutionResponse]
+	listStepExecutions           *connect.Client[v1.ListStepExecutionsRequest, v1.ListStepExecutionsResponse]
+	listElicitations             *connect.Client[v1.ListElicitationsRequest, v1.ListElicitationsResponse]
+	getElicitation               *connect.Client[v1.GetElicitationRequest, v1.GetElicitationResponse]
+	respondToElicitation         *connect.Client[v1.RespondToElicitationRequest, v1.RespondToElicitationResponse]
+	watchElicitations            *connect.Client[v1.WatchElicitationsRequest, v1.WatchElicitationsResponse]
+	listApprovalRequests         *connect.Client[v1.ListApprovalRequestsRequest, v1.ListApprovalRequestsResponse]
+	getApprovalRequest           *connect.Client[v1.GetApprovalRequestRequest, v1.GetApprovalRequestResponse]
+	respondToApprovalRequest     *connect.Client[v1.RespondToApprovalRequestRequest, v1.RespondToApprovalRequestResponse]
+	watchApprovalRequests        *connect.Client[v1.WatchApprovalRequestsRequest, v1.WatchApprovalRequestsResponse]
 }
 
 // GetPlanTemplate calls harpia.plans.v1.PlanService.GetPlanTemplate.
@@ -345,6 +362,11 @@ func (c *planServiceClient) ListPlanConfigurations(ctx context.Context, req *con
 // NextTurn calls harpia.plans.v1.PlanService.NextTurn.
 func (c *planServiceClient) NextTurn(ctx context.Context, req *connect.Request[v1.NextTurnRequest]) (*connect.Response[v1.NextTurnResponse], error) {
 	return c.nextTurn.CallUnary(ctx, req)
+}
+
+// SubmitConfigurationSelection calls harpia.plans.v1.PlanService.SubmitConfigurationSelection.
+func (c *planServiceClient) SubmitConfigurationSelection(ctx context.Context, req *connect.Request[v1.SubmitConfigurationSelectionRequest]) (*connect.Response[v1.SubmitConfigurationSelectionResponse], error) {
+	return c.submitConfigurationSelection.CallUnary(ctx, req)
 }
 
 // CreatePlanExecution calls harpia.plans.v1.PlanService.CreatePlanExecution.
@@ -431,6 +453,13 @@ type PlanServiceHandler interface {
 	// Conversational configuration assistant: derive and append the next
 	// ASSISTANT_PROMPT for a configuration (binding/overseer/policies/matrix).
 	NextTurn(context.Context, *connect.Request[v1.NextTurnRequest]) (*connect.Response[v1.NextTurnResponse], error)
+	// Submit a user's selection for the current ASSISTANT_PROMPT. The server
+	// infers the mutation kind from the prompt's payload and applies it
+	// atomically, then returns the updated configuration plus the messages
+	// appended this turn (USER_SELECTION, optional STEP_REBOUND, next
+	// ASSISTANT_PROMPT). Replaces the browser's 4-RPC configuration-selection
+	// orchestration with a single server-authoritative call.
+	SubmitConfigurationSelection(context.Context, *connect.Request[v1.SubmitConfigurationSelectionRequest]) (*connect.Response[v1.SubmitConfigurationSelectionResponse], error)
 	// Execution (MVP stubs — messages defined for downstream workflow wiring).
 	CreatePlanExecution(context.Context, *connect.Request[v1.CreatePlanExecutionRequest]) (*connect.Response[v1.CreatePlanExecutionResponse], error)
 	RetryPlanExecution(context.Context, *connect.Request[v1.RetryPlanExecutionRequest]) (*connect.Response[v1.RetryPlanExecutionResponse], error)
@@ -505,6 +534,12 @@ func NewPlanServiceHandler(svc PlanServiceHandler, opts ...connect.HandlerOption
 		PlanServiceNextTurnProcedure,
 		svc.NextTurn,
 		connect.WithSchema(planServiceMethods.ByName("NextTurn")),
+		connect.WithHandlerOptions(opts...),
+	)
+	planServiceSubmitConfigurationSelectionHandler := connect.NewUnaryHandler(
+		PlanServiceSubmitConfigurationSelectionProcedure,
+		svc.SubmitConfigurationSelection,
+		connect.WithSchema(planServiceMethods.ByName("SubmitConfigurationSelection")),
 		connect.WithHandlerOptions(opts...),
 	)
 	planServiceCreatePlanExecutionHandler := connect.NewUnaryHandler(
@@ -609,6 +644,8 @@ func NewPlanServiceHandler(svc PlanServiceHandler, opts ...connect.HandlerOption
 			planServiceListPlanConfigurationsHandler.ServeHTTP(w, r)
 		case PlanServiceNextTurnProcedure:
 			planServiceNextTurnHandler.ServeHTTP(w, r)
+		case PlanServiceSubmitConfigurationSelectionProcedure:
+			planServiceSubmitConfigurationSelectionHandler.ServeHTTP(w, r)
 		case PlanServiceCreatePlanExecutionProcedure:
 			planServiceCreatePlanExecutionHandler.ServeHTTP(w, r)
 		case PlanServiceRetryPlanExecutionProcedure:
@@ -676,6 +713,10 @@ func (UnimplementedPlanServiceHandler) ListPlanConfigurations(context.Context, *
 
 func (UnimplementedPlanServiceHandler) NextTurn(context.Context, *connect.Request[v1.NextTurnRequest]) (*connect.Response[v1.NextTurnResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("harpia.plans.v1.PlanService.NextTurn is not implemented"))
+}
+
+func (UnimplementedPlanServiceHandler) SubmitConfigurationSelection(context.Context, *connect.Request[v1.SubmitConfigurationSelectionRequest]) (*connect.Response[v1.SubmitConfigurationSelectionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("harpia.plans.v1.PlanService.SubmitConfigurationSelection is not implemented"))
 }
 
 func (UnimplementedPlanServiceHandler) CreatePlanExecution(context.Context, *connect.Request[v1.CreatePlanExecutionRequest]) (*connect.Response[v1.CreatePlanExecutionResponse], error) {

@@ -297,15 +297,7 @@ func (r *Repository) CreateConfiguration(ctx context.Context, config *PlanConfig
 func (r *Repository) GetConfiguration(ctx context.Context, tenantID, configID uuid.UUID) (*PlanConfiguration, error) {
 	var config PlanConfiguration
 	err := database.WithTenant(ctx, r.pool, tenantID, func(q database.Querier) error {
-		row := q.QueryRow(ctx,
-			`SELECT id, tenant_id, workspace_id, plan_template_id, plan_template_version, status, kind,
-			        seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
-			        parameter_values, thread_id, origin_thread_id, created_at, updated_at
-			 FROM plan_configurations
-			 WHERE id = $1 AND tenant_id = $2`,
-			configID, tenantID,
-		)
-		return scanConfiguration(row, &config)
+		return getConfigurationQ(ctx, q, tenantID, configID, &config)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("get plan configuration: %w", err)
@@ -313,33 +305,73 @@ func (r *Repository) GetConfiguration(ctx context.Context, tenantID, configID uu
 	return &config, nil
 }
 
+// GetConfigurationWithQuerier loads a plan configuration using a caller-provided
+// Querier (typically a transaction from database.WithTenant), so the read can
+// share a transaction with the caller's mutation. The caller is responsible for
+// having set the tenant GUC on q.
+func (r *Repository) GetConfigurationWithQuerier(ctx context.Context, q database.Querier, tenantID, configID uuid.UUID) (*PlanConfiguration, error) {
+	var config PlanConfiguration
+	if err := getConfigurationQ(ctx, q, tenantID, configID, &config); err != nil {
+		return nil, fmt.Errorf("get plan configuration: %w", err)
+	}
+	return &config, nil
+}
+
+func getConfigurationQ(ctx context.Context, q database.Querier, tenantID, configID uuid.UUID, config *PlanConfiguration) error {
+	row := q.QueryRow(ctx,
+		`SELECT id, tenant_id, workspace_id, plan_template_id, plan_template_version, status, kind,
+		        seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
+		        parameter_values, thread_id, origin_thread_id, created_at, updated_at
+		 FROM plan_configurations
+		 WHERE id = $1 AND tenant_id = $2`,
+		configID, tenantID,
+	)
+	return scanConfiguration(row, config)
+}
+
 func (r *Repository) UpdateConfiguration(ctx context.Context, config *PlanConfiguration) (*PlanConfiguration, error) {
 	var updated PlanConfiguration
 	err := database.WithTenant(ctx, r.pool, config.TenantID, func(q database.Querier) error {
-		row := q.QueryRow(ctx,
-			`UPDATE plan_configurations
-			 SET status = $1,
-			     kind = $2,
-			     seed_artifacts = $3,
-			     slot_bindings = $4,
-			     overseer_bindings = $5,
-			     behavior_policies = $6,
-			     schedule = $7,
-			     parameter_values = $8,
-			     updated_at = now()
-			 WHERE id = $9 AND tenant_id = $10
-			 RETURNING id, tenant_id, workspace_id, plan_template_id, plan_template_version, status, kind,
-			           seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
-			           parameter_values, thread_id, origin_thread_id, created_at, updated_at`,
-			config.Status, config.Kind, config.SeedArtifacts, config.SlotBindings, config.OverseerBindings,
-			config.BehaviorPolicies, config.Schedule, config.ParameterValues, config.ID, config.TenantID,
-		)
-		return scanConfiguration(row, &updated)
+		return updateConfigurationQ(ctx, q, config, &updated)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("update plan configuration: %w", err)
 	}
 	return &updated, nil
+}
+
+// UpdateConfigurationWithQuerier persists a configuration projection using a
+// caller-provided Querier (typically a transaction from database.WithTenant),
+// so the mutation can share a transaction with the caller's other writes. The
+// caller is responsible for having set the tenant GUC on q.
+func (r *Repository) UpdateConfigurationWithQuerier(ctx context.Context, q database.Querier, config *PlanConfiguration) (*PlanConfiguration, error) {
+	var updated PlanConfiguration
+	if err := updateConfigurationQ(ctx, q, config, &updated); err != nil {
+		return nil, fmt.Errorf("update plan configuration: %w", err)
+	}
+	return &updated, nil
+}
+
+func updateConfigurationQ(ctx context.Context, q database.Querier, config *PlanConfiguration, updated *PlanConfiguration) error {
+	row := q.QueryRow(ctx,
+		`UPDATE plan_configurations
+		 SET status = $1,
+		     kind = $2,
+		     seed_artifacts = $3,
+		     slot_bindings = $4,
+		     overseer_bindings = $5,
+		     behavior_policies = $6,
+		     schedule = $7,
+		     parameter_values = $8,
+		     updated_at = now()
+		 WHERE id = $9 AND tenant_id = $10
+		 RETURNING id, tenant_id, workspace_id, plan_template_id, plan_template_version, status, kind,
+		           seed_artifacts, slot_bindings, overseer_bindings, behavior_policies, schedule,
+		           parameter_values, thread_id, origin_thread_id, created_at, updated_at`,
+		config.Status, config.Kind, config.SeedArtifacts, config.SlotBindings, config.OverseerBindings,
+		config.BehaviorPolicies, config.Schedule, config.ParameterValues, config.ID, config.TenantID,
+	)
+	return scanConfiguration(row, updated)
 }
 
 func (r *Repository) UpdateConfigurationStatus(ctx context.Context, tenantID, configID uuid.UUID, status plansv1.PlanConfigurationStatus) error {

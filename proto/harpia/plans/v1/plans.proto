@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package harpia.plans.v1;
 
+import "harpia/chat/v1/chat.proto";
+
 // PlanService manages plan templates, tenant configurations, and executions.
 // Template plans use the plan-centric model defined in ADR-012.
 service PlanService {
@@ -18,6 +20,14 @@ service PlanService {
   // Conversational configuration assistant: derive and append the next
   // ASSISTANT_PROMPT for a configuration (binding/overseer/policies/matrix).
   rpc NextTurn(NextTurnRequest) returns (NextTurnResponse);
+  // Submit a user's selection for the current ASSISTANT_PROMPT. The server
+  // infers the mutation kind from the prompt's payload and applies it
+  // atomically, then returns the updated configuration plus the messages
+  // appended this turn (USER_SELECTION, optional STEP_REBOUND, next
+  // ASSISTANT_PROMPT). Replaces the browser's 4-RPC configuration-selection
+  // orchestration with a single server-authoritative call.
+  rpc SubmitConfigurationSelection(SubmitConfigurationSelectionRequest)
+      returns (SubmitConfigurationSelectionResponse);
 
   // Execution (MVP stubs — messages defined for downstream workflow wiring).
   rpc CreatePlanExecution(CreatePlanExecutionRequest) returns (CreatePlanExecutionResponse);
@@ -330,6 +340,36 @@ message NextTurnRequest {
 }
 
 message NextTurnResponse {}
+
+message SubmitConfigurationSelectionRequest {
+  string tenant_id = 1;
+  string plan_configuration_id = 2;
+  // The ASSISTANT_PROMPT message being answered. The server validates it is the
+  // current, unanswered prompt for this configuration, and records the
+  // USER_SELECTION as in_response_to this id.
+  string assistant_prompt_message_id = 3;
+  // The user's choice. The server infers the mutation kind (slot binding /
+  // overseer / policy / matrix-save) from the prompt's payload state+step, so
+  // the client only sends what was picked.
+  ConfigurationSelection selection = 4;
+}
+
+message ConfigurationSelection {
+  string option_id = 1;
+  string value = 2;
+}
+
+message SubmitConfigurationSelectionResponse {
+  // The configuration after the mutation was applied.
+  PlanConfiguration plan_configuration = 1;
+  // The messages the server appended this turn: USER_SELECTION, optional
+  // STEP_REBOUND, and the next ASSISTANT_PROMPT (if any). The frontend may also
+  // just render the live watch stream; this is for immediate confirmation.
+  repeated harpia.chat.v1.ThreadMessage messages = 2;
+  // True when the prompt was already answered (duplicate/double-click retry) —
+  // no mutation or message was applied.
+  bool already_applied = 3;
+}
 
 message ListPlanConfigurationsRequest {
   string tenant_id = 1;
