@@ -1,5 +1,7 @@
 """Temporal activities and workflow wrapping LangGraph execution."""
 
+import asyncio
+import contextlib
 import json
 
 from connectrpc.errors import ConnectError
@@ -9,7 +11,7 @@ from temporalio import activity
 from temporalio.exceptions import ApplicationError
 
 from harpia_agents.agents.newsletter_writer import ElicitationRequest
-from harpia_agents.agents.registry import run_registered_agent
+from harpia_agents.agents.registry import AgentRunResult, run_registered_agent
 from harpia_agents.artifacts.client import ArtifactPayloadClient
 from harpia_agents.identity import require_temporal_tenant
 from harpia_agents.llm import LLMRegistry
@@ -23,6 +25,45 @@ _NON_RETRYABLE_CONNECT_ERROR_MARKERS = (
     "HARPIA_INTERNAL_AUTH_TOKEN",
     "static credentials are empty",
 )
+
+# Periodic heartbeat cadence for the activity body. The Go workflow sets
+# HeartbeatTimeout=30s; ticking at half that interval leaves slack for GC
+# pauses or scheduling jitter while still well within the deadline.
+_HEARTBEAT_INTERVAL_SECONDS = 10.0
+
+
+@contextlib.asynccontextmanager
+async def _heartbeat_loop(details: dict[str, str], *, every: float = _HEARTBEAT_INTERVAL_SECONDS):
+    """Heartbeat to Temporal for the lifetime of the wrapped block.
+
+    Emits one heartbeat immediately (so a short HeartbeatTimeout is satisfied
+    before the first tick) and then periodically from a background task until
+    the wrapped code returns or raises. ``activity.heartbeat`` is a no-op when
+    the activity has already been cancelled, and any ``CancelledError`` raised
+    by the periodic task during teardown is swallowed so the original error
+    from the wrapped block is the one that propagates.
+
+    Becomes a pass-through when invoked outside an activity context (e.g. in
+    unit tests) since there is no Temporal worker to receive the heartbeat.
+    """
+    if not activity.in_activity():
+        yield
+        return
+
+    activity.heartbeat(details)
+
+    async def _tick() -> None:
+        while True:
+            await asyncio.sleep(every)
+            activity.heartbeat(details)
+
+    task = asyncio.create_task(_tick(), name="harpia-agent-heartbeat")
+    try:
+        yield
+    finally:
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
 
 
 def configure_llm_registry(registry: LLMRegistry) -> None:
@@ -135,6 +176,31 @@ async def run_agent_activity(input_payload: dict) -> dict:
         raise
 
 
+async def _run_agent_with_heartbeat(
+    manifest_id: str,
+    *,
+    tenant_id: str,
+    agent_input: NewsList | TextDraft,
+    elicitation_responses: dict[str, str] | None,
+) -> AgentRunResult:
+    """Run the registered agent inside a periodic Temporal heartbeat loop.
+
+    The LLM call (DeepSeek, etc.) is a single blocking await with no internal
+    checkpoints, so a background task heartbeats every
+    :data:`_HEARTBEAT_INTERVAL_SECONDS` seconds while it is in flight. The
+    first heartbeat is emitted synchronously before the await so a tight
+    HeartbeatTimeout is satisfied even if the periodic task has not ticked yet.
+    """
+    async with _heartbeat_loop({"phase": "llm", "manifest_id": manifest_id}):
+        return await run_registered_agent(
+            manifest_id,
+            tenant_id=tenant_id,
+            input_payload=agent_input,
+            llm_registry=_LLM_REGISTRY,
+            elicitation_responses=elicitation_responses,
+        )
+
+
 async def _run_agent_activity(input_payload: dict) -> dict:
     tenant_id = require_temporal_tenant(input_payload)
     installation = input_payload.get("executor_installation_snapshot")
@@ -168,11 +234,10 @@ async def _run_agent_activity(input_payload: dict) -> dict:
     else:
         raise ValueError(f"unsupported manifest id: {manifest_id}")
 
-    result = await run_registered_agent(
+    result = await _run_agent_with_heartbeat(
         manifest_id,
         tenant_id=tenant_id,
-        input_payload=agent_input,
-        llm_registry=_LLM_REGISTRY,
+        agent_input=agent_input,
         elicitation_responses=elicitation_responses,
     )
     if isinstance(result, ElicitationRequest):

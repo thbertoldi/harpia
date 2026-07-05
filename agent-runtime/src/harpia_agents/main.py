@@ -6,6 +6,7 @@ Starts a ConnectRPC ASGI server or a Temporal worker depending on HARPIA_ROLE.
 import asyncio
 import logging
 import os
+import sys
 
 import uvicorn
 
@@ -13,6 +14,33 @@ from harpia_agents.identity import TenantResolverMiddleware
 from harpia_agents.services import AgentServiceImpl
 
 logger = logging.getLogger("harpia_agents")
+
+# Single stdout handler so container runtimes (`kubectl logs`) capture every
+# record. Without this the root logger has no handler and Python's lastResort
+# handler silently drops INFO records to stderr.
+_LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s: %(message)s"
+
+
+def _configure_logging() -> None:
+    """Install a stdout handler on the root logger and pick up the level.
+
+    Level is overridable via ``HARPIA_LOG_LEVEL`` (e.g. ``DEBUG``). Defaults to
+    INFO so the worker startup banner and activity logs are visible. Must run
+    before :func:`start_worker` / :func:`start_server` so the
+    "Temporal worker started" line is captured.
+    """
+    level_name = os.environ.get("HARPIA_LOG_LEVEL", "INFO").upper()
+    level = getattr(logging, level_name, logging.INFO)
+
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(logging.Formatter(_LOG_FORMAT))
+
+    root = logging.getLogger()
+    # Replace any pre-existing handlers so re-entry (e.g. tests, reloaders)
+    # does not double-emit records.
+    root.handlers[:] = [handler]
+    root.setLevel(level)
+    logging.getLogger("harpia_agents").setLevel(level)
 
 
 def env_bool(name: str, default: bool = False) -> bool:
@@ -55,6 +83,7 @@ def start_worker() -> None:
 
 def main() -> None:
     """Entry point: dispatch based on HARPIA_ROLE or --worker flag."""
+    _configure_logging()
     role = os.environ.get("HARPIA_ROLE", "server")
 
     if role == "worker":
