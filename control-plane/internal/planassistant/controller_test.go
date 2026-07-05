@@ -2,6 +2,7 @@ package planassistant_test
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -333,5 +334,303 @@ func TestNextTurn_LandingIsIdempotent(t *testing.T) {
 	}
 	if len(chatStore.appended) != 1 {
 		t.Fatalf("landing should be emitted at most once, got %d", len(chatStore.appended))
+	}
+}
+
+// storedAssistantPrompt builds an ASSISTANT_PROMPT row with a hand-crafted
+// payload so tests can seed the fake chat store with prompts that have the
+// same fingerprint but a different body than what the controller would derive.
+func storedAssistantPrompt(configurationID, state, stepKey, bodySuffix string) *chatv1.ThreadMessage {
+	body := fmt.Sprintf(
+		`{"configuration_id":%q,"state":%q,"step_key":%q,"options":[{"id":"x","label":%q,"value":"x"}]}`,
+		configurationID, state, stepKey, bodySuffix,
+	)
+	return &chatv1.ThreadMessage{
+		Id:          uuid.NewString(),
+		Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_ASSISTANT_PROMPT,
+		PayloadJson: body,
+	}
+}
+
+// TestNextTurn_DedupsByFingerprintNotBytes is the core regression: a stored
+// prompt with the SAME (configuration_id, state, step_key) but a DIFFERENT
+// candidate body must suppress re-emission. This is exactly what happened
+// after a page reload — NextTurn re-derived the same state and produced a
+// byte-different but semantically identical prompt.
+func TestNextTurn_DedupsByFingerprintNotBytes(t *testing.T) {
+	chatStore := &fakeChat{}
+	tpl := mkTemplate("draft")
+	tpl.Id = testTemplateUUID
+	cfgID := uuid.NewString()
+	cfg := &plansv1.PlanConfiguration{
+		Id:             cfgID,
+		ThreadId:       testThreadUUID,
+		PlanTemplateId: testTemplateUUID,
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+	}
+	// Same config/state/step, but a stale candidate label the controller will
+	// not reproduce — under the old byte-comparison this would NOT dedup.
+	chatStore.stored = []*chatv1.ThreadMessage{
+		storedAssistantPrompt(cfgID, "BINDING_STEP", "draft", "stale-candidate-label"),
+	}
+	c := newController(chatStore, cfg, tpl)
+	if err := c.NextTurn(context.Background(), uuid.New(), uuid.New()); err != nil {
+		t.Fatal(err)
+	}
+	if len(chatStore.appended) != 0 {
+		t.Fatalf("same (config,state,step) fingerprint must suppress even when body differs; appended %d: %+v",
+			len(chatStore.appended), chatStore.appended)
+	}
+}
+
+// TestNextTurn_DoesNotDedupAcrossConfigurations guards the multi-plan thread
+// case: two configs in the same thread, both in BINDING_STEP for the same
+// step_key, must each get their own prompt.
+func TestNextTurn_DoesNotDedupAcrossConfigurations(t *testing.T) {
+	chatStore := &fakeChat{}
+	tpl := mkTemplate("draft")
+	tpl.Id = testTemplateUUID
+	cfgID := uuid.NewString()
+	cfg := &plansv1.PlanConfiguration{
+		Id:             cfgID,
+		ThreadId:       testThreadUUID,
+		PlanTemplateId: testTemplateUUID,
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+	}
+	// Same state/step, DIFFERENT configuration_id — must NOT suppress.
+	chatStore.stored = []*chatv1.ThreadMessage{
+		storedAssistantPrompt(uuid.NewString(), "BINDING_STEP", "draft", "other-config"),
+	}
+	c := newController(chatStore, cfg, tpl)
+	if err := c.NextTurn(context.Background(), uuid.New(), uuid.New()); err != nil {
+		t.Fatal(err)
+	}
+	if len(chatStore.appended) != 1 {
+		t.Fatalf("different configuration_id must not suppress; appended %d", len(chatStore.appended))
+	}
+	want := fmt.Sprintf(`"configuration_id":%q`, cfgID)
+	if !strings.Contains(chatStore.appended[0].PayloadJSON, want) {
+		t.Fatalf("emitted prompt must stamp configuration_id=%s, got %s", cfgID, chatStore.appended[0].PayloadJSON)
+	}
+}
+
+// TestNextTurn_DedupIsStepScoped confirms the same config in the same state
+// but a DIFFERENT step_key emits a fresh prompt (advancement is preserved).
+func TestNextTurn_DedupIsStepScoped(t *testing.T) {
+	chatStore := &fakeChat{}
+	tpl := mkTemplate("fetch-news", "write-draft")
+	tpl.Id = testTemplateUUID
+	cfgID := uuid.NewString()
+	cfg := &plansv1.PlanConfiguration{
+		Id:             cfgID,
+		ThreadId:       testThreadUUID,
+		PlanTemplateId: testTemplateUUID,
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+		SlotBindings:   []*plansv1.SlotBinding{{StepKey: "fetch-news", ExecutorInstallationId: "rss-tech"}},
+	}
+	// Already prompted for fetch-news; we're now asking about write-draft.
+	chatStore.stored = []*chatv1.ThreadMessage{
+		storedAssistantPrompt(cfgID, "BINDING_STEP", "fetch-news", "earlier"),
+	}
+	c := newControllerWithCatalog(chatStore, cfg, tpl, fakeCatalog{byStep: map[string][]planassistant.ExecutorOption{
+		"fetch-news":  {{StepKey: "fetch-news", InstallationID: "rss-tech", DisplayName: "Tech RSS", SkuKey: "rss-news-feed"}},
+		"write-draft": {{StepKey: "write-draft", InstallationID: "writer", DisplayName: "Writer", SkuKey: "newsletter-writer-senior"}},
+	}})
+	if err := c.NextTurn(context.Background(), uuid.New(), uuid.New()); err != nil {
+		t.Fatal(err)
+	}
+	if len(chatStore.appended) != 1 {
+		t.Fatalf("different step_key must emit; appended %d", len(chatStore.appended))
+	}
+	if !strings.Contains(chatStore.appended[0].PayloadJSON, `"step_key":"write-draft"`) {
+		t.Fatalf("expected write-draft prompt, got %s", chatStore.appended[0].PayloadJSON)
+	}
+}
+
+// TestNextTurn_LandingIsConfigScoped guards the multi-plan thread case for
+// landings: a landing for config A in a shared thread must not block config
+// B's landing.
+func TestNextTurn_LandingIsConfigScoped(t *testing.T) {
+	chatStore := &fakeChat{}
+	tpl := mkTemplate("draft")
+	tpl.Id = testTemplateUUID
+	cfgID := uuid.NewString()
+	cfg := &plansv1.PlanConfiguration{
+		Id:             cfgID,
+		ThreadId:       testThreadUUID,
+		PlanTemplateId: testTemplateUUID,
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
+	}
+	// A landing for a DIFFERENT config in the same thread — old thread-global
+	// check suppressed us; the config-scoped check must not.
+	chatStore.stored = []*chatv1.ThreadMessage{
+		storedAssistantPrompt(uuid.NewString(), "landing", "", "other-config"),
+	}
+	c := newController(chatStore, cfg, tpl)
+	if err := c.NextTurn(context.Background(), uuid.New(), uuid.New()); err != nil {
+		t.Fatal(err)
+	}
+	if len(chatStore.appended) != 1 {
+		t.Fatalf("landing for another config must not suppress; appended %d", len(chatStore.appended))
+	}
+	if !strings.Contains(chatStore.appended[0].PayloadJSON, `"state":"landing"`) {
+		t.Fatalf("expected landing payload, got %s", chatStore.appended[0].PayloadJSON)
+	}
+	if !strings.Contains(chatStore.appended[0].PayloadJSON, fmt.Sprintf(`"configuration_id":%q`, cfgID)) {
+		t.Fatalf("emitted landing must stamp configuration_id=%s, got %s", cfgID, chatStore.appended[0].PayloadJSON)
+	}
+}
+
+// TestNextTurn_ProgressionEmitsExactlyOnePromptPerStep walks the full happy
+// path (binding1 → binding2 → overseer → policies → matrix → landing) and
+// re-fires NextTurn after every step to confirm each emits exactly once.
+func TestNextTurn_ProgressionEmitsExactlyOnePromptPerStep(t *testing.T) {
+	chatStore := &fakeChat{}
+	tpl := mkTemplate("fetch-news", "write-draft")
+	markStepIntegration(tpl, "fetch-news")
+	markStepAgent(tpl, "write-draft")
+	tpl.Id = testTemplateUUID
+	cfgID := uuid.NewString()
+	configs := &fakeConfigs{cur: &plansv1.PlanConfiguration{
+		Id:             cfgID,
+		ThreadId:       testThreadUUID,
+		PlanTemplateId: testTemplateUUID,
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+	}}
+	c := &planassistant.Controller{
+		Chat: chatStore,
+		Catalog: fakeCatalog{byStep: map[string][]planassistant.ExecutorOption{
+			"fetch-news":  {{StepKey: "fetch-news", InstallationID: "rss-tech", DisplayName: "Tech RSS", SkuKey: "rss-news-feed"}},
+			"write-draft": {{StepKey: "write-draft", InstallationID: "writer", DisplayName: "Writer", SkuKey: "newsletter-writer-senior"}},
+		}},
+		Configs:   configs,
+		Templates: &fakeTemplates{tpl: tpl},
+	}
+	ctx := identity.WithRequestContext(context.Background(), identity.RequestContext{UserID: "user-ana"})
+	tenant := uuid.New()
+
+	// Step 1: BINDING_STEP/fetch-news. Re-fire to confirm idempotency.
+	mustNextTurn(t, c, ctx, tenant)
+	mustNextTurn(t, c, ctx, tenant)
+	assertStateStep(t, chatStore.appended, 0, "BINDING_STEP", "fetch-news")
+	if len(chatStore.appended) != 1 {
+		t.Fatalf("step 1: expected 1 append, got %d", len(chatStore.appended))
+	}
+
+	// Step 2: BINDING_STEP/write-draft.
+	configs.cur = &plansv1.PlanConfiguration{
+		Id: cfgID, ThreadId: testThreadUUID, PlanTemplateId: testTemplateUUID,
+		Status: plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+		SlotBindings: []*plansv1.SlotBinding{
+			{StepKey: "fetch-news", ExecutorInstallationId: "rss-tech"},
+		},
+	}
+	mustNextTurn(t, c, ctx, tenant)
+	mustNextTurn(t, c, ctx, tenant)
+	assertStateStep(t, chatStore.appended, 1, "BINDING_STEP", "write-draft")
+	if len(chatStore.appended) != 2 {
+		t.Fatalf("step 2: expected 2 appends, got %d", len(chatStore.appended))
+	}
+
+	// Step 3: OVERSEER_STEP/write-draft (write-draft is agent-backed).
+	configs.cur = &plansv1.PlanConfiguration{
+		Id: cfgID, ThreadId: testThreadUUID, PlanTemplateId: testTemplateUUID,
+		Status: plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+		SlotBindings: []*plansv1.SlotBinding{
+			{StepKey: "fetch-news", ExecutorInstallationId: "rss-tech"},
+			{StepKey: "write-draft", ExecutorInstallationId: "writer"},
+		},
+	}
+	mustNextTurn(t, c, ctx, tenant)
+	mustNextTurn(t, c, ctx, tenant)
+	assertStateStep(t, chatStore.appended, 2, "OVERSEER_STEP", "write-draft")
+	if len(chatStore.appended) != 3 {
+		t.Fatalf("step 3: expected 3 appends, got %d", len(chatStore.appended))
+	}
+
+	// Step 4: POLICIES_STEP.
+	configs.cur = &plansv1.PlanConfiguration{
+		Id: cfgID, ThreadId: testThreadUUID, PlanTemplateId: testTemplateUUID,
+		Status: plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+		SlotBindings: []*plansv1.SlotBinding{
+			{StepKey: "fetch-news", ExecutorInstallationId: "rss-tech"},
+			{StepKey: "write-draft", ExecutorInstallationId: "writer"},
+		},
+		OverseerBindings: []*plansv1.OverseerBinding{
+			{StepKey: "write-draft", OverseerUserId: "user-ana"},
+		},
+	}
+	mustNextTurn(t, c, ctx, tenant)
+	mustNextTurn(t, c, ctx, tenant)
+	if !strings.Contains(chatStore.appended[3].PayloadJSON, `"state":"POLICIES_STEP"`) {
+		t.Fatalf("step 4: expected POLICIES_STEP, got %s", chatStore.appended[3].PayloadJSON)
+	}
+	if len(chatStore.appended) != 4 {
+		t.Fatalf("step 4: expected 4 appends, got %d", len(chatStore.appended))
+	}
+
+	// Step 5: BINDING_MATRIX.
+	configs.cur = &plansv1.PlanConfiguration{
+		Id: cfgID, ThreadId: testThreadUUID, PlanTemplateId: testTemplateUUID,
+		Status: plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+		SlotBindings: []*plansv1.SlotBinding{
+			{StepKey: "fetch-news", ExecutorInstallationId: "rss-tech"},
+			{StepKey: "write-draft", ExecutorInstallationId: "writer"},
+		},
+		OverseerBindings: []*plansv1.OverseerBinding{
+			{StepKey: "write-draft", OverseerUserId: "user-ana"},
+		},
+		BehaviorPolicies: validPolicies(),
+	}
+	mustNextTurn(t, c, ctx, tenant)
+	mustNextTurn(t, c, ctx, tenant)
+	if !strings.Contains(chatStore.appended[4].PayloadJSON, `"state":"BINDING_MATRIX"`) {
+		t.Fatalf("step 5: expected BINDING_MATRIX, got %s", chatStore.appended[4].PayloadJSON)
+	}
+	if len(chatStore.appended) != 5 {
+		t.Fatalf("step 5: expected 5 appends, got %d", len(chatStore.appended))
+	}
+
+	// Step 6: landing on promotion to RUNNABLE. Re-fire to confirm idempotency.
+	configs.cur = &plansv1.PlanConfiguration{
+		Id: cfgID, ThreadId: testThreadUUID, PlanTemplateId: testTemplateUUID,
+		Status: plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
+		SlotBindings: []*plansv1.SlotBinding{
+			{StepKey: "fetch-news", ExecutorInstallationId: "rss-tech"},
+			{StepKey: "write-draft", ExecutorInstallationId: "writer"},
+		},
+		OverseerBindings: []*plansv1.OverseerBinding{
+			{StepKey: "write-draft", OverseerUserId: "user-ana"},
+		},
+		BehaviorPolicies: validPolicies(),
+	}
+	mustNextTurn(t, c, ctx, tenant)
+	mustNextTurn(t, c, ctx, tenant)
+	if !strings.Contains(chatStore.appended[5].PayloadJSON, `"state":"landing"`) {
+		t.Fatalf("step 6: expected landing, got %s", chatStore.appended[5].PayloadJSON)
+	}
+	if got := len(chatStore.appended); got != 6 {
+		t.Fatalf("step 6: expected exactly 6 appends (one per step), got %d", got)
+	}
+}
+
+func mustNextTurn(t *testing.T, c *planassistant.Controller, ctx context.Context, tenant uuid.UUID) {
+	t.Helper()
+	if err := c.NextTurn(ctx, tenant, uuid.New()); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func assertStateStep(t *testing.T, appended []chat.AppendInput, idx int, state, stepKey string) {
+	t.Helper()
+	if idx >= len(appended) {
+		t.Fatalf("assertStateStep: index %d out of range (len=%d)", idx, len(appended))
+	}
+	got := appended[idx].PayloadJSON
+	if !strings.Contains(got, fmt.Sprintf(`"state":%q`, state)) {
+		t.Fatalf("appended[%d]: expected state %s, got %s", idx, state, got)
+	}
+	if !strings.Contains(got, fmt.Sprintf(`"step_key":%q`, stepKey)) {
+		t.Fatalf("appended[%d]: expected step_key %s, got %s", idx, stepKey, got)
 	}
 }

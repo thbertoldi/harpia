@@ -100,7 +100,9 @@ func (c *Controller) emitCurrentPrompt(ctx context.Context, tenantID uuid.UUID, 
 	state := DeriveState(tpl, cfg, nil)
 
 	if state.Kind == StateSaved {
-		emitted, err := c.landingAlreadyEmitted(ctx, tenantID, threadID)
+		// Landing idempotency is per-configuration: a landing for config A in
+		// a shared thread must not suppress config B's landing.
+		emitted, err := c.landingAlreadyEmitted(ctx, tenantID, threadID, cfg.GetId())
 		if err != nil {
 			return err
 		}
@@ -130,10 +132,18 @@ func (c *Controller) emitCurrentPrompt(ctx context.Context, tenantID uuid.UUID, 
 	}
 
 	text, payload := BuildPrompt(state, in)
+	// Stamp the owning configuration into every prompt payload so dedup can be
+	// config-scoped — two configurations sharing one thread must not suppress
+	// each other's prompts. BuildPrompt does not emit this field today; we
+	// round-trip through a map so every prompt variant is covered uniformly.
+	payload = stampConfigurationID(payload, cfg.GetId())
 
-	// Suppress duplicate prompts. NextTurn can fire on incremental edits, but
-	// we only want a fresh prompt when the rendered payload actually differs
-	// from the most recent assistant prompt.
+	// Suppress duplicate prompts semantically. NextTurn can fire on every
+	// incremental edit, but two prompts with the same
+	// (configuration_id, state, step_key) are the same turn to the user even
+	// when the candidate/price/current-user-label body differs. Comparing raw
+	// payload bytes is brittle and caused every binding/overseer/policies
+	// prompt to be duplicated after a page reload.
 	if dup, err := c.isDuplicateAssistantPrompt(ctx, tenantID, threadID, payload); err != nil {
 		return err
 	} else if dup {
@@ -152,9 +162,11 @@ func (c *Controller) emitCurrentPrompt(ctx context.Context, tenantID uuid.UUID, 
 	return nil
 }
 
-// landingAlreadyEmitted reports whether an ASSISTANT_PROMPT with state
-// "landing" has already been written to the thread.
-func (c *Controller) landingAlreadyEmitted(ctx context.Context, tenantID uuid.UUID, threadID string) (bool, error) {
+// landingAlreadyEmitted reports whether an ASSISTANT_PROMPT whose payload
+// carries the given configuration_id and state "landing" has already been
+// written to the thread. Landing idempotency is per-configuration so two
+// configurations sharing a thread do not suppress each other's landing.
+func (c *Controller) landingAlreadyEmitted(ctx context.Context, tenantID uuid.UUID, threadID, configurationID string) (bool, error) {
 	msgs, err := c.Chat.ListMessages(ctx, tenantID, threadID, 0, 0)
 	if err != nil {
 		return false, fmt.Errorf("planassistant: list messages: %w", err)
@@ -163,34 +175,73 @@ func (c *Controller) landingAlreadyEmitted(ctx context.Context, tenantID uuid.UU
 		if m.GetKind() != chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_ASSISTANT_PROMPT {
 			continue
 		}
-		if promptState(m.GetPayloadJson()) == "landing" {
+		cid, st, _ := promptFingerprint(m.GetPayloadJson())
+		if cid == configurationID && st == "landing" {
 			return true, nil
 		}
 	}
 	return false, nil
 }
 
-// isDuplicateAssistantPrompt reports whether the most recent ASSISTANT_PROMPT
-// already carries the given payload (so re-emitting would be a no-op).
+// isDuplicateAssistantPrompt reports whether any stored ASSISTANT_PROMPT
+// already carries the same semantic fingerprint (configuration_id, state,
+// step_key) as the candidate payload. The full payload body may differ in
+// non-semantic fields (candidate labels, price lookups, current-user label)
+// without meaningfully changing the prompt, so byte comparison was too brittle
+// and duplicated every prompt after a page reload.
 func (c *Controller) isDuplicateAssistantPrompt(ctx context.Context, tenantID uuid.UUID, threadID, payload string) (bool, error) {
 	msgs, err := c.Chat.ListMessages(ctx, tenantID, threadID, 0, 0)
 	if err != nil {
 		return false, fmt.Errorf("planassistant: list messages: %w", err)
 	}
-	for i := len(msgs) - 1; i >= 0; i-- {
-		if msgs[i].GetKind() == chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_ASSISTANT_PROMPT {
-			return msgs[i].GetPayloadJson() == payload, nil
+	wantCid, wantState, wantStep := promptFingerprint(payload)
+	for _, m := range msgs {
+		if m.GetKind() != chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_ASSISTANT_PROMPT {
+			continue
+		}
+		cid, st, sk := promptFingerprint(m.GetPayloadJson())
+		if cid == wantCid && st == wantState && sk == wantStep {
+			return true, nil
 		}
 	}
 	return false, nil
 }
 
-func promptState(payloadJSON string) string {
+// promptFingerprint extracts the semantic identity of an ASSISTANT_PROMPT
+// payload: the owning configuration, the assistant state, and (for step
+// prompts) the focused step key. Two payloads with the same fingerprint are
+// the same turn to the user. Missing fields compare as "".
+func promptFingerprint(payloadJSON string) (configurationID, state, stepKey string) {
 	var p struct {
-		State string `json:"state"`
+		ConfigurationID string `json:"configuration_id"`
+		State           string `json:"state"`
+		StepKey         string `json:"step_key"`
 	}
 	if json.Unmarshal([]byte(payloadJSON), &p) != nil {
-		return ""
+		return "", "", ""
 	}
-	return p.State
+	return p.ConfigurationID, p.State, p.StepKey
+}
+
+// stampConfigurationID merges configuration_id into the prompt payload. The
+// payload is opaque JSON built by BuildPrompt across several typed variants,
+// so we round-trip it through a map rather than mutate every builder. If the
+// payload already carries a configuration_id it is overwritten to guarantee
+// the stamped value equals the owning configuration.
+func stampConfigurationID(payload, configurationID string) string {
+	var m map[string]any
+	if err := json.Unmarshal([]byte(payload), &m); err != nil {
+		// Fall back to the raw payload rather than dropping a prompt entirely
+		// over a serialization detail; dedup then degrades to byte comparison.
+		return payload
+	}
+	if m == nil {
+		m = map[string]any{}
+	}
+	m["configuration_id"] = configurationID
+	out, err := json.Marshal(m)
+	if err != nil {
+		return payload
+	}
+	return string(out)
 }
