@@ -18,4 +18,9 @@ export interface ResolvedNavSection {
   label: string;
   href: string;
   icon: NavIcon;
+  /**
+   * Optional pending-count pill (e.g. inbox approvals/elicitations).
+   * Rendered hidden when undefined or 0. The shell owns the live source.
+   */
+  badge?: number;
 }

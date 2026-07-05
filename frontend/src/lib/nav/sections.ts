@@ -2,6 +2,7 @@ import {
   Activity,
   BookOpen,
   Bot,
+  Inbox,
   Plug,
   ScrollText,
   Settings,
@@ -18,6 +19,11 @@ import type { NavSectionDef, ResolvedNavSection } from "./types";
  * and Runs (`/runs`). Conversation lives at `/chat/[threadId]` and is only
  * reachable in-context, so it is not a static nav entry. Permission-gated
  * admin tooling is appended below for platform engineers.
+ *
+ * ADR-017 amendment: the Inbox (`/inbox`) is re-added as the notifications
+ * entry — recurring plans surface pending APPROVALS and ELICITATIONS that
+ * need the user outside of the chat thread. It is visible to all roles and
+ * carries a live pending-count badge fed by the shell's inbox watch.
  */
 export const navSectionDefs: NavSectionDef[] = [
   {
@@ -30,6 +36,12 @@ export const navSectionDefs: NavSectionDef[] = [
     i18nKey: "nav.runs",
     href: "/runs",
     icon: Activity,
+    visibleTo: "all",
+  },
+  {
+    i18nKey: "nav.inbox",
+    href: "/inbox",
+    icon: Inbox,
     visibleTo: "all",
   },
   {

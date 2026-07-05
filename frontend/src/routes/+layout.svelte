@@ -73,11 +73,21 @@
   );
 
   const sections = $derived(
-    m1Enabled
+    (m1Enabled
       ? resolveNavSectionsM1(personaMode, data?.user?.role, (key) =>
           translate(key, $locale),
         )
-      : resolveNavSections(data?.user?.role, (key) => translate(key, $locale)),
+      : resolveNavSections(data?.user?.role, (key) => translate(key, $locale))
+    ).map((section) => ({
+      ...section,
+      // Attach the live pending-count badge to the inbox entry. The count
+      // is sourced from the shell-level watchInbox below (single shared
+      // watch); the /inbox page keeps its own for the detailed list.
+      badge:
+        section.href === "/inbox" && inboxCountDisplay > 0
+          ? inboxCountDisplay
+          : undefined,
+    })),
   );
 
   function togglePersona() {
@@ -246,11 +256,11 @@
                 class="text-sm font-medium"
                 style="font-family: 'DM Sans', sans-serif">{section.label}</span
               >
-              {#if section.href === "/inbox" && inboxCountDisplay > 0}
+              {#if section.badge !== undefined && section.badge > 0}
                 <span
-                  class="ml-auto inline-flex items-center justify-center rounded-full bg-primary px-1.5 font-mono text-[11px] leading-none text-primary-foreground"
+                  class="ml-auto inline-flex items-center justify-center rounded-full bg-primary px-1.5 font-mono text-[11px] leading-none text-primary-foreground motion-safe:transition-opacity motion-safe:duration-200"
                 >
-                  {inboxCountDisplay}
+                  {section.badge}
                 </span>
               {/if}
             </a>

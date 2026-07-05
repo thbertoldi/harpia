@@ -2,6 +2,7 @@ import {
   Activity,
   BookOpen,
   Bot,
+  Inbox,
   Plug,
   ScrollText,
   Settings,
@@ -17,13 +18,19 @@ interface M1Section {
 }
 
 /**
- * Operator persona navigation is locked to the ADR-017 conversational
- * journey: Gallery (`/plans`) and Runs (`/runs`). Home is the brand
- * lockup and Conversation (`/chat/[threadId]`) is reached in-context.
+ * Operator persona navigation follows the ADR-017 conversational journey:
+ * Gallery (`/plans`) and Runs (`/runs`). Home is the brand lockup and
+ * Conversation (`/chat/[threadId]`) is reached in-context.
+ *
+ * ADR-017 amendment: the Inbox (`/inbox`) is appended for operators as the
+ * notifications entry — recurring plans surface pending APPROVALS and
+ * ELICITATIONS needing action outside the chat thread. The shell attaches a
+ * live pending-count badge to this entry.
  */
 const OPERATOR_SECTIONS: M1Section[] = [
   { i18nKey: "nav.plans", href: "/plans", icon: BookOpen },
   { i18nKey: "nav.runs", href: "/runs", icon: Activity },
+  { i18nKey: "nav.inbox", href: "/inbox", icon: Inbox },
 ];
 
 const ADMIN_SECTIONS: Array<

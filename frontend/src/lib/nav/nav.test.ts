@@ -8,9 +8,9 @@ import {
 
 describe("nav sections registry", () => {
   it("includes base sections for all roles", () => {
-    // 2 base ("all") sections (Gallery, Runs) + 4 permission-gated /admin/* sections.
-    expect(filterNavSections("Leader")).toHaveLength(6);
-    expect(filterNavSections(undefined)).toHaveLength(2);
+    // 3 base ("all") sections (Gallery, Runs, Inbox) + 4 permission-gated /admin/* sections.
+    expect(filterNavSections("Leader")).toHaveLength(7);
+    expect(filterNavSections(undefined)).toHaveLength(3);
   });
 
   it("shows integrations to leaders and engineers", () => {
@@ -54,7 +54,7 @@ describe("nav sections registry", () => {
   });
 
   it("hides permission-gated sections from unknown roles", () => {
-    expect(filterNavSections("member")).toHaveLength(2);
+    expect(filterNavSections("member")).toHaveLength(3);
     expect(
       filterNavSections("member").some((d) => d.href === "/admin/audit"),
     ).toBe(false);
@@ -69,6 +69,18 @@ describe("nav sections registry", () => {
     );
   });
 
+  it("shows the inbox notifications entry to all roles", () => {
+    expect(filterNavSections("Leader").some((d) => d.href === "/inbox")).toBe(
+      true,
+    );
+    expect(filterNavSections("member").some((d) => d.href === "/inbox")).toBe(
+      true,
+    );
+    expect(filterNavSections(undefined).some((d) => d.href === "/inbox")).toBe(
+      true,
+    );
+  });
+
   it("resolves labels via translate callback", () => {
     const labels = resolveNavSections("Leader", (key) => `t:${key}`).map(
       (s) => s.label,
@@ -76,6 +88,7 @@ describe("nav sections registry", () => {
     expect(labels).toEqual([
       "t:nav.plans",
       "t:nav.runs",
+      "t:nav.inbox",
       "t:nav.integrations",
       "t:nav.audit",
       "t:nav.agents",
@@ -98,6 +111,7 @@ describe("navSectionDefs", () => {
     expect(navSectionDefs.map((d) => d.href)).toEqual([
       "/plans",
       "/runs",
+      "/inbox",
       "/admin/integrations",
       "/admin/audit",
       "/admin/agents",
