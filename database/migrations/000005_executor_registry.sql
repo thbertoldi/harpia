@@ -42,7 +42,9 @@ CREATE TABLE executor_installations (
     CHECK (
         (kind = 'integration' AND connection_status IS NOT NULL)
         OR (kind = 'agent' AND manifest_id IS NOT NULL AND manifest_version IS NOT NULL)
-    )
+    ),
+    CONSTRAINT executor_installations_tenant_sku_name_unique
+        UNIQUE (tenant_id, executor_sku_id, display_name)
 );
 
 CREATE INDEX idx_executor_skus_kind ON executor_skus(kind);
