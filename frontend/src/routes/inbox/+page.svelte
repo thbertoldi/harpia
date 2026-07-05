@@ -3,16 +3,13 @@
   import { getTenant } from "$lib/auth";
   import { locale, translate } from "$lib/i18n";
   import { watchInbox } from "$lib/inbox/aggregator";
+  import { selectPendingItems } from "$lib/inbox/pending";
   import type { InboxItem } from "$lib/inbox/types";
   import InboxRow from "$lib/components/inbox/InboxRow.svelte";
   import InboxElicitationActions from "$lib/components/inbox/InboxElicitationActions.svelte";
   import InboxApprovalEntry from "$lib/components/inbox/InboxApprovalEntry.svelte";
 
   type Filter = "all" | "elicitation" | "approval";
-  type SupportedInboxItem = Extract<
-    InboxItem,
-    { kind: "elicitation" | "approval" }
-  >;
 
   let items = $state<InboxItem[]>([]);
   let filter = $state<Filter>("all");
@@ -40,12 +37,9 @@
     };
   });
 
-  const supportedItems = $derived(
-    items.filter(
-      (it): it is SupportedInboxItem =>
-        it.kind === "elicitation" || it.kind === "approval",
-    ),
-  );
+  // Shared with the shell badge via $lib/inbox/pending — both surfaces count
+  // the same set, so the badge total always matches the list below.
+  const supportedItems = $derived(selectPendingItems(items));
 
   const visible = $derived(
     filter === "all"

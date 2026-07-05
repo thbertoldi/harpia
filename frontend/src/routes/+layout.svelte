@@ -8,6 +8,7 @@
   import { page } from "$app/state";
   import { resolve } from "$app/paths";
   import { watchInbox } from "$lib/inbox/aggregator";
+  import { countPendingInbox } from "$lib/inbox/pending";
   import { createCountTween } from "$lib/motion/springs";
   import { planClient } from "$lib/rpc";
   import { PlanConfigurationStatus } from "$lib/gen/harpia/plans/v1/plans_pb";
@@ -131,7 +132,9 @@
         for await (const batch of watchInbox(tenantId, undefined, {
           signal: controller.signal,
         })) {
-          await inboxCountTween.set(batch.length);
+          // Count through the same predicate the /inbox list renders with
+          // (countPendingInbox) so the badge can never diverge from the page.
+          await inboxCountTween.set(countPendingInbox(batch));
         }
       } catch {
         /* stream aborted or unavailable */
