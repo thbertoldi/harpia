@@ -38,13 +38,32 @@ export async function loadThreadMessages(
   threadId: string,
   pageSize = 100,
 ): Promise<ChatMessage[]> {
-  const response = await threadClient.listThreadMessages({
-    tenantId,
-    threadId,
-    pageSize,
-    pageToken: "",
-  });
-  return response.messages.map(chatMessageFromProto);
+  // The backend caps pageSize at 100 (maxThreadMessagePageSize) and pages by
+  // sequence_number: each page's nextPageToken is its last message's sequence,
+  // and the next page returns strictly-greater sequences in ascending order.
+  // Follow the token until exhausted so a full plan lifecycle (proposal +
+  // config + a run's RUN_*/STEP_*/ARTIFACT_CREATED events) is not truncated
+  // — the re-entry bug where the most recent execution's events get sliced
+  // off, leaving mostRecentExecutionId null and the workspace $effect idle.
+  // Ascending order is backend-enforced per page and across the token chain,
+  // so plain concatenation preserves global sequence order without a
+  // client-side sort; the caller's sinceSeq (last element) stays the high
+  // watermark for the watch cursor.
+  const all: ChatMessage[] = [];
+  let pageToken = "";
+  do {
+    const response = await threadClient.listThreadMessages({
+      tenantId,
+      threadId,
+      pageSize,
+      pageToken,
+    });
+    for (const message of response.messages) {
+      all.push(chatMessageFromProto(message));
+    }
+    pageToken = response.nextPageToken;
+  } while (pageToken);
+  return all;
 }
 
 /**

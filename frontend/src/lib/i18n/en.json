@@ -934,6 +934,7 @@
   "sidebar.yourPlans.empty": "No plans yet. Start one with + New plan.",
   "sidebar.yourPlans.loadError": "Failed to load plans.",
   "sidebar.yourPlans.seeAll": "See all",
+  "sidebar.yourPlans.planFallback": "Plan",
   "sidebar.yourPlans.status.draft": "Draft",
   "sidebar.yourPlans.status.runnable": "Runnable",
   "sidebar.yourPlans.status.scheduled": "Scheduled",

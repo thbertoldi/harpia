@@ -934,6 +934,7 @@
   "sidebar.yourPlans.empty": "Nenhum plano ainda. Comece com + Novo plano.",
   "sidebar.yourPlans.loadError": "Falha ao carregar planos.",
   "sidebar.yourPlans.seeAll": "Ver todos",
+  "sidebar.yourPlans.planFallback": "Plano",
   "sidebar.yourPlans.status.draft": "Rascunho",
   "sidebar.yourPlans.status.runnable": "Executável",
   "sidebar.yourPlans.status.scheduled": "Agendado",

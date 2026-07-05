@@ -74,12 +74,117 @@ describe("loadThreadMessages", () => {
           sequenceNumber: 1n,
         },
       ],
+      nextPageToken: "",
     });
     const { loadThreadMessages } = await import("./client");
     const got = await loadThreadMessages("tenant-1", "thread-1");
     expect(got).toHaveLength(1);
     expect(got[0].kind).toBe("CONFIGURATION_SAVED");
     expect(got[0].role).toBe("SYSTEM");
+  });
+
+  it("follows nextPageToken and concatenates pages in ascending sequence order", async () => {
+    // Page 1: messages 1..2, token points at seq 2.
+    // Page 2: messages 3..4, token points at seq 4.
+    // Page 3: message 5, no token (done).
+    // Mirrors the backend paging scheme (nextPageToken = last seq; next page
+    // returns strictly-greater seqs in ascending order).
+    threadClientMock.threadClient.listThreadMessages
+      .mockResolvedValueOnce({
+        messages: [
+          {
+            id: "m1",
+            tenantId: "tenant-1",
+            threadId: "thread-1",
+            role: 3,
+            kind: 1,
+            text: "",
+            payloadJson: "{}",
+            sequenceNumber: 1n,
+          },
+          {
+            id: "m2",
+            tenantId: "tenant-1",
+            threadId: "thread-1",
+            role: 3,
+            kind: 1,
+            text: "",
+            payloadJson: "{}",
+            sequenceNumber: 2n,
+          },
+        ],
+        nextPageToken: "2",
+      })
+      .mockResolvedValueOnce({
+        messages: [
+          {
+            id: "m3",
+            tenantId: "tenant-1",
+            threadId: "thread-1",
+            role: 3,
+            kind: 1,
+            text: "",
+            payloadJson: "{}",
+            sequenceNumber: 3n,
+          },
+          {
+            id: "m4",
+            tenantId: "tenant-1",
+            threadId: "thread-1",
+            role: 3,
+            kind: 1,
+            text: "",
+            payloadJson: "{}",
+            sequenceNumber: 4n,
+          },
+        ],
+        nextPageToken: "4",
+      })
+      .mockResolvedValueOnce({
+        messages: [
+          {
+            id: "m5",
+            tenantId: "tenant-1",
+            threadId: "thread-1",
+            role: 3,
+            kind: 1,
+            text: "",
+            payloadJson: "{}",
+            sequenceNumber: 5n,
+          },
+        ],
+        nextPageToken: "",
+      });
+
+    const { loadThreadMessages } = await import("./client");
+    const got = await loadThreadMessages("tenant-1", "thread-1");
+
+    // Global ascending order preserved by concatenation alone.
+    expect(got.map((m) => m.id)).toEqual(["m1", "m2", "m3", "m4", "m5"]);
+    expect(got.map((m) => m.sequenceNumber)).toEqual([1n, 2n, 3n, 4n, 5n]);
+    expect(
+      threadClientMock.threadClient.listThreadMessages,
+    ).toHaveBeenCalledTimes(3);
+    // Each follow-up request carries the previous page's token.
+    expect(
+      threadClientMock.threadClient.listThreadMessages,
+    ).toHaveBeenNthCalledWith(2, expect.objectContaining({ pageToken: "2" }));
+    expect(
+      threadClientMock.threadClient.listThreadMessages,
+    ).toHaveBeenNthCalledWith(3, expect.objectContaining({ pageToken: "4" }));
+  });
+
+  it("returns [] for an empty thread (no messages, no next token)", async () => {
+    threadClientMock.threadClient.listThreadMessages.mockResolvedValueOnce({
+      messages: [],
+      nextPageToken: "",
+    });
+    const { loadThreadMessages } = await import("./client");
+    const got = await loadThreadMessages("tenant-1", "thread-1");
+    expect(got).toEqual([]);
+    expect(
+      threadClientMock.threadClient.listThreadMessages,
+    ).toHaveBeenCalledTimes(1);
   });
 });
 
