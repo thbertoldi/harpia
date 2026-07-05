@@ -43,20 +43,58 @@
     }
     return `width: ${pct}%; background: linear-gradient(90deg, var(--token-energy-bright), var(--token-energy));`;
   });
+
+  // The step list is capped at a fixed max-height so a plan with many steps
+  // never balloons the card. When the list scrolls, keep the running step
+  // (or the latest one) in view by adjusting scrollTop directly — we never
+  // touch the page scroll, only the list's own. Re-runs whenever the steps
+  // array reference changes (param-driven action update).
+  function keepActiveStepVisible(
+    node: HTMLOListElement,
+    steps: ExecutionStepView[],
+  ) {
+    const apply = () => {
+      // Pin the running (or, on failure, the failed) step into view; fall
+      // back to the latest step otherwise. Resolved by index from the array
+      // so we don't depend on status attribute names in the DOM.
+      const activeIndex = steps.findIndex(
+        (s) => s.status === "running" || s.status === "failed",
+      );
+      const targetIndex = activeIndex >= 0 ? activeIndex : steps.length - 1;
+      const el = node.querySelector<HTMLElement>(
+        `[data-step-index='${targetIndex}']`,
+      );
+      if (!el) return;
+      // Only scroll the list itself — never the page.
+      const viewTop = node.scrollTop;
+      const viewBottom = viewTop + node.clientHeight;
+      const elTop = el.offsetTop;
+      const elBottom = elTop + el.offsetHeight;
+      if (elTop < viewTop) {
+        node.scrollTop = elTop;
+      } else if (elBottom > viewBottom) {
+        node.scrollTop = elBottom - node.clientHeight;
+      }
+    };
+    requestAnimationFrame(apply);
+    return {
+      update: () => requestAnimationFrame(apply),
+    };
+  }
 </script>
 
 <div
-  class="rounded-md border border-plumage/60 bg-obsidian-light/80 px-3 py-2.5 text-[12px]"
+  class="rounded-md border border-plumage/60 bg-obsidian-light/80 px-3 py-2 text-[12px]"
 >
   <button
     type="button"
     onclick={() => (collapsed = !collapsed)}
-    class="flex w-full items-center gap-2.5 text-left"
+    class="flex w-full items-center gap-2 text-left"
     aria-expanded={!collapsed}
     aria-label={translate("thread.execution.toggle", $locale)}
   >
     <span
-      class="flex size-5 shrink-0 items-center justify-center rounded
+      class="flex size-4 shrink-0 items-center justify-center rounded
         {vm.state === 'running'
         ? 'text-energy'
         : vm.state === 'completed'
@@ -66,24 +104,24 @@
             : 'text-crown-ash-dark'}"
     >
       {#if vm.state === "running"}
-        <Loader2 class="size-4 animate-spin" />
+        <Loader2 class="size-3.5 animate-spin" />
       {:else if vm.state === "completed"}
-        <Check class="size-4" />
+        <Check class="size-3.5" />
       {:else if vm.state === "failed"}
-        <AlertTriangle class="size-4" />
+        <AlertTriangle class="size-3.5" />
       {:else}
-        <Loader2 class="size-4 opacity-0" />
+        <Loader2 class="size-3.5 opacity-0" />
       {/if}
     </span>
 
     <span class="min-w-0 flex-1">
-      <span class="flex items-center gap-2">
+      <span class="flex items-center gap-1.5">
         <span class="truncate font-body font-medium text-cream">
           {translate("thread.execution.runLabel", $locale, { n: vm.runNumber })}
         </span>
         {#if vm.total > 0}
           <span
-            class="shrink-0 rounded-full bg-plumage/60 px-1.5 py-0.5 text-[10px] font-medium text-crown-ash tabular-nums"
+            class="shrink-0 rounded-full bg-plumage/60 px-1.5 py-px text-[10px] font-medium text-crown-ash tabular-nums"
             aria-label={translate("thread.execution.steps", $locale, {
               done: vm.doneCount,
               total: vm.total,
@@ -93,20 +131,20 @@
           </span>
         {/if}
       </span>
-      <span class="mt-0.5 block truncate text-[11px] text-crown-ash"
+      <span class="mt-px block truncate text-[11px] text-crown-ash"
         >{subtitle}</span
       >
     </span>
 
     <ChevronDown
-      class="size-3.5 shrink-0 text-crown-ash-dark transition-transform duration-150 {!collapsed
+      class="size-3 shrink-0 text-crown-ash-dark transition-transform duration-150 {!collapsed
         ? ''
         : '-rotate-90'}"
     />
   </button>
 
   {#if vm.total > 0}
-    <div class="mt-2 h-0.5 w-full overflow-hidden rounded-full bg-plumage/50">
+    <div class="mt-1.5 h-0.5 w-full overflow-hidden rounded-full bg-plumage/50">
       <div
         class="h-full transition-all duration-500 ease-out"
         style={barStyle}
@@ -115,23 +153,29 @@
   {/if}
 
   {#if !collapsed && vm.total > 0}
-    <ol class="mt-2.5 flex flex-col gap-0.5">
+    <ol
+      use:keepActiveStepVisible={vm.steps}
+      class="mt-2 flex max-h-60 flex-col gap-0 overflow-y-auto pr-1"
+    >
       {#each vm.steps as step, i (step.key)}
         {@const notLast = i < vm.steps.length - 1}
-        <li class="relative flex gap-2.5 pb-2 {!notLast ? 'pb-0' : ''}">
+        <li
+          data-step-index={i}
+          class="relative flex gap-2 pb-1.5 {!notLast ? 'pb-0' : ''}"
+        >
           {#if notLast}
             <span
-              class="absolute top-5 left-[9px] h-[calc(100%-0.75rem)] w-px
+              class="absolute top-4 left-2 h-[calc(100%-0.5rem)] w-px
                 {step.status === 'done'
                 ? 'bg-status-done/40'
                 : 'bg-plumage/50'}"
             ></span>
           {/if}
-          <span class="relative z-10 pt-0.5">
+          <span class="relative z-10">
             {@render stepIcon(step)}
           </span>
           <span
-            class="pt-0.5 font-body
+            class="pt-px font-body
               {step.status === 'running'
               ? 'text-energy'
               : step.status === 'done'
@@ -144,7 +188,7 @@
           </span>
           {#if step.status === "running"}
             <span
-              class="mt-0.5 ml-auto shrink-0 animate-pulse rounded-full bg-energy/15 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-energy uppercase"
+              class="ml-auto shrink-0 animate-pulse self-center rounded-full bg-energy/15 px-1 py-px text-[9px] font-semibold tracking-wide text-energy uppercase"
             >
               {translate("thread.execution.runningChip", $locale)}
             </span>
@@ -157,7 +201,7 @@
 
 {#snippet stepIcon(step: ExecutionStepView)}
   <span
-    class="flex size-[18px] items-center justify-center rounded-full
+    class="flex size-4 items-center justify-center rounded-full
       {step.status === 'done'
       ? 'bg-status-done/15 text-status-done ring-1 ring-status-done/40'
       : step.status === 'running'
@@ -169,11 +213,11 @@
     {#if step.status === "done"}
       <Check class="size-2.5" />
     {:else if step.status === "running"}
-      <Loader2 class="size-3.5 animate-spin" />
+      <Loader2 class="size-3 animate-spin" />
     {:else if step.status === "failed"}
       <AlertTriangle class="size-2.5" />
     {:else}
-      <span class="size-1.5 rounded-full bg-current opacity-60"></span>
+      <span class="size-1 rounded-full bg-current opacity-60"></span>
     {/if}
   </span>
 {/snippet}
