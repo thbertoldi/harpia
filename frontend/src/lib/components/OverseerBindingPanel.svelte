@@ -19,6 +19,7 @@
     upsertOverseerBinding,
     validateOverseerBindings,
   } from "$lib/plans/overseer-binding";
+  import { localizedOverseerLabel } from "$lib/plans/overseer-label";
 
   let {
     template,
@@ -62,6 +63,13 @@
     const binding = getOverseerBindingForStep(bindings, stepKey);
     return binding?.overseerUserId === sessionUser.sub;
   }
+
+  // The panel is self-assignment only in the MVP, so the bound overseer is
+  // always the current user — render their localized "You"/"Eu" label rather
+  // than the session display name (and never a raw subject id).
+  const selfOverseerLabel = $derived(
+    localizedOverseerLabel(sessionUser.sub, sessionUser.sub, $locale),
+  );
 
   function toggleSelfAssignment(stepKey: string): void {
     saveMessage = null;
@@ -192,7 +200,7 @@
               {#if assigned}
                 <CheckCircle2 class="size-3.5" />
                 {translate("plans.overseer.assignedSelf", $locale, {
-                  name: sessionUser.name,
+                  name: selfOverseerLabel,
                 })}
               {:else}
                 <UserCheck class="size-3.5" />

@@ -871,6 +871,7 @@
   "assistant.overseerStep.selected": "Overseer: {overseer}",
   "assistant.overseerStep.unassigned": "Unassigned",
   "assistant.overseer.you": "You",
+  "assistant.overseer.someone": "Someone",
   "assistant.landing.runNow": "Run now",
   "assistant.landing.schedule": "Schedule…",
   "assistant.landing.walkAway": "Save and walk away",

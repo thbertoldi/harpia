@@ -25,6 +25,12 @@ export interface ConfigLineItem {
   detail?: string;
   priceCents: number;
   currency: string;
+  /**
+   * Raw subject id for `overseer` line items. Kept separate from `label` so
+   * the renderer can resolve a localized display name (and never leak the id)
+   * — see {@link localizedOverseerLabel}.
+   */
+  overseerUserId?: string;
 }
 
 export interface ConfigCostSummary {
@@ -206,7 +212,10 @@ export function buildConfigLineItems(
       items.push({
         kind: "overseer",
         key: `overseer:${step.key}`,
-        label: overseer.overseerUserId,
+        // Never embed the raw subject id in the display label; the renderer
+        // resolves it to a localized name via `localizedOverseerLabel`.
+        label: "",
+        overseerUserId: overseer.overseerUserId,
         detail: step.key,
         priceCents: OVERSEER_REVIEW_CENTS,
         currency,

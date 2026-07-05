@@ -12,6 +12,7 @@
     type MatrixRow,
     type OverseerStepPayload,
   } from "$lib/plans/matrix";
+  import { localizedOverseerLabel } from "$lib/plans/overseer-label";
   import { chipFlash } from "$lib/motion/transitions";
   import { planClient } from "$lib/rpc";
   import {
@@ -93,18 +94,22 @@
   );
 
   function selectedOverseer(row: MatrixRow): string {
+    const sessionUser = getSession()?.user;
     const selected = payload?.options.find(
       (option) => option.value === row.current_overseer_id,
     );
     if (selected) {
-      return (
-        displayLabel(selected) ||
-        row.current_overseer_label ||
-        row.current_overseer_id ||
-        ""
-      );
+      return displayLabel(selected);
     }
-    return row.current_overseer_label || row.current_overseer_id || "";
+    // No matching option (e.g. after hydration the row only carries the id):
+    // resolve the id to a localized label rather than rendering it raw.
+    return row.current_overseer_id
+      ? localizedOverseerLabel(
+          row.current_overseer_id,
+          sessionUser?.sub,
+          $locale,
+        )
+      : "";
   }
 
   function policiesComplete(config: PlanConfiguration): boolean {
@@ -129,11 +134,13 @@
 
   // The backend labels the current-user overseer option "You" (a locale-agnostic
   // fallback). Localize it for display by matching the option's value (the user
-  // id) against the session user — never by string-matching the label.
+  // id) against the session user — never by string-matching the label. The
+  // shared helper owns the id→label resolution so every "linked things" surface
+  // stays consistent.
   function displayLabel(option: MatrixOption): string {
     const sessionUser = getSession()?.user;
     if (sessionUser && option.value === sessionUser.sub) {
-      return translate("assistant.overseer.you", $locale);
+      return localizedOverseerLabel(option.value, sessionUser.sub, $locale);
     }
     return option.label;
   }

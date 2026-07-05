@@ -2,8 +2,13 @@
   import { Pencil } from "lucide-svelte";
   import { fade } from "svelte/transition";
   import type { ChatMessage } from "$lib/chat/types";
+  import { getSession } from "$lib/auth";
   import { locale, translate } from "$lib/i18n";
   import { applyLinkedInSuggestion, editBinding } from "$lib/plans/assistant";
+  import {
+    localizedOverseerLabel,
+    overseerAvatarInitial,
+  } from "$lib/plans/overseer-label";
   import {
     buildDefaultLinkedInInputValues,
     linkedInInputValuesFromParameterValuesJson,
@@ -36,7 +41,6 @@
     configurationId: string;
     tenantId: string;
     executorCatalog?: Map<string, ExecutorCatalogEntry>;
-    currentUserDisplayName?: string;
   }
   let {
     message,
@@ -44,7 +48,6 @@
     tenantId,
     // Reserved for parent price overrides; cost currently derived from matrix rows.
     executorCatalog,
-    currentUserDisplayName,
   }: Props = $props();
   void executorCatalog;
 
@@ -130,9 +133,23 @@
     return opt?.sublabel ?? "";
   }
 
-  function overseerInitial(label: string): string {
-    const trimmed = (label || currentUserDisplayName || "A").trim();
-    return trimmed ? trimmed.charAt(0).toUpperCase() : "A";
+  // Overseers are stored as raw subject ids; never render the id directly.
+  // The current user is identified by session `sub` equality (never by
+  // string-matching a label) and localized to "You"/"Eu"; anyone else falls
+  // back to a localized generic label.
+  const sessionUserSub = $derived(getSession()?.user.sub);
+
+  function overseerDisplay(row: MatrixRow): string {
+    if (!row.current_overseer_id) {
+      // Unbound agent step: the MVP only supports self-assignment, so the
+      // current user is the implied default — show their localized label.
+      return sessionUserSub ? translate("assistant.overseer.you", $locale) : "";
+    }
+    return localizedOverseerLabel(
+      row.current_overseer_id,
+      sessionUserSub,
+      $locale,
+    );
   }
 
   async function onPickExecutor(row: MatrixRow, optionId: string) {
@@ -489,13 +506,9 @@
             <div
               class="flex size-[18px] items-center justify-center rounded-full border border-plumage bg-surface-pop text-[10px] font-semibold text-talon-gold"
             >
-              {overseerInitial(row.current_overseer_label)}
+              {overseerAvatarInitial(overseerDisplay(row))}
             </div>
-            <span class="truncate"
-              >{row.current_overseer_label ||
-                currentUserDisplayName ||
-                ""}</span
-            >
+            <span class="truncate">{overseerDisplay(row)}</span>
             <button
               type="button"
               class="ml-auto cursor-pointer text-crown-ash-dark opacity-0 transition-opacity group-hover:opacity-100 hover:text-talon-gold"

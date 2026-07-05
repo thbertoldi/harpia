@@ -871,6 +871,7 @@
   "assistant.overseerStep.selected": "Supervisor: {overseer}",
   "assistant.overseerStep.unassigned": "Sem atribuição",
   "assistant.overseer.you": "Eu",
+  "assistant.overseer.someone": "Alguém",
   "assistant.landing.runNow": "Executar agora",
   "assistant.landing.schedule": "Agendar…",
   "assistant.landing.walkAway": "Salvar e sair",

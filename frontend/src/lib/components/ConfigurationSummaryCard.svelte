@@ -5,8 +5,11 @@
   import {
     formatMoney,
     type ConfigCostSummary,
+    type ConfigLineItem,
     type ConfigLineItemKind,
   } from "$lib/plans/config-summary";
+  import { localizedOverseerLabel } from "$lib/plans/overseer-label";
+  import { getSession } from "$lib/auth";
   import { locale, translate } from "$lib/i18n";
 
   let {
@@ -41,6 +44,22 @@
       default:
         return "text-text-muted";
     }
+  }
+
+  const sessionUserSub = $derived(getSession()?.user.sub);
+
+  // Overseer line items carry only a raw subject id; resolve it to a
+  // localized label (current user → "You"/"Eu", otherwise a generic label)
+  // so no id is ever rendered.
+  function lineItemLabel(item: ConfigLineItem): string {
+    if (item.kind === "overseer") {
+      return localizedOverseerLabel(
+        item.overseerUserId ?? "",
+        sessionUserSub,
+        $locale,
+      );
+    }
+    return item.label;
   }
 </script>
 
@@ -95,7 +114,7 @@
               </td>
               <td class="px-3 py-3">
                 <p class="font-heading text-sm font-semibold text-text">
-                  {item.label}
+                  {lineItemLabel(item)}
                 </p>
                 {#if item.detail}
                   <p class="font-mono text-[10px] text-text-muted-dark">
