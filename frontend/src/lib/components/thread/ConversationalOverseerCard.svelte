@@ -96,12 +96,15 @@
     const selected = payload?.options.find(
       (option) => option.value === row.current_overseer_id,
     );
-    return (
-      selected?.label ||
-      row.current_overseer_label ||
-      row.current_overseer_id ||
-      ""
-    );
+    if (selected) {
+      return (
+        displayLabel(selected) ||
+        row.current_overseer_label ||
+        row.current_overseer_id ||
+        ""
+      );
+    }
+    return row.current_overseer_label || row.current_overseer_id || "";
   }
 
   function policiesComplete(config: PlanConfiguration): boolean {
@@ -122,6 +125,17 @@
       ...option,
       label: sessionUser.name || sessionUser.email || option.label,
     };
+  }
+
+  // The backend labels the current-user overseer option "You" (a locale-agnostic
+  // fallback). Localize it for display by matching the option's value (the user
+  // id) against the session user — never by string-matching the label.
+  function displayLabel(option: MatrixOption): string {
+    const sessionUser = getSession()?.user;
+    if (sessionUser && option.value === sessionUser.sub) {
+      return translate("assistant.overseer.you", $locale);
+    }
+    return option.label;
   }
 
   function reflectOverseer(
@@ -238,7 +252,7 @@
 
     {#if showChips}
       <div class="mt-3 flex flex-wrap gap-2">
-        {#each payload.options.map(currentUserFallback) as opt (opt.id)}
+        {#each payload.options as opt (opt.id)}
           <button
             type="button"
             in:chipFlash
@@ -246,7 +260,7 @@
             onclick={() => onPickFocused(opt)}
             class="cursor-pointer rounded-md border border-plumage bg-obsidian px-3 py-2 text-left text-[12px] text-cream hover:border-talon-gold hover:text-talon-gold disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <span class="font-medium">{opt.label}</span>
+            <span class="font-medium">{displayLabel(opt)}</span>
             {#if opt.sublabel}
               <span class="ml-2 text-[10px] text-crown-ash-dark">
                 {opt.sublabel}
