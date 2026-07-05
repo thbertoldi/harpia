@@ -53,6 +53,13 @@ const (
 	defaultElicitationTimeoutHours       = 24
 	maxElicitationTimeoutHours     int32 = 720
 	planActivityMaximumAttempts    int32 = 3
+	// planActivityScheduleToStartTimeout bounds how long an activity can sit in
+	// a task queue before a worker picks it up. Agent activities are routed to
+	// a dedicated queue (AgentTaskQueueName) serviced only by the Python
+	// agent-runtime worker; without this timeout an outage there would park the
+	// plan at ExecuteActivity().Get() forever — invisible, no retry, no failure.
+	// 2 min turns that silent stall into a clean, retryable failure.
+	planActivityScheduleToStartTimeout = 2 * time.Minute
 )
 
 type PlanExecutionInput struct {
@@ -81,8 +88,9 @@ type PlanWorkflowResult struct {
 
 func planActivityOptions() workflow.ActivityOptions {
 	return workflow.ActivityOptions{
-		StartToCloseTimeout: 5 * time.Minute,
-		HeartbeatTimeout:    30 * time.Second,
+		StartToCloseTimeout:    5 * time.Minute,
+		ScheduleToStartTimeout: planActivityScheduleToStartTimeout,
+		HeartbeatTimeout:       30 * time.Second,
 		RetryPolicy: &temporal.RetryPolicy{
 			InitialInterval:    time.Second,
 			BackoffCoefficient: 2,
