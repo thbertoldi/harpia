@@ -318,8 +318,16 @@ func (h *PlanHandler) CreatePlanConfiguration(ctx context.Context, req *connect.
 		return nil, connectErrorFromBinding(err)
 	}
 
+	// Auto-assign the current user as overseer for every agent-backed step the
+	// caller did not explicitly bind. Validation has already run on the
+	// caller-supplied bindings, so this only fills gaps for well-formed input.
+	// With every agent step overseer-bound, DeriveState skips OVERSEER_STEP and
+	// the conversational flow advances BINDING_STEP → POLICIES_STEP →
+	// BINDING_MATRIX without the pointless "who oversees this?" prompt.
+	overseerBindings := autoBindOverseers(ctx, template, req.Msg.OverseerBindings)
+
 	config, err := h.buildConfigurationFromRequest(tenantID, template, req.Msg.WorkspaceId, req.Msg.Status, req.Msg.Kind,
-		seedArtifacts, slotBindings, req.Msg.OverseerBindings,
+		seedArtifacts, slotBindings, overseerBindings,
 		behaviorPolicies, req.Msg.Schedule, req.Msg.ParameterValuesJson)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
@@ -874,6 +882,58 @@ func (h *PlanHandler) ListStepExecutions(ctx context.Context, req *connect.Reque
 		response.NextPageToken = strconv.Itoa(offset + limit)
 	}
 	return stream.Send(response)
+}
+
+// autoBindOverseers returns the caller's overseer bindings plus an
+// auto-assigned entry for every agent-backed PlanStep the caller left unbound:
+// the current user becomes the overseer. This removes the OVERSEER_STEP prompt
+// from the conversational configuration flow — in practice the only sensible
+// answer to "who oversees {agent-step}?" is the configuring user themselves.
+//
+// Caller-supplied bindings always win and are never overwritten. When the
+// context carries no authenticated user id, the caller's bindings are returned
+// unchanged and the OVERSEER_STEP prompt remains as the fallback path (and for
+// future multi-user scenarios). Agent-step detection reuses
+// planStepExecutorKind so it stays consistent with the binding validator.
+func autoBindOverseers(ctx context.Context, template *PlanTemplate, callerBindings []*plansv1.OverseerBinding) []*plansv1.OverseerBinding {
+	if template == nil {
+		return callerBindings
+	}
+	userID := ""
+	if rc, ok := identity.RequestContextFrom(ctx); ok {
+		userID = strings.TrimSpace(rc.UserID)
+	}
+	if userID == "" {
+		return callerBindings
+	}
+
+	bound := make(map[string]bool, len(callerBindings))
+	for _, ob := range callerBindings {
+		if ob == nil {
+			continue
+		}
+		if ob.GetStepKey() != "" && ob.GetOverseerUserId() != "" {
+			bound[ob.GetStepKey()] = true
+		}
+	}
+
+	out := make([]*plansv1.OverseerBinding, 0, len(callerBindings)+len(template.Steps))
+	out = append(out, callerBindings...)
+	for _, step := range template.Steps {
+		stepKey := strings.TrimSpace(step.Key)
+		if stepKey == "" || bound[stepKey] {
+			continue
+		}
+		if planStepExecutorKind(step) != plansv1.ExecutorKind_EXECUTOR_KIND_AGENT {
+			continue
+		}
+		out = append(out, &plansv1.OverseerBinding{
+			StepKey:        stepKey,
+			OverseerUserId: userID,
+		})
+		bound[stepKey] = true
+	}
+	return out
 }
 
 func (h *PlanHandler) buildConfigurationFromRequest(

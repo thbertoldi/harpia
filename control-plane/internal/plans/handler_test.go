@@ -13,6 +13,7 @@ import (
 	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
 	"github.com/harpia/control-plane/internal/executors"
 	"github.com/harpia/control-plane/internal/identity"
+	"github.com/harpia/control-plane/internal/planassistant"
 )
 
 // TestCreatePlanConfiguration_RequiresThreadID guards the Path B contract: a
@@ -291,4 +292,165 @@ func mustMarshalTemplateInputs(t *testing.T, inputs []*plansv1.TemplateInputPara
 		parts = append(parts, string(raw))
 	}
 	return json.RawMessage("[" + strings.Join(parts, ",") + "]")
+}
+
+// autoBindTestTemplate has one integration step and two agent-backed steps.
+// executor_kind uses the plans-proto numeric form (AGENT=1, INTEGRATION=2) so
+// both planStepExecutorKind and stepToProto agree on the kind.
+func autoBindTestTemplate() *PlanTemplate {
+	return &PlanTemplate{
+		ID:  uuid.New(),
+		Key: "auto-bind-overseer-test",
+		Steps: []PlanStep{
+			{
+				Key:                 "fetch-news",
+				ExecutorRequirement: json.RawMessage(`{"executor_kind":2}`), // INTEGRATION
+			},
+			{
+				Key:                 "write-draft",
+				ExecutorRequirement: json.RawMessage(`{"executor_kind":1}`), // AGENT
+			},
+			{
+				Key:                 "adapt-for-linkedin",
+				ExecutorRequirement: json.RawMessage(`{"executor_kind":1}`), // AGENT
+			},
+		},
+	}
+}
+
+func findOverseer(bindings []*plansv1.OverseerBinding, stepKey string) *plansv1.OverseerBinding {
+	for _, ob := range bindings {
+		if ob.GetStepKey() == stepKey {
+			return ob
+		}
+	}
+	return nil
+}
+
+// TestAutoBindOverseers_AssignsCurrentUserToAgentSteps proves the helper fills
+// overseer bindings for agent-backed steps with the authenticated user id,
+// leaves integration steps alone, and respects caller-supplied bindings.
+func TestAutoBindOverseers_AssignsCurrentUserToAgentSteps(t *testing.T) {
+	currentUser := uuid.New().String()
+	ctx := identity.WithRequestContext(context.Background(), identity.RequestContext{
+		UserID:   currentUser,
+		TenantID: uuid.New(),
+	})
+	template := autoBindTestTemplate()
+
+	// Caller pre-binds write-draft to someone else; that must be preserved.
+	callerBindings := []*plansv1.OverseerBinding{
+		{StepKey: "write-draft", OverseerUserId: "user-ana"},
+	}
+
+	got := autoBindOverseers(ctx, template, callerBindings)
+
+	if got := findOverseer(got, "fetch-news"); got != nil {
+		t.Fatalf("integration step fetch-news must not get an overseer binding, got %#v", got)
+	}
+	wd := findOverseer(got, "write-draft")
+	if wd == nil {
+		t.Fatal("missing overseer binding for write-draft")
+	}
+	if wd.OverseerUserId != "user-ana" {
+		t.Fatalf("write-draft overseer = %q, caller-supplied value must be preserved", wd.OverseerUserId)
+	}
+	adapt := findOverseer(got, "adapt-for-linkedin")
+	if adapt == nil {
+		t.Fatal("missing overseer binding for unbound agent step adapt-for-linkedin")
+	}
+	if adapt.OverseerUserId != currentUser {
+		t.Fatalf("adapt-for-linkedin overseer = %q, want current user %q", adapt.OverseerUserId, currentUser)
+	}
+	if len(got) != 2 {
+		t.Fatalf("len(bindings) = %d, want 2 (caller write-draft + auto adapt-for-linkedin)", len(got))
+	}
+}
+
+// TestAutoBindOverseers_NoUserReturnsCallerBindings guards the fallback: with
+// no authenticated user in the context, auto-binding is skipped so the
+// OVERSEER_STEP prompt remains the configuration fallback.
+func TestAutoBindOverseers_NoUserReturnsCallerBindings(t *testing.T) {
+	template := autoBindTestTemplate()
+	callerBindings := []*plansv1.OverseerBinding{
+		{StepKey: "write-draft", OverseerUserId: "user-ana"},
+	}
+
+	// Plain context with no request context attached.
+	got := autoBindOverseers(context.Background(), template, callerBindings)
+	if len(got) != 1 || got[0] != callerBindings[0] {
+		t.Fatalf("bindings = %#v, want caller bindings unchanged when no user is present", got)
+	}
+
+	// Request context present but empty user id → same fallback.
+	emptyCtx := identity.WithRequestContext(context.Background(), identity.RequestContext{
+		UserID:   "   ",
+		TenantID: uuid.New(),
+	})
+	got = autoBindOverseers(emptyCtx, template, callerBindings)
+	if len(got) != 1 {
+		t.Fatalf("bindings = %#v, want caller bindings unchanged for blank user id", got)
+	}
+}
+
+// TestAutoBindOverseers_SkipsOverseerStepInDeriveState proves the end-to-end
+// effect: a configuration built with auto-bound overseers causes the assistant
+// state machine to skip OVERSEER_STEP, whereas the same configuration without
+// auto-binding would land on OVERSEER_STEP.
+func TestAutoBindOverseers_SkipsOverseerStepInDeriveState(t *testing.T) {
+	currentUser := uuid.New().String()
+	ctx := identity.WithRequestContext(context.Background(), identity.RequestContext{
+		UserID:   currentUser,
+		TenantID: uuid.New(),
+	})
+	template := autoBindTestTemplate()
+	templateProto := templateToProto(template)
+	tenantID := uuid.New()
+
+	// Every step has a slot binding so DeriveState moves past BINDING_STEP.
+	slotBindings := []*plansv1.SlotBinding{
+		{StepKey: "fetch-news", ExecutorInstallationId: uuid.New().String()},
+		{StepKey: "write-draft", ExecutorInstallationId: uuid.New().String()},
+		{StepKey: "adapt-for-linkedin", ExecutorInstallationId: uuid.New().String()},
+	}
+
+	h := &PlanHandler{}
+
+	// With auto-binding: every agent step is overseer-bound → DeriveState must
+	// NOT return OVERSEER_STEP (it advances to POLICIES_STEP since policies are
+	// unset).
+	autoOverseers := autoBindOverseers(ctx, template, nil)
+	autoCfg, err := h.buildConfigurationFromRequest(
+		tenantID, template, "",
+		plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+		plansv1.PlanConfigurationKind_PLAN_CONFIGURATION_KIND_UNSPECIFIED,
+		nil, slotBindings, autoOverseers, nil, nil, "{}",
+	)
+	if err != nil {
+		t.Fatalf("buildConfigurationFromRequest() error = %v", err)
+	}
+	autoState := planassistant.DeriveState(templateProto, configurationToProto(autoCfg), nil)
+	if autoState.Kind == planassistant.StateOverseerStep {
+		t.Fatalf("DeriveState = OVERSEER_STEP, want it skipped when overseers are auto-bound")
+	}
+	if autoState.Kind != planassistant.StatePoliciesStep {
+		t.Fatalf("DeriveState = %v, want POLICIES_STEP (policies unset, overseers bound)", autoState.Kind)
+	}
+
+	// Contrast: with no caller bindings and no user in context, the overseer
+	// step is unbound → DeriveState returns OVERSEER_STEP (the fallback path).
+	plainOverseers := autoBindOverseers(context.Background(), template, nil)
+	plainCfg, err := h.buildConfigurationFromRequest(
+		tenantID, template, "",
+		plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+		plansv1.PlanConfigurationKind_PLAN_CONFIGURATION_KIND_UNSPECIFIED,
+		nil, slotBindings, plainOverseers, nil, nil, "{}",
+	)
+	if err != nil {
+		t.Fatalf("buildConfigurationFromRequest() error = %v", err)
+	}
+	plainState := planassistant.DeriveState(templateProto, configurationToProto(plainCfg), nil)
+	if plainState.Kind != planassistant.StateOverseerStep {
+		t.Fatalf("DeriveState = %v, want OVERSEER_STEP when no user is in context", plainState.Kind)
+	}
 }
