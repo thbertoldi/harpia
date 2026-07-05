@@ -6,7 +6,11 @@
   import { listArtifacts, getArtifact } from "$lib/artifacts/artifacts";
   import { getTenant } from "$lib/auth";
   import { locale, translate } from "$lib/i18n";
-  import { loadThreadMessages, appendThreadMessage } from "$lib/chat/client";
+  import {
+    loadThreadMessages,
+    appendThreadMessage,
+    mergeThreadMessages,
+  } from "$lib/chat/client";
   import { watchThreadMessages } from "$lib/chat/watch";
   import type { ChatMessage } from "$lib/chat/types";
   import { buildThreadSections } from "$lib/plans/thread";
@@ -18,6 +22,7 @@
   import ThreadComposer from "$lib/components/thread/ThreadComposer.svelte";
   import PlanProposalCard from "$lib/components/thread/PlanProposalCard.svelte";
   import PlanExecutionCard from "$lib/components/thread/PlanExecutionCard.svelte";
+  import { matchingConfigurationForProposal } from "$lib/components/thread/plan-proposal-logic";
   import ArtifactPreviewSheet from "$lib/components/artifacts/ArtifactPreviewSheet.svelte";
   import SuggestionChips from "$lib/components/SuggestionChips.svelte";
   import HintBanner from "$lib/components/thread/HintBanner.svelte";
@@ -100,8 +105,23 @@
       ) ?? data.configuration
     );
   });
+  // Mirrors liveConfigurationOverride: right after a config is created or
+  // flipped to, data.templateByConfigurationId may not yet contain it (the
+  // load hasn't repopulated after invalidateAll). Fetch the template directly
+  // so PlanThreadTopBar renders immediately and the graph appears once the
+  // steps arrive. See the lazy-fetch effect below.
+  let liveTemplateOverride = $state<PlanTemplate | undefined>();
   const focusedTemplate = $derived(
-    data.templateByConfigurationId.get(activeConfigurationId) ?? data.template,
+    liveTemplateOverride ??
+      data.templateByConfigurationId.get(activeConfigurationId) ??
+      data.template,
+  );
+  // Maps a step_key to its human template title for STEP_STARTED / STEP_BOUND
+  // system events. Threads down to SystemEventCard so the event text reads
+  // "Step Write draft started." rather than the raw step id.
+  const stepTitleFor = $derived(
+    (stepKey: string) =>
+      focusedTemplate?.steps.find((s) => s.key === stepKey)?.title ?? stepKey,
   );
   let workspaceArtifacts = $state<Artifact[]>([]);
   let workspaceActivityItems = $state<PlanActivityItem[]>([]);
@@ -182,6 +202,46 @@
   });
 
   const tenantId = $derived(getTenant()?.id ?? "");
+
+  // Looks up the PlanConfiguration that already exists for a PLAN_PROPOSED
+  // message, if any. Computed against the server-supplied data.configurations
+  // (newest-first) so PlanProposalCard renders read-only instead of re-offering
+  // confirm/adjust on reload.
+  function existingConfigurationFor(
+    message: ChatMessage,
+  ): PlanConfiguration | undefined {
+    let candidateIds: { template_id: string }[] = [];
+    try {
+      const parsed = JSON.parse(message.payloadJson || "{}") as {
+        candidates?: unknown;
+      };
+      const rawCandidates = Array.isArray(parsed.candidates)
+        ? parsed.candidates
+        : [];
+      candidateIds = rawCandidates
+        .map((candidate: unknown) => {
+          if (
+            typeof candidate === "object" &&
+            candidate !== null &&
+            "template_id" in candidate &&
+            typeof candidate.template_id === "string"
+          ) {
+            return { template_id: candidate.template_id };
+          }
+          return null;
+        })
+        .filter(
+          (candidate): candidate is { template_id: string } =>
+            candidate !== null,
+        );
+    } catch {
+      // malformed payload — treat as no candidates
+    }
+    return (
+      matchingConfigurationForProposal(candidateIds, data.configurations) ??
+      undefined
+    );
+  }
 
   // Id of the most recent USER_TEXT that has no PLAN_PROPOSED after it, else
   // null. This is the message a proposal would answer.
@@ -268,6 +328,7 @@
   function selectConfiguration(configurationId: string) {
     selectedConfigurationId = configurationId;
     liveConfigurationOverride = undefined;
+    liveTemplateOverride = undefined;
     clearFocusedPlanUi();
     // Keep the URL's ?plan= param in sync with the selected chip so a reload
     // or bookmark lands back on the plan the user actually switched to,
@@ -363,7 +424,9 @@
           signal: controller.signal,
         })) {
           if (controller.signal.aborted) return;
-          messages = [...messages, ...batch];
+          // mergeThreadMessages dedupes by id and re-sorts by sequenceNumber,
+          // hardening against stream replay dupes.
+          messages = mergeThreadMessages(messages, batch);
         }
       } catch {
         if (controller.signal.aborted) return;
@@ -373,6 +436,72 @@
     return () => {
       controller.abort();
     };
+  });
+
+  // Fetch-on-flip: when the thread transitions from no-config (proposal flow)
+  // to configured (e.g. after "Finish setup" calls nextTurn + invalidateAll),
+  // the seeded ASSISTANT_PROMPT may not have arrived over the watch stream
+  // yet. Refetch the full history and merge it in so the configured branch
+  // (ConversationalBindingCard etc.) has something to render immediately.
+  // The existing watch stream is NOT reset or aborted; this only supplements
+  // it. Guarded per-thread so it fires once per flip, not on every tick.
+  let flippedFetchThread = $state("");
+  $effect(() => {
+    const configId = activeConfigurationId;
+    const threadId = routeThreadId;
+    if (!configId) {
+      // Re-arm so a later flip (e.g. proposal -> configure) re-fires.
+      if (flippedFetchThread !== "") flippedFetchThread = "";
+      return;
+    }
+    if (!tenantId || !threadId) return;
+    if (flippedFetchThread === threadId) return;
+    flippedFetchThread = threadId;
+    void (async () => {
+      try {
+        const fresh = await loadThreadMessages(tenantId, threadId);
+        messages = mergeThreadMessages(messages, fresh);
+      } catch {
+        // best-effort; the watch stream still delivers in due course
+      }
+    })();
+  });
+
+  // Lazy template fetch fallback: when focusedConfiguration exists but its
+  // template isn't in data.templateByConfigurationId (typical right after a
+  // config is created or flipped to, before invalidateAll repopulates data),
+  // fetch it directly so PlanThreadTopBar renders immediately and the graph
+  // (PlanDagMiniMap) appears once steps arrive. If the fetch fails, the top
+  // bar still renders with the fallback name and the graph stays hidden.
+  $effect(() => {
+    const configId = activeConfigurationId;
+    const templateId = focusedConfiguration?.planTemplateId;
+    if (!configId || !templateId) {
+      liveTemplateOverride = undefined;
+      return;
+    }
+    // data already has the template — clear any stale override and rely on it
+    // so we don't shadow server data once the load catches up.
+    if (data.templateByConfigurationId.get(configId)) {
+      liveTemplateOverride = undefined;
+      return;
+    }
+    // Clear any override left over from a previously focused config so its
+    // steps don't briefly render for this one, then fetch this config's.
+    liveTemplateOverride = undefined;
+    const controller = new AbortController();
+    void (async () => {
+      try {
+        const res = await planClient.getPlanTemplate(
+          { planTemplateId: templateId },
+          { signal: controller.signal },
+        );
+        if (res.planTemplate) liveTemplateOverride = res.planTemplate;
+      } catch {
+        // best-effort; top bar still renders with the fallback name
+      }
+    })();
+    return () => controller.abort();
   });
 
   // Refetch the configuration when an incoming message indicates the
@@ -585,7 +714,12 @@
       {#each messages as m, i (m.id)}
         {#if m.kind === "PLAN_PROPOSED"}
           <div in:chatEnterStaggered={{ delay: Math.min(i * 40, 200) }}>
-            <PlanProposalCard message={m} {tenantId} threadId={routeThreadId} />
+            <PlanProposalCard
+              message={m}
+              {tenantId}
+              threadId={routeThreadId}
+              existingConfiguration={existingConfigurationFor(m)}
+            />
           </div>
         {:else if m.kind === "USER_TEXT"}
           <div
@@ -655,9 +789,11 @@
           </div>
         {/if}
 
-        {#if focusedTemplate && focusedConfiguration}
+        {#if focusedConfiguration}
           <PlanThreadTopBar
-            planName={planSummary?.intent || focusedTemplate.name}
+            planName={planSummary?.intent ||
+              focusedTemplate?.name ||
+              shortConfigurationId(focusedConfiguration.id)}
             {statusLabel}
             {cost}
             onOpenSchedule={() => (scheduleOpen = true)}
@@ -749,6 +885,8 @@
             activityItems={workspaceActivityItems}
             artifacts={workspaceArtifacts}
             onOpenArtifact={openArtifact}
+            {existingConfigurationFor}
+            {stepTitleFor}
           />
         {/if}
 

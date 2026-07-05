@@ -48,9 +48,17 @@
     message: ChatMessage;
     tenantId: string;
     threadId: string;
+    /**
+     * When set, a PlanConfiguration derived from this proposal already
+     * exists, so the card renders a static read-only summary instead of
+     * re-offering the confirm/adjust flow. Drives display mode off a
+     * server-supplied signal rather than local `$state`, which resets to
+     * "confirm" on every reload.
+     */
+    existingConfiguration?: PlanConfiguration;
   }
 
-  let { message, tenantId, threadId }: Props = $props();
+  let { message, tenantId, threadId, existingConfiguration }: Props = $props();
 
   const confidenceThreshold = 0.6;
 
@@ -72,6 +80,18 @@
   const bestCandidate = $derived(
     selectBestCandidate(candidates, payload.best_candidate_id),
   );
+
+  // Read-only mode display name. The matching config's planTemplateId points
+  // back at one of this proposal's candidates, so reuse that candidate's
+  // template_name/template_key rather than re-fetching the template.
+  const existingPlanName = $derived.by(() => {
+    if (!existingConfiguration) return "";
+    const match = candidates.find(
+      (candidate) =>
+        candidate.template_id === existingConfiguration.planTemplateId,
+    );
+    return match?.template_name || match?.template_key || "";
+  });
 
   const autoSelected = $derived.by<PlanProposalCandidate | null>(() => {
     if (
@@ -129,6 +149,8 @@
   }
 
   $effect(() => {
+    // Read-only mode never needs the template; skip the fetch entirely.
+    if (existingConfiguration) return;
     const cand = active;
     template = null;
     if (!cand) return;
@@ -406,7 +428,22 @@
   next turn below, rather than swapping a single card's contents in place.
 -->
 <div id={`m-${message.id}`} class="flex w-full flex-col gap-2">
-  {#if candidates.length === 0}
+  {#if existingConfiguration}
+    <!--
+      Read-only summary: a configuration already exists for this proposal.
+      No confirm/adjust buttons, no TemplateInputsForm, no created-card
+      actions. Just an assistant note that setup continues below.
+    -->
+    <div class={agentBubble} in:stageTransition>
+      {#if existingPlanName}
+        {translate("thread.propose.createdSummaryWithPlan", $locale, {
+          plan: existingPlanName,
+        })}
+      {:else}
+        {translate("thread.propose.createdSummary", $locale)}
+      {/if}
+    </div>
+  {:else if candidates.length === 0}
     <div class={agentBubble} in:stageTransition>
       {translate("thread.propose.noMatch", $locale)}
       <a class="text-talon-gold underline" href={resolve("/new")}>

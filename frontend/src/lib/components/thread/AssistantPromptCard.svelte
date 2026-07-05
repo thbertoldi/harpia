@@ -41,6 +41,14 @@
     }
   });
 
+  // Localized heading: the AWAITING_TEMPLATE state has a canonical key; any
+  // other unexpected prompt state falls back to the backend's English text.
+  const headingText = $derived(
+    payload.state === "AWAITING_TEMPLATE"
+      ? translate("assistant.prompt.awaitingTemplate", $locale)
+      : message.text,
+  );
+
   const showChips = $derived((isLive || editing) && !submitted);
 
   async function onSelect(option: Option) {
@@ -50,6 +58,7 @@
       await selectChip({
         tenantId,
         configurationId,
+        threadId: message.threadId,
         promptMessageId: message.id,
         optionId: option.id,
         value: option.value,
@@ -75,7 +84,7 @@
     : ''}"
 >
   <div class="flex items-start justify-between gap-2">
-    <p class="font-body text-[13px] text-cream">{message.text}</p>
+    <p class="font-body text-[13px] text-cream">{headingText}</p>
     {#if isAnswered && !isLive}
       <button
         type="button"

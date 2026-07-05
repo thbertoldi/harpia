@@ -37,6 +37,7 @@ async function advanceAssistant(
 export async function selectChip(args: {
   tenantId: string;
   configurationId: string;
+  threadId: string;
   promptMessageId: string;
   optionId: string;
   value: string;
@@ -50,7 +51,7 @@ export async function selectChip(args: {
   });
   await appendThreadMessage(
     args.tenantId,
-    args.configurationId,
+    args.threadId,
     "OVERSEER",
     "USER_SELECTION",
     args.label ?? "",
@@ -161,6 +162,7 @@ export async function editPolicyParameter(args: {
 export async function selectBindingOption(args: {
   tenantId: string;
   configurationId: string;
+  threadId: string;
   promptMessageId: string;
   existingConfiguration: PlanConfiguration;
   template: PlanTemplate;
@@ -177,6 +179,7 @@ export async function selectBindingOption(args: {
   await selectChip({
     tenantId: args.tenantId,
     configurationId: args.configurationId,
+    threadId: args.threadId,
     promptMessageId: args.promptMessageId,
     optionId: args.optionId,
     value: args.value,
@@ -195,6 +198,7 @@ export async function selectBindingOption(args: {
   await appendStepRebound({
     tenantId: args.tenantId,
     configurationId: args.configurationId,
+    threadId: args.threadId,
     stepKey: args.stepKey,
     previousInstallationId,
     newInstallationId: args.value,
@@ -208,6 +212,7 @@ export async function selectBindingOption(args: {
 export async function selectOverseerOption(args: {
   tenantId: string;
   configurationId: string;
+  threadId: string;
   promptMessageId: string;
   existingConfiguration: PlanConfiguration;
   stepKey: string;
@@ -223,6 +228,7 @@ export async function selectOverseerOption(args: {
   await selectChip({
     tenantId: args.tenantId,
     configurationId: args.configurationId,
+    threadId: args.threadId,
     promptMessageId: args.promptMessageId,
     optionId: args.optionId,
     value: args.value,
@@ -240,6 +246,7 @@ export async function selectOverseerOption(args: {
   await appendStepRebound({
     tenantId: args.tenantId,
     configurationId: args.configurationId,
+    threadId: args.threadId,
     stepKey: args.stepKey,
     previousOverseerUserId,
     newOverseerUserId: args.value,
@@ -253,6 +260,7 @@ export async function selectOverseerOption(args: {
 export async function selectPolicyOption(args: {
   tenantId: string;
   configurationId: string;
+  threadId: string;
   promptMessageId: string;
   existingConfiguration: PlanConfiguration;
   template: PlanTemplate;
@@ -271,6 +279,7 @@ export async function selectPolicyOption(args: {
   await selectChip({
     tenantId: args.tenantId,
     configurationId: args.configurationId,
+    threadId: args.threadId,
     promptMessageId: args.promptMessageId,
     optionId: args.optionId,
     value: args.value,
@@ -290,6 +299,7 @@ export async function selectPolicyOption(args: {
   await appendStepRebound({
     tenantId: args.tenantId,
     configurationId: args.configurationId,
+    threadId: args.threadId,
     stepKey: "",
     policyKey: args.policyKey,
     previousPolicyValue,
@@ -304,6 +314,7 @@ export async function selectPolicyOption(args: {
 export async function appendStepRebound(args: {
   tenantId: string;
   configurationId: string;
+  threadId: string;
   stepKey: string;
   previousInstallationId?: string;
   newInstallationId?: string;
@@ -316,7 +327,7 @@ export async function appendStepRebound(args: {
 }): Promise<void> {
   await appendThreadMessage(
     args.tenantId,
-    args.configurationId,
+    args.threadId,
     "SYSTEM",
     "STEP_REBOUND",
     args.label,

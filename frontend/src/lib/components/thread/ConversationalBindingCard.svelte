@@ -146,6 +146,7 @@
       const next = await selectBindingOption({
         tenantId,
         configurationId,
+        threadId: message.threadId,
         promptMessageId: message.id,
         existingConfiguration: configuration,
         template,
@@ -186,6 +187,7 @@
       await appendStepRebound({
         tenantId,
         configurationId,
+        threadId: message.threadId,
         stepKey: row.step_key,
         previousInstallationId: previous,
         newInstallationId: optionId,
@@ -215,7 +217,11 @@
   {:else}
     <div class="flex items-start justify-between gap-3">
       <div class="min-w-0">
-        <p class="font-body text-[13px] text-cream">{message.text}</p>
+        <p class="font-body text-[13px] text-cream">
+          {translate("assistant.prompt.bindingStep", $locale, {
+            step: focusedRow.step_title || payload.step_key || "",
+          })}
+        </p>
         <div
           class="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-crown-ash"
         >

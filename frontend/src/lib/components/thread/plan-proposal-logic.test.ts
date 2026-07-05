@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { PlanConfigurationStatus } from "$lib/gen/harpia/plans/v1/plans_pb";
+import {
+  PlanConfigurationStatus,
+  type PlanConfiguration,
+} from "$lib/gen/harpia/plans/v1/plans_pb";
 import {
   applyRefinementSelection,
   buildFinalConfirmation,
@@ -7,6 +10,7 @@ import {
   confirmSummaryLabel,
   createdActionIds,
   createdActionI18nKey,
+  matchingConfigurationForProposal,
   selectBestCandidate,
   type PlanProposalCandidate,
 } from "./plan-proposal-logic";
@@ -211,5 +215,102 @@ describe("buildFinalConfirmation", () => {
     ).toBe(
       "Vou criar boletim para LinkedIn para fundadores, com foco em IA, B2B, usando Tecnologia, Negócios como grupos de fontes, com artigos publicados de 2026-06-01 a 2026-07-01.",
     );
+  });
+});
+
+describe("matchingConfigurationForProposal", () => {
+  function makeCandidate(
+    templateId: string,
+    name = templateId,
+  ): PlanProposalCandidate {
+    return {
+      template_id: templateId,
+      template_key: templateId,
+      template_name: name,
+      confidence: 0.8,
+      input_values_json: "{}",
+    };
+  }
+
+  // PlanConfiguration has many generated fields; the helper only reads
+  // planTemplateId + createdAt, so a partial cast keeps the tests focused.
+  function makeConfig(
+    id: string,
+    templateId: string,
+    createdAt: string,
+  ): PlanConfiguration {
+    return {
+      id,
+      planTemplateId: templateId,
+      createdAt,
+      status: PlanConfigurationStatus.DRAFT,
+    } as PlanConfiguration;
+  }
+
+  it("returns the configuration whose planTemplateId matches a candidate", () => {
+    const candidates = [makeCandidate("template-a")];
+    const configurations = [
+      makeConfig("config-1", "template-a", "2026-01-01T00:00:00Z"),
+    ];
+    expect(
+      matchingConfigurationForProposal(candidates, configurations)?.id,
+    ).toBe("config-1");
+  });
+
+  it("returns null when no configuration matches any candidate template_id", () => {
+    const candidates = [makeCandidate("template-a")];
+    const configurations = [
+      makeConfig("config-1", "template-b", "2026-01-01T00:00:00Z"),
+    ];
+    expect(matchingConfigurationForProposal(candidates, configurations)).toBe(
+      null,
+    );
+  });
+
+  it("returns the newest matching configuration when several candidates match", () => {
+    const candidates = [
+      makeCandidate("template-a"),
+      makeCandidate("template-b"),
+    ];
+    const configurations = [
+      makeConfig("config-old", "template-a", "2026-01-01T00:00:00Z"),
+      makeConfig("config-new", "template-b", "2026-06-01T00:00:00Z"),
+    ];
+    expect(
+      matchingConfigurationForProposal(candidates, configurations)?.id,
+    ).toBe("config-new");
+  });
+
+  it("returns null when there are zero candidates", () => {
+    const configurations = [
+      makeConfig("config-1", "template-a", "2026-01-01T00:00:00Z"),
+    ];
+    expect(matchingConfigurationForProposal([], configurations)).toBe(null);
+  });
+
+  it("returns null when there are zero configurations", () => {
+    const candidates = [makeCandidate("template-a")];
+    expect(matchingConfigurationForProposal(candidates, [])).toBe(null);
+  });
+
+  it("ignores candidates whose template_id is empty", () => {
+    const candidates = [{ template_id: "" }];
+    const configurations = [
+      makeConfig("config-1", "template-a", "2026-01-01T00:00:00Z"),
+    ];
+    expect(matchingConfigurationForProposal(candidates, configurations)).toBe(
+      null,
+    );
+  });
+
+  it("picks the newest match even when the input list is not pre-sorted", () => {
+    const candidates = [makeCandidate("template-a")];
+    const configurations = [
+      makeConfig("config-newer", "template-a", "2026-06-01T00:00:00Z"),
+      makeConfig("config-older", "template-a", "2026-01-01T00:00:00Z"),
+    ];
+    expect(
+      matchingConfigurationForProposal(candidates, configurations)?.id,
+    ).toBe("config-newer");
   });
 });

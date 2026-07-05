@@ -169,6 +169,7 @@
       const next = await selectPolicyOption({
         tenantId,
         configurationId,
+        threadId: message.threadId,
         promptMessageId: message.id,
         existingConfiguration: configuration,
         template,
@@ -204,7 +205,9 @@
   {:else}
     <div class="flex items-start justify-between gap-3">
       <div class="min-w-0">
-        <p class="font-body text-[13px] text-cream">{message.text}</p>
+        <p class="font-body text-[13px] text-cream">
+          {translate("assistant.prompt.policiesStep", $locale)}
+        </p>
         <p class="mt-2 text-[11px] text-crown-ash">
           {translate("assistant.policiesStep.progress", $locale, {
             selected: selectedCount,

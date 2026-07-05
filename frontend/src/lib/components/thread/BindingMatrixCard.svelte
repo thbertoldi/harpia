@@ -262,7 +262,9 @@
     }
   }
 
-  const introText = $derived(message.text);
+  const introText = $derived(
+    translate("assistant.prompt.bindingMatrix", $locale),
+  );
   const templateName = $derived(template?.name ?? "");
 </script>
 

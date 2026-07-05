@@ -126,7 +126,7 @@
 
     {#if message.text}
       <p class="max-w-md font-body text-[14px] leading-relaxed text-cream">
-        {message.text}
+        {translate("assistant.prompt.landing", $locale)}
       </p>
     {/if}
 

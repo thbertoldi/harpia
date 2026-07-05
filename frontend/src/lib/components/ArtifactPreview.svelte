@@ -136,6 +136,17 @@
 </div>
 
 <style>
+  /*
+   * Base readable text color for every preview kind. The ArtifactPreviewSheet
+   * is a fixed-position portal rendered outside the page flow, so its <aside>
+   * sets bg-obsidian but no text color — without this rule the markdown/json/
+   * text/list bodies inherit the browser default (#000) and have no contrast in
+   * dark mode. Headings/blockquote/links/code already override below.
+   */
+  .artifact-preview-body {
+    color: var(--color-text);
+  }
+
   .artifact-preview-body--constrained {
     max-height: 24rem;
     overflow-y: auto;

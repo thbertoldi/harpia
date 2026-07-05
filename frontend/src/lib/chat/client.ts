@@ -48,6 +48,40 @@ export async function loadThreadMessages(
 }
 
 /**
+ * Merges two message lists by `id` (deduping) and orders the result ascending
+ * by `sequenceNumber`. `sequenceNumber` is a bigint, so it is compared with
+ * `</>` rather than arithmetic.
+ *
+ * Used by the chat route to combine an existing in-memory stream with an
+ * incoming batch (watch loop or a fetch-on-flip refetch), so stream replay
+ * dupes and a fresh listThreadMessages round-trip can't introduce duplicates
+ * or reorder history.
+ */
+export function mergeThreadMessages(
+  existing: ReadonlyArray<ChatMessage>,
+  incoming: ReadonlyArray<ChatMessage>,
+): ChatMessage[] {
+  const seen = new Set<string>();
+  const merged: ChatMessage[] = [];
+  for (const message of existing) {
+    if (seen.has(message.id)) continue;
+    seen.add(message.id);
+    merged.push(message);
+  }
+  for (const message of incoming) {
+    if (seen.has(message.id)) continue;
+    seen.add(message.id);
+    merged.push(message);
+  }
+  merged.sort((a, b) => {
+    if (a.sequenceNumber < b.sequenceNumber) return -1;
+    if (a.sequenceNumber > b.sequenceNumber) return 1;
+    return 0;
+  });
+  return merged;
+}
+
+/**
  * Recent chat threads for recall (home-page "recent conversations"). The
  * ListThreads RPC streams pages; we take the first page only.
  */

@@ -1,4 +1,7 @@
-import { PlanConfigurationStatus } from "$lib/gen/harpia/plans/v1/plans_pb";
+import {
+  PlanConfigurationStatus,
+  type PlanConfiguration,
+} from "$lib/gen/harpia/plans/v1/plans_pb";
 import { translate, type Locale } from "$lib/i18n";
 
 export type ProposalStage = "confirm" | "form" | "created";
@@ -208,4 +211,44 @@ export function createdActionI18nKey(id: CreatedActionId): string {
     case "anythingElse":
       return "thread.created.anythingElse";
   }
+}
+
+/**
+ * Finds the newest `PlanConfiguration` whose `planTemplateId` matches any of
+ * the proposal's candidate `template_id`s. Returns null when there is no
+ * match, no candidates, or no configurations.
+ *
+ * Used to drive `PlanProposalCard`'s read-only mode: once a configuration
+ * derived from a proposal exists, the card stops re-offering the confirm/
+ * adjust flow (it would otherwise reset to "confirm" on every reload because
+ * its UI progress lives in local `$state`).
+ *
+ * Candidates are accepted in their minimal shape (`template_id` only) so both
+ * the parsed-payload call site in the page (which has no confidence/name) and
+ * the fully-typed component call site can use this helper.
+ *
+ * The caller's configurations list is assumed newest-first (matching the sort
+ * in `+page.ts`), but the helper sorts defensively so the result is correct
+ * regardless of input ordering.
+ */
+export function matchingConfigurationForProposal(
+  candidates: ReadonlyArray<Pick<PlanProposalCandidate, "template_id">>,
+  configurations: ReadonlyArray<PlanConfiguration>,
+): PlanConfiguration | null {
+  if (candidates.length === 0 || configurations.length === 0) return null;
+  const candidateTemplateIds = new Set(
+    candidates
+      .map((candidate) => candidate.template_id)
+      .filter((id) => id !== ""),
+  );
+  if (candidateTemplateIds.size === 0) return null;
+  const matching = configurations.filter((config) =>
+    candidateTemplateIds.has(config.planTemplateId),
+  );
+  if (matching.length === 0) return null;
+  // Newest wins: sort by createdAt DESC so a stale older match never shadows
+  // the configuration actually created from this proposal.
+  return [...matching].sort((a, b) =>
+    b.createdAt.localeCompare(a.createdAt),
+  )[0];
 }

@@ -3,7 +3,9 @@
   import PlanActivityTimeline from "$lib/components/thread/PlanActivityTimeline.svelte";
   import ThreadMessage from "$lib/components/thread/ThreadMessage.svelte";
   import type { ChatMessage } from "$lib/chat/types";
+  import type { StepTitleResolver } from "$lib/chat/event-text";
   import type { Artifact } from "$lib/gen/harpia/artifacts/v1/artifacts_pb";
+  import type { PlanConfiguration } from "$lib/gen/harpia/plans/v1/plans_pb";
   import type { PlanActivityItem } from "$lib/plans/activity";
 
   let {
@@ -13,6 +15,19 @@
     activityItems,
     artifacts,
     onOpenArtifact,
+    /**
+     * Per-message lookup: returns the existing PlanConfiguration for a
+     * PLAN_PROPOSED message (driving read-only mode), or undefined. Computed
+     * in +page.svelte against data.configurations so the page is the single
+     * source of truth for the match.
+     */
+    existingConfigurationFor,
+    /**
+     * Resolves a step_key to its human template title for STEP_STARTED /
+     * STEP_BOUND system events. Optional; defaults to the raw key inside
+     * SystemEventCard.
+     */
+    stepTitleFor,
   }: {
     tenantId: string;
     configurationId: string;
@@ -20,6 +35,10 @@
     activityItems: PlanActivityItem[];
     artifacts: Artifact[];
     onOpenArtifact: (artifactId: string) => void;
+    existingConfigurationFor?: (
+      message: ChatMessage,
+    ) => PlanConfiguration | undefined;
+    stepTitleFor?: StepTitleResolver;
   } = $props();
 
   function isSelectionAnswerFor(
@@ -64,6 +83,8 @@
           {onOpenArtifact}
           isLive={livePrompt}
           isAnswered={message.kind === "ASSISTANT_PROMPT" && !livePrompt}
+          existingConfiguration={existingConfigurationFor?.(message)}
+          {stepTitleFor}
         />
       {/each}
     </div>

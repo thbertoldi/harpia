@@ -72,18 +72,19 @@ function templateWithPolicyParam(
 }
 
 describe("selectChip", () => {
-  it("appends a USER_SELECTION message", async () => {
+  it("appends a USER_SELECTION message to the thread (not the configuration)", async () => {
     appendThreadMessage.mockResolvedValueOnce({});
     await selectChip({
       tenantId: "t",
       configurationId: "c",
+      threadId: "thread-1",
       promptMessageId: "m1",
       optionId: "junior",
       value: "inst-junior",
     });
     expect(appendThreadMessage).toHaveBeenCalledWith(
       "t",
-      "c",
+      "thread-1",
       "OVERSEER",
       "USER_SELECTION",
       "",
@@ -251,6 +252,7 @@ describe("selectBindingOption", () => {
     const next = await selectBindingOption({
       tenantId: "t",
       configurationId: "c",
+      threadId: "thread-1",
       promptMessageId: "prompt-1",
       existingConfiguration: config,
       template,
@@ -264,7 +266,7 @@ describe("selectBindingOption", () => {
     expect(appendThreadMessage).toHaveBeenNthCalledWith(
       1,
       "t",
-      "c",
+      "thread-1",
       "OVERSEER",
       "USER_SELECTION",
       "Tech RSS",
@@ -281,7 +283,7 @@ describe("selectBindingOption", () => {
     expect(appendThreadMessage).toHaveBeenNthCalledWith(
       2,
       "t",
-      "c",
+      "thread-1",
       "SYSTEM",
       "STEP_REBOUND",
       "Tech RSS",
@@ -310,6 +312,7 @@ describe("selectBindingOption", () => {
     await selectBindingOption({
       tenantId: "t",
       configurationId: "c",
+      threadId: "thread-1",
       promptMessageId: "prompt-1",
       existingConfiguration: config,
       template,
@@ -326,6 +329,9 @@ describe("selectBindingOption", () => {
     expect(reboundPayload).toContain(
       '"new_executor_installation_id":"rss-new"',
     );
+    // Regression: appendThreadMessage must be keyed on the thread id, not
+    // the configuration id (the bug halted the chat at the binding step).
+    expect(appendThreadMessage.mock.calls[1][1]).toBe("thread-1");
   });
 });
 
@@ -431,6 +437,7 @@ describe("selectPolicyOption", () => {
     await selectPolicyOption({
       tenantId: "t",
       configurationId: "c",
+      threadId: "thread-1",
       promptMessageId: "prompt-1",
       existingConfiguration: config,
       template: templateWithPolicyParam(),
@@ -444,7 +451,7 @@ describe("selectPolicyOption", () => {
     expect(appendThreadMessage).toHaveBeenNthCalledWith(
       1,
       "t",
-      "c",
+      "thread-1",
       "OVERSEER",
       "USER_SELECTION",
       "Require approval",
@@ -457,7 +464,7 @@ describe("selectPolicyOption", () => {
     expect(appendThreadMessage).toHaveBeenNthCalledWith(
       2,
       "t",
-      "c",
+      "thread-1",
       "SYSTEM",
       "STEP_REBOUND",
       "Require approval",
@@ -469,6 +476,8 @@ describe("selectPolicyOption", () => {
     expect(appendThreadMessage.mock.calls[1][5]).toContain(
       '"new_policy_value":"require_approval"',
     );
+    // Regression: appendThreadMessage must be keyed on the thread id.
+    expect(appendThreadMessage.mock.calls[1][1]).toBe("thread-1");
   });
 });
 
@@ -503,6 +512,7 @@ describe("selectOverseerOption", () => {
     const next = await selectOverseerOption({
       tenantId: "t",
       configurationId: "c",
+      threadId: "thread-1",
       promptMessageId: "prompt-1",
       existingConfiguration: config,
       stepKey: "write-draft",
@@ -515,7 +525,7 @@ describe("selectOverseerOption", () => {
     expect(appendThreadMessage).toHaveBeenNthCalledWith(
       1,
       "t",
-      "c",
+      "thread-1",
       "OVERSEER",
       "USER_SELECTION",
       "Ana",
@@ -531,7 +541,7 @@ describe("selectOverseerOption", () => {
     expect(appendThreadMessage).toHaveBeenNthCalledWith(
       2,
       "t",
-      "c",
+      "thread-1",
       "SYSTEM",
       "STEP_REBOUND",
       "Ana",
@@ -559,6 +569,7 @@ describe("selectOverseerOption", () => {
     await selectOverseerOption({
       tenantId: "t",
       configurationId: "c",
+      threadId: "thread-1",
       promptMessageId: "prompt-1",
       existingConfiguration: config,
       stepKey: "write-draft",
@@ -570,5 +581,7 @@ describe("selectOverseerOption", () => {
     const reboundPayload = appendThreadMessage.mock.calls[1][5];
     expect(reboundPayload).toContain('"previous_overseer_user_id":"user-old"');
     expect(reboundPayload).toContain('"new_overseer_user_id":"user-new"');
+    // Regression: appendThreadMessage must be keyed on the thread id.
+    expect(appendThreadMessage.mock.calls[1][1]).toBe("thread-1");
   });
 });

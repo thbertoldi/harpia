@@ -1,8 +1,10 @@
 <script lang="ts">
   import type { ChatMessage } from "$lib/chat/types";
   import type { Artifact } from "$lib/gen/harpia/artifacts/v1/artifacts_pb";
+  import type { PlanConfiguration } from "$lib/gen/harpia/plans/v1/plans_pb";
   import { locale } from "$lib/i18n";
   import { formatRelativeTime } from "$lib/i18n/format";
+  import type { StepTitleResolver } from "$lib/chat/event-text";
   import SystemEventCard from "./SystemEventCard.svelte";
   import ElicitationRefCard from "./ElicitationRefCard.svelte";
   import ApprovalRefCard from "./ApprovalRefCard.svelte";
@@ -22,6 +24,16 @@
     onOpenArtifact?: (artifactId: string) => void;
     isLive?: boolean;
     isAnswered?: boolean;
+    /**
+     * Matching configuration for a PLAN_PROPOSED message, if one already
+     * exists. Switches PlanProposalCard into read-only summary mode.
+     */
+    existingConfiguration?: PlanConfiguration;
+    /**
+     * Resolves a step_key to its human template title for STEP_STARTED /
+     * STEP_BOUND system events. Optional; defaults to the raw key.
+     */
+    stepTitleFor?: StepTitleResolver;
   }
   let {
     message,
@@ -31,6 +43,8 @@
     onOpenArtifact,
     isLive = false,
     isAnswered = false,
+    existingConfiguration,
+    stepTitleFor,
   }: Props = $props();
 
   const promptState = $derived.by<string | null>(() => {
@@ -62,7 +76,12 @@
     {message.text || JSON.parse(message.payloadJson || "{}").value || "—"}
   </div>
 {:else if message.kind === "PLAN_PROPOSED"}
-  <PlanProposalCard {message} {tenantId} threadId={message.threadId} />
+  <PlanProposalCard
+    {message}
+    {tenantId}
+    threadId={message.threadId}
+    {existingConfiguration}
+  />
 {:else if message.kind === "ASSISTANT_PROMPT" && promptState === "BINDING_MATRIX"}
   <BindingMatrixCard {message} {configurationId} {tenantId} />
 {:else if message.kind === "ASSISTANT_PROMPT" && promptState === "BINDING_STEP"}
@@ -104,5 +123,11 @@
 {:else if message.kind === "APPROVAL_RAISED" || message.kind === "APPROVAL_DECIDED"}
   <ApprovalRefCard {message} />
 {:else}
-  <SystemEventCard {message} {tenantId} {artifacts} {onOpenArtifact} />
+  <SystemEventCard
+    {message}
+    {tenantId}
+    {artifacts}
+    {onOpenArtifact}
+    {stepTitleFor}
+  />
 {/if}
