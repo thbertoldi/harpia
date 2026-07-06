@@ -6,7 +6,7 @@
   import {
     appendStepRebound,
     editBinding,
-    selectBindingOption,
+    selectChip,
   } from "$lib/plans/assistant";
   import {
     hydrateMatrixPayload,
@@ -155,17 +155,12 @@
     savingRowKey = focusedRow.step_key;
     saveError = false;
     try {
-      const next = await selectBindingOption({
+      const next = await selectChip({
         tenantId,
         configurationId,
-        threadId: message.threadId,
         promptMessageId: message.id,
-        existingConfiguration: configuration,
-        template,
-        stepKey: focusedRow.step_key,
         optionId: option.id,
         value: option.value || option.id,
-        label: option.label,
       });
       configuration = next;
       reflectBinding(focusedRow.step_key, option.id);

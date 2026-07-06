@@ -17,15 +17,10 @@ import {
 export async function selectChip(args: {
   tenantId: string;
   configurationId: string;
-  threadId: string;
   promptMessageId: string;
   optionId: string;
   value: string;
-  /** Human-readable chip label, surfaced in the right-aligned bubble. */
-  label?: string;
 }): Promise<PlanConfiguration> {
-  void args.threadId;
-  void args.label;
   const response = await planClient.submitConfigurationSelection({
     tenantId: args.tenantId,
     planConfigurationId: args.configurationId,
@@ -141,84 +136,6 @@ export async function editPolicyParameter(args: {
     );
   }
   return response.planConfiguration;
-}
-
-export async function selectBindingOption(args: {
-  tenantId: string;
-  configurationId: string;
-  threadId: string;
-  promptMessageId: string;
-  existingConfiguration: PlanConfiguration;
-  template: PlanTemplate;
-  stepKey: string;
-  optionId: string;
-  value: string;
-  label: string;
-}): Promise<PlanConfiguration> {
-  void args.existingConfiguration;
-  void args.template;
-  void args.stepKey;
-  return selectChip({
-    tenantId: args.tenantId,
-    configurationId: args.configurationId,
-    threadId: args.threadId,
-    promptMessageId: args.promptMessageId,
-    optionId: args.optionId,
-    value: args.value,
-    label: args.label,
-  });
-}
-
-export async function selectOverseerOption(args: {
-  tenantId: string;
-  configurationId: string;
-  threadId: string;
-  promptMessageId: string;
-  existingConfiguration: PlanConfiguration;
-  stepKey: string;
-  optionId: string;
-  value: string;
-  label: string;
-}): Promise<PlanConfiguration> {
-  void args.existingConfiguration;
-  void args.stepKey;
-  return selectChip({
-    tenantId: args.tenantId,
-    configurationId: args.configurationId,
-    threadId: args.threadId,
-    promptMessageId: args.promptMessageId,
-    optionId: args.optionId,
-    value: args.value,
-    label: args.label,
-  });
-}
-
-export async function selectPolicyOption(args: {
-  tenantId: string;
-  configurationId: string;
-  threadId: string;
-  promptMessageId: string;
-  existingConfiguration: PlanConfiguration;
-  template: PlanTemplate;
-  policyKey: string;
-  parameterKey: string;
-  optionId: string;
-  value: string;
-  label: string;
-}): Promise<PlanConfiguration> {
-  void args.existingConfiguration;
-  void args.template;
-  void args.policyKey;
-  void args.parameterKey;
-  return selectChip({
-    tenantId: args.tenantId,
-    configurationId: args.configurationId,
-    threadId: args.threadId,
-    promptMessageId: args.promptMessageId,
-    optionId: args.optionId,
-    value: args.value,
-    label: args.label,
-  });
 }
 
 export async function appendStepRebound(args: {

@@ -17,12 +17,9 @@ vi.mock("$lib/rpc", () => ({
 
 import {
   selectChip,
-  selectBindingOption,
-  selectOverseerOption,
   editBinding,
   editOverseerBinding,
   editPolicyParameter,
-  selectPolicyOption,
   applyLinkedInSuggestion,
 } from "./assistant";
 import {
@@ -87,7 +84,6 @@ describe("selectChip", () => {
     const next = await selectChip({
       tenantId: "t",
       configurationId: "c",
-      threadId: "thread-1",
       promptMessageId: "m1",
       optionId: "junior",
       value: "inst-junior",
@@ -235,90 +231,6 @@ describe("editBinding", () => {
   });
 });
 
-describe("selectBindingOption", () => {
-  it("submits binding selection in one server-authoritative RPC", async () => {
-    submitConfigurationSelection.mockResolvedValueOnce({
-      planConfiguration: {
-        id: "c",
-        status: PlanConfigurationStatus.DRAFT,
-        slotBindings: [
-          { stepKey: "fetch-news", executorInstallationId: "rss-tech" },
-        ],
-        overseerBindings: [],
-        seedArtifacts: [],
-      },
-    });
-    const config = {
-      id: "c",
-      status: PlanConfigurationStatus.DRAFT,
-      slotBindings: [],
-      overseerBindings: [],
-      behaviorPolicies: undefined,
-      schedule: undefined,
-      seedArtifacts: [],
-    } as unknown as PlanConfiguration;
-    const template = templateWithSlotBindingParam();
-
-    const next = await selectBindingOption({
-      tenantId: "t",
-      configurationId: "c",
-      threadId: "thread-1",
-      promptMessageId: "prompt-1",
-      existingConfiguration: config,
-      template,
-      stepKey: "fetch-news",
-      optionId: "rss-tech",
-      value: "rss-tech",
-      label: "Tech RSS",
-    });
-
-    expect(next.id).toBe("c");
-    expect(submitConfigurationSelection).toHaveBeenCalledWith({
-      tenantId: "t",
-      planConfigurationId: "c",
-      assistantPromptMessageId: "prompt-1",
-      selection: { optionId: "rss-tech", value: "rss-tech" },
-    });
-    expect(updatePlanConfiguration).not.toHaveBeenCalled();
-    expect(appendThreadMessage).not.toHaveBeenCalled();
-  });
-
-  it("does not need the client-side previous binding to rebind", async () => {
-    submitConfigurationSelection.mockResolvedValueOnce({
-      planConfiguration: { id: "c" },
-    });
-    const config = {
-      id: "c",
-      status: PlanConfigurationStatus.DRAFT,
-      slotBindings: [
-        { stepKey: "fetch-news", executorInstallationId: "rss-old" },
-      ],
-      overseerBindings: [],
-      behaviorPolicies: undefined,
-      schedule: undefined,
-      seedArtifacts: [],
-    } as unknown as PlanConfiguration;
-    const template = templateWithSlotBindingParam();
-
-    await selectBindingOption({
-      tenantId: "t",
-      configurationId: "c",
-      threadId: "thread-1",
-      promptMessageId: "prompt-1",
-      existingConfiguration: config,
-      template,
-      stepKey: "fetch-news",
-      optionId: "rss-new",
-      value: "rss-new",
-      label: "Brazil RSS",
-    });
-
-    expect(submitConfigurationSelection).toHaveBeenCalledTimes(1);
-    expect(updatePlanConfiguration).not.toHaveBeenCalled();
-    expect(appendThreadMessage).not.toHaveBeenCalled();
-  });
-});
-
 describe("editOverseerBinding", () => {
   it("upserts an overseer binding without announcing a save", async () => {
     updatePlanConfiguration.mockResolvedValueOnce({
@@ -399,129 +311,5 @@ describe("editPolicyParameter", () => {
       theme: "existing",
       approval_mode: "require_approval",
     });
-  });
-});
-
-describe("selectPolicyOption", () => {
-  it("submits policy selection in one server-authoritative RPC", async () => {
-    submitConfigurationSelection.mockResolvedValueOnce({
-      planConfiguration: { id: "c" },
-    });
-    const config = {
-      id: "c",
-      status: PlanConfigurationStatus.DRAFT,
-      slotBindings: [],
-      overseerBindings: [],
-      behaviorPolicies: undefined,
-      schedule: undefined,
-      parameterValuesJson: '{"approval_mode":"auto_publish"}',
-    } as unknown as PlanConfiguration;
-
-    await selectPolicyOption({
-      tenantId: "t",
-      configurationId: "c",
-      threadId: "thread-1",
-      promptMessageId: "prompt-1",
-      existingConfiguration: config,
-      template: templateWithPolicyParam(),
-      policyKey: "publish_approval_mode",
-      parameterKey: "approval_mode",
-      optionId: "require_approval",
-      value: "require_approval",
-      label: "Require approval",
-    });
-
-    expect(submitConfigurationSelection).toHaveBeenCalledWith({
-      tenantId: "t",
-      planConfigurationId: "c",
-      assistantPromptMessageId: "prompt-1",
-      selection: { optionId: "require_approval", value: "require_approval" },
-    });
-    expect(updatePlanConfiguration).not.toHaveBeenCalled();
-    expect(appendThreadMessage).not.toHaveBeenCalled();
-  });
-});
-
-describe("selectOverseerOption", () => {
-  it("submits overseer selection in one server-authoritative RPC", async () => {
-    submitConfigurationSelection.mockResolvedValueOnce({
-      planConfiguration: {
-        id: "c",
-        status: PlanConfigurationStatus.DRAFT,
-        slotBindings: [
-          { stepKey: "write-draft", executorInstallationId: "writer" },
-        ],
-        overseerBindings: [
-          { stepKey: "write-draft", overseerUserId: "user-ana" },
-        ],
-        seedArtifacts: [],
-      },
-    });
-    const config = {
-      id: "c",
-      status: PlanConfigurationStatus.DRAFT,
-      slotBindings: [
-        { stepKey: "write-draft", executorInstallationId: "writer" },
-      ],
-      overseerBindings: [],
-      behaviorPolicies: undefined,
-      schedule: undefined,
-      seedArtifacts: [],
-    } as unknown as PlanConfiguration;
-
-    const next = await selectOverseerOption({
-      tenantId: "t",
-      configurationId: "c",
-      threadId: "thread-1",
-      promptMessageId: "prompt-1",
-      existingConfiguration: config,
-      stepKey: "write-draft",
-      optionId: "user-ana",
-      value: "user-ana",
-      label: "Ana",
-    });
-
-    expect(next.id).toBe("c");
-    expect(submitConfigurationSelection).toHaveBeenCalledWith({
-      tenantId: "t",
-      planConfigurationId: "c",
-      assistantPromptMessageId: "prompt-1",
-      selection: { optionId: "user-ana", value: "user-ana" },
-    });
-    expect(updatePlanConfiguration).not.toHaveBeenCalled();
-    expect(appendThreadMessage).not.toHaveBeenCalled();
-  });
-
-  it("does not need client-side previous overseer state to rebind", async () => {
-    submitConfigurationSelection.mockResolvedValueOnce({
-      planConfiguration: { id: "c" },
-    });
-    const config = {
-      id: "c",
-      status: PlanConfigurationStatus.DRAFT,
-      slotBindings: [],
-      overseerBindings: [
-        { stepKey: "write-draft", overseerUserId: "user-old" },
-      ],
-      behaviorPolicies: undefined,
-      schedule: undefined,
-      seedArtifacts: [],
-    } as unknown as PlanConfiguration;
-
-    await selectOverseerOption({
-      tenantId: "t",
-      configurationId: "c",
-      threadId: "thread-1",
-      promptMessageId: "prompt-1",
-      existingConfiguration: config,
-      stepKey: "write-draft",
-      optionId: "user-new",
-      value: "user-new",
-      label: "Paula",
-    });
-
-    expect(submitConfigurationSelection).toHaveBeenCalledTimes(1);
-    expect(updatePlanConfiguration).not.toHaveBeenCalled();
-    expect(appendThreadMessage).not.toHaveBeenCalled();
   });
 });

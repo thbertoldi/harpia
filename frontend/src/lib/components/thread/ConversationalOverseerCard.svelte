@@ -4,7 +4,7 @@
   import type { ChatMessage } from "$lib/chat/types";
   import { getSession } from "$lib/auth";
   import { locale, translate } from "$lib/i18n";
-  import { selectOverseerOption } from "$lib/plans/assistant";
+  import { selectChip } from "$lib/plans/assistant";
   import {
     hydrateMatrixPayload,
     parseOverseerStepPayload,
@@ -172,16 +172,12 @@
     saving = true;
     saveError = false;
     try {
-      const next = await selectOverseerOption({
+      const next = await selectChip({
         tenantId,
         configurationId,
-        threadId: message.threadId,
         promptMessageId: message.id,
-        existingConfiguration: configuration,
-        stepKey: focusedRow.step_key,
         optionId: picked.id,
         value: picked.value || picked.id,
-        label: picked.label,
       });
       configuration = next;
       reflectOverseer(

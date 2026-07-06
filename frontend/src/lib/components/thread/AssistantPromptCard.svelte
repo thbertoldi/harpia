@@ -58,11 +58,9 @@
       await selectChip({
         tenantId,
         configurationId,
-        threadId: message.threadId,
         promptMessageId: message.id,
         optionId: option.id,
         value: option.value,
-        label: option.label,
       });
       submitted = true;
     } finally {

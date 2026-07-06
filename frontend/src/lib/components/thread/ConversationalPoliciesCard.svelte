@@ -3,7 +3,7 @@
   import { fade } from "svelte/transition";
   import type { ChatMessage } from "$lib/chat/types";
   import { locale, translate } from "$lib/i18n";
-  import { selectPolicyOption } from "$lib/plans/assistant";
+  import { selectChip } from "$lib/plans/assistant";
   import { parseParameterValuesJson } from "$lib/plans/template-inputs";
   import {
     isPolicyOptionSelected,
@@ -166,18 +166,12 @@
     savingFieldKey = field.key;
     saveError = false;
     try {
-      const next = await selectPolicyOption({
+      const next = await selectChip({
         tenantId,
         configurationId,
-        threadId: message.threadId,
         promptMessageId: message.id,
-        existingConfiguration: configuration,
-        template,
-        policyKey: field.key,
-        parameterKey: field.parameter_key,
         optionId: option.id,
         value,
-        label: optionLabel(field, option),
       });
       configuration = next;
       reflectPolicy(field.key, value);
