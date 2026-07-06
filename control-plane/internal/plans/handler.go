@@ -17,7 +17,6 @@ import (
 
 	chatv1 "github.com/harpia/control-plane/gen/harpia/chat/v1"
 	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
-	plansv1connect "github.com/harpia/control-plane/gen/harpia/plans/v1/plansv1connect"
 	"github.com/harpia/control-plane/internal/chat"
 	"github.com/harpia/control-plane/internal/database"
 	"github.com/harpia/control-plane/internal/identity"
@@ -162,10 +161,6 @@ func (a *AssistantCatalog) CandidatesForStep(ctx context.Context, tenantID uuid.
 }
 
 type PlanHandler struct {
-	// Embeds the generated stub so newly added RPCs compile before their
-	// handler is wired; existing methods on PlanHandler shadow these. Remove
-	// once SubmitConfigurationSelection is implemented.
-	plansv1connect.UnimplementedPlanServiceHandler
 	chat             chat.Store
 	assistant        *planassistant.Controller
 	repo             *Repository
@@ -418,8 +413,22 @@ func (h *PlanHandler) UpdatePlanConfiguration(ctx context.Context, req *connect.
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	var updated *PlanConfiguration
+	var (
+		lockedExisting *PlanConfiguration
+		updated        *PlanConfiguration
+	)
 	err = database.WithTenant(ctx, h.repo.pool, tenantID, func(q database.Querier) error {
+		var current PlanConfiguration
+		if err := getConfigurationQ(ctx, q, tenantID, configID, &current); err != nil {
+			return connect.NewError(connect.CodeNotFound, fmt.Errorf("plan configuration not found: %w", err))
+		}
+		lockedExisting = &current
+		if threadID := configurationThreadID(&current); threadID != uuid.Nil {
+			if err := chat.LockThreadForUpdate(ctx, q, tenantID, threadID); err != nil {
+				return connect.NewError(connect.CodeNotFound, err)
+			}
+		}
+
 		var updateErr error
 		updated, updateErr = h.applyConfigurationUpdate(
 			ctx, q, tenantID, configID, template,
@@ -437,6 +446,9 @@ func (h *PlanHandler) UpdatePlanConfiguration(ctx context.Context, req *connect.
 
 	if err := h.syncSchedule(ctx, updated); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	if lockedExisting != nil {
+		existing = lockedExisting
 	}
 
 	// Schedule reconciliation: if the cron expression changed, validate it,
@@ -542,6 +554,130 @@ func (h *PlanHandler) NextTurn(ctx context.Context, req *connect.Request[plansv1
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 	return connect.NewResponse(&plansv1.NextTurnResponse{}), nil
+}
+
+func (h *PlanHandler) SubmitConfigurationSelection(ctx context.Context, req *connect.Request[plansv1.SubmitConfigurationSelectionRequest]) (*connect.Response[plansv1.SubmitConfigurationSelectionResponse], error) {
+	tenantID, err := identity.RequireTenant(ctx, req.Msg.TenantId)
+	if err != nil {
+		return nil, err
+	}
+	configID, err := uuid.Parse(req.Msg.PlanConfigurationId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	promptID := strings.TrimSpace(req.Msg.AssistantPromptMessageId)
+	if promptID == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("assistant_prompt_message_id is required"))
+	}
+	selection := req.Msg.GetSelection()
+	if selection == nil || strings.TrimSpace(selection.GetValue()) == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("selection.value is required"))
+	}
+
+	existing, err := h.repo.GetConfiguration(ctx, tenantID, configID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, err)
+	}
+	template, err := h.repo.GetTemplateByID(ctx, existing.PlanTemplateID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	var (
+		updated        *PlanConfiguration
+		appended       []*chatv1.ThreadMessage
+		alreadyApplied bool
+	)
+	err = database.WithTenant(ctx, h.repo.pool, tenantID, func(q database.Querier) error {
+		var current PlanConfiguration
+		if err := getConfigurationQ(ctx, q, tenantID, configID, &current); err != nil {
+			return connect.NewError(connect.CodeNotFound, fmt.Errorf("plan configuration not found: %w", err))
+		}
+		threadID := configurationThreadID(&current)
+		if threadID == uuid.Nil {
+			return connect.NewError(connect.CodeFailedPrecondition, errors.New("plan configuration has no owning thread"))
+		}
+		if err := chat.LockThreadForUpdate(ctx, q, tenantID, threadID); err != nil {
+			return connect.NewError(connect.CodeNotFound, err)
+		}
+		messages, err := chat.ListMessagesTx(ctx, q, tenantID, threadID.String(), 0, 0)
+		if err != nil {
+			return connect.NewError(connect.CodeInternal, err)
+		}
+
+		prompt, promptPayload, err := selectionPrompt(messages, promptID)
+		if err != nil {
+			return err
+		}
+		if promptPayload.ConfigurationID != current.ID.String() {
+			return connect.NewError(connect.CodeFailedPrecondition, errors.New("assistant prompt does not belong to this plan configuration"))
+		}
+		if promptAlreadyAnswered(messages, promptID) {
+			updated = &current
+			alreadyApplied = true
+			return nil
+		}
+		if latest := latestUnansweredPromptID(messages, current.ID.String()); latest != promptID {
+			return connect.NewError(connect.CodeFailedPrecondition, errors.New("assistant prompt is no longer current"))
+		}
+		label, ok := selectionLabel(promptPayload, selection)
+		if !ok && promptPayload.State != string(planassistant.StateBindingMatrix) {
+			return connect.NewError(connect.CodeInvalidArgument, errors.New("selection does not match prompt options"))
+		}
+		if label == "" {
+			label = selectionTextForValue(selection.GetValue())
+		}
+
+		userMsg, err := chat.AppendMessageTx(ctx, q, tenantID, chat.AppendInput{
+			ThreadID:    threadID.String(),
+			Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_OVERSEER,
+			Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_USER_SELECTION,
+			Text:        label,
+			PayloadJSON: chat.BuildUserSelectionPayload(prompt.GetId(), selection.GetOptionId(), selection.GetValue()),
+		})
+		if err != nil {
+			return connect.NewError(connect.CodeInternal, err)
+		}
+		appended = append(appended, userMsg)
+		messages = append(messages, userMsg)
+
+		var rebound *chat.AppendInput
+		updated, rebound, err = h.applyConfigurationSelection(ctx, q, tenantID, &current, template, promptPayload, selection, label)
+		if err != nil {
+			return err
+		}
+		if rebound != nil {
+			rebound.ThreadID = threadID.String()
+			reboundMsg, err := chat.AppendMessageTx(ctx, q, tenantID, *rebound)
+			if err != nil {
+				return connect.NewError(connect.CodeInternal, err)
+			}
+			appended = append(appended, reboundMsg)
+			messages = append(messages, reboundMsg)
+		}
+
+		nextPrompt, err := h.appendNextAssistantPromptTx(ctx, q, tenantID, template, updated, messages)
+		if err != nil {
+			return err
+		}
+		if nextPrompt != nil {
+			appended = append(appended, nextPrompt)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if updated != nil {
+		if err := h.syncSchedule(ctx, updated); err != nil {
+			return nil, connect.NewError(connect.CodeInternal, err)
+		}
+	}
+	return connect.NewResponse(&plansv1.SubmitConfigurationSelectionResponse{
+		PlanConfiguration: configurationToProto(updated),
+		Messages:          appended,
+		AlreadyApplied:    alreadyApplied,
+	}), nil
 }
 
 func (h *PlanHandler) ListPlanConfigurations(ctx context.Context, req *connect.Request[plansv1.ListPlanConfigurationsRequest], stream *connect.ServerStream[plansv1.ListPlanConfigurationsResponse]) error {

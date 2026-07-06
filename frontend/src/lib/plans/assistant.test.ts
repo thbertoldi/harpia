@@ -1,12 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { appendThreadMessage, updatePlanConfiguration } = vi.hoisted(() => ({
+const {
+  appendThreadMessage,
+  submitConfigurationSelection,
+  updatePlanConfiguration,
+} = vi.hoisted(() => ({
   appendThreadMessage: vi.fn(),
+  submitConfigurationSelection: vi.fn(),
   updatePlanConfiguration: vi.fn(),
 }));
 
 vi.mock("$lib/chat/client", () => ({ appendThreadMessage }));
-vi.mock("$lib/rpc", () => ({ planClient: { updatePlanConfiguration } }));
+vi.mock("$lib/rpc", () => ({
+  planClient: { submitConfigurationSelection, updatePlanConfiguration },
+}));
 
 import {
   selectChip,
@@ -28,6 +35,7 @@ import {
 
 beforeEach(() => {
   appendThreadMessage.mockReset();
+  submitConfigurationSelection.mockReset();
   updatePlanConfiguration.mockReset();
 });
 
@@ -72,9 +80,11 @@ function templateWithPolicyParam(
 }
 
 describe("selectChip", () => {
-  it("appends a USER_SELECTION message to the thread (not the configuration)", async () => {
-    appendThreadMessage.mockResolvedValueOnce({});
-    await selectChip({
+  it("submits the prompt answer through PlanService", async () => {
+    submitConfigurationSelection.mockResolvedValueOnce({
+      planConfiguration: { id: "c" },
+    });
+    const next = await selectChip({
       tenantId: "t",
       configurationId: "c",
       threadId: "thread-1",
@@ -82,14 +92,15 @@ describe("selectChip", () => {
       optionId: "junior",
       value: "inst-junior",
     });
-    expect(appendThreadMessage).toHaveBeenCalledWith(
-      "t",
-      "thread-1",
-      "OVERSEER",
-      "USER_SELECTION",
-      "",
-      expect.stringContaining("junior"),
-    );
+    expect(next.id).toBe("c");
+    expect(submitConfigurationSelection).toHaveBeenCalledWith({
+      tenantId: "t",
+      planConfigurationId: "c",
+      assistantPromptMessageId: "m1",
+      selection: { optionId: "junior", value: "inst-junior" },
+    });
+    expect(appendThreadMessage).not.toHaveBeenCalled();
+    expect(updatePlanConfiguration).not.toHaveBeenCalled();
   });
 });
 
@@ -225,9 +236,8 @@ describe("editBinding", () => {
 });
 
 describe("selectBindingOption", () => {
-  it("appends selection, persists SlotBinding silently, and emits STEP_REBOUND", async () => {
-    appendThreadMessage.mockResolvedValue({});
-    updatePlanConfiguration.mockResolvedValueOnce({
+  it("submits binding selection in one server-authoritative RPC", async () => {
+    submitConfigurationSelection.mockResolvedValueOnce({
       planConfiguration: {
         id: "c",
         status: PlanConfigurationStatus.DRAFT,
@@ -263,37 +273,18 @@ describe("selectBindingOption", () => {
     });
 
     expect(next.id).toBe("c");
-    expect(appendThreadMessage).toHaveBeenNthCalledWith(
-      1,
-      "t",
-      "thread-1",
-      "OVERSEER",
-      "USER_SELECTION",
-      "Tech RSS",
-      expect.stringContaining("prompt-1"),
-    );
-    expect(updatePlanConfiguration).toHaveBeenCalledTimes(1);
-    expect(updatePlanConfiguration.mock.calls[0][0].announceSaved).toBeFalsy();
-    expect(
-      updatePlanConfiguration.mock.calls[0][0].slotBindings,
-    ).toBeUndefined();
-    expect(
-      JSON.parse(updatePlanConfiguration.mock.calls[0][0].parameterValuesJson),
-    ).toMatchObject({ source_group: "rss-tech" });
-    expect(appendThreadMessage).toHaveBeenNthCalledWith(
-      2,
-      "t",
-      "thread-1",
-      "SYSTEM",
-      "STEP_REBOUND",
-      "Tech RSS",
-      expect.stringContaining('"new_executor_installation_id":"rss-tech"'),
-    );
+    expect(submitConfigurationSelection).toHaveBeenCalledWith({
+      tenantId: "t",
+      planConfigurationId: "c",
+      assistantPromptMessageId: "prompt-1",
+      selection: { optionId: "rss-tech", value: "rss-tech" },
+    });
+    expect(updatePlanConfiguration).not.toHaveBeenCalled();
+    expect(appendThreadMessage).not.toHaveBeenCalled();
   });
 
-  it("records previous and new installation ids when rebinding", async () => {
-    appendThreadMessage.mockResolvedValue({});
-    updatePlanConfiguration.mockResolvedValueOnce({
+  it("does not need the client-side previous binding to rebind", async () => {
+    submitConfigurationSelection.mockResolvedValueOnce({
       planConfiguration: { id: "c" },
     });
     const config = {
@@ -322,16 +313,9 @@ describe("selectBindingOption", () => {
       label: "Brazil RSS",
     });
 
-    const reboundPayload = appendThreadMessage.mock.calls[1][5];
-    expect(reboundPayload).toContain(
-      '"previous_executor_installation_id":"rss-old"',
-    );
-    expect(reboundPayload).toContain(
-      '"new_executor_installation_id":"rss-new"',
-    );
-    // Regression: appendThreadMessage must be keyed on the thread id, not
-    // the configuration id (the bug halted the chat at the binding step).
-    expect(appendThreadMessage.mock.calls[1][1]).toBe("thread-1");
+    expect(submitConfigurationSelection).toHaveBeenCalledTimes(1);
+    expect(updatePlanConfiguration).not.toHaveBeenCalled();
+    expect(appendThreadMessage).not.toHaveBeenCalled();
   });
 });
 
@@ -419,9 +403,8 @@ describe("editPolicyParameter", () => {
 });
 
 describe("selectPolicyOption", () => {
-  it("appends selection, persists policy parameter, and emits policy STEP_REBOUND", async () => {
-    appendThreadMessage.mockResolvedValue({});
-    updatePlanConfiguration.mockResolvedValueOnce({
+  it("submits policy selection in one server-authoritative RPC", async () => {
+    submitConfigurationSelection.mockResolvedValueOnce({
       planConfiguration: { id: "c" },
     });
     const config = {
@@ -448,43 +431,20 @@ describe("selectPolicyOption", () => {
       label: "Require approval",
     });
 
-    expect(appendThreadMessage).toHaveBeenNthCalledWith(
-      1,
-      "t",
-      "thread-1",
-      "OVERSEER",
-      "USER_SELECTION",
-      "Require approval",
-      expect.stringContaining("prompt-1"),
-    );
-    expect(updatePlanConfiguration).toHaveBeenCalledTimes(1);
-    expect(
-      JSON.parse(updatePlanConfiguration.mock.calls[0][0].parameterValuesJson),
-    ).toMatchObject({ approval_mode: "require_approval" });
-    expect(appendThreadMessage).toHaveBeenNthCalledWith(
-      2,
-      "t",
-      "thread-1",
-      "SYSTEM",
-      "STEP_REBOUND",
-      "Require approval",
-      expect.stringContaining('"policy_key":"publish_approval_mode"'),
-    );
-    expect(appendThreadMessage.mock.calls[1][5]).toContain(
-      '"previous_policy_value":"auto_publish"',
-    );
-    expect(appendThreadMessage.mock.calls[1][5]).toContain(
-      '"new_policy_value":"require_approval"',
-    );
-    // Regression: appendThreadMessage must be keyed on the thread id.
-    expect(appendThreadMessage.mock.calls[1][1]).toBe("thread-1");
+    expect(submitConfigurationSelection).toHaveBeenCalledWith({
+      tenantId: "t",
+      planConfigurationId: "c",
+      assistantPromptMessageId: "prompt-1",
+      selection: { optionId: "require_approval", value: "require_approval" },
+    });
+    expect(updatePlanConfiguration).not.toHaveBeenCalled();
+    expect(appendThreadMessage).not.toHaveBeenCalled();
   });
 });
 
 describe("selectOverseerOption", () => {
-  it("appends selection, persists OverseerBinding silently, and emits overseer STEP_REBOUND", async () => {
-    appendThreadMessage.mockResolvedValue({});
-    updatePlanConfiguration.mockResolvedValueOnce({
+  it("submits overseer selection in one server-authoritative RPC", async () => {
+    submitConfigurationSelection.mockResolvedValueOnce({
       planConfiguration: {
         id: "c",
         status: PlanConfigurationStatus.DRAFT,
@@ -522,36 +482,18 @@ describe("selectOverseerOption", () => {
     });
 
     expect(next.id).toBe("c");
-    expect(appendThreadMessage).toHaveBeenNthCalledWith(
-      1,
-      "t",
-      "thread-1",
-      "OVERSEER",
-      "USER_SELECTION",
-      "Ana",
-      expect.stringContaining("prompt-1"),
-    );
-    expect(updatePlanConfiguration).toHaveBeenCalledTimes(1);
-    expect(updatePlanConfiguration.mock.calls[0][0].announceSaved).toBeFalsy();
-    expect(
-      updatePlanConfiguration.mock.calls[0][0].overseerBindings.find(
-        (binding: OverseerBinding) => binding.stepKey === "write-draft",
-      )?.overseerUserId,
-    ).toBe("user-ana");
-    expect(appendThreadMessage).toHaveBeenNthCalledWith(
-      2,
-      "t",
-      "thread-1",
-      "SYSTEM",
-      "STEP_REBOUND",
-      "Ana",
-      expect.stringContaining('"new_overseer_user_id":"user-ana"'),
-    );
+    expect(submitConfigurationSelection).toHaveBeenCalledWith({
+      tenantId: "t",
+      planConfigurationId: "c",
+      assistantPromptMessageId: "prompt-1",
+      selection: { optionId: "user-ana", value: "user-ana" },
+    });
+    expect(updatePlanConfiguration).not.toHaveBeenCalled();
+    expect(appendThreadMessage).not.toHaveBeenCalled();
   });
 
-  it("records previous and new overseer user ids when rebinding", async () => {
-    appendThreadMessage.mockResolvedValue({});
-    updatePlanConfiguration.mockResolvedValueOnce({
+  it("does not need client-side previous overseer state to rebind", async () => {
+    submitConfigurationSelection.mockResolvedValueOnce({
       planConfiguration: { id: "c" },
     });
     const config = {
@@ -578,10 +520,8 @@ describe("selectOverseerOption", () => {
       label: "Paula",
     });
 
-    const reboundPayload = appendThreadMessage.mock.calls[1][5];
-    expect(reboundPayload).toContain('"previous_overseer_user_id":"user-old"');
-    expect(reboundPayload).toContain('"new_overseer_user_id":"user-new"');
-    // Regression: appendThreadMessage must be keyed on the thread id.
-    expect(appendThreadMessage.mock.calls[1][1]).toBe("thread-1");
+    expect(submitConfigurationSelection).toHaveBeenCalledTimes(1);
+    expect(updatePlanConfiguration).not.toHaveBeenCalled();
+    expect(appendThreadMessage).not.toHaveBeenCalled();
   });
 });

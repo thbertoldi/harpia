@@ -229,9 +229,13 @@ func promptFingerprint(payloadJSON string) (configurationID, state, stepKey stri
 		ConfigurationID string `json:"configuration_id"`
 		State           string `json:"state"`
 		StepKey         string `json:"step_key"`
+		PolicyKey       string `json:"policy_key"`
 	}
 	if json.Unmarshal([]byte(payloadJSON), &p) != nil {
 		return "", "", "", false
+	}
+	if p.StepKey == "" {
+		p.StepKey = p.PolicyKey
 	}
 	return p.ConfigurationID, p.State, p.StepKey, true
 }

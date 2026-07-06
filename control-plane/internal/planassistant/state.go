@@ -28,8 +28,9 @@ const (
 
 // AssistantState is the derived state for a single PlanConfiguration.
 type AssistantState struct {
-	Kind    StateKind
-	StepKey string
+	Kind      StateKind
+	StepKey   string
+	PolicyKey string
 }
 
 // DeriveState is a pure function over (template, configuration, messages)
@@ -51,8 +52,8 @@ func DeriveState(template *plansv1.PlanTemplate, config *plansv1.PlanConfigurati
 		if stepKey := firstUnboundOverseerStepKey(template, config); stepKey != "" {
 			return AssistantState{Kind: StateOverseerStep, StepKey: stepKey}
 		}
-		if !policiesSet(config.GetBehaviorPolicies()) {
-			return AssistantState{Kind: StatePoliciesStep}
+		if policyKey := firstUnsetPolicyKey(config.GetBehaviorPolicies()); policyKey != "" {
+			return AssistantState{Kind: StatePoliciesStep, PolicyKey: policyKey}
 		}
 		return AssistantState{Kind: StateBindingMatrix}
 	default:
@@ -60,6 +61,16 @@ func DeriveState(template *plansv1.PlanTemplate, config *plansv1.PlanConfigurati
 		// and promoted the configuration. Next assistant turn is the landing.
 		return AssistantState{Kind: StateSaved}
 	}
+}
+
+func firstUnsetPolicyKey(p *plansv1.PlanBehaviorPolicies) string {
+	if p == nil || p.GetPublishApprovalMode() == plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_UNSPECIFIED {
+		return "publish_approval_mode"
+	}
+	if p.GetElicitationTimeoutBehavior() == plansv1.ElicitationTimeoutBehavior_ELICITATION_TIMEOUT_BEHAVIOR_UNSPECIFIED {
+		return "elicitation_timeout_behavior"
+	}
+	return ""
 }
 
 func firstUnboundStepKey(template *plansv1.PlanTemplate, config *plansv1.PlanConfiguration) string {

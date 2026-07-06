@@ -25,10 +25,9 @@
   import type { LinkedInTemplateInputValues } from "$lib/plans/template-inputs";
   import { cardLift, chipFlash } from "$lib/motion/transitions";
   import { planClient } from "$lib/rpc";
-  import {
-    PlanConfigurationStatus,
-    type PlanConfiguration,
-    type PlanTemplate,
+  import type {
+    PlanConfiguration,
+    PlanTemplate,
   } from "$lib/gen/harpia/plans/v1/plans_pb";
 
   interface ExecutorCatalogEntry {
@@ -42,14 +41,7 @@
     tenantId: string;
     executorCatalog?: Map<string, ExecutorCatalogEntry>;
   }
-  let {
-    message,
-    configurationId,
-    tenantId,
-    // Reserved for parent price overrides; cost currently derived from matrix rows.
-    executorCatalog,
-  }: Props = $props();
-  void executorCatalog;
+  let { message, configurationId, tenantId }: Props = $props();
 
   // The matrix payload is the visible source of truth for rows, options,
   // contracts and current bindings. We seed it once from the (immutable)
@@ -63,6 +55,7 @@
     }
   }
 
+  // svelte-ignore state_referenced_locally
   let payload = $state<MatrixPayload | null>(
     parseMatrixPayloadSafe(message.payloadJson),
   );
@@ -251,25 +244,26 @@
     saving = true;
     saveError = false;
     try {
-      const hasCron = !!configuration.schedule?.cronExpression?.trim();
-      // "Save draft" persists the current bindings without promoting status.
-      // "Save & make runnable" promotes DRAFT → RUNNABLE (or SCHEDULED when a
-      // cron is already set), which triggers the server's NextTurn → LandingCard.
-      const status = !promote
-        ? configuration.status
-        : hasCron
-          ? PlanConfigurationStatus.SCHEDULED
-          : PlanConfigurationStatus.RUNNABLE;
-      const res = await planClient.updatePlanConfiguration({
-        tenantId,
-        planConfigurationId: configurationId,
-        status,
-        overseerBindings: configuration.overseerBindings,
-        schedule: configuration.schedule,
-        parameterValuesJson: configuration.parameterValuesJson,
-        // Explicit user save — announce it in the thread.
-        announceSaved: true,
-      });
+      const res = promote
+        ? await planClient.submitConfigurationSelection({
+            tenantId,
+            planConfigurationId: configurationId,
+            assistantPromptMessageId: message.id,
+            selection: {
+              optionId: "save-runnable",
+              value: "save_runnable",
+            },
+          })
+        : await planClient.updatePlanConfiguration({
+            tenantId,
+            planConfigurationId: configurationId,
+            status: configuration.status,
+            overseerBindings: configuration.overseerBindings,
+            schedule: configuration.schedule,
+            parameterValuesJson: configuration.parameterValuesJson,
+            // Explicit user save — announce it in the thread.
+            announceSaved: true,
+          });
       if (res.planConfiguration) configuration = res.planConfiguration;
       submitted = true;
     } catch {

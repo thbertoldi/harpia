@@ -51,7 +51,7 @@ func BuildPrompt(state AssistantState, in PromptInput) (text, payload string) {
 		return buildOverseerStepPrompt(state, in)
 
 	case StatePoliciesStep:
-		return buildPoliciesStepPrompt(in)
+		return buildPoliciesStepPrompt(state, in)
 
 	case StateBindingMatrix:
 		return buildMatrixPrompt(in)
@@ -113,8 +113,8 @@ func buildOverseerStepPrompt(state AssistantState, in PromptInput) (string, stri
 	return text, payload
 }
 
-func buildPoliciesStepPrompt(in PromptInput) (string, string) {
-	fields := []chat.AssistantPolicyField{
+func buildPoliciesStepPrompt(state AssistantState, in PromptInput) (string, string) {
+	allFields := []chat.AssistantPolicyField{
 		{
 			Key:          "publish_approval_mode",
 			ParameterKey: policyParameterKey(in.Template, "publish_approval_mode", "approval_mode"),
@@ -135,8 +135,22 @@ func buildPoliciesStepPrompt(in PromptInput) (string, string) {
 			},
 		},
 	}
+	policyKey := state.PolicyKey
+	if policyKey == "" {
+		policyKey = firstUnsetPolicyKey(in.Config.GetBehaviorPolicies())
+	}
+	fields := make([]chat.AssistantPolicyField, 0, 1)
+	for _, field := range allFields {
+		if field.Key == policyKey {
+			fields = append(fields, field)
+			break
+		}
+	}
+	if len(fields) == 0 {
+		fields = allFields
+	}
 	text := "How should this plan behave at runtime?"
-	payload := chat.BuildAssistantPoliciesStepPayload(fields, policiesSet(in.Config.GetBehaviorPolicies()))
+	payload := chat.BuildAssistantPoliciesStepPayload(policyKey, fields, policiesSet(in.Config.GetBehaviorPolicies()))
 	return text, payload
 }
 

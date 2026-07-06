@@ -250,8 +250,9 @@ func TestBuildPrompt_PoliciesStep_RendersPolicyFields(t *testing.T) {
 	}
 
 	var parsed struct {
-		State  string `json:"state"`
-		Fields []struct {
+		State     string `json:"state"`
+		PolicyKey string `json:"policy_key"`
+		Fields    []struct {
 			Key          string `json:"key"`
 			ParameterKey string `json:"parameter_key"`
 			CurrentValue string `json:"current_value"`
@@ -272,20 +273,17 @@ func TestBuildPrompt_PoliciesStep_RendersPolicyFields(t *testing.T) {
 	if parsed.PoliciesSet {
 		t.Fatalf("partial policies should not be complete")
 	}
-	if len(parsed.Fields) != 2 {
-		t.Fatalf("want 2 policy fields, got %d", len(parsed.Fields))
+	if parsed.PolicyKey != "elicitation_timeout_behavior" {
+		t.Fatalf("want missing policy_key elicitation_timeout_behavior, got %q", parsed.PolicyKey)
 	}
-	if parsed.Fields[0].Key != "publish_approval_mode" ||
-		parsed.Fields[0].ParameterKey != "approval_mode" ||
-		parsed.Fields[0].CurrentValue != "require_approval" ||
-		len(parsed.Fields[0].Options) != 2 {
-		t.Fatalf("publish field not populated from template/current config: %+v", parsed.Fields[0])
+	if len(parsed.Fields) != 1 {
+		t.Fatalf("want 1 focused policy field, got %d", len(parsed.Fields))
 	}
-	if parsed.Fields[1].Key != "elicitation_timeout_behavior" ||
-		parsed.Fields[1].ParameterKey != "elicitation_timeout" ||
-		parsed.Fields[1].CurrentValue != "" ||
-		len(parsed.Fields[1].Options) != 3 {
-		t.Fatalf("elicitation field not populated from template/current config: %+v", parsed.Fields[1])
+	if parsed.Fields[0].Key != "elicitation_timeout_behavior" ||
+		parsed.Fields[0].ParameterKey != "elicitation_timeout" ||
+		parsed.Fields[0].CurrentValue != "" ||
+		len(parsed.Fields[0].Options) != 3 {
+		t.Fatalf("elicitation field not populated from template/current config: %+v", parsed.Fields[0])
 	}
 }
 

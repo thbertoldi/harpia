@@ -14,26 +14,6 @@ import {
   type PlanTemplate,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
 
-/**
- * Advance the configuration assistant so it derives and appends its next
- * prompt (binding/overseer/policies/matrix). Best-effort: a conversational
- * selection has already persisted by the time this runs, so a failure here
- * must not undo it — the next interaction or a manual refresh re-derives.
- */
-async function advanceAssistant(
-  tenantId: string,
-  configurationId: string,
-): Promise<void> {
-  try {
-    await planClient.nextTurn({
-      tenantId,
-      planConfigurationId: configurationId,
-    });
-  } catch {
-    /* best-effort: selection already persisted */
-  }
-}
-
 export async function selectChip(args: {
   tenantId: string;
   configurationId: string;
@@ -43,20 +23,24 @@ export async function selectChip(args: {
   value: string;
   /** Human-readable chip label, surfaced in the right-aligned bubble. */
   label?: string;
-}): Promise<void> {
-  const payload = JSON.stringify({
-    in_response_to_message_id: args.promptMessageId,
-    option_id: args.optionId,
-    value: args.value,
+}): Promise<PlanConfiguration> {
+  void args.threadId;
+  void args.label;
+  const response = await planClient.submitConfigurationSelection({
+    tenantId: args.tenantId,
+    planConfigurationId: args.configurationId,
+    assistantPromptMessageId: args.promptMessageId,
+    selection: {
+      optionId: args.optionId,
+      value: args.value,
+    },
   });
-  await appendThreadMessage(
-    args.tenantId,
-    args.threadId,
-    "OVERSEER",
-    "USER_SELECTION",
-    args.label ?? "",
-    payload,
-  );
+  if (!response.planConfiguration) {
+    throw new Error(
+      "selectChip: SubmitConfigurationSelection returned no configuration",
+    );
+  }
+  return response.planConfiguration;
 }
 
 export async function editBinding(args: {
@@ -171,12 +155,10 @@ export async function selectBindingOption(args: {
   value: string;
   label: string;
 }): Promise<PlanConfiguration> {
-  const previousInstallationId =
-    args.existingConfiguration.slotBindings.find(
-      (binding) => binding.stepKey === args.stepKey,
-    )?.executorInstallationId ?? "";
-
-  await selectChip({
+  void args.existingConfiguration;
+  void args.template;
+  void args.stepKey;
+  return selectChip({
     tenantId: args.tenantId,
     configurationId: args.configurationId,
     threadId: args.threadId,
@@ -185,28 +167,6 @@ export async function selectBindingOption(args: {
     value: args.value,
     label: args.label,
   });
-
-  const next = await editBinding({
-    tenantId: args.tenantId,
-    configurationId: args.configurationId,
-    existingConfiguration: args.existingConfiguration,
-    template: args.template,
-    stepKey: args.stepKey,
-    newInstallationId: args.value,
-  });
-
-  await appendStepRebound({
-    tenantId: args.tenantId,
-    configurationId: args.configurationId,
-    threadId: args.threadId,
-    stepKey: args.stepKey,
-    previousInstallationId,
-    newInstallationId: args.value,
-    label: args.label,
-  });
-
-  await advanceAssistant(args.tenantId, args.configurationId);
-  return next;
 }
 
 export async function selectOverseerOption(args: {
@@ -220,12 +180,9 @@ export async function selectOverseerOption(args: {
   value: string;
   label: string;
 }): Promise<PlanConfiguration> {
-  const previousOverseerUserId =
-    args.existingConfiguration.overseerBindings.find(
-      (binding) => binding.stepKey === args.stepKey,
-    )?.overseerUserId ?? "";
-
-  await selectChip({
+  void args.existingConfiguration;
+  void args.stepKey;
+  return selectChip({
     tenantId: args.tenantId,
     configurationId: args.configurationId,
     threadId: args.threadId,
@@ -234,27 +191,6 @@ export async function selectOverseerOption(args: {
     value: args.value,
     label: args.label,
   });
-
-  const next = await editOverseerBinding({
-    tenantId: args.tenantId,
-    configurationId: args.configurationId,
-    existingConfiguration: args.existingConfiguration,
-    stepKey: args.stepKey,
-    newOverseerUserId: args.value,
-  });
-
-  await appendStepRebound({
-    tenantId: args.tenantId,
-    configurationId: args.configurationId,
-    threadId: args.threadId,
-    stepKey: args.stepKey,
-    previousOverseerUserId,
-    newOverseerUserId: args.value,
-    label: args.label,
-  });
-
-  await advanceAssistant(args.tenantId, args.configurationId);
-  return next;
 }
 
 export async function selectPolicyOption(args: {
@@ -270,13 +206,11 @@ export async function selectPolicyOption(args: {
   value: string;
   label: string;
 }): Promise<PlanConfiguration> {
-  const previousPolicyValue = String(
-    parseParameterValuesJson(args.existingConfiguration.parameterValuesJson)[
-      args.parameterKey
-    ] ?? "",
-  );
-
-  await selectChip({
+  void args.existingConfiguration;
+  void args.template;
+  void args.policyKey;
+  void args.parameterKey;
+  return selectChip({
     tenantId: args.tenantId,
     configurationId: args.configurationId,
     threadId: args.threadId,
@@ -285,30 +219,6 @@ export async function selectPolicyOption(args: {
     value: args.value,
     label: args.label,
   });
-
-  const next = await editPolicyParameter({
-    tenantId: args.tenantId,
-    configurationId: args.configurationId,
-    existingConfiguration: args.existingConfiguration,
-    template: args.template,
-    policyKey: args.policyKey,
-    parameterKey: args.parameterKey,
-    value: args.value,
-  });
-
-  await appendStepRebound({
-    tenantId: args.tenantId,
-    configurationId: args.configurationId,
-    threadId: args.threadId,
-    stepKey: "",
-    policyKey: args.policyKey,
-    previousPolicyValue,
-    newPolicyValue: args.value,
-    label: args.label,
-  });
-
-  await advanceAssistant(args.tenantId, args.configurationId);
-  return next;
 }
 
 export async function appendStepRebound(args: {

@@ -149,6 +149,7 @@ type AssistantPolicyField struct {
 
 type assistantPoliciesStepPayload struct {
 	State       string                 `json:"state"`
+	PolicyKey   string                 `json:"policy_key,omitempty"`
 	Fields      []AssistantPolicyField `json:"fields"`
 	PoliciesSet bool                   `json:"policies_set"`
 }
@@ -161,8 +162,13 @@ type userSelectionPayload struct {
 
 type stepReboundPayload struct {
 	StepKey                        string `json:"step_key"`
-	PreviousExecutorInstallationID string `json:"previous_executor_installation_id"`
-	NewExecutorInstallationID      string `json:"new_executor_installation_id"`
+	PreviousExecutorInstallationID string `json:"previous_executor_installation_id,omitempty"`
+	NewExecutorInstallationID      string `json:"new_executor_installation_id,omitempty"`
+	PreviousOverseerUserID         string `json:"previous_overseer_user_id,omitempty"`
+	NewOverseerUserID              string `json:"new_overseer_user_id,omitempty"`
+	PolicyKey                      string `json:"policy_key,omitempty"`
+	PreviousPolicyValue            string `json:"previous_policy_value,omitempty"`
+	NewPolicyValue                 string `json:"new_policy_value,omitempty"`
 }
 
 type scheduleSetPayload struct {
@@ -227,8 +233,11 @@ func BuildAssistantOverseerStepPayload(stepKey string, options []AssistantOption
 }
 
 // BuildAssistantPoliciesStepPayload returns the JSON payload for a focused
-// conversational PlanBehaviorPolicies prompt.
-func BuildAssistantPoliciesStepPayload(fields []AssistantPolicyField, policiesSet bool) string {
+// conversational PlanBehaviorPolicies prompt. policyKey identifies the single
+// field this turn asks about (one prompt = one selection); it is also carried
+// at the top level so the assistant's semantic dedup can distinguish two
+// policy-field prompts for the same configuration.
+func BuildAssistantPoliciesStepPayload(policyKey string, fields []AssistantPolicyField, policiesSet bool) string {
 	if fields == nil {
 		fields = []AssistantPolicyField{}
 	}
@@ -239,6 +248,7 @@ func BuildAssistantPoliciesStepPayload(fields []AssistantPolicyField, policiesSe
 	}
 	return mustEncodeJSON(assistantPoliciesStepPayload{
 		State:       "POLICIES_STEP",
+		PolicyKey:   policyKey,
 		Fields:      fields,
 		PoliciesSet: policiesSet,
 	})
@@ -261,6 +271,26 @@ func BuildStepReboundPayload(stepKey, previousInstallationID, newInstallationID 
 		StepKey:                        stepKey,
 		PreviousExecutorInstallationID: previousInstallationID,
 		NewExecutorInstallationID:      newInstallationID,
+	})
+}
+
+// BuildOverseerReboundPayload returns the JSON payload for an overseer change
+// echoed into the thread as STEP_REBOUND.
+func BuildOverseerReboundPayload(stepKey, previousOverseerUserID, newOverseerUserID string) string {
+	return mustEncodeJSON(stepReboundPayload{
+		StepKey:                stepKey,
+		PreviousOverseerUserID: previousOverseerUserID,
+		NewOverseerUserID:      newOverseerUserID,
+	})
+}
+
+// BuildPolicyReboundPayload returns the JSON payload for a behavior-policy
+// change echoed into the thread as STEP_REBOUND.
+func BuildPolicyReboundPayload(policyKey, previousPolicyValue, newPolicyValue string) string {
+	return mustEncodeJSON(stepReboundPayload{
+		PolicyKey:           policyKey,
+		PreviousPolicyValue: previousPolicyValue,
+		NewPolicyValue:      newPolicyValue,
 	})
 }
 

@@ -130,7 +130,7 @@ func TestBuildAssistantPromptPayload(t *testing.T) {
 }
 
 func TestBuildAssistantPoliciesStepPayload(t *testing.T) {
-	got := BuildAssistantPoliciesStepPayload([]AssistantPolicyField{
+	got := BuildAssistantPoliciesStepPayload("publish_approval_mode", []AssistantPolicyField{
 		{
 			Key:          "publish_approval_mode",
 			ParameterKey: "approval_mode",
@@ -148,14 +148,14 @@ func TestBuildAssistantPoliciesStepPayload(t *testing.T) {
 			},
 		},
 	}, false)
-	want := `{"state":"POLICIES_STEP","fields":[{"key":"publish_approval_mode","parameter_key":"approval_mode","current_value":"require_approval","options":[{"id":"require_approval","label":"Require approval","value":"require_approval"},{"id":"auto_publish","label":"Auto publish","value":"auto_publish"}]},{"key":"elicitation_timeout_behavior","parameter_key":"elicitation_timeout_behavior","current_value":"","options":[{"id":"pause_until_answered","label":"Pause until answered","value":"pause_until_answered"}]}],"policies_set":false}`
+	want := `{"state":"POLICIES_STEP","policy_key":"publish_approval_mode","fields":[{"key":"publish_approval_mode","parameter_key":"approval_mode","current_value":"require_approval","options":[{"id":"require_approval","label":"Require approval","value":"require_approval"},{"id":"auto_publish","label":"Auto publish","value":"auto_publish"}]},{"key":"elicitation_timeout_behavior","parameter_key":"elicitation_timeout_behavior","current_value":"","options":[{"id":"pause_until_answered","label":"Pause until answered","value":"pause_until_answered"}]}],"policies_set":false}`
 	if got != want {
 		t.Fatalf("got %s, want %s", got, want)
 	}
 }
 
 func TestBuildAssistantPoliciesStepPayloadDefaultsNilFields(t *testing.T) {
-	got := BuildAssistantPoliciesStepPayload(nil, false)
+	got := BuildAssistantPoliciesStepPayload("", nil, false)
 	want := `{"state":"POLICIES_STEP","fields":[],"policies_set":false}`
 	if got != want {
 		t.Fatalf("got %s, want %s", got, want)
