@@ -66,6 +66,43 @@ seeded named `rss-news-feed` installations (`EnsureTenantRSSPresetInstallations`
 Proved the multi-template declarative path (fetch-news → write-draft → TextDraft, review-only).
 A richer library is **blocked on new ExecutorSKUs** (blog/email/X integrations don't exist yet).
 
+### 💡 Creator Kit: deterministic creative asset tools inspired by Lolly
+**Taxonomy:** PlanTemplate, PlanStep, ExecutorSKU, ExecutorInstallation, SlotBinding,
+Artifact, ArtifactType, PlanConfiguration.
+Embed a constraints-first "Creator Kit" into Harpia so chat-configured plans can generate
+deterministic creative assets (SVG/PDF/PNG/ZIP/ICS/VCF/etc.) from governed templates instead
+of asking an LLM to improvise design output. Inspiration: [lolly-tools/lolly](https://github.com/lolly-tools/lolly),
+especially its declarative tool manifests, URL/CLI render path, tool composition, batch mode,
+capability bridge, and brand-safe creator workflow.
+
+**Product shape:** a user can ask for outputs like "Create 5 LinkedIn quote cards from this
+article," "Generate event badges from this CSV," "Make a branded QR poster," or "Create a
+campaign asset pack." Harpia matches a Creator Kit PlanTemplate, fills/clarifies inputs in chat,
+binds a tenant-configured renderer ExecutorInstallation, produces typed Artifacts, previews them
+in the thread, and offers approve/regenerate/export/schedule actions.
+
+**Architecture direction:** start headless, not as an embedded Canva-like app. Add a renderer
+ExecutorSKU whose ExecutorInstallation carries tenant catalog URL, brand assets, allowed formats,
+and sandbox/capability settings. PlanSteps should look like `CreativeSpec -> RenderedAsset` or
+`ToolInputSet -> AssetBundle`; outputs stay in the Artifact stream and are browsed through the
+existing artifact preview surfaces. Interactive editing can come later as a refinement surface.
+
+**Boundary:** do not make Creator Kit a hard-coded vertical module and do not let tool code bypass
+Artifact/Executor boundaries. Tools must be catalog content plus sandboxed execution behind a
+capability bridge. Feed/asset/catalog config belongs on ExecutorInstallation, not on templates or
+artifacts. Business Áreas/RBAC should gate access to tool packs and produced Artifacts.
+
+**Licensing / due diligence:** Lolly is MPL-2.0, but its README says reusable engine/shell/schema
+parts are separated from SUSE-specific `tools/` and `catalog/assets/` content. Treat current branded
+tools/assets as inspiration only until license/trademark review confirms what can be reused. Safer
+MVP: build a Harpia-owned Creator Kit catalog while evaluating whether the open engine/schemas can
+be embedded or adapted.
+
+**Possible next step:** OpenSpec exploration for a `creator-kit-renderer` spike: one Harpia-owned
+tool manifest, one headless renderer ExecutorInstallation, one PlanTemplate that produces a
+previewable SVG/PDF Artifact, and no interactive editor yet. ADR may be needed if adopting Lolly's
+engine/capability bridge as platform architecture.
+
 ## Execution
 
 ### 🛠️ Milestone E: a configured plan actually runs (and on schedule)
