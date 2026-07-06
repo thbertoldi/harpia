@@ -4,23 +4,24 @@
   import type { ChatMessage } from "$lib/chat/types";
   import { locale, translate } from "$lib/i18n";
   import { selectChip } from "$lib/plans/assistant";
-  import { parseParameterValuesJson } from "$lib/plans/template-inputs";
   import {
     isPolicyOptionSelected,
     parsePoliciesStepPayload,
-    policyChipsShown,
     policyFieldChipsShown,
     type MatrixOption,
     type PoliciesStepPayload,
     type PolicyField,
   } from "$lib/plans/matrix";
+  import {
+    buildPoliciesStepView,
+    hydratePoliciesPayloadFromConfiguration,
+    reflectPolicyPayload,
+  } from "$lib/plans/configuration-flow";
   import { chipFlash } from "$lib/motion/transitions";
   import { planClient } from "$lib/rpc";
-  import {
-    ElicitationTimeoutBehavior,
-    PublishApprovalMode,
-    type PlanConfiguration,
-    type PlanTemplate,
+  import type {
+    PlanConfiguration,
+    PlanTemplate,
   } from "$lib/gen/harpia/plans/v1/plans_pb";
 
   interface Props {
@@ -83,53 +84,26 @@
     return () => controller.abort();
   });
 
-  const fields = $derived(payload?.fields ?? []);
-  const selectedCount = $derived(
-    fields.filter((field) => field.current_value !== "").length,
+  const stepView = $derived(
+    payload
+      ? buildPoliciesStepView(payload, { isLive, editingAnswered, submitted })
+      : null,
   );
-  const complete = $derived(
-    fields.length > 0 && fields.every((field) => field.current_value !== ""),
-  );
-  const showChips = $derived(
-    fields.length > 0 &&
-      policyChipsShown({ isLive, editingAnswered, submitted }),
-  );
+  const fields = $derived(stepView?.fields ?? []);
+  const selectedCount = $derived(stepView?.selectedCount ?? 0);
+  const totalCount = $derived(stepView?.totalCount ?? 0);
+  const complete = $derived(stepView?.complete ?? false);
+  const showChips = $derived(stepView?.showChips ?? false);
 
   function hydrateCurrentValues(config: PlanConfiguration) {
     if (!payload) return;
-    const values = parseParameterValuesJson(config.parameterValuesJson);
-    payload = {
-      ...payload,
-      policies_set: policiesComplete(config),
-      fields: payload.fields.map((field) => ({
-        ...field,
-        current_value: String(
-          values[field.parameter_key] ?? field.current_value ?? "",
-        ),
-      })),
-    };
+    payload = hydratePoliciesPayloadFromConfiguration(payload, config);
     submitted = payload.fields.every((field) => field.current_value !== "");
-  }
-
-  function policiesComplete(config: PlanConfiguration): boolean {
-    const policies = config.behaviorPolicies;
-    return (
-      policies?.publishApprovalMode !== undefined &&
-      policies.publishApprovalMode !== PublishApprovalMode.UNSPECIFIED &&
-      policies?.elicitationTimeoutBehavior !== undefined &&
-      policies.elicitationTimeoutBehavior !==
-        ElicitationTimeoutBehavior.UNSPECIFIED
-    );
   }
 
   function reflectPolicy(fieldKey: string, value: string) {
     if (!payload) return;
-    payload = {
-      ...payload,
-      fields: payload.fields.map((field) =>
-        field.key === fieldKey ? { ...field, current_value: value } : field,
-      ),
-    };
+    payload = reflectPolicyPayload(payload, fieldKey, value);
     submitted = payload.fields.every((field) => field.current_value !== "");
     editingAnswered = !submitted && editingAnswered;
   }
@@ -205,7 +179,7 @@
         <p class="mt-2 text-[11px] text-crown-ash">
           {translate("assistant.policiesStep.progress", $locale, {
             selected: selectedCount,
-            total: fields.length,
+            total: totalCount,
           })}
         </p>
       </div>

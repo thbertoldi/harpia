@@ -15,16 +15,17 @@
     type MatrixOption,
     type MatrixRow,
   } from "$lib/plans/matrix";
+  import {
+    buildBindingStepView,
+    policiesComplete,
+    reflectBindingPayload,
+  } from "$lib/plans/configuration-flow";
   import { chipFlash } from "$lib/motion/transitions";
   import { planClient } from "$lib/rpc";
   import { localizedStepTitle } from "$lib/plans/catalog-i18n";
   import type {
     PlanConfiguration,
     PlanTemplate,
-  } from "$lib/gen/harpia/plans/v1/plans_pb";
-  import {
-    ElicitationTimeoutBehavior as ElicitationTimeoutBehaviorEnum,
-    PublishApprovalMode as PublishApprovalModeEnum,
   } from "$lib/gen/harpia/plans/v1/plans_pb";
 
   interface Props {
@@ -93,16 +94,16 @@
     return () => controller.abort();
   });
 
-  const rows = $derived(payload?.rows ?? []);
-  const focusedRow = $derived(
-    rows.find((row) => row.step_key === payload?.step_key) ?? null,
+  const stepView = $derived(
+    payload
+      ? buildBindingStepView(payload, { isLive, editingAnswered, submitted })
+      : null,
   );
-  const boundCount = $derived(
-    rows.filter((row) => row.current_executor_id !== "").length,
-  );
-  const showChips = $derived(
-    (isLive || editingAnswered) && !submitted && !!focusedRow,
-  );
+  const rows = $derived(stepView?.rows ?? []);
+  const focusedRow = $derived(stepView?.focusedRow ?? null);
+  const boundCount = $derived(stepView?.boundCount ?? 0);
+  const totalCount = $derived(stepView?.totalCount ?? 0);
+  const showChips = $derived(stepView?.showChips ?? false);
 
   function selectedOption(row: MatrixRow): MatrixOption | undefined {
     return row.options.find((option) => option.id === row.current_executor_id);
@@ -126,29 +127,6 @@
     return fallbackTitle || stepKey;
   }
 
-  function policiesComplete(config: PlanConfiguration): boolean {
-    const policies = config.behaviorPolicies;
-    return (
-      policies?.publishApprovalMode !== undefined &&
-      policies.publishApprovalMode !== PublishApprovalModeEnum.UNSPECIFIED &&
-      policies?.elicitationTimeoutBehavior !== undefined &&
-      policies.elicitationTimeoutBehavior !==
-        ElicitationTimeoutBehaviorEnum.UNSPECIFIED
-    );
-  }
-
-  function reflectBinding(stepKey: string, installationId: string) {
-    if (!payload) return;
-    payload = {
-      ...payload,
-      rows: payload.rows.map((row) =>
-        row.step_key === stepKey
-          ? { ...row, current_executor_id: installationId }
-          : row,
-      ),
-    };
-  }
-
   async function onPickFocused(option: MatrixOption) {
     if (!payload || !focusedRow || !configuration || !template) return;
     if (savingRowKey || option.id === focusedRow.current_executor_id) return;
@@ -163,7 +141,7 @@
         value: option.value || option.id,
       });
       configuration = next;
-      reflectBinding(focusedRow.step_key, option.id);
+      payload = reflectBindingPayload(payload, focusedRow.step_key, option.id);
       submitted = true;
       editingAnswered = false;
     } catch {
@@ -175,7 +153,7 @@
 
   async function onPickMatrix(row: MatrixRow, optionId: string) {
     if (!optionId || optionId === row.current_executor_id) return;
-    if (!configuration || !template) return;
+    if (!payload || !configuration || !template) return;
     const option = row.options.find((candidate) => candidate.id === optionId);
     savingRowKey = row.step_key;
     saveError = false;
@@ -190,7 +168,7 @@
         newInstallationId: optionId,
       });
       configuration = next;
-      reflectBinding(row.step_key, optionId);
+      payload = reflectBindingPayload(payload, row.step_key, optionId);
       await appendStepRebound({
         tenantId,
         configurationId,
@@ -244,7 +222,7 @@
           <span>
             {translate("assistant.bindingStep.progress", $locale, {
               bound: boundCount,
-              total: rows.length,
+              total: totalCount,
             })}
           </span>
         </div>

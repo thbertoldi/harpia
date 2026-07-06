@@ -3,14 +3,12 @@
   import type { ChatMessage } from "$lib/chat/types";
   import { selectChip } from "$lib/plans/assistant";
   import { locale, translate } from "$lib/i18n";
+  import {
+    parseGenericAssistantPromptPayload,
+    promptChipsShown,
+    type AssistantPromptOption,
+  } from "$lib/plans/configuration-flow";
 
-  interface Option {
-    id: string;
-    label: string;
-    sublabel?: string;
-    value: string;
-    price_brl?: number;
-  }
   interface Props {
     message: ChatMessage;
     configurationId: string;
@@ -29,17 +27,9 @@
   // cannot fire a duplicate USER_SELECTION. Reset on edit-pencil reopen.
   let submitted = $state(false);
 
-  const payload = $derived.by(() => {
-    try {
-      return JSON.parse(message.payloadJson) as {
-        state?: string;
-        step_key?: string;
-        options?: Option[];
-      };
-    } catch {
-      return { options: [] as Option[] };
-    }
-  });
+  const payload = $derived(
+    parseGenericAssistantPromptPayload(message.payloadJson),
+  );
 
   // Localized heading: the AWAITING_TEMPLATE state has a canonical key; any
   // other unexpected prompt state falls back to the backend's English text.
@@ -49,9 +39,11 @@
       : message.text,
   );
 
-  const showChips = $derived((isLive || editing) && !submitted);
+  const showChips = $derived(
+    promptChipsShown({ isLive, editingAnswered: editing, submitted }),
+  );
 
-  async function onSelect(option: Option) {
+  async function onSelect(option: AssistantPromptOption) {
     if (pending || submitted) return;
     pending = true;
     try {

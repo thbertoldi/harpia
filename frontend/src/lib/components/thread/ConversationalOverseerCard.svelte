@@ -12,13 +12,14 @@
     type MatrixRow,
     type OverseerStepPayload,
   } from "$lib/plans/matrix";
+  import {
+    buildOverseerStepView,
+    policiesComplete,
+    reflectOverseerPayload,
+  } from "$lib/plans/configuration-flow";
   import { localizedOverseerLabel } from "$lib/plans/overseer-label";
   import { chipFlash } from "$lib/motion/transitions";
   import { planClient } from "$lib/rpc";
-  import {
-    ElicitationTimeoutBehavior,
-    PublishApprovalMode,
-  } from "$lib/gen/harpia/plans/v1/plans_pb";
   import type { PlanConfiguration } from "$lib/gen/harpia/plans/v1/plans_pb";
 
   interface Props {
@@ -79,19 +80,16 @@
     return () => controller.abort();
   });
 
-  const rows = $derived(payload?.rows ?? []);
-  const focusedRow = $derived(
-    rows.find((row) => row.step_key === payload?.step_key) ?? null,
+  const stepView = $derived(
+    payload
+      ? buildOverseerStepView(payload, { isLive, editingAnswered, submitted })
+      : null,
   );
-  const requiredRows = $derived(
-    rows.filter((row) => payload?.required_step_keys.includes(row.step_key)),
-  );
-  const overseerCount = $derived(
-    requiredRows.filter((row) => row.current_overseer_id !== "").length,
-  );
-  const showChips = $derived(
-    (isLive || editingAnswered) && !submitted && !!focusedRow,
-  );
+  const focusedRow = $derived(stepView?.focusedRow ?? null);
+  const requiredRows = $derived(stepView?.requiredRows ?? []);
+  const overseerCount = $derived(stepView?.overseerCount ?? 0);
+  const totalRequired = $derived(stepView?.totalRequired ?? 0);
+  const showChips = $derived(stepView?.showChips ?? false);
 
   function selectedOverseer(row: MatrixRow): string {
     const sessionUser = getSession()?.user;
@@ -110,17 +108,6 @@
           $locale,
         )
       : "";
-  }
-
-  function policiesComplete(config: PlanConfiguration): boolean {
-    const policies = config.behaviorPolicies;
-    return (
-      policies?.publishApprovalMode !== undefined &&
-      policies.publishApprovalMode !== PublishApprovalMode.UNSPECIFIED &&
-      policies?.elicitationTimeoutBehavior !== undefined &&
-      policies.elicitationTimeoutBehavior !==
-        ElicitationTimeoutBehavior.UNSPECIFIED
-    );
   }
 
   function currentUserFallback(option: MatrixOption): MatrixOption {
@@ -145,26 +132,6 @@
     return option.label;
   }
 
-  function reflectOverseer(
-    stepKey: string,
-    overseerUserId: string,
-    label: string,
-  ) {
-    if (!payload) return;
-    payload = {
-      ...payload,
-      rows: payload.rows.map((row) =>
-        row.step_key === stepKey
-          ? {
-              ...row,
-              current_overseer_id: overseerUserId,
-              current_overseer_label: label || overseerUserId,
-            }
-          : row,
-      ),
-    };
-  }
-
   async function onPickFocused(option: MatrixOption) {
     if (!payload || !focusedRow || !configuration) return;
     const picked = currentUserFallback(option);
@@ -180,7 +147,8 @@
         value: picked.value || picked.id,
       });
       configuration = next;
-      reflectOverseer(
+      payload = reflectOverseerPayload(
+        payload,
         focusedRow.step_key,
         picked.value || picked.id,
         picked.label,
@@ -228,7 +196,7 @@
           <span>
             {translate("assistant.overseerStep.progress", $locale, {
               bound: overseerCount,
-              total: requiredRows.length,
+              total: totalRequired,
             })}
           </span>
         </div>

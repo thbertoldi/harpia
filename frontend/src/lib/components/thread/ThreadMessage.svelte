@@ -5,6 +5,7 @@
   import { locale } from "$lib/i18n";
   import { formatRelativeTime } from "$lib/i18n/format";
   import type { StepTitleResolver } from "$lib/chat/event-text";
+  import { parseAssistantPromptState } from "$lib/plans/configuration-flow";
   import SystemEventCard from "./SystemEventCard.svelte";
   import ElicitationRefCard from "./ElicitationRefCard.svelte";
   import ApprovalRefCard from "./ApprovalRefCard.svelte";
@@ -54,15 +55,11 @@
     messages = [],
   }: Props = $props();
 
-  const promptState = $derived.by<string | null>(() => {
-    if (message.kind !== "ASSISTANT_PROMPT") return null;
-    try {
-      const s = JSON.parse(message.payloadJson)?.state;
-      return typeof s === "string" ? s : null;
-    } catch {
-      return null;
-    }
-  });
+  const promptState = $derived(
+    message.kind === "ASSISTANT_PROMPT"
+      ? parseAssistantPromptState(message.payloadJson)
+      : null,
+  );
 </script>
 
 {#if message.kind === "USER_TEXT"}
