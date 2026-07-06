@@ -4,6 +4,10 @@
   import { page } from "$app/stores";
   import { resolve } from "$app/paths";
   import { listArtifacts, getArtifact } from "$lib/artifacts/artifacts";
+  import {
+    resolvePreviewArtifact,
+    shouldAutoOpenFinalArtifact,
+  } from "$lib/artifacts/preview";
   import { getTenant } from "$lib/auth";
   import { locale, translate } from "$lib/i18n";
   import {
@@ -135,11 +139,12 @@
 
   // Canonical artifact preview state — single source of truth for BOTH the
   // auto-surfaced final artifact and any manually-opened artifact (final-
-  // artifact button, ArtifactRail, inline STEP_BOUND cards). Intermediate
+  // artifact button, inline STEP_BOUND cards). Intermediate
   // artifacts are never auto-promoted here (spec: artifact-side-preview) —
   // only opened explicitly by the user.
-  let previewArtifactId = $state<string | null>(null);
+  let activeArtifactId = $state<string | null>(null);
   let previewOpen = $state(false);
+  let previewArtifactLoading = $state(false);
   // Populated on demand when the id isn't in workspaceArtifacts (e.g. an
   // artifact from an older execution in this thread).
   let previewFallbackArtifact = $state<Artifact | null>(null);
@@ -161,24 +166,29 @@
   );
 
   const previewArtifact = $derived(
-    previewArtifactId
-      ? (workspaceArtifacts.find((a) => a.id === previewArtifactId) ??
-          (previewFallbackArtifact?.id === previewArtifactId
-            ? previewFallbackArtifact
-            : null))
-      : null,
+    resolvePreviewArtifact(
+      activeArtifactId,
+      workspaceArtifacts,
+      previewFallbackArtifact,
+    ),
   );
 
-  // The one callback threaded down through ConversationalWorkspace to
-  // ArtifactRail and inline STEP_BOUND artifact cards.
+  // The one callback threaded down through ConversationalWorkspace to inline
+  // STEP_BOUND artifact cards.
   function openArtifact(artifactId: string) {
-    previewArtifactId = artifactId;
+    activeArtifactId = artifactId;
     previewOpen = true;
     previewFallbackArtifact = null;
+    previewArtifactLoading = false;
     if (workspaceArtifacts.some((a) => a.id === artifactId)) return;
+    previewArtifactLoading = true;
     void (async () => {
-      const artifact = await getArtifact(tenantId, artifactId);
-      if (previewArtifactId === artifactId) previewFallbackArtifact = artifact;
+      try {
+        const artifact = await getArtifact(tenantId, artifactId);
+        if (activeArtifactId === artifactId) previewFallbackArtifact = artifact;
+      } finally {
+        if (activeArtifactId === artifactId) previewArtifactLoading = false;
+      }
     })();
   }
 
@@ -194,15 +204,19 @@
       previewDismissedFinalArtifactId = finalArtifact.id;
     }
     previewOpen = false;
+    previewArtifactLoading = false;
   }
 
   // Re-open the panel automatically when a new final artifact appears (e.g. a
   // fresh run completes). Stays dismissed for the artifact the user closed.
   $effect(() => {
     const artifactId = finalArtifact?.id ?? null;
-    if (artifactId && artifactId !== previewDismissedFinalArtifactId) {
-      previewArtifactId = artifactId;
+    if (
+      shouldAutoOpenFinalArtifact(artifactId, previewDismissedFinalArtifactId)
+    ) {
+      activeArtifactId = artifactId;
       previewFallbackArtifact = null;
+      previewArtifactLoading = false;
       previewOpen = true;
     }
   });
@@ -325,8 +339,9 @@
     workspaceArtifacts = [];
     workspaceLoadError = false;
     previewOpen = false;
-    previewArtifactId = null;
+    activeArtifactId = null;
     previewFallbackArtifact = null;
+    previewArtifactLoading = false;
     previewDismissedFinalArtifactId = null;
   }
 
@@ -929,6 +944,7 @@
       <ArtifactPreviewSheet
         open={previewOpen}
         artifact={previewArtifact}
+        artifactLoading={previewArtifactLoading}
         {tenantId}
         onClose={closePreview}
       />

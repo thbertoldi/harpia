@@ -164,7 +164,7 @@
 
 <div
   id={`m-${message.id}`}
-  class="rounded-lg border border-plumage bg-obsidian-light px-4 py-3 {isLive
+  class="w-full rounded-lg border border-plumage bg-obsidian-light px-4 py-3 {isLive
     ? 'ring-1 ring-talon-gold'
     : ''}"
 >

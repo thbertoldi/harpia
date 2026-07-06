@@ -1,5 +1,4 @@
 <script lang="ts">
-  import ArtifactRail from "$lib/components/artifacts/ArtifactRail.svelte";
   import ThreadMessage from "$lib/components/thread/ThreadMessage.svelte";
   import type { ChatMessage } from "$lib/chat/types";
   import type { StepTitleResolver } from "$lib/chat/event-text";
@@ -63,7 +62,7 @@
   }
 </script>
 
-<div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+<div class="w-full">
   <main class="min-w-0 space-y-4">
     <div class="flex flex-col gap-2">
       {#each messages as message (message.id)}
@@ -83,5 +82,4 @@
       {/each}
     </div>
   </main>
-  <ArtifactRail {tenantId} {artifacts} {onOpenArtifact} />
 </div>

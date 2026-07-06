@@ -312,13 +312,13 @@
 
   {#if parseError || !payload}
     <p
-      class="rounded-lg border border-plumage bg-surface-elevated px-4 py-3 text-[13px] text-crown-ash"
+      class="w-full rounded-lg border border-plumage bg-surface-elevated px-4 py-3 text-[13px] text-crown-ash"
     >
       {introText}
     </p>
   {:else}
     <div
-      class="overflow-hidden rounded-lg border border-plumage bg-surface-elevated shadow-[0_8px_24px_rgba(0,0,0,0.25)]"
+      class="w-full overflow-hidden rounded-lg border border-plumage bg-surface-elevated shadow-[0_8px_24px_rgba(0,0,0,0.25)]"
     >
       <!-- Header -->
       <div

@@ -143,7 +143,7 @@
 
 <div
   id={`m-${message.id}`}
-  class="rounded-lg border px-4 py-3 {effectiveDecision === 'rejected'
+  class="w-full rounded-lg border px-4 py-3 {effectiveDecision === 'rejected'
     ? 'border-danger/40 bg-danger/10'
     : 'border-talon-gold/40 bg-talon-gold/10'}"
 >

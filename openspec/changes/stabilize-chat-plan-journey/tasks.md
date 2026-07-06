@@ -10,15 +10,15 @@
 ## 2. Structured Chat Card Alignment
 
 - [x] 2.1 Remove or make conditional the `max-w-[85%]` bubble-width styling in `frontend/src/lib/components/thread/PlanExecutionCard.svelte` so execution cards render at full structured-card width in the configured thread branch.
-- [ ] 2.2 Audit structured cards under `frontend/src/lib/components/thread/` and normalize wrapper classes so proposal, binding, policies, execution, artifact, and approval cards align visually in the conversation column.
+- [x] 2.2 Audit structured cards under `frontend/src/lib/components/thread/` and normalize wrapper classes so proposal, binding, policies, execution, artifact, and approval cards align visually in the conversation column.
 - [x] 2.3 Add a focused regression assertion where feasible for the execution card class contract, or document the manual smoke assertion in the task completion notes if component-render tests are unavailable.
 
 ## 3. Canonical Artifact Preview Flow
 
-- [ ] 3.1 Rewire `frontend/src/routes/chat/[threadId]/+page.svelte` and `frontend/src/lib/components/thread/ConversationalWorkspace.svelte` so all artifact launchers use one canonical `ArtifactPreviewSheet` state (`activeArtifactId` plus loading/ready state).
-- [ ] 3.2 Remove the sticky artifact rail behavior that pins artifacts at the top of the viewport; artifact access should come from inline cards, produced-artifact launchers, and an optional lightweight reopen affordance.
-- [ ] 3.3 Ensure `STEP_BOUND` messages with `output_artifact_id` render or feed an inline artifact card close to the producing step without duplicating independent artifact panel state.
-- [ ] 3.4 Keep final artifact emphasis by default when a run completes, while allowing explicit user selection of intermediate artifacts for preview.
+- [x] 3.1 Rewire `frontend/src/routes/chat/[threadId]/+page.svelte` and `frontend/src/lib/components/thread/ConversationalWorkspace.svelte` so all artifact launchers use one canonical `ArtifactPreviewSheet` state (`activeArtifactId` plus loading/ready state).
+- [x] 3.2 Remove the sticky artifact rail behavior that pins artifacts at the top of the viewport; artifact access should come from inline cards, produced-artifact launchers, and an optional lightweight reopen affordance.
+- [x] 3.3 Ensure `STEP_BOUND` messages with `output_artifact_id` render or feed an inline artifact card close to the producing step without duplicating independent artifact panel state.
+- [x] 3.4 Keep final artifact emphasis by default when a run completes, while allowing explicit user selection of intermediate artifacts for preview.
 - [ ] 3.5 Add or update frontend tests for artifact preview kind mapping/panel state, and smoke-test a live run to confirm markdown/html/image previews still render in the canonical sheet.
 
 ## 4. In-Thread Approval And Inbox Context

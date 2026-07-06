@@ -20,7 +20,9 @@
   const title = $derived(artifactTitle(artifact));
 </script>
 
-<article class="rounded-lg border border-plumage bg-obsidian-light/30 p-3">
+<article
+  class="w-full rounded-lg border border-plumage bg-obsidian-light/30 p-3"
+>
   <div class="mb-2 flex items-start justify-between gap-2">
     <div class="min-w-0">
       <h3 class="truncate font-heading text-sm font-semibold text-cream">

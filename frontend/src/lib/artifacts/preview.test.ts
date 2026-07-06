@@ -1,12 +1,18 @@
-import { describe, expect, it } from "vitest";
 import { create } from "@bufbuild/protobuf";
+import { describe, expect, it } from "vitest";
 import {
   ArtifactListSummarySchema,
+  ArtifactSchema,
   ImagePreviewSchema,
   PreviewArtifactResponseSchema,
   type PreviewArtifactResponse,
 } from "$lib/gen/harpia/artifacts/v1/artifacts_pb";
-import { buildPreviewArtifactRequest, formatArtifactPreview } from "./preview";
+import {
+  buildPreviewArtifactRequest,
+  formatArtifactPreview,
+  resolvePreviewArtifact,
+  shouldAutoOpenFinalArtifact,
+} from "./preview";
 
 function makePreview(
   preview: PreviewArtifactResponse["preview"],
@@ -66,40 +72,79 @@ describe("formatArtifactPreview", () => {
     });
   });
 
-  it("formats html previews with source", () => {
-    const formatted = formatArtifactPreview(
-      makePreview({ case: "htmlPreview", value: "<h1>Hi</h1>" }),
-    );
-    expect(formatted.kind).toBe("html");
-    expect(formatted.html).toBe("<h1>Hi</h1>");
-    expect(formatted.text).toBe("<h1>Hi</h1>");
-  });
-
-  it("formats markdown previews with source", () => {
-    const formatted = formatArtifactPreview(
-      makePreview({ case: "markdownPreview", value: "# Title\n\nBody" }),
-    );
-    expect(formatted.kind).toBe("markdown");
-    expect(formatted.markdown).toBe("# Title\n\nBody");
-  });
-
-  it("formats image previews (url)", () => {
-    const formatted = formatArtifactPreview(
-      makePreview({
-        case: "imagePreview",
-        value: create(ImagePreviewSchema, {
-          url: "https://example.com/a.png",
-          altText: "diagram",
-        }),
+  it("maps markdown previews to source-preserving markdown output", () => {
+    const preview = formatArtifactPreview(
+      create(PreviewArtifactResponseSchema, {
+        preview: { case: "markdownPreview", value: "# Draft" },
       }),
     );
-    expect(formatted.kind).toBe("image");
-    expect(formatted.image?.url).toBe("https://example.com/a.png");
-    expect(formatted.image?.altText).toBe("diagram");
-    expect(formatted.image?.inlineData).toBeUndefined();
+
+    expect(preview).toMatchObject({
+      kind: "markdown",
+      text: "# Draft",
+      markdown: "# Draft",
+    });
   });
 
-  it("formats image previews (inline bytes)", () => {
+  it("maps html previews to source-preserving html output", () => {
+    const preview = formatArtifactPreview(
+      create(PreviewArtifactResponseSchema, {
+        preview: { case: "htmlPreview", value: "<p>Ready</p>" },
+      }),
+    );
+
+    expect(preview).toMatchObject({
+      kind: "html",
+      text: "<p>Ready</p>",
+      html: "<p>Ready</p>",
+    });
+  });
+
+  it("maps list summaries and filters blank titles", () => {
+    const preview = formatArtifactPreview(
+      create(PreviewArtifactResponseSchema, {
+        preview: {
+          case: "listSummary",
+          value: create(ArtifactListSummarySchema, {
+            articleCount: 3,
+            titles: ["First", " ", "Second"],
+          }),
+        },
+      }),
+    );
+
+    expect(preview.kind).toBe("list");
+    expect(preview.text).toBe("First\nSecond");
+    expect(preview.listSummary).toEqual({
+      articleCount: 3,
+      titles: ["First", "Second"],
+    });
+  });
+
+  it("maps image previews to optional image metadata", () => {
+    const preview = formatArtifactPreview(
+      create(PreviewArtifactResponseSchema, {
+        preview: {
+          case: "imagePreview",
+          value: create(ImagePreviewSchema, {
+            url: "https://example.test/image.png",
+            altText: "Generated preview",
+          }),
+        },
+      }),
+    );
+
+    expect(preview).toMatchObject({
+      kind: "image",
+      text: "https://example.test/image.png",
+      image: {
+        url: "https://example.test/image.png",
+        altText: "Generated preview",
+      },
+    });
+  });
+
+  it("formats image previews with inline bytes", () => {
     const formatted = formatArtifactPreview(
       makePreview({
         case: "imagePreview",
@@ -116,5 +161,41 @@ describe("formatArtifactPreview", () => {
   it("falls back to empty for an unset oneof", () => {
     const formatted = formatArtifactPreview(makePreview({ case: undefined }));
     expect(formatted.kind).toBe("empty");
+  });
+});
+
+describe("artifact preview state helpers", () => {
+  const finalArtifact = create(ArtifactSchema, {
+    id: "artifact-final",
+    artifactTypeKey: "harpia.artifacts.v1.PublishConfirmation",
+  });
+  const fallbackArtifact = create(ArtifactSchema, {
+    id: "artifact-old",
+    artifactTypeKey: "harpia.artifacts.v1.TextDraft",
+  });
+
+  it("resolves the active artifact from current execution artifacts first", () => {
+    expect(
+      resolvePreviewArtifact(
+        "artifact-final",
+        [finalArtifact],
+        fallbackArtifact,
+      ),
+    ).toBe(finalArtifact);
+  });
+
+  it("resolves a fetched fallback artifact when it matches the active id", () => {
+    expect(resolvePreviewArtifact("artifact-old", [], fallbackArtifact)).toBe(
+      fallbackArtifact,
+    );
+  });
+
+  it("keeps final artifact auto-open suppressed only for the dismissed final artifact", () => {
+    expect(
+      shouldAutoOpenFinalArtifact("artifact-final", "artifact-final"),
+    ).toBe(false);
+    expect(shouldAutoOpenFinalArtifact("artifact-next", "artifact-final")).toBe(
+      true,
+    );
   });
 });

@@ -21,11 +21,13 @@
     onClose,
     tenantId,
     artifact,
+    artifactLoading = false,
   }: {
     open: boolean;
     onClose: () => void;
     tenantId: string;
     artifact: Artifact | null;
+    artifactLoading?: boolean;
   } = $props();
 
   let tab = $state<"preview" | "code">("preview");
@@ -61,6 +63,7 @@
     }
   });
   const sizeKb = $derived(((preview?.text?.length ?? 0) / 1024).toFixed(1));
+  const busy = $derived(artifactLoading || loading);
   const Icon = $derived(
     preview?.kind === "html" || preview?.kind === "json"
       ? Code
@@ -83,7 +86,7 @@
   }
 </script>
 
-{#if open && artifact}
+{#if open}
   <!-- Mobile-only scrim: below lg the panel is a full overlay; on lg+ it
        shares space with the chat (split view), so no backdrop is needed. -->
   <div
@@ -108,11 +111,15 @@
       </span>
       <div class="min-w-0 flex-1">
         <h2 class="truncate font-heading text-[13px] font-semibold text-cream">
-          {artifactTitle(artifact)}
+          {artifact
+            ? artifactTitle(artifact)
+            : translate("artifactPreview.loading", $locale)}
         </h2>
-        <p class="truncate font-mono text-[10px] text-crown-ash-dark">
-          {artifact.artifactTypeKey}
-        </p>
+        {#if artifact}
+          <p class="truncate font-mono text-[10px] text-crown-ash-dark">
+            {artifact.artifactTypeKey}
+          </p>
+        {/if}
       </div>
 
       <div class="flex rounded-md border border-plumage p-0.5">
@@ -166,7 +173,13 @@
 
     <!-- Body -->
     <div class="min-h-0 flex-1 overflow-y-auto">
-      {#if tab === "preview"}
+      {#if !artifact}
+        <div
+          class="flex h-full items-center justify-center px-4 py-10 text-[12px] text-crown-ash"
+        >
+          {translate("artifactPreview.loading", $locale)}
+        </div>
+      {:else if tab === "preview"}
         {#key reloadKey}
           <ArtifactPreview
             {tenantId}
@@ -196,11 +209,11 @@
     >
       <span class="flex items-center gap-1.5">
         <span
-          class="size-1.5 rounded-full {loading
+          class="size-1.5 rounded-full {busy
             ? 'animate-pulse bg-energy'
             : 'bg-status-done/70'}"
         ></span>
-        {loading
+        {busy
           ? translate("artifactPreview.generating", $locale)
           : translate("artifactPreview.ready", $locale)}
       </span>

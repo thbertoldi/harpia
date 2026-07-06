@@ -1,6 +1,7 @@
 import { create } from "@bufbuild/protobuf";
 import {
   PreviewArtifactRequestSchema,
+  type Artifact,
   type PreviewArtifactRequest,
   type PreviewArtifactResponse,
 } from "$lib/gen/harpia/artifacts/v1/artifacts_pb";
@@ -118,4 +119,23 @@ export function formatArtifactPreview(
         text: "",
       };
   }
+}
+
+export function resolvePreviewArtifact(
+  activeArtifactId: string | null,
+  artifacts: Artifact[],
+  fallbackArtifact: Artifact | null,
+): Artifact | null {
+  if (!activeArtifactId) return null;
+  return (
+    artifacts.find((artifact) => artifact.id === activeArtifactId) ??
+    (fallbackArtifact?.id === activeArtifactId ? fallbackArtifact : null)
+  );
+}
+
+export function shouldAutoOpenFinalArtifact(
+  finalArtifactId: string | null,
+  dismissedFinalArtifactId: string | null,
+): boolean {
+  return !!finalArtifactId && finalArtifactId !== dismissedFinalArtifactId;
 }
