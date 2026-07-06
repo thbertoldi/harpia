@@ -84,7 +84,7 @@
 </script>
 
 <div
-  class="max-w-[85%] rounded-md border border-plumage/60 bg-obsidian-light/80 px-2.5 py-1.5 text-[12px]"
+  class="w-full rounded-md border border-plumage/60 bg-obsidian-light/80 px-2.5 py-1.5 text-[12px]"
 >
   <button
     type="button"

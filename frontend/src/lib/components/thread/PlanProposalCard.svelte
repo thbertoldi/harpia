@@ -35,6 +35,7 @@
     genericParameterValuesJson,
     requiredInputsSatisfied,
   } from "$lib/plans/template-inputs";
+  import { localizedPlanNameByKey } from "$lib/plans/catalog-i18n";
   import { ensureAggregateRssInstallation } from "$lib/plans/source-groups";
   import { prefersReducedMotion } from "$lib/motion/reducedMotion";
   import {
@@ -81,6 +82,14 @@
     selectBestCandidate(candidates, payload.best_candidate_id),
   );
 
+  function candidatePlanName(candidate: PlanProposalCandidate): string {
+    return localizedPlanNameByKey(
+      candidate.template_key,
+      $locale,
+      candidate.template_name || candidate.template_key,
+    );
+  }
+
   // Read-only mode display name. The matching config's planTemplateId points
   // back at one of this proposal's candidates, so reuse that candidate's
   // template_name/template_key rather than re-fetching the template.
@@ -90,7 +99,7 @@
       (candidate) =>
         candidate.template_id === existingConfiguration.planTemplateId,
     );
-    return match?.template_name || match?.template_key || "";
+    return match ? candidatePlanName(match) : "";
   });
 
   const autoSelected = $derived.by<PlanProposalCandidate | null>(() => {
@@ -127,7 +136,7 @@
   const confirmPromptText = $derived.by(() => {
     const cand = active;
     if (!cand) return "";
-    return confirmPrompt($locale, cand.template_name, cand.template_key);
+    return confirmPrompt($locale, candidatePlanName(cand), cand.template_key);
   });
 
   const createdActions = $derived.by(() => {
@@ -225,7 +234,7 @@
     rememberSelection(
       "candidate",
       translate("thread.propose.turn.plan", $locale),
-      candidate.template_name || candidate.template_key,
+      candidatePlanName(candidate),
     );
   }
 
@@ -327,7 +336,7 @@
         "confirmation",
         translate("thread.propose.turn.confirmation", $locale),
         buildFinalConfirmation($locale, {
-          planName: active.template_name || active.template_key,
+          planName: candidatePlanName(active),
           audience: values.audience,
           themes: typeof values.theme === "string" ? [values.theme] : [],
           sourceGroups:
@@ -463,12 +472,12 @@
           class="rounded-full border border-plumage px-3 py-1 text-[12px] text-cream hover:border-talon-gold"
           aria-label={c.template_id === bestCandidate?.template_id
             ? translate("thread.propose.bestMatchAria", $locale, {
-                plan: c.template_name || c.template_key,
+                plan: candidatePlanName(c),
               })
-            : c.template_name || c.template_key}
+            : candidatePlanName(c)}
           onclick={() => pickCandidate(c)}
         >
-          {c.template_name || c.template_key}
+          {candidatePlanName(c)}
           {#if c.template_id === bestCandidate?.template_id}
             <span class="ml-1 text-talon-gold">
               {translate("thread.propose.bestMatch", $locale)}
@@ -520,16 +529,16 @@
                 use:clickFlash
                 aria-label={isBest
                   ? translate("thread.propose.bestMatchAria", $locale, {
-                      plan: c.template_name || c.template_key,
+                      plan: candidatePlanName(c),
                     })
-                  : c.template_name || c.template_key}
+                  : candidatePlanName(c)}
                 class="rounded-full border px-2.5 py-0.5 text-[11px] {c.template_id ===
                 active.template_id
                   ? 'border-talon-gold text-cream'
                   : 'border-plumage text-crown-ash hover:border-talon-gold'}"
                 onclick={() => pickCandidate(c)}
               >
-                {c.template_name || c.template_key}
+                {candidatePlanName(c)}
                 {#if isBest}
                   <span class="ml-1 text-talon-gold">
                     {translate("thread.propose.bestMatch", $locale)}

@@ -1,6 +1,10 @@
 import type { Locale } from "$lib/i18n";
+import { translate } from "$lib/i18n";
 import { resolveLocalizedContent } from "$lib/i18n/content";
-import type { PlanTemplate } from "$lib/gen/harpia/plans/v1/plans_pb";
+import type {
+  PlanTemplate,
+  TemplateInputParameter,
+} from "$lib/gen/harpia/plans/v1/plans_pb";
 
 /**
  * Catalog-driven localization for plan content (ADR-015: the catalog is
@@ -33,12 +37,45 @@ export function localizedPlanName(
   template: PlanTemplate,
   locale: Locale,
 ): string {
-  const key = template.key?.trim();
-  if (!key) return template.name || "";
+  return localizedPlanNameByKey(template.key, locale, template.name);
+}
+
+export function localizedPlanNameByKey(
+  templateKey: string,
+  locale: Locale,
+  fallback = "",
+): string {
+  const key = templateKey.trim();
+  if (!key) return fallback;
   return resolveCatalogEntry(
     `catalog.plan.${key}.name`,
     locale,
-    template.name || key,
+    fallback || key,
+  );
+}
+
+export function localizedPlanDescription(
+  template: PlanTemplate,
+  locale: Locale,
+): string {
+  return localizedPlanDescriptionByKey(
+    template.key,
+    locale,
+    template.description,
+  );
+}
+
+export function localizedPlanDescriptionByKey(
+  templateKey: string,
+  locale: Locale,
+  fallback = "",
+): string {
+  const key = templateKey.trim();
+  if (!key) return fallback;
+  return resolveCatalogEntry(
+    `catalog.plan.${key}.description`,
+    locale,
+    fallback,
   );
 }
 
@@ -56,12 +93,85 @@ export function localizedStepTitle(
     template.steps.find((step) => step.key === stepKey)?.title ?? "";
   const fallback = fallbackStepTitle || stepKey;
 
-  const key = template.key?.trim();
-  if (!key) return fallback;
+  return localizedStepTitleByKey(template.key, stepKey, locale, fallback);
+}
 
+export function localizedStepTitleByKey(
+  templateKey: string,
+  stepKey: string,
+  locale: Locale,
+  fallback = "",
+): string {
+  const key = templateKey.trim();
+  const normalizedStepKey = stepKey.trim();
+  const fallbackTitle = fallback || normalizedStepKey;
+  if (!key || !normalizedStepKey) return fallbackTitle;
   return resolveCatalogEntry(
-    `catalog.plan.${key}.step.${stepKey}.title`,
+    `catalog.plan.${key}.step.${normalizedStepKey}.title`,
+    locale,
+    fallbackTitle,
+  );
+}
+
+export function localizedStepDescription(
+  template: PlanTemplate,
+  stepKey: string,
+  locale: Locale,
+): string {
+  const fallback =
+    template.steps.find((step) => step.key === stepKey)?.description ?? "";
+  return localizedStepDescriptionByKey(template.key, stepKey, locale, fallback);
+}
+
+export function localizedStepDescriptionByKey(
+  templateKey: string,
+  stepKey: string,
+  locale: Locale,
+  fallback = "",
+): string {
+  const key = templateKey.trim();
+  const normalizedStepKey = stepKey.trim();
+  if (!key || !normalizedStepKey) return fallback;
+  return resolveCatalogEntry(
+    `catalog.plan.${key}.step.${normalizedStepKey}.description`,
     locale,
     fallback,
+  );
+}
+
+function resolveInputEntry(
+  inputKey: string,
+  suffix: "label" | "description",
+  locale: Locale,
+  fallback: string,
+): string {
+  const key = inputKey.trim();
+  if (!key) return fallback;
+  const i18nKey = `plans.inputs.${key}.${suffix}`;
+  const resolved = translate(i18nKey, locale);
+  return resolved !== i18nKey ? resolved : fallback;
+}
+
+export function localizedInputLabel(
+  parameter: TemplateInputParameter,
+  locale: Locale,
+): string {
+  return resolveInputEntry(
+    parameter.key,
+    "label",
+    locale,
+    parameter.label || parameter.key,
+  );
+}
+
+export function localizedInputDescription(
+  parameter: TemplateInputParameter,
+  locale: Locale,
+): string {
+  return resolveInputEntry(
+    parameter.key,
+    "description",
+    locale,
+    parameter.description,
   );
 }

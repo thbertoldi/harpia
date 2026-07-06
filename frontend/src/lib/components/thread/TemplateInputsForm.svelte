@@ -10,6 +10,10 @@
     type SelectOption,
   } from "$lib/plans/template-inputs";
   import { sourceGroupInstallations } from "$lib/plans/source-groups";
+  import {
+    localizedInputDescription,
+    localizedInputLabel,
+  } from "$lib/plans/catalog-i18n";
   import { executorClient } from "$lib/rpc";
   import type { ExecutorInstallation } from "$lib/gen/harpia/executors/v1/executors_pb";
   import { locale, translate } from "$lib/i18n";
@@ -152,35 +156,21 @@
   // as a LinkedIn publisher are destinations, not sources, and are excluded from
   // the "source group" picker.
   const sourceInstallations = $derived(sourceGroupInstallations(installations));
-
-  // Helper to translate a label with fallback to the original label
-  function translatedLabel(p: TemplateInputParameter): string {
-    const key = `plans.inputs.${p.key}.label`;
-    const translated = translate(key, $locale);
-    return translated === key ? p.label || p.key : translated;
-  }
-
-  // Translated helper text for a field. Catalog descriptions are authored in
-  // English, so we only surface the localized copy when a translation exists;
-  // otherwise we hide the helper rather than leak an untranslated string.
-  function translatedDescription(p: TemplateInputParameter): string {
-    const key = `plans.inputs.${p.key}.description`;
-    const translated = translate(key, $locale);
-    return translated === key ? "" : translated;
-  }
 </script>
 
 <div class="flex flex-col gap-3">
   {#each params as p (p.key)}
     <label class="flex flex-col gap-1 text-[12px] text-crown-ash">
       <span class="font-medium text-cream">
-        {translatedLabel(p)}{#if p.required}<span class="text-talon-gold">
+        {localizedInputLabel(p, $locale)}{#if p.required}<span
+            class="text-talon-gold"
+          >
             *</span
           >{/if}
       </span>
-      {#if translatedDescription(p)}
+      {#if localizedInputDescription(p, $locale)}
         <span class="text-[11px] text-crown-ash-dark"
-          >{translatedDescription(p)}</span
+          >{localizedInputDescription(p, $locale)}</span
         >
       {/if}
 

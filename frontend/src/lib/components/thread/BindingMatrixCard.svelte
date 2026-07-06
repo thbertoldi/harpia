@@ -13,6 +13,7 @@
     buildDefaultLinkedInInputValues,
     linkedInInputValuesFromParameterValuesJson,
   } from "$lib/plans/linkedin-template-inputs";
+  import { localizedStepTitleByKey } from "$lib/plans/catalog-i18n";
   import {
     parseMatrixPayload,
     computeRunCostBRL,
@@ -143,6 +144,31 @@
       sessionUserSub,
       $locale,
     );
+  }
+
+  function stepTitle(row: MatrixRow): string {
+    return localizedStepTitleByKey(
+      template?.key ?? "",
+      row.step_key,
+      $locale,
+      row.step_title || row.step_key,
+    );
+  }
+
+  function translatedInputLabel(inputKey: string, fallback: string): string {
+    const key = `plans.inputs.${inputKey}.label`;
+    const translated = translate(key, $locale);
+    return translated === key ? fallback : translated;
+  }
+
+  function translatedInputOption(
+    inputKey: string,
+    value: string,
+    fallback: string,
+  ): string {
+    const key = `plans.inputs.${inputKey}.option.${value}`;
+    const translated = translate(key, $locale);
+    return translated === key ? fallback : translated;
   }
 
   async function onPickExecutor(row: MatrixRow, optionId: string) {
@@ -310,7 +336,7 @@
             onclick={() => (suggestOpen = true)}
             class="cursor-pointer rounded-md border border-plumage px-3 py-1.5 text-[12px] font-medium text-crown-ash hover:border-talon-gold hover:text-talon-gold disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Suggest
+            {translate("assistant.bindingMatrix.suggest", $locale)}
           </button>
           <span
             class="rounded border border-talon-gold/35 bg-talon-gold/[0.06] px-2 py-1 text-[10px] font-semibold tracking-[0.1em] text-talon-gold uppercase"
@@ -328,7 +354,7 @@
           <div class="grid gap-3 md:grid-cols-2">
             <label class="block">
               <span class="mb-1 block text-[11px] font-medium text-crown-ash"
-                >Theme</span
+                >{translatedInputLabel("theme", "Theme")}</span
               >
               <input
                 value={inputValues.theme}
@@ -342,7 +368,7 @@
             </label>
             <label class="block">
               <span class="mb-1 block text-[11px] font-medium text-crown-ash"
-                >Language</span
+                >{translatedInputLabel("language", "Language")}</span
               >
               <select
                 value={inputValues.language}
@@ -354,14 +380,28 @@
                   })}
                 class="w-full rounded-md border border-plumage bg-surface-hover px-3 py-2 text-[13px] text-cream outline-none focus:border-talon-gold"
               >
-                <option value="pt-BR">Portuguese</option>
-                <option value="en-US">English</option>
-                <option value="es">Spanish</option>
+                <option value="pt-BR"
+                  >{translatedInputOption(
+                    "language",
+                    "pt-BR",
+                    "Portuguese",
+                  )}</option
+                >
+                <option value="en-US"
+                  >{translatedInputOption(
+                    "language",
+                    "en-US",
+                    "English",
+                  )}</option
+                >
+                <option value="es"
+                  >{translatedInputOption("language", "es", "Spanish")}</option
+                >
               </select>
             </label>
             <label class="block">
               <span class="mb-1 block text-[11px] font-medium text-crown-ash"
-                >Tone</span
+                >{translatedInputLabel("tone", "Tone")}</span
               >
               <select
                 value={inputValues.tone}
@@ -373,15 +413,31 @@
                 class="w-full rounded-md border border-plumage bg-surface-hover px-3 py-2 text-[13px] text-cream outline-none focus:border-talon-gold"
               >
                 <option value="analytical, concise, and practical">
-                  Analytical
+                  {translatedInputOption(
+                    "tone",
+                    "analytical, concise, and practical",
+                    "Analytical",
+                  )}
                 </option>
-                <option value="friendly and clear">Friendly</option>
-                <option value="executive and direct">Executive</option>
+                <option value="friendly and clear"
+                  >{translatedInputOption(
+                    "tone",
+                    "friendly and clear",
+                    "Friendly",
+                  )}</option
+                >
+                <option value="executive and direct"
+                  >{translatedInputOption(
+                    "tone",
+                    "executive and direct",
+                    "Executive",
+                  )}</option
+                >
               </select>
             </label>
             <label class="block">
               <span class="mb-1 block text-[11px] font-medium text-crown-ash"
-                >Audience</span
+                >{translatedInputLabel("audience", "Audience")}</span
               >
               <input
                 value={inputValues.audience}
@@ -395,7 +451,10 @@
             </label>
             <label class="block md:col-span-2">
               <span class="mb-1 block text-[11px] font-medium text-crown-ash"
-                >Topics to avoid</span
+                >{translatedInputLabel(
+                  "topics_to_avoid",
+                  "Topics to avoid",
+                )}</span
               >
               <textarea
                 value={inputValues.topicsToAvoid}
@@ -417,7 +476,7 @@
               onclick={onSuggest}
               class="cursor-pointer rounded-md bg-talon-gold px-3 py-2 text-[12px] font-semibold text-on-primary hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Apply
+              {translate("assistant.bindingMatrix.applySuggestion", $locale)}
             </button>
           </div>
         </div>
@@ -442,7 +501,7 @@
           <!-- Task name + contract -->
           <div class="min-w-0">
             <p class="truncate text-[13px] font-medium text-cream">
-              {row.step_title}
+              {stepTitle(row)}
             </p>
             <div
               class="mt-0.5 font-mono text-[10px] tracking-[0.02em] text-crown-ash-dark"
@@ -542,7 +601,8 @@
             >{translate("assistant.bindingMatrix.schedule", $locale)}</span
           >
           <span class="text-[12px] text-crown-ash">
-            {configuration?.schedule?.cronExpression?.trim() || "Manual"}
+            {configuration?.schedule?.cronExpression?.trim() ||
+              translate("assistant.bindingMatrix.manualSchedule", $locale)}
           </span>
         </div>
       </div>
@@ -561,7 +621,9 @@
             <span
               class="rounded border border-talon-gold/30 px-1.5 py-0.5 text-[10px] tracking-[0.08em] text-talon-gold uppercase"
             >
-              {cost.unboundCount} pending
+              {translate("assistant.bindingMatrix.pending", $locale, {
+                count: cost.unboundCount,
+              })}
             </span>
           {/if}
         </div>

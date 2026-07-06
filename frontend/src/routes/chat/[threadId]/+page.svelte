@@ -807,11 +807,12 @@
 
         {#if focusedConfiguration}
           <PlanThreadTopBar
-            planName={planSummary?.intent ||
-              (focusedTemplate
+            planName={(planSummary?.intent &&
+            planSummary.intent !== focusedTemplate?.name
+              ? planSummary.intent
+              : focusedTemplate
                 ? localizedPlanName(focusedTemplate, $locale)
-                : "") ||
-              shortConfigurationId(focusedConfiguration.id)}
+                : "") || shortConfigurationId(focusedConfiguration.id)}
             {statusLabel}
             {cost}
             onOpenSchedule={() => (scheduleOpen = true)}

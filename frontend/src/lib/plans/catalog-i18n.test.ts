@@ -3,12 +3,24 @@ import { create } from "@bufbuild/protobuf";
 import {
   PlanStepSchema,
   PlanTemplateSchema,
+  TemplateInputParameterType,
   type PlanTemplate,
+  type TemplateInputParameter,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
-import { localizedPlanName, localizedStepTitle } from "$lib/plans/catalog-i18n";
+import {
+  localizedInputDescription,
+  localizedInputLabel,
+  localizedPlanDescription,
+  localizedPlanDescriptionByKey,
+  localizedPlanName,
+  localizedPlanNameByKey,
+  localizedStepDescription,
+  localizedStepTitle,
+  localizedStepTitleByKey,
+} from "$lib/plans/catalog-i18n";
 
-function step(key: string, title: string) {
-  return create(PlanStepSchema, { key, title });
+function step(key: string, title: string, description = "") {
+  return create(PlanStepSchema, { key, title, description });
 }
 
 function template(
@@ -24,6 +36,24 @@ function template(
   });
 }
 
+function input(
+  key: string,
+  label: string,
+  description = "Backend description",
+): TemplateInputParameter {
+  return {
+    $typeName: "harpia.plans.v1.TemplateInputParameter",
+    key,
+    label,
+    description,
+    type: TemplateInputParameterType.TEXT,
+    required: false,
+    defaultValueJson: "",
+    optionsJson: "",
+    runtimeMappings: [],
+  } as TemplateInputParameter;
+}
+
 describe("localizedPlanName", () => {
   it("returns the localized name when the catalog key exists", () => {
     const tpl = template(
@@ -34,6 +64,34 @@ describe("localizedPlanName", () => {
       "Newsletter Semanal (LinkedIn)",
     );
     expect(localizedPlanName(tpl, "en")).toBe("Weekly Newsletter (LinkedIn)");
+  });
+
+  it("resolves candidate names by key with backend-string fallback", () => {
+    expect(
+      localizedPlanNameByKey(
+        "weekly-newsletter-linkedin",
+        "pt-BR",
+        "Weekly Newsletter",
+      ),
+    ).toBe("Newsletter Semanal (LinkedIn)");
+    expect(localizedPlanNameByKey("custom-plan", "pt-BR", "Custom")).toBe(
+      "Custom",
+    );
+  });
+
+  it("resolves plan descriptions with fallback", () => {
+    const tpl = create(PlanTemplateSchema, {
+      key: "weekly-newsletter-linkedin",
+      name: "Weekly Newsletter",
+      description: "Backend description",
+    });
+
+    expect(localizedPlanDescription(tpl, "en")).toBe(
+      "Fetch news, write a draft, adapt for LinkedIn, and publish.",
+    );
+    expect(localizedPlanDescriptionByKey("unknown", "pt-BR", "Backend")).toBe(
+      "Backend",
+    );
   });
 
   it("falls back to template.name when the key is absent", () => {
@@ -61,6 +119,27 @@ describe("localizedStepTitle", () => {
     expect(localizedStepTitle(tpl, "fetch-news", "pt-BR")).toBe(
       "Buscar Noticias",
     );
+    expect(
+      localizedStepTitleByKey(
+        "weekly-newsletter-linkedin",
+        "publish-linkedin",
+        "en",
+        "Backend Publish",
+      ),
+    ).toBe("Publish LinkedIn");
+  });
+
+  it("resolves localized step descriptions with backend fallback", () => {
+    const tpl = create(PlanTemplateSchema, {
+      key: "weekly-newsletter-linkedin",
+      name: "Weekly Newsletter",
+      steps: [step("fetch-news", "Fetch News", "Backend fetch")],
+    });
+
+    expect(localizedStepDescription(tpl, "fetch-news", "en")).toBe(
+      "Collect curated articles for the configured date range.",
+    );
+    expect(localizedStepDescription(tpl, "missing", "pt-BR")).toBe("");
   });
 
   it("falls back to template step title when the catalog key is absent", () => {
@@ -107,5 +186,23 @@ describe("localizedStepTitle", () => {
     expect(localizedStepTitle(tpl, "write-draft", "pt-BR")).toBe(
       "Escrever Rascunho",
     );
+  });
+});
+
+describe("localized input metadata", () => {
+  it("resolves flat template input labels and descriptions", () => {
+    expect(localizedInputLabel(input("source_group", "Source"), "pt-BR")).toBe(
+      "Grupo de fontes",
+    );
+    expect(
+      localizedInputDescription(input("approval_mode", "Approval"), "en"),
+    ).toBe("Whether publishing requires your approval first.");
+  });
+
+  it("falls back to backend input metadata when no key exists", () => {
+    const parameter = input("custom_field", "Custom label", "Custom help");
+
+    expect(localizedInputLabel(parameter, "pt-BR")).toBe("Custom label");
+    expect(localizedInputDescription(parameter, "pt-BR")).toBe("Custom help");
   });
 });
