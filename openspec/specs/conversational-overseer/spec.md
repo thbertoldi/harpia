@@ -25,11 +25,18 @@ The PlanConfiguration assistant SHALL emit a focused conversational OverseerBind
 - **WHEN** the first agent-backed PlanStep already has an OverseerBinding
 - **THEN** the next `OVERSEER_STEP` assistant prompt focuses the next agent-backed PlanStep without an OverseerBinding in template order
 
-#### Scenario: All required overseers reach review gate
+#### Scenario: All required overseers reach policy gate
 
 - **WHEN** every agent-backed PlanStep has an OverseerBinding
+- **AND** at least one required PlanBehaviorPolicies field is unset
+- **THEN** the next assistant prompt has state `POLICIES_STEP`
+
+#### Scenario: All required overseers and policies reach review gate
+
+- **WHEN** every agent-backed PlanStep has an OverseerBinding
+- **AND** every required PlanBehaviorPolicies field is set
 - **THEN** the next assistant prompt has state `BINDING_MATRIX`
-- **AND** the existing review, policy, save, and landing flow remains the follow-on path
+- **AND** the existing review and save flow remains the follow-on path
 
 ### Requirement: Overseer prompt payload
 
@@ -127,3 +134,20 @@ The conversational OverseerBinding UI SHALL localize all user-facing copy and SH
 - **WHEN** the user selects an overseer chip
 - **THEN** the UI uses existing reduced-motion-aware motion primitives
 - **AND** no transition animates color, font, or layout dimensions
+
+### Requirement: Overseer setup remains visible after conversational creation
+
+The PlanConfiguration assistant SHALL keep OverseerBinding setup visible in the same thread after conversational refinement and SlotBinding completion.
+
+#### Scenario: Overseer prompt follows completed slot bindings in same thread
+
+- **WHEN** a plan created from conversational refinement has all required SlotBindings persisted
+- **AND** at least one agent-backed PlanStep still lacks an OverseerBinding
+- **THEN** the next assistant prompt in the same thread has state `OVERSEER_STEP`
+- **AND** it appears below the prior binding selection turn
+
+#### Scenario: Real-thread verification covers overseer transition
+
+- **WHEN** the conversational refinement implementation is verified
+- **THEN** verification includes a real thread that creates a plan, completes SlotBindings, and observes the `OVERSEER_STEP` prompt before the review gate
+
