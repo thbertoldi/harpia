@@ -10,8 +10,10 @@
   import ArtifactPreview from "$lib/components/ArtifactPreview.svelte";
   import {
     getArtifactPayload,
+    listArtifactVersions,
     saveTextArtifactVersion,
   } from "$lib/artifacts/artifacts";
+  import { deriveIterationNumber } from "$lib/artifacts/iteration";
   import { locale, translate } from "$lib/i18n";
   import {
     artifactTitle,
@@ -36,12 +38,18 @@
     tenantId,
     artifact,
     artifactLoading = false,
+    generating = false,
+    executionOrdinal = null,
   }: {
     open: boolean;
     onClose: () => void;
     tenantId: string;
     artifact: Artifact | null;
     artifactLoading?: boolean;
+    /** True while the artifact doesn't exist yet and is being produced. */
+    generating?: boolean;
+    /** Ordinal of this artifact's producing execution among repeated runs. */
+    executionOrdinal?: number | null;
   } = $props();
 
   let tab = $state<ArtifactPreviewTab>("preview");
@@ -55,6 +63,7 @@
   let editSaving = $state(false);
   let editSaved = $state(false);
   let editError = $state(false);
+  let versionCount = $state(0);
 
   // Reset transient UI state when the artifact changes.
   $effect(() => {
@@ -65,6 +74,7 @@
     editContentHash = "";
     editSaved = false;
     editError = false;
+    versionCount = 0;
   });
 
   const editable = $derived(
@@ -72,6 +82,27 @@
       artifact?.artifactTypeKey === "harpia.artifacts.v1.LinkedInPostDraft",
   );
   const tabs = $derived(editable ? editableTabs : defaultTabs);
+
+  // Content-revision signal for the iteration badge (spec: artifact-preview-panel).
+  $effect(() => {
+    if (!artifact || !tenantId) return;
+    const artifactId = artifact.id;
+    void reloadKey;
+    const controller = new AbortController();
+    void (async () => {
+      try {
+        const versions = await listArtifactVersions(tenantId, artifactId);
+        if (!controller.signal.aborted) versionCount = versions.length;
+      } catch {
+        // best-effort; the badge simply falls back to the execution ordinal
+      }
+    })();
+    return () => controller.abort();
+  });
+
+  const iterationNumber = $derived(
+    artifact ? deriveIterationNumber(versionCount, executionOrdinal) : null,
+  );
 
   $effect(() => {
     if (!artifact || !editable || !tenantId) return;
@@ -160,11 +191,28 @@
         <Icon class="size-4" />
       </span>
       <div class="min-w-0 flex-1">
-        <h2 class="truncate font-heading text-[13px] font-semibold text-cream">
-          {artifact
-            ? artifactTitle(artifact)
-            : translate("artifactPreview.loading", $locale)}
-        </h2>
+        <div class="flex items-center gap-1.5">
+          <h2
+            class="truncate font-heading text-[13px] font-semibold text-cream"
+          >
+            {#if artifact}
+              {artifactTitle(artifact)}
+            {:else if generating}
+              {translate("artifacts.status.generating", $locale)}
+            {:else}
+              {translate("artifactPreview.loading", $locale)}
+            {/if}
+          </h2>
+          {#if iterationNumber}
+            <span
+              class="shrink-0 rounded-full bg-plumage/60 px-1.5 py-px text-[10px] font-medium text-crown-ash tabular-nums"
+            >
+              {translate("artifacts.iteration.badge", $locale, {
+                n: String(iterationNumber),
+              })}
+            </span>
+          {/if}
+        </div>
         {#if artifact}
           <p class="truncate text-[10px] text-crown-ash-dark">
             {translate(artifactTypeLabelKey(artifact.artifactTypeKey), $locale)}
@@ -211,11 +259,25 @@
     <!-- Body -->
     <div class="min-h-0 flex-1 overflow-y-auto">
       {#if !artifact}
-        <div
-          class="flex h-full items-center justify-center px-4 py-10 text-[12px] text-crown-ash"
-        >
-          {translate("artifactPreview.loading", $locale)}
-        </div>
+        {#if generating}
+          <div class="flex h-full flex-col gap-3 px-4 py-6" aria-hidden="true">
+            <div class="skeleton-bar h-4 w-1/3 rounded bg-plumage/50"></div>
+            <div class="skeleton-bar h-3 w-full rounded bg-plumage/50"></div>
+            <div class="skeleton-bar h-3 w-5/6 rounded bg-plumage/50"></div>
+            <div class="skeleton-bar h-3 w-4/6 rounded bg-plumage/50"></div>
+            <div
+              class="skeleton-bar mt-3 h-3 w-full rounded bg-plumage/50"
+            ></div>
+            <div class="skeleton-bar h-3 w-3/4 rounded bg-plumage/50"></div>
+            <div class="skeleton-bar h-3 w-1/2 rounded bg-plumage/50"></div>
+          </div>
+        {:else}
+          <div
+            class="flex h-full items-center justify-center px-4 py-10 text-[12px] text-crown-ash"
+          >
+            {translate("artifactPreview.loading", $locale)}
+          </div>
+        {/if}
       {:else if tab === "preview"}
         {#key reloadKey}
           <ArtifactPreview
@@ -294,3 +356,23 @@
     </footer>
   </aside>
 {/if}
+
+<style>
+  .skeleton-bar {
+    animation: harpia-skeleton-shimmer 1.4s ease-in-out infinite;
+  }
+  @keyframes harpia-skeleton-shimmer {
+    0%,
+    100% {
+      opacity: 0.5;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton-bar {
+      animation: none;
+    }
+  }
+</style>

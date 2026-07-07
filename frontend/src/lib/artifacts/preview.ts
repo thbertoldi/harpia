@@ -140,6 +140,29 @@ export function shouldAutoOpenFinalArtifact(
   return !!finalArtifactId && finalArtifactId !== dismissedFinalArtifactId;
 }
 
+/**
+ * Early-open predicate: whether the side preview should pre-open in a
+ * generating state because the step producing the emphasized/final artifact
+ * is currently running. Yields to the existence-based open once the artifact
+ * is ready (`hasReadyFinalArtifact`), and respects the same per-execution
+ * dismissal memory the generating placeholder itself was closed under (an
+ * artifact id doesn't exist yet to key dismissal on, so this is keyed to the
+ * producing execution id instead).
+ */
+export function shouldOpenGeneratingPreview(
+  runningStepOutputTypeKey: string | null,
+  finalArtifactTypeKeys: Set<string>,
+  hasReadyFinalArtifact: boolean,
+  producingExecutionId: string | null,
+  dismissedGeneratingExecutionId: string | null,
+): boolean {
+  if (hasReadyFinalArtifact) return false;
+  if (!producingExecutionId) return false;
+  if (!runningStepOutputTypeKey) return false;
+  if (!finalArtifactTypeKeys.has(runningStepOutputTypeKey)) return false;
+  return producingExecutionId !== dismissedGeneratingExecutionId;
+}
+
 const PRIMARY_TEXT_ARTIFACT_TYPES = [
   "harpia.artifacts.v1.LinkedInPostDraft",
   "harpia.artifacts.v1.TextDraft",

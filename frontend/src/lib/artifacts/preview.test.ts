@@ -13,6 +13,7 @@ import {
   primaryPreviewArtifact,
   resolvePreviewArtifact,
   shouldAutoOpenFinalArtifact,
+  shouldOpenGeneratingPreview,
 } from "./preview";
 
 function makePreview(
@@ -224,5 +225,75 @@ describe("artifact preview state helpers", () => {
         new Set(["harpia.artifacts.v1.PublishConfirmation"]),
       ),
     ).toBe(publishConfirmation);
+  });
+});
+
+describe("shouldOpenGeneratingPreview", () => {
+  const finalTypes = new Set(["harpia.artifacts.v1.PublishConfirmation"]);
+
+  it("opens while the final artifact's producing step is running", () => {
+    expect(
+      shouldOpenGeneratingPreview(
+        "harpia.artifacts.v1.PublishConfirmation",
+        finalTypes,
+        false,
+        "exec-1",
+        null,
+      ),
+    ).toBe(true);
+  });
+
+  it("does not open for a step producing a non-final artifact type", () => {
+    expect(
+      shouldOpenGeneratingPreview(
+        "harpia.artifacts.v1.NewsList",
+        finalTypes,
+        false,
+        "exec-1",
+        null,
+      ),
+    ).toBe(false);
+  });
+
+  it("does not open when no step is currently running", () => {
+    expect(
+      shouldOpenGeneratingPreview(null, finalTypes, false, "exec-1", null),
+    ).toBe(false);
+  });
+
+  it("respects dismissal for the same producing execution", () => {
+    expect(
+      shouldOpenGeneratingPreview(
+        "harpia.artifacts.v1.PublishConfirmation",
+        finalTypes,
+        false,
+        "exec-1",
+        "exec-1",
+      ),
+    ).toBe(false);
+  });
+
+  it("re-opens for a different (repeated) execution despite a prior dismissal", () => {
+    expect(
+      shouldOpenGeneratingPreview(
+        "harpia.artifacts.v1.PublishConfirmation",
+        finalTypes,
+        false,
+        "exec-2",
+        "exec-1",
+      ),
+    ).toBe(true);
+  });
+
+  it("yields to the existence-based open once the final artifact is ready", () => {
+    expect(
+      shouldOpenGeneratingPreview(
+        "harpia.artifacts.v1.PublishConfirmation",
+        finalTypes,
+        true,
+        "exec-1",
+        null,
+      ),
+    ).toBe(false);
   });
 });

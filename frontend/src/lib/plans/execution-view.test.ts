@@ -9,9 +9,9 @@ import {
 import type { OrderedStep } from "$lib/plans/execution-view";
 
 const STEPS: OrderedStep[] = [
-  { key: "fetch", title: "Fetch" },
-  { key: "draft", title: "Draft" },
-  { key: "publish", title: "Publish" },
+  { key: "fetch", title: "Fetch", detail: "Fetching source articles" },
+  { key: "draft", title: "Draft", detail: "Writing the draft" },
+  { key: "publish", title: "Publish", detail: "Publishing to LinkedIn" },
 ];
 
 let seq = 0;
@@ -367,6 +367,44 @@ describe("buildExecutionViewModel", () => {
     expect(vm.pendingApproval?.approvalRequestId).toBe("approval-1");
     expect(vm.pendingApproval?.inputArtifactId).toBe("artifact-linkedin-draft");
     expect(vm.pendingApproval?.message).toBe(approval);
+  });
+
+  it("exposes currentStep title/detail while a step is running", () => {
+    reset();
+    const vm = buildExecutionViewModel(
+      {
+        executionId: "exec-1",
+        runNumber: 1,
+        messages: [msg("RUN_STARTED"), started("draft")],
+      },
+      STEPS,
+    );
+    expect(vm.currentStep).toEqual({
+      title: "Draft",
+      detail: "Writing the draft",
+    });
+  });
+
+  it("clears currentStep once the run completes", () => {
+    reset();
+    const vm = buildExecutionViewModel(
+      {
+        executionId: "exec-1",
+        runNumber: 1,
+        messages: [msg("RUN_STARTED"), started("draft"), msg("RUN_COMPLETED")],
+      },
+      STEPS,
+    );
+    expect(vm.currentStep).toBeNull();
+  });
+
+  it("has no currentStep before any step starts", () => {
+    reset();
+    const vm = buildExecutionViewModel(
+      { executionId: "exec-1", runNumber: 1, messages: [] },
+      STEPS,
+    );
+    expect(vm.currentStep).toBeNull();
   });
 
   it("clears pending approval state after a decision", () => {

@@ -7,10 +7,18 @@
     tenantId,
     artifacts,
     onOpenArtifact,
+    activeArtifactId = null,
+    generatingArtifactId = null,
+    iterationNumberFor,
   }: {
     tenantId: string;
     artifacts: Artifact[];
     onOpenArtifact?: (artifactId: string) => void;
+    /** Id of the artifact currently shown in the preview panel, if open. */
+    activeArtifactId?: string | null;
+    /** Id of the artifact currently being produced by a running step. */
+    generatingArtifactId?: string | null;
+    iterationNumberFor?: (artifact: Artifact) => number | null;
   } = $props();
 </script>
 
@@ -35,7 +43,15 @@
   {:else}
     <div class="flex flex-col gap-2">
       {#each artifacts as artifact (artifact.id)}
-        <ArtifactCard {tenantId} {artifact} compact onOpen={onOpenArtifact} />
+        <ArtifactCard
+          {tenantId}
+          {artifact}
+          compact
+          active={artifact.id === activeArtifactId}
+          generating={artifact.id === generatingArtifactId}
+          iterationNumber={iterationNumberFor?.(artifact) ?? null}
+          onOpen={onOpenArtifact}
+        />
       {/each}
     </div>
   {/if}

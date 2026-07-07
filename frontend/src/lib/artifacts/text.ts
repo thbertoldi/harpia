@@ -62,6 +62,27 @@ export function artifactStatusLabelKey(status: ArtifactStatus): string {
   }
 }
 
+/**
+ * Status label key for an ArtifactCard: "generating" takes priority over the
+ * artifact's own persisted status while a step is actively producing it.
+ */
+export function artifactCardStatusLabelKey(
+  status: ArtifactStatus,
+  generating: boolean,
+): string {
+  return generating
+    ? "artifacts.status.generating"
+    : artifactStatusLabelKey(status);
+}
+
+/**
+ * Open-action i18n key for an ArtifactCard: the currently active (open in the
+ * panel) card reads "Open"; every other card reads "Preview".
+ */
+export function artifactCardOpenActionKey(active: boolean): string {
+  return active ? "artifacts.actions.open" : "artifacts.actions.preview";
+}
+
 export function artifactStatusLabel(status: ArtifactStatus): string {
   switch (status) {
     case ArtifactStatus.GENERATED:

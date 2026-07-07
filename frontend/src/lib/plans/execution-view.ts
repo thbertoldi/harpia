@@ -7,11 +7,13 @@ export type ExecutionState = "idle" | "running" | "completed" | "failed";
 export interface OrderedStep {
   key: string;
   title: string;
+  detail?: string;
 }
 
 export interface ExecutionStepView {
   key: string;
   title: string;
+  detail?: string;
   status: StepStatus;
   outputArtifactId: string | null;
 }
@@ -35,6 +37,8 @@ export interface ExecutionViewModel {
   progress: number;
   runningStep: ExecutionStepView | null;
   failedStep: ExecutionStepView | null;
+  /** Running step's title/detail, for the collapsed header; null once settled. */
+  currentStep: { title: string; detail: string } | null;
   /** True when the ordered step list is empty (summary-only rendering). */
   degraded: boolean;
   messages: ChatMessage[];
@@ -136,6 +140,7 @@ export function buildExecutionViewModel(
   const steps: ExecutionStepView[] = orderedSteps.map((s) => ({
     key: s.key,
     title: s.title,
+    detail: s.detail,
     status: "pending",
     outputArtifactId: null,
   }));
@@ -242,6 +247,10 @@ export function buildExecutionViewModel(
     approvals.find((approval) => approval.status === "pending") ?? null;
   const runningFrac = runningStep ? 0.5 : 0;
   const progress = total > 0 ? (doneCount + runningFrac) / total : 0;
+  const currentStep =
+    state === "running" && runningStep
+      ? { title: runningStep.title, detail: runningStep.detail ?? "" }
+      : null;
 
   return {
     executionId: group.executionId,
@@ -253,6 +262,7 @@ export function buildExecutionViewModel(
     progress,
     runningStep,
     failedStep,
+    currentStep,
     degraded: total === 0,
     messages: ordered,
     approvals,

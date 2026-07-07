@@ -8,7 +8,9 @@
     primaryPreviewArtifact,
     resolvePreviewArtifact,
     shouldAutoOpenFinalArtifact,
+    shouldOpenGeneratingPreview,
   } from "$lib/artifacts/preview";
+  import { executionProducingOrdinal } from "$lib/artifacts/iteration";
   import { getTenant } from "$lib/auth";
   import { locale, translate } from "$lib/i18n";
   import {
@@ -43,6 +45,7 @@
   import { buildPlanSummary } from "$lib/plans/config-summary";
   import {
     localizedPlanName,
+    localizedStepDescription,
     localizedStepTitle,
   } from "$lib/plans/catalog-i18n";
   import { planClient, threadClient } from "$lib/rpc";
@@ -159,6 +162,10 @@
   // Dismissal memory scoped ONLY to the final-artifact auto-open flow below —
   // never touched by manually opening/closing an unrelated artifact.
   let previewDismissedFinalArtifactId = $state<string | null>(null);
+  // Dismissal memory for the early generating-state open. Keyed by execution
+  // id (not artifact id) because no artifact exists yet at that point; also
+  // suppresses the on-arrival open for the same execution's final artifact.
+  let previewDismissedGeneratingExecutionId = $state<string | null>(null);
 
   const finalArtifactTypeKeySet = $derived(
     focusedTemplate
@@ -209,21 +216,39 @@
       previewArtifact.id === finalArtifact.id
     ) {
       previewDismissedFinalArtifactId = finalArtifact.id;
+    } else if (previewGenerating && mostRecentExecutionId) {
+      previewDismissedGeneratingExecutionId = mostRecentExecutionId;
     }
     previewOpen = false;
     previewArtifactLoading = false;
   }
 
   // Re-open the panel automatically when a new final artifact appears (e.g. a
-  // fresh run completes). Stays dismissed for the artifact the user closed.
+  // fresh run completes). Stays dismissed for the artifact the user closed,
+  // and also for one dismissed earlier while it was still generating.
   $effect(() => {
     const artifactId = finalArtifact?.id ?? null;
+    const producingExecutionId = finalArtifact?.planExecutionId || null;
+    const dismissedWhileGenerating =
+      !!producingExecutionId &&
+      producingExecutionId === previewDismissedGeneratingExecutionId;
     if (
+      !dismissedWhileGenerating &&
       shouldAutoOpenFinalArtifact(artifactId, previewDismissedFinalArtifactId)
     ) {
       activeArtifactId = artifactId;
       previewFallbackArtifact = null;
       previewArtifactLoading = false;
+      previewOpen = true;
+    }
+  });
+
+  // Early-open: pre-open the panel in a generating state the instant the step
+  // producing the emphasized/final artifact starts running, before the
+  // artifact exists (spec: artifact-side-preview). Swaps to the ready
+  // artifact via the effect above once it arrives.
+  $effect(() => {
+    if (producingFinalArtifact) {
       previewOpen = true;
     }
   });
@@ -350,6 +375,7 @@
     previewFallbackArtifact = null;
     previewArtifactLoading = false;
     previewDismissedFinalArtifactId = null;
+    previewDismissedGeneratingExecutionId = null;
   }
 
   function selectConfiguration(configurationId: string) {
@@ -595,6 +621,7 @@
       ? focusedTemplate.steps.map((s) => ({
           key: s.key,
           title: localizedStepTitle(focusedTemplate, s.key, $locale),
+          detail: localizedStepDescription(focusedTemplate, s.key, $locale),
         }))
       : [],
   );
@@ -618,6 +645,64 @@
       if (s.kind === "execution") return s.group.executionId;
     }
     return null;
+  });
+
+  // Drives the early generating-state open (spec: artifact-side-preview) and
+  // the generating affordance on the producing step's row (spec:
+  // artifact-preview-panel). Scoped to the most recent execution only — an
+  // older, already-settled execution never has a running step.
+  const focusedExecutionViewModel = $derived(
+    executionViewModels.find(
+      (vm) => vm.executionId === mostRecentExecutionId,
+    ) ?? null,
+  );
+  const runningStepOutputTypeKey = $derived.by(() => {
+    const runningKey = focusedExecutionViewModel?.runningStep?.key;
+    if (!runningKey || !focusedTemplate) return null;
+    return (
+      focusedTemplate.steps.find((s) => s.key === runningKey)
+        ?.outputArtifactTypeId ?? null
+    );
+  });
+  const producingFinalArtifact = $derived(
+    shouldOpenGeneratingPreview(
+      runningStepOutputTypeKey,
+      finalArtifactTypeKeySet,
+      !!finalArtifact,
+      mostRecentExecutionId,
+      previewDismissedGeneratingExecutionId,
+    ),
+  );
+  const previewGenerating = $derived(
+    producingFinalArtifact && !previewArtifact,
+  );
+  // The specific step (of the most recent execution) currently producing the
+  // emphasized final artifact, so its PlanExecutionCard row can show the
+  // generating affordance instead of the generic "running" chip.
+  const generatingStepKey = $derived(
+    producingFinalArtifact
+      ? (focusedExecutionViewModel?.runningStep?.key ?? null)
+      : null,
+  );
+  // Artifact rows only exist once fully generated (no partial/pending row),
+  // so no already-rendered ArtifactCard can ever be the one "currently
+  // generating" — kept for interface symmetry with activeArtifactId, and in
+  // case a future artifact type introduces an in-place regeneration flow.
+  const generatingArtifactId = $derived<string | null>(null);
+
+  // Resolves the iteration/version signal (spec: artifact-preview-panel) for
+  // a given artifact: the ordinal of its producing execution among repeated
+  // runs of this configuration that produced the same artifact type.
+  const iterationNumberFor = $derived.by(() => {
+    const template = focusedTemplate;
+    const vms = executionViewModels;
+    return (artifact: Artifact): number | null => {
+      const stepKey = template?.steps.find(
+        (s) => s.outputArtifactTypeId === artifact.artifactTypeKey,
+      )?.key;
+      if (!stepKey) return null;
+      return executionProducingOrdinal(vms, stepKey, artifact.planExecutionId);
+    };
   });
   const planScopeMessages = $derived(
     sections.flatMap((section) =>
@@ -935,6 +1020,9 @@
             {existingConfigurationFor}
             {stepTitleFor}
             onApprovalDecided={() => void invalidateAll()}
+            activeArtifactId={previewOpen ? activeArtifactId : null}
+            {generatingArtifactId}
+            {iterationNumberFor}
           />
         {/if}
 
@@ -946,6 +1034,10 @@
                   {vm}
                   initiallyCollapsed
                   {tenantId}
+                  activeArtifactId={previewOpen ? activeArtifactId : null}
+                  generatingStepKey={vm.executionId === mostRecentExecutionId
+                    ? generatingStepKey
+                    : null}
                   onOpenArtifact={openArtifact}
                   onApprovalDecided={() => void invalidateAll()}
                 />
@@ -965,6 +1057,10 @@
         open={previewOpen}
         artifact={previewArtifact}
         artifactLoading={previewArtifactLoading}
+        generating={previewGenerating}
+        executionOrdinal={previewArtifact
+          ? iterationNumberFor(previewArtifact)
+          : null}
         {tenantId}
         onClose={closePreview}
       />

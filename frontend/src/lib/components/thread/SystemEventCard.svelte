@@ -29,6 +29,11 @@
      * STEP_BOUND events render the step's title instead of its id.
      */
     stepTitleFor?: StepTitleResolver;
+    /** Id of the artifact currently shown in the preview panel, if open. */
+    activeArtifactId?: string | null;
+    /** Id of the artifact currently being produced by a running step. */
+    generatingArtifactId?: string | null;
+    iterationNumberFor?: (artifact: Artifact) => number | null;
   }
   let {
     message,
@@ -36,6 +41,9 @@
     artifacts = [],
     onOpenArtifact,
     stepTitleFor = (key: string) => key,
+    activeArtifactId = null,
+    generatingArtifactId = null,
+    iterationNumberFor,
   }: Props = $props();
 
   const outputArtifactId = $derived(
@@ -84,6 +92,9 @@
       {tenantId}
       artifact={resolvedArtifact}
       compact
+      active={resolvedArtifact.id === activeArtifactId}
+      generating={resolvedArtifact.id === generatingArtifactId}
+      iterationNumber={iterationNumberFor?.(resolvedArtifact) ?? null}
       onOpen={onOpenArtifact}
     />
   </div>

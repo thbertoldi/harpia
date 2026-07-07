@@ -29,6 +29,11 @@
      * trigger a data refresh on the chat page.
      */
     onApprovalDecided,
+    /** Id of the artifact currently shown in the preview panel, if open. */
+    activeArtifactId = null,
+    /** Id of the artifact currently being produced by a running step. */
+    generatingArtifactId = null,
+    iterationNumberFor,
   }: {
     tenantId: string;
     configurationId: string;
@@ -40,6 +45,9 @@
     ) => PlanConfiguration | undefined;
     stepTitleFor?: StepTitleResolver;
     onApprovalDecided?: () => void;
+    activeArtifactId?: string | null;
+    generatingArtifactId?: string | null;
+    iterationNumberFor?: (artifact: Artifact) => number | null;
   } = $props();
 
   function isSelectionAnswerFor(
@@ -85,6 +93,9 @@
           existingConfiguration={existingConfigurationFor?.(message)}
           {stepTitleFor}
           {onApprovalDecided}
+          {activeArtifactId}
+          {generatingArtifactId}
+          {iterationNumberFor}
         />
       {/each}
     </div>

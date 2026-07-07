@@ -7,6 +7,7 @@
     Eye,
   } from "lucide-svelte";
   import { locale, translate } from "$lib/i18n";
+  import { artifactCardOpenActionKey } from "$lib/artifacts/text";
   import type {
     ExecutionViewModel,
     ExecutionStepView,
@@ -19,6 +20,14 @@
     tenantId?: string;
     onOpenArtifact?: (artifactId: string) => void;
     onApprovalDecided?: () => void;
+    /** Id of the artifact currently shown in the preview panel, if open. */
+    activeArtifactId?: string | null;
+    /**
+     * Key of the step (within this execution) currently producing the
+     * emphasized final artifact, distinguishing it from other steps that
+     * happen to be running concurrently.
+     */
+    generatingStepKey?: string | null;
   }
   let {
     vm,
@@ -26,6 +35,8 @@
     tenantId = "",
     onOpenArtifact,
     onApprovalDecided,
+    activeArtifactId = null,
+    generatingStepKey = null,
   }: Props = $props();
 
   // svelte-ignore state_referenced_locally
@@ -156,6 +167,12 @@
     />
   </button>
 
+  {#if vm.state === "running" && vm.currentStep?.detail}
+    <p class="mt-0.5 truncate pl-6 text-[10px] text-crown-ash-dark">
+      {vm.currentStep.detail}
+    </p>
+  {/if}
+
   {#if vm.total > 0}
     <div class="mt-1 h-0.5 w-full overflow-hidden rounded-full bg-plumage/50">
       <div
@@ -212,18 +229,29 @@
           >
             {step.title}
           </span>
-          {#if step.status === "running"}
+          {#if step.status === "running" && step.key === generatingStepKey}
+            <span
+              class="ml-auto flex shrink-0 items-center gap-1 self-center text-[9px] font-semibold tracking-wide text-energy uppercase"
+            >
+              <Loader2 class="size-3 animate-spin" />
+              {translate("artifacts.status.generating", $locale)}
+            </span>
+          {:else if step.status === "running"}
             <span
               class="ml-auto shrink-0 animate-pulse self-center rounded-full bg-energy/15 px-1 py-px text-[9px] font-semibold tracking-wide text-energy uppercase"
             >
               {translate("thread.execution.runningChip", $locale)}
             </span>
           {:else if step.outputArtifactId && onOpenArtifact}
+            {@const active = step.outputArtifactId === activeArtifactId}
             <button
               type="button"
-              class="ml-auto inline-flex size-7 shrink-0 items-center justify-center rounded-md border border-plumage text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
-              aria-label={translate("artifacts.actions.open", $locale)}
-              title={translate("artifacts.actions.open", $locale)}
+              class="ml-auto inline-flex size-7 shrink-0 items-center justify-center rounded-md border transition-colors
+                {active
+                ? 'border-talon-gold text-talon-gold'
+                : 'border-plumage text-crown-ash hover:border-talon-gold hover:text-talon-gold'}"
+              aria-label={translate(artifactCardOpenActionKey(active), $locale)}
+              title={translate(artifactCardOpenActionKey(active), $locale)}
               onclick={() => onOpenArtifact(step.outputArtifactId!)}
             >
               <Eye class="size-3.5" />

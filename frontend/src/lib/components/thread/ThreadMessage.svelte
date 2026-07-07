@@ -46,6 +46,11 @@
      * uses this to invalidate load data so downstream surfaces refresh.
      */
     onApprovalDecided?: () => void;
+    /** Id of the artifact currently shown in the preview panel, if open. */
+    activeArtifactId?: string | null;
+    /** Id of the artifact currently being produced by a running step. */
+    generatingArtifactId?: string | null;
+    iterationNumberFor?: (artifact: Artifact) => number | null;
   }
   let {
     message,
@@ -59,6 +64,9 @@
     stepTitleFor,
     messages = [],
     onApprovalDecided,
+    activeArtifactId = null,
+    generatingArtifactId = null,
+    iterationNumberFor,
   }: Props = $props();
 
   const promptState = $derived(
@@ -169,5 +177,8 @@
     {artifacts}
     {onOpenArtifact}
     {stepTitleFor}
+    {activeArtifactId}
+    {generatingArtifactId}
+    {iterationNumberFor}
   />
 {/if}
