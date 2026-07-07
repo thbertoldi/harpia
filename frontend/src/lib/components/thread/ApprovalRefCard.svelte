@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { ShieldCheck, ShieldX, ShieldQuestion } from "lucide-svelte";
+  import { Eye, ShieldCheck, ShieldX, ShieldQuestion } from "lucide-svelte";
   import { fade } from "svelte/transition";
   import type { ChatMessage } from "$lib/chat/types";
   import { locale, translate } from "$lib/i18n";
   import { formatRelativeTime } from "$lib/i18n/format";
-  import { respondToApprovalRequest } from "$lib/plans/approvals";
+  import { loadApproval, respondToApprovalRequest } from "$lib/plans/approvals";
   import { toUserMessage } from "$lib/connect-errors";
   import { chipFlash } from "$lib/motion/transitions";
 
@@ -18,9 +18,19 @@
      * to its terminal state instead of re-showing the action buttons.
      */
     messages?: ChatMessage[];
+    inputArtifactId?: string;
+    onOpenArtifact?: (artifactId: string) => void;
+    onDecided?: () => void;
   }
 
-  let { message, tenantId = "", messages = [] }: Props = $props();
+  let {
+    message,
+    tenantId = "",
+    messages = [],
+    inputArtifactId = "",
+    onOpenArtifact,
+    onDecided,
+  }: Props = $props();
 
   const isDecidedMessage = $derived(message.kind === "APPROVAL_DECIDED");
 
@@ -32,6 +42,8 @@
   const parsed = $derived.by<{
     approvalRequestId: string;
     approved: boolean | null;
+    inputArtifactId: string;
+    planStepKey: string;
   } | null>(() => {
     try {
       const raw = JSON.parse(message.payloadJson);
@@ -41,7 +53,16 @@
           : "";
       if (!id) return null;
       const approved = typeof raw.approved === "boolean" ? raw.approved : null;
-      return { approvalRequestId: id, approved };
+      return {
+        approvalRequestId: id,
+        approved,
+        inputArtifactId:
+          typeof raw.input_artifact_id === "string"
+            ? raw.input_artifact_id
+            : "",
+        planStepKey:
+          typeof raw.plan_step_key === "string" ? raw.plan_step_key : "",
+      };
     } catch {
       return null;
     }
@@ -74,6 +95,29 @@
   let rejectMode = $state(false);
   let rejectReason = $state("");
   let errorMessage = $state<string | null>(null);
+  let loadedInputArtifactId = $state("");
+
+  const effectiveInputArtifactId = $derived(
+    inputArtifactId || parsed?.inputArtifactId || loadedInputArtifactId,
+  );
+
+  $effect(() => {
+    if (!tenantId || !parsed?.approvalRequestId || effectiveInputArtifactId) {
+      return;
+    }
+    const controller = new AbortController();
+    void (async () => {
+      try {
+        const approval = await loadApproval(tenantId, parsed.approvalRequestId);
+        if (!controller.signal.aborted) {
+          loadedInputArtifactId = approval.inputArtifactId;
+        }
+      } catch {
+        // The approve/reject controls still work with only approval_request_id.
+      }
+    })();
+    return () => controller.abort();
+  });
 
   // Effective terminal decision, if any: a real APPROVAL_DECIDED payload
   // wins, then a streamed later message, then the local optimistic state.
@@ -133,6 +177,7 @@
       );
       localDecision = approved ? "approved" : "rejected";
       rejectMode = false;
+      onDecided?.();
     } catch (err) {
       errorMessage = toUserMessage(err);
     } finally {
@@ -161,6 +206,18 @@
 
   {#if isActionable}
     <div class="mt-3 flex flex-wrap items-center gap-2">
+      {#if effectiveInputArtifactId && onOpenArtifact}
+        <button
+          type="button"
+          onclick={() => onOpenArtifact(effectiveInputArtifactId)}
+          class="cursor-pointer rounded-md border border-plumage bg-transparent px-3 py-2 text-[12px] font-medium text-crown-ash hover:border-talon-gold hover:text-talon-gold disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <span class="inline-flex items-center gap-1.5">
+            <Eye class="size-3.5" />
+            {translate("thread.approval.previewArtifact", $locale)}
+          </span>
+        </button>
+      {/if}
       <button
         type="button"
         in:chipFlash

@@ -59,6 +59,21 @@ export async function listArtifactVersions(
   );
 }
 
+export async function getArtifactPayload(
+  tenantId: string,
+  artifactId: string,
+): Promise<{ payload: Record<string, unknown>; contentHash: string }> {
+  const response = await artifactClient.getArtifactPayload({
+    tenantId,
+    artifactId,
+  });
+  const text = new TextDecoder().decode(response.payloadJson);
+  return {
+    payload: JSON.parse(text) as Record<string, unknown>,
+    contentHash: response.contentHash,
+  };
+}
+
 export async function saveTextArtifactVersion(args: {
   tenantId: string;
   artifactId: string;

@@ -10,6 +10,7 @@ import {
 import {
   buildPreviewArtifactRequest,
   formatArtifactPreview,
+  primaryPreviewArtifact,
   resolvePreviewArtifact,
   shouldAutoOpenFinalArtifact,
 } from "./preview";
@@ -173,6 +174,14 @@ describe("artifact preview state helpers", () => {
     id: "artifact-old",
     artifactTypeKey: "harpia.artifacts.v1.TextDraft",
   });
+  const publishConfirmation = create(ArtifactSchema, {
+    id: "artifact-publish-confirmation",
+    artifactTypeKey: "harpia.artifacts.v1.PublishConfirmation",
+  });
+  const linkedInDraft = create(ArtifactSchema, {
+    id: "artifact-linkedin-draft",
+    artifactTypeKey: "harpia.artifacts.v1.LinkedInPostDraft",
+  });
 
   it("resolves the active artifact from current execution artifacts first", () => {
     expect(
@@ -197,5 +206,23 @@ describe("artifact preview state helpers", () => {
     expect(shouldAutoOpenFinalArtifact("artifact-next", "artifact-final")).toBe(
       true,
     );
+  });
+
+  it("prefers human-readable text drafts over publish confirmations", () => {
+    expect(
+      primaryPreviewArtifact(
+        [publishConfirmation, linkedInDraft],
+        new Set(["harpia.artifacts.v1.PublishConfirmation"]),
+      ),
+    ).toBe(linkedInDraft);
+  });
+
+  it("falls back to terminal artifacts when no text draft exists", () => {
+    expect(
+      primaryPreviewArtifact(
+        [publishConfirmation],
+        new Set(["harpia.artifacts.v1.PublishConfirmation"]),
+      ),
+    ).toBe(publishConfirmation);
   });
 });

@@ -10,11 +10,27 @@
     List,
   } from "lucide-svelte";
   import ArtifactPreview from "$lib/components/ArtifactPreview.svelte";
+  import {
+    getArtifactPayload,
+    saveTextArtifactVersion,
+  } from "$lib/artifacts/artifacts";
   import { locale, translate } from "$lib/i18n";
-  import { artifactTitle } from "$lib/artifacts/text";
+  import { artifactTitle, editableTextFromPayload } from "$lib/artifacts/text";
   import type { FormattedArtifactPreview } from "$lib/artifacts/preview";
   import type { Artifact } from "$lib/gen/harpia/artifacts/v1/artifacts_pb";
   import { fade } from "svelte/transition";
+
+  type ArtifactPreviewTab = "preview" | "code" | "edit";
+
+  const defaultTabs = [
+    "preview",
+    "code",
+  ] satisfies readonly ArtifactPreviewTab[];
+  const editableTabs = [
+    "preview",
+    "code",
+    "edit",
+  ] satisfies readonly ArtifactPreviewTab[];
 
   let {
     open,
@@ -30,17 +46,62 @@
     artifactLoading?: boolean;
   } = $props();
 
-  let tab = $state<"preview" | "code">("preview");
+  let tab = $state<ArtifactPreviewTab>("preview");
   let copied = $state(false);
   let reloadKey = $state(0);
   let preview = $state<FormattedArtifactPreview | null>(null);
   let loading = $state(false);
+  let editTitle = $state("");
+  let editText = $state("");
+  let editContentHash = $state("");
+  let editLoading = $state(false);
+  let editSaving = $state(false);
+  let editSaved = $state(false);
+  let editError = $state(false);
 
   // Reset transient UI state when the artifact changes.
   $effect(() => {
     void artifact?.id;
     tab = "preview";
     copied = false;
+    editTitle = "";
+    editText = "";
+    editContentHash = "";
+    editSaved = false;
+    editError = false;
+  });
+
+  const editable = $derived(
+    artifact?.artifactTypeKey === "harpia.artifacts.v1.TextDraft" ||
+      artifact?.artifactTypeKey === "harpia.artifacts.v1.LinkedInPostDraft",
+  );
+  const tabs = $derived(editable ? editableTabs : defaultTabs);
+
+  $effect(() => {
+    if (!artifact || !editable || !tenantId) return;
+    const artifactId = artifact.id;
+    const artifactTypeKey = artifact.artifactTypeKey;
+    const controller = new AbortController();
+    editLoading = true;
+    editError = false;
+    void (async () => {
+      try {
+        const { payload, contentHash } = await getArtifactPayload(
+          tenantId,
+          artifactId,
+        );
+        if (controller.signal.aborted) return;
+        const projection = editableTextFromPayload(artifactTypeKey, payload);
+        editTitle = projection.title;
+        editText = projection.text;
+        editContentHash = contentHash;
+      } catch {
+        if (!controller.signal.aborted) editError = true;
+      } finally {
+        if (!controller.signal.aborted) editLoading = false;
+      }
+    })();
+    return () => controller.abort();
   });
 
   const source = $derived(
@@ -84,6 +145,30 @@
       /* clipboard unavailable */
     }
   }
+
+  async function saveEditedText() {
+    if (!artifact || !editContentHash || editSaving) return;
+    editSaving = true;
+    editSaved = false;
+    editError = false;
+    try {
+      const response = await saveTextArtifactVersion({
+        tenantId,
+        artifactId: artifact.id,
+        expectedContentHash: editContentHash,
+        title: editTitle,
+        text: editText,
+        editSummary: translate("artifactPreview.editSummary", $locale),
+      });
+      editContentHash = response.artifact?.contentHash ?? editContentHash;
+      reloadKey += 1;
+      editSaved = true;
+    } catch {
+      editError = true;
+    } finally {
+      editSaving = false;
+    }
+  }
 </script>
 
 {#if open}
@@ -123,7 +208,7 @@
       </div>
 
       <div class="flex rounded-md border border-plumage p-0.5">
-        {#each ["preview", "code"] as const as t (t)}
+        {#each tabs as t (t)}
           <button
             type="button"
             onclick={() => (tab = t)}
@@ -189,7 +274,7 @@
             bind:loading
           />
         {/key}
-      {:else}
+      {:else if tab === "code"}
         <div class="h-full overflow-auto bg-surface-deep px-4 py-3">
           {#if source}
             <pre
@@ -198,6 +283,54 @@
             <p class="text-[12px] text-crown-ash-dark">
               {translate("artifactPreview.noSource", $locale)}
             </p>
+          {/if}
+        </div>
+      {:else}
+        <div class="flex h-full flex-col gap-3 bg-surface-deep px-4 py-3">
+          {#if editLoading}
+            <p class="text-[12px] text-crown-ash">
+              {translate("artifactPreview.loading", $locale)}
+            </p>
+          {:else}
+            <label class="grid gap-1 text-[11px] text-crown-ash">
+              {translate("artifactPreview.editTitle", $locale)}
+              <input
+                class="rounded border border-plumage bg-obsidian px-3 py-2 text-[12px] text-cream outline-none focus:border-talon-gold"
+                bind:value={editTitle}
+              />
+            </label>
+            <label class="grid min-h-0 flex-1 gap-1 text-[11px] text-crown-ash">
+              {translate("artifactPreview.editText", $locale)}
+              <textarea
+                class="min-h-[18rem] flex-1 resize-none rounded border border-plumage bg-obsidian px-3 py-2 font-mono text-[12px] leading-relaxed text-cream outline-none focus:border-talon-gold"
+                bind:value={editText}
+              ></textarea>
+            </label>
+            <div class="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onclick={saveEditedText}
+                disabled={editSaving || !editContentHash}
+                class="rounded-md border border-talon-gold bg-talon-gold px-3 py-2 text-[12px] font-semibold text-on-primary hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {translate(
+                  editSaving
+                    ? "artifactPreview.saving"
+                    : "artifactPreview.save",
+                  $locale,
+                )}
+              </button>
+              {#if editSaved}
+                <span class="text-[11px] text-status-done">
+                  {translate("artifactPreview.saved", $locale)}
+                </span>
+              {/if}
+              {#if editError}
+                <span class="text-[11px] text-danger">
+                  {translate("artifactPreview.saveError", $locale)}
+                </span>
+              {/if}
+            </div>
           {/if}
         </div>
       {/if}

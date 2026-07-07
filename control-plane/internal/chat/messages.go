@@ -73,12 +73,35 @@ func BuildElicitationAnsweredPayload(elicitationID uuid.UUID, outcome string) st
 	})
 }
 
+type ApprovalRaisedContext struct {
+	PlanConfigurationID string
+	PlanExecutionID     string
+	StepExecutionID     string
+	PlanStepKey         string
+	InputArtifactID     string
+}
+
+type approvalRaisedPayload struct {
+	ApprovalRequestID   string `json:"approval_request_id"`
+	PlanConfigurationID string `json:"plan_configuration_id,omitempty"`
+	PlanExecutionID     string `json:"plan_execution_id,omitempty"`
+	StepExecutionID     string `json:"step_execution_id,omitempty"`
+	PlanStepKey         string `json:"plan_step_key,omitempty"`
+	InputArtifactID     string `json:"input_artifact_id,omitempty"`
+}
+
 // BuildApprovalRaisedPayload returns the JSON payload for an
 // APPROVAL_RAISED pointer message.
-func BuildApprovalRaisedPayload(approvalRequestID string) string {
-	return mustEncodeJSON(map[string]string{
-		"approval_request_id": approvalRequestID,
-	})
+func BuildApprovalRaisedPayload(approvalRequestID string, ctx ...ApprovalRaisedContext) string {
+	payload := approvalRaisedPayload{ApprovalRequestID: approvalRequestID}
+	if len(ctx) > 0 {
+		payload.PlanConfigurationID = strings.TrimSpace(ctx[0].PlanConfigurationID)
+		payload.PlanExecutionID = strings.TrimSpace(ctx[0].PlanExecutionID)
+		payload.StepExecutionID = strings.TrimSpace(ctx[0].StepExecutionID)
+		payload.PlanStepKey = strings.TrimSpace(ctx[0].PlanStepKey)
+		payload.InputArtifactID = strings.TrimSpace(ctx[0].InputArtifactID)
+	}
+	return mustEncodeJSON(payload)
 }
 
 // BuildApprovalDecidedPayload returns the JSON payload for an

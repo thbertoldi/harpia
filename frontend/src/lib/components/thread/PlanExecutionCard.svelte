@@ -11,13 +11,22 @@
     ExecutionViewModel,
     ExecutionStepView,
   } from "$lib/plans/execution-view";
+  import ApprovalRefCard from "./ApprovalRefCard.svelte";
 
   interface Props {
     vm: ExecutionViewModel;
     initiallyCollapsed?: boolean;
+    tenantId?: string;
     onOpenArtifact?: (artifactId: string) => void;
+    onApprovalDecided?: () => void;
   }
-  let { vm, initiallyCollapsed = false, onOpenArtifact }: Props = $props();
+  let {
+    vm,
+    initiallyCollapsed = false,
+    tenantId = "",
+    onOpenArtifact,
+    onApprovalDecided,
+  }: Props = $props();
 
   // svelte-ignore state_referenced_locally
   // Seed the initial expanded/collapsed state from the prop; the card is then
@@ -153,6 +162,19 @@
         class="h-full transition-all duration-500 ease-out"
         style={barStyle}
       ></div>
+    </div>
+  {/if}
+
+  {#if vm.pendingApproval}
+    <div class="mt-2">
+      <ApprovalRefCard
+        message={vm.pendingApproval.message}
+        {tenantId}
+        messages={vm.messages}
+        inputArtifactId={vm.pendingApproval.inputArtifactId}
+        {onOpenArtifact}
+        onDecided={onApprovalDecided}
+      />
     </div>
   {/if}
 

@@ -69,6 +69,9 @@ func EditableTextPayload(typeKey string, currentPayload []byte, title, text stri
 		if err := protojson.Unmarshal(currentPayload, &draft); err != nil {
 			return nil, fmt.Errorf("%w: %v", ErrInvalidPayload, err)
 		}
+		if strings.TrimSpace(title) != "" {
+			draft.Hook = strings.TrimSpace(title)
+		}
 		draft.Text = text
 		return protojson.Marshal(&draft)
 	default:

@@ -365,7 +365,13 @@ func (r *RuntimeRepository) CreateApprovalRequest(ctx context.Context, input wor
 				Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
 				Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_APPROVAL_RAISED,
 				Text:        "Approval required on step " + input.PlanStepKey + ".",
-				PayloadJSON: chat.BuildApprovalRaisedPayload(input.ApprovalRequestID),
+				PayloadJSON: chat.BuildApprovalRaisedPayload(input.ApprovalRequestID, chat.ApprovalRaisedContext{
+					PlanConfigurationID: configID.String(),
+					PlanExecutionID:     input.PlanExecutionID,
+					StepExecutionID:     input.StepExecutionID,
+					PlanStepKey:         input.PlanStepKey,
+					InputArtifactID:     input.InputArtifactID,
+				}),
 			})
 		}
 	}

@@ -2,6 +2,7 @@ package artifacts
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -68,6 +69,7 @@ func TestSaveTextArtifactVersionCreatesVersionAndUpdatesCurrent(t *testing.T) {
 			TenantId:            tenantID.String(),
 			ArtifactId:          artifactID.String(),
 			ExpectedContentHash: currentHash,
+			Title:               "Edited hook",
 			Text:                "Original post\n\nAdded line.",
 			EditSummary:         "Added CTA line",
 		}),
@@ -93,6 +95,9 @@ func TestSaveTextArtifactVersionCreatesVersionAndUpdatesCurrent(t *testing.T) {
 	edited := store.objects[resp.Msg.Artifact.GetStorageUri()]
 	if string(edited) == string(currentPayload) {
 		t.Fatal("stored edited payload did not change")
+	}
+	if !strings.Contains(string(edited), "Edited hook") {
+		t.Fatalf("stored edited payload = %s, want edited hook", string(edited))
 	}
 }
 

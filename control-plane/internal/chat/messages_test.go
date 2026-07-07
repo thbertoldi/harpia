@@ -49,6 +49,30 @@ func TestBuildApprovalRaisedPayload(t *testing.T) {
 	}
 }
 
+func TestBuildApprovalRaisedPayloadWithContext(t *testing.T) {
+	got := BuildApprovalRaisedPayload("abc-123", ApprovalRaisedContext{
+		PlanConfigurationID: "config-1",
+		PlanExecutionID:     "exec-1",
+		StepExecutionID:     "step-exec-1",
+		PlanStepKey:         "publish-linkedin",
+		InputArtifactID:     "artifact-linkedin-draft",
+	})
+
+	var decoded map[string]string
+	if err := json.Unmarshal([]byte(got), &decoded); err != nil {
+		t.Fatalf("payload is not valid JSON: %v", err)
+	}
+	if decoded["approval_request_id"] != "abc-123" {
+		t.Fatalf("expected approval_request_id=abc-123, got %s", decoded["approval_request_id"])
+	}
+	if decoded["plan_step_key"] != "publish-linkedin" {
+		t.Fatalf("expected plan_step_key=publish-linkedin, got %s", decoded["plan_step_key"])
+	}
+	if decoded["input_artifact_id"] != "artifact-linkedin-draft" {
+		t.Fatalf("expected input_artifact_id=artifact-linkedin-draft, got %s", decoded["input_artifact_id"])
+	}
+}
+
 func TestBuildApprovalDecidedPayload(t *testing.T) {
 	got := BuildApprovalDecidedPayload("abc-123", true)
 

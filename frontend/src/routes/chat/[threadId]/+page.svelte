@@ -5,6 +5,7 @@
   import { resolve } from "$app/paths";
   import { listArtifacts, getArtifact } from "$lib/artifacts/artifacts";
   import {
+    primaryPreviewArtifact,
     resolvePreviewArtifact,
     shouldAutoOpenFinalArtifact,
   } from "$lib/artifacts/preview";
@@ -157,12 +158,11 @@
       ? finalArtifactTypeKeys(focusedTemplate.steps, focusedTemplate.edges)
       : new Set<string>(),
   );
-  // workspaceArtifacts is sorted newest-first (see listArtifacts), so the first
-  // match is the most recent final artifact produced by the run.
+  // Prefer the human-readable generated draft over a terminal publish receipt.
+  // In the LinkedIn plan the PublishConfirmation is useful metadata, but the
+  // artifact users need to review is the LinkedInPostDraft.
   const finalArtifact = $derived(
-    workspaceArtifacts.find((artifact) =>
-      finalArtifactTypeKeySet.has(artifact.artifactTypeKey),
-    ) ?? null,
+    primaryPreviewArtifact(workspaceArtifacts, finalArtifactTypeKeySet),
   );
 
   const previewArtifact = $derived(
@@ -931,7 +931,9 @@
                 <PlanExecutionCard
                   {vm}
                   initiallyCollapsed
+                  {tenantId}
                   onOpenArtifact={openArtifact}
+                  onApprovalDecided={() => void invalidateAll()}
                 />
               </div>
             {/each}

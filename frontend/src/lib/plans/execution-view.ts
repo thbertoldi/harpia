@@ -1,3 +1,4 @@
+import type { ChatMessage } from "$lib/chat/types";
 import type { ExecutionGroup } from "$lib/plans/thread";
 
 export type StepStatus = "pending" | "running" | "done" | "failed";
@@ -15,6 +16,14 @@ export interface ExecutionStepView {
   outputArtifactId: string | null;
 }
 
+export interface ExecutionApprovalView {
+  approvalRequestId: string;
+  inputArtifactId: string;
+  planStepKey: string;
+  status: "pending" | "approved" | "rejected";
+  message: ChatMessage;
+}
+
 export interface ExecutionViewModel {
   executionId: string;
   runNumber: number;
@@ -28,6 +37,9 @@ export interface ExecutionViewModel {
   failedStep: ExecutionStepView | null;
   /** True when the ordered step list is empty (summary-only rendering). */
   degraded: boolean;
+  messages: ChatMessage[];
+  approvals: ExecutionApprovalView[];
+  pendingApproval: ExecutionApprovalView | null;
 }
 
 /**
@@ -71,6 +83,42 @@ export function parseOutputArtifactId(payloadJson: string): string | null {
   return null;
 }
 
+export function parseApprovalPayload(payloadJson: string): {
+  approvalRequestId: string;
+  approved: boolean | null;
+  inputArtifactId: string;
+  planStepKey: string;
+} | null {
+  if (!payloadJson) return null;
+  try {
+    const parsed = JSON.parse(payloadJson) as unknown;
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      "approval_request_id" in parsed
+    ) {
+      const raw = parsed as Record<string, unknown>;
+      const approvalRequestId = raw.approval_request_id;
+      if (typeof approvalRequestId !== "string" || !approvalRequestId) {
+        return null;
+      }
+      return {
+        approvalRequestId,
+        approved: typeof raw.approved === "boolean" ? raw.approved : null,
+        inputArtifactId:
+          typeof raw.input_artifact_id === "string"
+            ? raw.input_artifact_id
+            : "",
+        planStepKey:
+          typeof raw.plan_step_key === "string" ? raw.plan_step_key : "",
+      };
+    }
+  } catch {
+    // malformed payload — degrade gracefully
+  }
+  return null;
+}
+
 /**
  * Fold an execution group's message stream (already grouped by executionId via
  * buildThreadSections) into a per-step status view model. Events are processed
@@ -92,6 +140,7 @@ export function buildExecutionViewModel(
     outputArtifactId: null,
   }));
   const byKey = new Map(steps.map((s) => [s.key, s]));
+  const approvalsById = new Map<string, ExecutionApprovalView>();
   let state: ExecutionState = "idle";
   let runningKey: string | null = null;
 
@@ -153,6 +202,32 @@ export function buildExecutionViewModel(
         for (const s of steps) if (s.status === "running") s.status = "done";
         runningKey = null;
         break;
+      case "APPROVAL_RAISED": {
+        const parsed = parseApprovalPayload(m.payloadJson);
+        if (!parsed) break;
+        approvalsById.set(parsed.approvalRequestId, {
+          approvalRequestId: parsed.approvalRequestId,
+          inputArtifactId: parsed.inputArtifactId,
+          planStepKey: parsed.planStepKey,
+          status: "pending",
+          message: m,
+        });
+        break;
+      }
+      case "APPROVAL_DECIDED": {
+        const parsed = parseApprovalPayload(m.payloadJson);
+        if (!parsed) break;
+        const existing = approvalsById.get(parsed.approvalRequestId);
+        approvalsById.set(parsed.approvalRequestId, {
+          approvalRequestId: parsed.approvalRequestId,
+          inputArtifactId:
+            parsed.inputArtifactId || existing?.inputArtifactId || "",
+          planStepKey: parsed.planStepKey || existing?.planStepKey || "",
+          status: parsed.approved === false ? "rejected" : "approved",
+          message: existing?.message ?? m,
+        });
+        break;
+      }
       default:
         break;
     }
@@ -162,6 +237,9 @@ export function buildExecutionViewModel(
   const total = steps.length;
   const runningStep = steps.find((s) => s.status === "running") ?? null;
   const failedStep = steps.find((s) => s.status === "failed") ?? null;
+  const approvals = [...approvalsById.values()];
+  const pendingApproval =
+    approvals.find((approval) => approval.status === "pending") ?? null;
   const runningFrac = runningStep ? 0.5 : 0;
   const progress = total > 0 ? (doneCount + runningFrac) / total : 0;
 
@@ -176,6 +254,9 @@ export function buildExecutionViewModel(
     runningStep,
     failedStep,
     degraded: total === 0,
+    messages: ordered,
+    approvals,
+    pendingApproval,
   };
 }
 

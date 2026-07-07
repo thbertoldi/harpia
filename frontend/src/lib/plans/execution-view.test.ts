@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ChatMessage } from "$lib/chat/types";
 import {
   buildExecutionViewModel,
+  parseApprovalPayload,
   parseStepKey,
   parseOutputArtifactId,
 } from "$lib/plans/execution-view";
@@ -84,6 +85,33 @@ describe("parseOutputArtifactId", () => {
   });
   it("returns null for empty input", () => {
     expect(parseOutputArtifactId("")).toBeNull();
+  });
+});
+
+describe("parseApprovalPayload", () => {
+  it("reads approval context from an enriched APPROVAL_RAISED payload", () => {
+    expect(
+      parseApprovalPayload(
+        JSON.stringify({
+          approval_request_id: "approval-1",
+          input_artifact_id: "artifact-linkedin-draft",
+          plan_step_key: "publish-linkedin",
+        }),
+      ),
+    ).toEqual({
+      approvalRequestId: "approval-1",
+      approved: null,
+      inputArtifactId: "artifact-linkedin-draft",
+      planStepKey: "publish-linkedin",
+    });
+  });
+
+  it("reads approval decisions", () => {
+    expect(
+      parseApprovalPayload(
+        JSON.stringify({ approval_request_id: "approval-1", approved: true }),
+      )?.approved,
+    ).toBe(true);
   });
 });
 
@@ -316,5 +344,53 @@ describe("buildExecutionViewModel", () => {
     );
     expect(vm.state).toBe("running");
     expect(vm.steps[0].status).toBe("running");
+  });
+
+  it("surfaces pending approval requests with their input artifact", () => {
+    reset();
+    const approval = msg("APPROVAL_RAISED", {
+      payload: JSON.stringify({
+        approval_request_id: "approval-1",
+        input_artifact_id: "artifact-linkedin-draft",
+        plan_step_key: "publish-linkedin",
+      }),
+    });
+    const vm = buildExecutionViewModel(
+      {
+        executionId: "exec-1",
+        runNumber: 1,
+        messages: [msg("RUN_STARTED"), approval],
+      },
+      STEPS,
+    );
+
+    expect(vm.pendingApproval?.approvalRequestId).toBe("approval-1");
+    expect(vm.pendingApproval?.inputArtifactId).toBe("artifact-linkedin-draft");
+    expect(vm.pendingApproval?.message).toBe(approval);
+  });
+
+  it("clears pending approval state after a decision", () => {
+    reset();
+    const vm = buildExecutionViewModel(
+      {
+        executionId: "exec-1",
+        runNumber: 1,
+        messages: [
+          msg("APPROVAL_RAISED", {
+            payload: JSON.stringify({ approval_request_id: "approval-1" }),
+          }),
+          msg("APPROVAL_DECIDED", {
+            payload: JSON.stringify({
+              approval_request_id: "approval-1",
+              approved: true,
+            }),
+          }),
+        ],
+      },
+      STEPS,
+    );
+
+    expect(vm.pendingApproval).toBeNull();
+    expect(vm.approvals[0]?.status).toBe("approved");
   });
 });

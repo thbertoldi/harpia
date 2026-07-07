@@ -139,3 +139,25 @@ export function shouldAutoOpenFinalArtifact(
 ): boolean {
   return !!finalArtifactId && finalArtifactId !== dismissedFinalArtifactId;
 }
+
+const PRIMARY_TEXT_ARTIFACT_TYPES = [
+  "harpia.artifacts.v1.LinkedInPostDraft",
+  "harpia.artifacts.v1.TextDraft",
+];
+
+export function primaryPreviewArtifact(
+  artifacts: Artifact[],
+  finalArtifactTypeKeys: Set<string>,
+): Artifact | null {
+  for (const typeKey of PRIMARY_TEXT_ARTIFACT_TYPES) {
+    const artifact = artifacts.find(
+      (candidate) => candidate.artifactTypeKey === typeKey,
+    );
+    if (artifact) return artifact;
+  }
+  return (
+    artifacts.find((artifact) =>
+      finalArtifactTypeKeys.has(artifact.artifactTypeKey),
+    ) ?? null
+  );
+}
