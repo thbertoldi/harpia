@@ -1,5 +1,11 @@
 # ADR-014: Agent Memory Boundary
 
+> **⚠ Historical record — not the current source of truth.** The canonical description of the
+> platform is the **[Platform Constitution](../architecture/harpia-platform.md)**, which
+> supersedes ADR-001…017 as the reading order. See the
+> **[ADR supersession map](README.md)** for how this ADR stands today. Where this ADR and the
+> constitution disagree, the constitution wins.
+
 **Status:** Accepted
 **Date:** 2026-06-14
 **Deciders:** thbertoldi
