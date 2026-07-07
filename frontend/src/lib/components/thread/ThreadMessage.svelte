@@ -2,7 +2,7 @@
   import type { ChatMessage } from "$lib/chat/types";
   import type { Artifact } from "$lib/gen/harpia/artifacts/v1/artifacts_pb";
   import type { PlanConfiguration } from "$lib/gen/harpia/plans/v1/plans_pb";
-  import { locale } from "$lib/i18n";
+  import { locale, translate } from "$lib/i18n";
   import { formatRelativeTime } from "$lib/i18n/format";
   import type { StepTitleResolver } from "$lib/chat/event-text";
   import { parseAssistantPromptState } from "$lib/plans/configuration-flow";
@@ -60,6 +60,30 @@
       ? parseAssistantPromptState(message.payloadJson)
       : null,
   );
+
+  function userSelectionLabel(): string {
+    try {
+      const payload = JSON.parse(message.payloadJson || "{}") as {
+        value?: string;
+        option_id?: string;
+      };
+      if (
+        payload.value === "save_runnable" ||
+        payload.option_id === "save-runnable"
+      ) {
+        return translate("assistant.bindingMatrix.savePrimary", $locale);
+      }
+      if (
+        payload.value === "save_draft" ||
+        payload.option_id === "save-draft"
+      ) {
+        return translate("assistant.bindingMatrix.saveSecondary", $locale);
+      }
+      return message.text || payload.value || "—";
+    } catch {
+      return message.text || "—";
+    }
+  }
 </script>
 
 {#if message.kind === "USER_TEXT"}
@@ -77,7 +101,7 @@
     id={`m-${message.id}`}
     class="max-w-[85%] self-end rounded-2xl rounded-tr-sm border border-talon-gold/40 bg-talon-gold/10 px-3 py-1.5 text-[11px] font-medium text-cream"
   >
-    {message.text || JSON.parse(message.payloadJson || "{}").value || "—"}
+    {userSelectionLabel()}
   </div>
 {:else if message.kind === "PLAN_PROPOSED"}
   <PlanProposalCard

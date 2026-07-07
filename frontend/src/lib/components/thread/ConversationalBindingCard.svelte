@@ -210,22 +210,12 @@
             ),
           })}
         </p>
-        <div
-          class="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-crown-ash"
-        >
-          <span
-            class="rounded border border-plumage bg-surface-hover px-2 py-1 font-mono text-[10px] text-crown-ash"
-          >
-            {focusedRow.contracts.input || "—"} → {focusedRow.contracts
-              .output || "—"}
-          </span>
-          <span>
-            {translate("assistant.bindingStep.progress", $locale, {
-              bound: boundCount,
-              total: totalCount,
-            })}
-          </span>
-        </div>
+        <p class="mt-2 text-[11px] text-crown-ash">
+          {translate("assistant.bindingStep.progress", $locale, {
+            bound: boundCount,
+            total: totalCount,
+          })}
+        </p>
       </div>
       {#if isAnswered && !isLive}
         <button
@@ -310,10 +300,6 @@
                   <td class="py-2 pr-3 align-top">
                     <p class="text-[12px] font-medium text-cream">
                       {stepLabel(row.step_key, row.step_title)}
-                    </p>
-                    <p class="mt-0.5 font-mono text-[10px] text-crown-ash-dark">
-                      {row.contracts.input || "—"} → {row.contracts.output ||
-                        "—"}
                     </p>
                   </td>
                   <td class="py-2 pr-3 align-top">

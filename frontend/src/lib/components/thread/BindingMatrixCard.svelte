@@ -1,14 +1,8 @@
 <script lang="ts">
-  import { Pencil } from "lucide-svelte";
   import { fade } from "svelte/transition";
   import type { ChatMessage } from "$lib/chat/types";
-  import { getSession } from "$lib/auth";
   import { locale, translate } from "$lib/i18n";
   import { applyLinkedInSuggestion, editBinding } from "$lib/plans/assistant";
-  import {
-    localizedOverseerLabel,
-    overseerAvatarInitial,
-  } from "$lib/plans/overseer-label";
   import {
     buildDefaultLinkedInInputValues,
     linkedInInputValuesFromParameterValuesJson,
@@ -44,8 +38,8 @@
   }
   let { message, configurationId, tenantId }: Props = $props();
 
-  // The matrix payload is the visible source of truth for rows, options,
-  // contracts and current bindings. We seed it once from the (immutable)
+  // The matrix payload is the visible source of truth for rows, options and
+  // current bindings. We seed it once from the (immutable)
   // message, then mutate `current_executor_id` locally for instant feedback
   // while the server is updated via editBinding.
   function parseMatrixPayloadSafe(json: string): MatrixPayload | null {
@@ -117,34 +111,6 @@
   let inputValues = $state<LinkedInTemplateInputValues>(
     buildDefaultLinkedInInputValues(),
   );
-
-  function optionLabel(row: MatrixRow): string {
-    const opt = row.options.find((o) => o.id === row.current_executor_id);
-    return opt?.label ?? "";
-  }
-  function optionSublabel(row: MatrixRow): string {
-    const opt = row.options.find((o) => o.id === row.current_executor_id);
-    return opt?.sublabel ?? "";
-  }
-
-  // Overseers are stored as raw subject ids; never render the id directly.
-  // The current user is identified by session `sub` equality (never by
-  // string-matching a label) and localized to "You"/"Eu"; anyone else falls
-  // back to a localized generic label.
-  const sessionUserSub = $derived(getSession()?.user.sub);
-
-  function overseerDisplay(row: MatrixRow): string {
-    if (!row.current_overseer_id) {
-      // Unbound agent step: the MVP only supports self-assignment, so the
-      // current user is the implied default — show their localized label.
-      return sessionUserSub ? translate("assistant.overseer.you", $locale) : "";
-    }
-    return localizedOverseerLabel(
-      row.current_overseer_id,
-      sessionUserSub,
-      $locale,
-    );
-  }
 
   function stepTitle(row: MatrixRow): string {
     return localizedStepTitleByKey(
@@ -487,7 +453,7 @@
         {@const bound = row.current_executor_id !== ""}
         <div
           in:cardLift
-          class="grid grid-cols-[20px_1fr_240px_120px] items-center gap-3.5 border-b border-obsidian-light px-5 py-3.5 hover:bg-surface-hover"
+          class="grid grid-cols-[20px_minmax(0,1fr)] items-center gap-3.5 border-b border-obsidian-light px-5 py-3.5 hover:bg-surface-hover md:grid-cols-[20px_minmax(10rem,1fr)_minmax(14rem,260px)]"
         >
           <!-- Step number -->
           <div
@@ -498,20 +464,15 @@
             {rows.indexOf(row) + 1}
           </div>
 
-          <!-- Task name + contract -->
+          <!-- Task name -->
           <div class="min-w-0">
             <p class="truncate text-[13px] font-medium text-cream">
               {stepTitle(row)}
             </p>
-            <div
-              class="mt-0.5 font-mono text-[10px] tracking-[0.02em] text-crown-ash-dark"
-            >
-              ({row.contracts.input}) → {row.contracts.output}
-            </div>
           </div>
 
           <!-- Executor picker -->
-          <div class="relative">
+          <div class="relative col-start-2 md:col-start-auto">
             <select
               value={row.current_executor_id}
               disabled={savingRowKey !== null ||
@@ -542,70 +503,9 @@
               class="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-[10px] text-crown-ash-dark"
               aria-hidden="true">▾</span
             >
-            {#if bound}
-              {@const sub = optionSublabel(row)}
-              {#if sub || optionLabel(row)}
-                <div class="mt-1 font-mono text-[10px] text-crown-ash-dark">
-                  {sub}
-                </div>
-              {/if}
-            {/if}
-          </div>
-
-          <!-- Overseer cell -->
-          <div
-            class="group flex items-center gap-1.5 text-[11px] text-crown-ash"
-          >
-            <div
-              class="flex size-[18px] items-center justify-center rounded-full border border-plumage bg-surface-pop text-[10px] font-semibold text-talon-gold"
-            >
-              {overseerAvatarInitial(overseerDisplay(row))}
-            </div>
-            <span class="truncate">{overseerDisplay(row)}</span>
-            <button
-              type="button"
-              class="ml-auto cursor-pointer text-crown-ash-dark opacity-0 transition-opacity group-hover:opacity-100 hover:text-talon-gold"
-              aria-label={translate("assistant.edit", $locale)}
-            >
-              <Pencil class="size-3" />
-            </button>
           </div>
         </div>
       {/each}
-
-      <!-- Policies footer -->
-      <div
-        class="flex flex-wrap gap-6 border-b border-plumage bg-surface-deep px-5 py-3.5"
-      >
-        <div class="flex flex-col gap-1">
-          <span
-            class="text-[10px] font-semibold tracking-[0.1em] text-crown-ash-dark uppercase"
-            >{translate("assistant.bindingMatrix.timeout", $locale)}</span
-          >
-          <span class="text-[12px] text-crown-ash">
-            {configuration?.behaviorPolicies?.elicitationTimeoutHours ?? "—"} h
-          </span>
-        </div>
-        <div class="flex flex-col gap-1">
-          <span
-            class="text-[10px] font-semibold tracking-[0.1em] text-crown-ash-dark uppercase"
-            >{translate("assistant.bindingMatrix.approval", $locale)}</span
-          >
-          <span class="text-[12px] text-crown-ash">
-            {payload.policies_set ? "✓" : "—"}
-          </span>
-        </div>
-        <div class="flex flex-col gap-1">
-          <span
-            class="text-[10px] font-semibold tracking-[0.1em] text-crown-ash-dark uppercase"
-            >{translate("assistant.bindingMatrix.schedule", $locale)}</span
-          >
-          <span class="text-[12px] text-crown-ash">
-            {configuration?.schedule?.cronExpression?.trim() ||
-              translate("assistant.bindingMatrix.manualSchedule", $locale)}
-          </span>
-        </div>
-      </div>
 
       <!-- Footer: cost + actions -->
       <div

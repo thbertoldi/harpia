@@ -728,7 +728,11 @@
   <title>{translate("thread.title", $locale)} · Harpia</title>
 </svelte:head>
 
-<div class="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-6">
+<div
+  class="mx-auto flex w-full flex-col gap-3 px-4 py-6 {previewOpen
+    ? 'max-w-[108rem]'
+    : 'max-w-7xl'}"
+>
   {#if !activeConfigurationId}
     <div class="flex flex-col gap-3">
       {#if messages.length === 0}
@@ -786,7 +790,7 @@
       />
     </div>
   {:else}
-    <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:gap-4">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:gap-5">
       <section class="flex min-w-0 flex-1 flex-col gap-3">
         {#if data.configurations.length > 1}
           <div

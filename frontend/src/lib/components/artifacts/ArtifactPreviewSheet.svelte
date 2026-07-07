@@ -183,7 +183,7 @@
   <aside
     transition:fade={{ duration: 150 }}
     class="fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-plumage bg-obsidian shadow-lg
-      lg:sticky lg:top-6 lg:right-auto lg:bottom-auto lg:z-auto lg:h-[calc(100vh-3rem)] lg:w-[52%] lg:max-w-[860px] lg:min-w-[440px] lg:rounded-md"
+      lg:sticky lg:top-6 lg:right-auto lg:bottom-auto lg:z-auto lg:h-[calc(100vh-3rem)] lg:w-[46%] lg:max-w-[980px] lg:min-w-[420px] lg:rounded-md 2xl:w-[48%]"
   >
     <!-- Header -->
     <header
