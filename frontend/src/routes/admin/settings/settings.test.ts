@@ -207,6 +207,6 @@ describe("nav sections for settings", () => {
 
   it("excludes /settings for Overseer role", () => {
     const sections = filterNavSections("Overseer");
-    expect(sections.some((s) => s.href === "/settings")).toBe(false);
+    expect(sections.some((s) => s.href === "/admin/settings")).toBe(false);
   });
 });

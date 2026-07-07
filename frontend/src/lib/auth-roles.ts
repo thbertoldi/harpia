@@ -7,6 +7,8 @@ export type HarpiaPermission =
   | "configurePlans"
   | "manageTenantSettings";
 
+type RoleBearingUser = (object & { role?: string }) | null | undefined;
+
 const ROLE_PERMISSIONS: Record<HarpiaRole, ReadonlySet<HarpiaPermission>> = {
   Leader: new Set([
     "manageIntegrations",
@@ -44,9 +46,7 @@ export function resolvePermissionRole(
 }
 
 /** Display label fallback; does not grant permissions by itself. */
-export function getUserRole(
-  user: { role?: string } | null | undefined,
-): HarpiaRole {
+export function getUserRole(user: RoleBearingUser): HarpiaRole {
   return resolvePermissionRole(user?.role) ?? "Leader";
 }
 
@@ -67,7 +67,7 @@ export function roleFromBackendRoles(
 }
 
 export function hasPermission(
-  user: { role?: string } | null | undefined,
+  user: RoleBearingUser,
   permission: HarpiaPermission,
 ): boolean {
   if (!user) {
@@ -80,39 +80,27 @@ export function hasPermission(
   return ROLE_PERMISSIONS[role].has(permission);
 }
 
-export function canManageIntegrations(
-  user: { role?: string } | null | undefined,
-): boolean {
+export function canManageIntegrations(user: RoleBearingUser): boolean {
   return hasPermission(user, "manageIntegrations");
 }
 
-export function canManageAgents(
-  user: { role?: string } | null | undefined,
-): boolean {
+export function canManageAgents(user: RoleBearingUser): boolean {
   return hasPermission(user, "manageAgents");
 }
 
-export function canViewAudit(
-  user: { role?: string } | null | undefined,
-): boolean {
+export function canViewAudit(user: RoleBearingUser): boolean {
   return hasPermission(user, "viewAudit");
 }
 
-export function canConfigurePlans(
-  user: { role?: string } | null | undefined,
-): boolean {
+export function canConfigurePlans(user: RoleBearingUser): boolean {
   return hasPermission(user, "configurePlans");
 }
 
-export function canManageTenantSettings(
-  user: { role?: string } | null | undefined,
-): boolean {
+export function canManageTenantSettings(user: RoleBearingUser): boolean {
   return hasPermission(user, "manageTenantSettings");
 }
 
 /** @deprecated Use canManageIntegrations or canManageAgents instead. */
-export function isEngineer(
-  user: { role?: string } | null | undefined,
-): boolean {
+export function isEngineer(user: RoleBearingUser): boolean {
   return resolvePermissionRole(user?.role) === "Engineer";
 }

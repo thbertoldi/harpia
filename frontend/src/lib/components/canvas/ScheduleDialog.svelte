@@ -1,11 +1,10 @@
 <script lang="ts">
+  import { create } from "@bufbuild/protobuf";
   import { X } from "lucide-svelte";
   import { planClient } from "$lib/rpc";
   import { locale, translate } from "$lib/i18n";
-  import type {
-    PlanConfiguration,
-    PlanSchedule,
-  } from "$lib/gen/harpia/plans/v1/plans_pb";
+  import type { PlanConfiguration } from "$lib/gen/harpia/plans/v1/plans_pb";
+  import { PlanScheduleSchema } from "$lib/gen/harpia/plans/v1/plans_pb";
 
   interface Props {
     open: boolean;
@@ -48,10 +47,10 @@
         slotBindings: configuration.slotBindings,
         overseerBindings: configuration.overseerBindings,
         behaviorPolicies: configuration.behaviorPolicies,
-        schedule: {
+        schedule: create(PlanScheduleSchema, {
           cronExpression: cron,
           timezone: configuration.schedule?.timezone || "UTC",
-        } satisfies PlanSchedule,
+        }),
         // Explicit user save — announce it in the thread.
         announceSaved: true,
       });
@@ -71,10 +70,16 @@
     class="fixed inset-0 z-50 flex items-center justify-center bg-obsidian/80 p-4"
   >
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="schedule-dialog-title"
       class="w-full max-w-md rounded-lg border border-plumage bg-obsidian-light p-4"
     >
       <div class="mb-3 flex items-center justify-between">
-        <h2 class="font-heading text-[14px] font-semibold text-cream">
+        <h2
+          id="schedule-dialog-title"
+          class="font-heading text-[14px] font-semibold text-cream"
+        >
           {translate("schedule.title", $locale)}
         </h2>
         <button
@@ -93,6 +98,7 @@
             <button
               type="button"
               onclick={() => (cadence = c as Cadence)}
+              aria-pressed={cadence === c}
               class="cursor-pointer rounded-md border px-2 py-1 text-[11px] {cadence ===
               c
                 ? 'border-talon-gold bg-talon-gold/10 text-talon-gold'
@@ -155,7 +161,7 @@
         {/if}
 
         {#if error}
-          <p class="text-[11px] text-red-400">{error}</p>
+          <p role="alert" class="text-[11px] text-red-400">{error}</p>
         {/if}
       </div>
 

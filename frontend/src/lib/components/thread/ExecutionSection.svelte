@@ -11,18 +11,19 @@
   }
   let { group, defaultExpanded = false }: Props = $props();
 
-  let expandedOverride = $state<boolean | undefined>(undefined);
-  const expanded = $derived(expandedOverride ?? defaultExpanded);
+  let expandedOverride = $state<{
+    defaultExpanded: boolean;
+    expanded: boolean;
+  } | null>(null);
+  const expanded = $derived(
+    expandedOverride?.defaultExpanded === defaultExpanded
+      ? expandedOverride.expanded
+      : defaultExpanded,
+  );
 
-  let lastDefaultExpanded = $state(defaultExpanded);
-
-  // Collapse sections that are no longer the most-recent run when the prop changes.
-  $effect(() => {
-    if (defaultExpanded !== lastDefaultExpanded) {
-      expandedOverride = undefined;
-      lastDefaultExpanded = defaultExpanded;
-    }
-  });
+  function toggleExpanded() {
+    expandedOverride = { defaultExpanded, expanded: !expanded };
+  }
 
   const statusKey = $derived(`thread.execution.status.${group.status}`);
   const startedAt = $derived(group.messages[0]?.createdAt ?? "");
@@ -31,7 +32,8 @@
 <section class="rounded-md border border-plumage bg-obsidian-light">
   <button
     type="button"
-    onclick={() => (expandedOverride = !expanded)}
+    onclick={toggleExpanded}
+    aria-expanded={expanded}
     class="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-[12px] hover:bg-obsidian-light/70"
   >
     {#if expanded}

@@ -75,7 +75,7 @@ export function orderPlanStepsLinear(
 
   const roots = steps.filter((step) => (incoming.get(step.key) ?? 0) === 0);
   const ordered: PlanStep[] = [];
-  let current = roots[0];
+  let current: PlanStep | undefined = roots[0];
 
   while (current) {
     ordered.push(current);

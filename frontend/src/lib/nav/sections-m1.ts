@@ -9,11 +9,11 @@ import {
 } from "lucide-svelte";
 import { hasPermission, type HarpiaPermission } from "$lib/auth-roles";
 import type { PersonaMode } from "$lib/personas/storage";
-import type { NavIcon, ResolvedNavSection } from "./types";
+import type { NavHref, NavIcon, ResolvedNavSection } from "./types";
 
 interface M1Section {
   i18nKey: string;
-  href: string;
+  href: NavHref;
   icon: NavIcon;
 }
 
