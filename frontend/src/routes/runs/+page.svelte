@@ -250,7 +250,9 @@
               {/if}
               {#if threadId}
                 <a
-                  href={resolve(chatPlanPath(threadId, configuration?.id ?? ""))}
+                  href={resolve(
+                    chatPlanPath(threadId, configuration?.id ?? ""),
+                  )}
                   class="flex cursor-pointer items-center gap-1 rounded-md border border-primary px-2.5 py-1.5 text-[11px] font-semibold text-primary transition hover:bg-primary/10"
                 >
                   <Pencil class="size-3.5" />
