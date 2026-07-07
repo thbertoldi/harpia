@@ -175,6 +175,17 @@ superseded one noted.
 | **Área** | A business area (Marketing, Sales, …). **Áreas are RBAC entities**, modeled as OpenFGA relations ([§11](#11-áreas--rbac)); memberships gate Plans, Agents, Integrations, Artifacts, and Resources. |
 | **Thread / Conversation** | The durable top-level work object the user opens, resumes, and searches. A Thread spawns **1:N** PlanConfigurations. |
 
+### Commercial & metering
+
+| Term | Definition |
+|---|---|
+| **Credit** | The end-user unit of account. Actions consume credits; a subscription grants credits per month. Credits are the *external* denomination shown to users — distinct from the *internal* money ledger. ([§14](#14-commercial-model--credits-subscriptions--budget)) |
+| **Credit rate** | The credit↔money conversion used to price and reconcile. A pricing lever, not a fixed function of measured cost; snapshotted into each PlanExecution at charge time. |
+| **CreditWallet** | A tenant's credit balance (granted allotment + top-ups − debits), the source of truth for "can this run be afforded." |
+| **SubscriptionTier** | A commercial plan = **entitlements** (which ExecutorSKUs are unlocked) **+ a monthly credit allotment**. Two independent dimensions. |
+| **PriceBook** | The mapping ExecutorSKU/step → **credit price** used to estimate and debit. Distinct from the internal `Money` cost. |
+| **Budget Policy / cost ledger** | The *internal*, money-denominated accounting (per-provider, per-LLM-invocation): `Money(amount_micros)`, reserve/record/release, `cost_budget` ceiling. The credit layer sits on top of it; both are kept. |
+
 ### UI vocabulary (synonyms layered over the domain, not renames)
 
 **Conversation** = Thread. **Gallery** = the PlanTemplate catalog browser. **Runs** = the
@@ -199,8 +210,10 @@ Canonical set — **six bounded contexts** (this resolves the ADR-010 vs ADR-012
 | **Workflow Engine** | workflow, activity, signal, timer, retry, schedule | Temporal SDK | Temporal workers |
 
 Supporting commercial context: **Executor Catalog / Marketplace** (`harpia.executors.v1`)
-— ExecutorSKU/Entitlement/Installation. Plan Management *queries* it when validating slot
-bindings; it is not folded into Plan Management. Full marketplace is post-MVP.
+— ExecutorSKU/Entitlement/Installation, plus the **commercial pricing model** (SubscriptionTier,
+PriceBook, CreditWallet; [§14](#14-commercial-model--credits-subscriptions--budget)). Plan
+Management *queries* it when validating slot bindings and estimating credit cost; it is not
+folded into Plan Management. Full marketplace is post-MVP.
 
 Key relationships: Plan Management ↔ Agent Orchestration is a **Partnership** (the core
 domain). Workflow Engine → Agent Orchestration is an **Open-Host Service** (Temporal
@@ -208,7 +221,10 @@ defines the protocol). Human Interaction → Slack (post-MVP) is an **Anticorrup
 Everything conforms to Identity.
 
 **Budget is a capability, not a context** (per ADR-010): it lives inside Agent
-Orchestration with its own proto package, enforced at the per-LLM-invocation layer.
+Orchestration with its own proto package, enforced at the per-LLM-invocation layer. It owns
+the *internal money ledger*; the *external credit* pricing/wallet is a commercial concern
+([§14](#14-commercial-model--credits-subscriptions--budget)) — enforcement mechanism and
+pricing policy stay separate.
 
 ---
 
@@ -446,8 +462,9 @@ in**, on top of the governance layers that already exist:
 **Explicitly deferred (post-MVP):** all Sales plans (V02–V08), CRM/customer/history
 (N02/N03), offer catalog (N04) as a full plan, opportunity pipeline (N05), leader
 dashboard/indicators/reporting (N09/N10/M08/V08), multi-channel publishing beyond LinkedIn,
-paid media (M07), strategic-diagnosis agents (M01), scheduling breadth, and the full
-catalog-authoring service + marketplace.
+paid media (M07), strategic-diagnosis agents (M01), scheduling breadth, the full
+catalog-authoring service + marketplace, and **the credit/subscription monetization layer**
+([§14](#14-commercial-model--credits-subscriptions--budget)).
 
 The sequenced build (Phase 0 → Resource layer → browsers → rich content) with per-phase
 executors, artifact types, data models, and OpenSpec changes lives in the
@@ -471,7 +488,69 @@ the existing four. The roadmap tracks which executors/artifact types each phase 
 
 ---
 
-## 14. Superseded-ADR map
+## 14. Commercial model — credits, subscriptions & budget
+
+The platform meters and prices work through **two ledgers**, and this separation is the
+whole point:
+
+- **Internal money ledger** *(exists — ADR-010 Budget Policy)* — the truth about *our* cost.
+  Money-denominated (`Money(amount_micros)`), per-provider, per-LLM-invocation, with the
+  reserve → resolve → record → release flow and a `cost_budget` ceiling. Required for cost
+  control, margin analysis, and provider reconciliation. Never removed.
+- **External credit ledger** *(new)* — the denomination the **end user** sees. A
+  subscription grants a monthly credit allotment; every action (typically per plan step)
+  debits credits. Credits convert to money via a **credit rate** that is a *pricing lever*,
+  not a pure function of measured cost.
+
+**Why credits, not raw money, for the user.** Provider costs are volatile and USD-denominated
+while the product is sold in BRL; credits **decouple the customer-facing price from provider
+cost** (the platform absorbs FX and model-price volatility), let us price by **value** rather
+than cost-plus (a senior writer step can be worth more credits than its raw tokens; an RSS
+fetch can be near-free), and collapse heterogeneous costs (LLM tokens + image generation +
+publish API calls + integration calls) into one legible unit.
+
+### 14.1 How it maps onto the existing model
+
+| Concept | Home | Note |
+|---|---|---|
+| **PriceBook** (SKU/step → credit price) | Executor Catalog (commercial context, §5) | Per-step-different-cost falls out of the SKU's listed credit price. |
+| **SubscriptionTier** (entitlements + monthly credit allotment) | Executor Catalog | Two dimensions: *what is unlocked* (entitlements) and *how much you can run* (credits). |
+| **CreditWallet** (balance) | Executor Catalog / billing | Source of truth for affordability. |
+| **Credit estimate on the approval card** | Plan Management `EvaluatePlan` → chat (§9) | `EvaluatePlan` already produces a cost estimate; denominate it in credits ("~35 credits") — far better UX than "~\$0.42", and shown before approval. |
+| **Reserve → debit → release** | Budget capability (§5) | Reuse the existing reservation flow: reserve credits on approval, debit on delivery, **release on failure/retry** so users pay only for delivered value. |
+| **`cost_budget` money ceiling** | Budget capability | Kept *underneath* credit pricing as a safety net: a flat-priced step still cannot cost more real money than its ceiling (guards a runaway run). |
+
+### 14.2 Decisions this model commits to
+
+1. **Two ledgers, not one.** Credits are the skin; money is the skeleton. Keep both.
+2. **Pricing policy is separate from enforcement mechanism.** PriceBook/SubscriptionTier/
+   CreditWallet live in the commercial context; reserve/debit/ceiling live in the Budget
+   capability.
+3. **Flat per-action credit price** (a step's credit cost is *listed and known before the
+   run*) is preferred over metered credit cost, because it makes the approval-card estimate
+   trustworthy and shields users from per-run variance. The internal money ceiling absorbs
+   the variance risk.
+4. **Charge for delivered value.** Platform-error retries and unrun steps release their
+   reserved credits.
+5. **A tier = entitlements + credit allotment** — the clean commercial packaging.
+6. **Snapshot the credit rate** into the PlanExecution at charge time, same discipline as
+   every other execution input, so a run is auditable at the rate it was charged.
+
+### 14.3 Open wrinkles (to settle when built)
+
+- **BYO API keys** (ADR-010): if a tenant brings its own LLM key, credits should cover only
+  platform value (orchestration, integrations, agents), not the LLM cost they pay directly.
+- Free tier / top-ups / rollover of unused monthly credits — commercial policy, not
+  architecture.
+
+**Status:** post-MVP **monetization** — behind the content-depth cut ([§12](#12-mvp-scope)).
+The hooks already exist (Budget capability, SKU price metadata, the approval-card cost
+summary), so no MVP work is blocked. A future **ADR-018** may capture the full rationale;
+this section is the canonical model in the meantime.
+
+---
+
+## 15. Superseded-ADR map
 
 The ADRs are retained as dated history. This is the reading key; the full per-ADR
 supersession detail is in [`docs/adr/README.md`](../adr/README.md).
@@ -487,7 +566,7 @@ supersession detail is in [`docs/adr/README.md`](../adr/README.md).
 | 007 | Agentic patterns | **Amended** — MCP §7 refined by ADR-011; memory refined by ADR-014; gates scoped to adaptive mode (§7.5). |
 | 008 | Tenant-safe boundaries | **Live** — §6. |
 | 009 | LangGraph state semantics | **Live** — adaptive mode only (§6). |
-| 010 | Budget policy service | **Live** — budget = capability in Agent Orchestration (§5); its "five contexts" claim is corrected to six. |
+| 010 | Budget policy service | **Live** — budget = capability in Agent Orchestration (§5); its "five contexts" claim is corrected to six. The **credit layer** (§14) sits on top of its money ledger. |
 | 011 | MCP capability gating | **Live** — Agent Orchestration (§5). |
 | 012 | Plan-centric task model | **Core, amended** — the spine (§7); 1:1 chat→config superseded by ADR-017 (§9); SQL templates → YAML (ADR-015). |
 | 013 | ConnectRPC Python | **Live** — §6. |
@@ -498,7 +577,7 @@ supersession detail is in [`docs/adr/README.md`](../adr/README.md).
 
 ---
 
-## 15. How to change this document
+## 16. How to change this document
 
 1. Capture the idea in [`docs/notes/product-ideas.md`](../notes/product-ideas.md).
 2. If it is an architectural *decision*, write an ADR in [`docs/adr/`](../adr/).

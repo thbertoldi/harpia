@@ -8,7 +8,7 @@
 > behind a decision.
 
 New architectural decisions still start as an ADR here; when accepted, their outcome is
-folded into the constitution and the ADR is stamped historical (see constitution §15).
+folded into the constitution and the ADR is stamped historical (see constitution §16).
 
 ## Supersession map
 

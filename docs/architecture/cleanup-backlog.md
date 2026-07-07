@@ -105,7 +105,7 @@ canonical taxonomy.
 
 ### ADR stamping
 Add a "superseded-by-constitution" banner to each ADR header and create
-`docs/adr/README.md` with the supersession map (constitution §14).
+`docs/adr/README.md` with the supersession map (constitution §15).
 
 ---
 

@@ -179,8 +179,11 @@ Kept out of the 6-week window, with rationale in the constitution: all Sales pla
 (V02–V08), CRM/customer/history (N02/N03), offer catalog as a full plan (N04), pipeline
 (N05), reporting/dashboards/indicators (N09/N10/M08/V08), paid media (M07), strategic
 diagnosis agents (M01), multi-channel publishing (Instagram/blog/email/X), full
-catalog-authoring service + marketplace, overseer re-delegation, and adaptive→PlanExecution
-migration. Each becomes its own spec → plan cycle after the MVP demo.
+catalog-authoring service + marketplace, the **credit/subscription monetization layer**
+(constitution §14), overseer re-delegation, and adaptive→PlanExecution migration. Each
+becomes its own spec → plan cycle after the MVP demo. The credit layer's hooks (Budget
+capability, SKU price metadata, approval-card cost summary) already exist, so nothing in the
+MVP is blocked by deferring it.
 
 ---
 
