@@ -135,6 +135,8 @@ func (h *PlanHandler) RespondToApprovalRequest(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
+	updated.PlanConfigurationID = row.PlanConfigurationID
+	updated.ThreadID = row.ThreadID
 	signal := workflow.ApprovalDecisionSignal{
 		StepExecutionID:   updated.StepExecutionID.String(),
 		ApprovalRequestID: updated.ID,

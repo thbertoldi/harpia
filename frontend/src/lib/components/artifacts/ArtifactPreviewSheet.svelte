@@ -1,8 +1,6 @@
 <script lang="ts">
   import {
     X,
-    Copy,
-    Check,
     RefreshCw,
     FileText,
     Code,
@@ -15,20 +13,20 @@
     saveTextArtifactVersion,
   } from "$lib/artifacts/artifacts";
   import { locale, translate } from "$lib/i18n";
-  import { artifactTitle, editableTextFromPayload } from "$lib/artifacts/text";
+  import {
+    artifactTitle,
+    artifactTypeLabelKey,
+    editableTextFromPayload,
+  } from "$lib/artifacts/text";
   import type { FormattedArtifactPreview } from "$lib/artifacts/preview";
   import type { Artifact } from "$lib/gen/harpia/artifacts/v1/artifacts_pb";
   import { fade } from "svelte/transition";
 
-  type ArtifactPreviewTab = "preview" | "code" | "edit";
+  type ArtifactPreviewTab = "preview" | "edit";
 
-  const defaultTabs = [
-    "preview",
-    "code",
-  ] satisfies readonly ArtifactPreviewTab[];
+  const defaultTabs = ["preview"] satisfies readonly ArtifactPreviewTab[];
   const editableTabs = [
     "preview",
-    "code",
     "edit",
   ] satisfies readonly ArtifactPreviewTab[];
 
@@ -47,7 +45,6 @@
   } = $props();
 
   let tab = $state<ArtifactPreviewTab>("preview");
-  let copied = $state(false);
   let reloadKey = $state(0);
   let preview = $state<FormattedArtifactPreview | null>(null);
   let loading = $state(false);
@@ -63,7 +60,6 @@
   $effect(() => {
     void artifact?.id;
     tab = "preview";
-    copied = false;
     editTitle = "";
     editText = "";
     editContentHash = "";
@@ -104,26 +100,6 @@
     return () => controller.abort();
   });
 
-  const source = $derived(
-    preview?.html ?? preview?.markdown ?? preview?.text ?? "",
-  );
-  const mime = $derived.by(() => {
-    switch (preview?.kind) {
-      case "html":
-        return "text/html";
-      case "markdown":
-        return "text/markdown";
-      case "json":
-        return "application/json";
-      case "image":
-        return "image/*";
-      case "list":
-        return "list";
-      default:
-        return "text/plain";
-    }
-  });
-  const sizeKb = $derived(((preview?.text?.length ?? 0) / 1024).toFixed(1));
   const busy = $derived(artifactLoading || loading);
   const Icon = $derived(
     preview?.kind === "html" || preview?.kind === "json"
@@ -134,17 +110,6 @@
           ? List
           : FileText,
   );
-
-  async function copySource() {
-    if (!source) return;
-    try {
-      await navigator.clipboard.writeText(source);
-      copied = true;
-      setTimeout(() => (copied = false), 1500);
-    } catch {
-      /* clipboard unavailable */
-    }
-  }
 
   async function saveEditedText() {
     if (!artifact || !editContentHash || editSaving) return;
@@ -201,8 +166,8 @@
             : translate("artifactPreview.loading", $locale)}
         </h2>
         {#if artifact}
-          <p class="truncate font-mono text-[10px] text-crown-ash-dark">
-            {artifact.artifactTypeKey}
+          <p class="truncate text-[10px] text-crown-ash-dark">
+            {translate(artifactTypeLabelKey(artifact.artifactTypeKey), $locale)}
           </p>
         {/if}
       </div>
@@ -234,19 +199,6 @@
         </button>
         <button
           type="button"
-          onclick={copySource}
-          aria-label={translate("artifactPreview.copy", $locale)}
-          title={translate("artifactPreview.copy", $locale)}
-          class="flex size-8 items-center justify-center rounded-md text-crown-ash hover:bg-plumage/40 hover:text-cream"
-        >
-          {#if copied}
-            <Check class="size-4 text-status-done" />
-          {:else}
-            <Copy class="size-4" />
-          {/if}
-        </button>
-        <button
-          type="button"
           onclick={onClose}
           aria-label={translate("canvas.drawer.close", $locale)}
           class="flex size-8 items-center justify-center rounded-md text-crown-ash hover:bg-plumage/40 hover:text-cream"
@@ -274,17 +226,6 @@
             bind:loading
           />
         {/key}
-      {:else if tab === "code"}
-        <div class="h-full overflow-auto bg-surface-deep px-4 py-3">
-          {#if source}
-            <pre
-              class="font-mono text-[12px] leading-relaxed text-crown-ash">{source}</pre>
-          {:else}
-            <p class="text-[12px] text-crown-ash-dark">
-              {translate("artifactPreview.noSource", $locale)}
-            </p>
-          {/if}
-        </div>
       {:else}
         <div class="flex h-full flex-col gap-3 bg-surface-deep px-4 py-3">
           {#if editLoading}
@@ -350,7 +291,6 @@
           ? translate("artifactPreview.generating", $locale)
           : translate("artifactPreview.ready", $locale)}
       </span>
-      <span class="font-mono">{mime} · {sizeKb} KB</span>
     </footer>
   </aside>
 {/if}

@@ -158,6 +158,7 @@ function toInboxApproval(req: ApprovalRequest): InboxApprovalItem {
     stepExecutionId: req.stepExecutionId,
     inputArtifactId: req.inputArtifactId,
     configurationId: req.planConfigurationId,
+    threadId: req.threadId,
     raw: req,
   };
 }

@@ -29,6 +29,7 @@ function approval(id: string): InboxItem {
     stepExecutionId: "se",
     inputArtifactId: "art",
     configurationId: "cfg",
+    threadId: "thread",
     raw: {} as never,
   };
 }

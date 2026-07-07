@@ -100,6 +100,7 @@ type PlanApprovalRequest struct {
 	TenantID            uuid.UUID
 	PlanExecutionID     uuid.UUID
 	PlanConfigurationID uuid.UUID
+	ThreadID            uuid.UUID
 	StepExecutionID     uuid.UUID
 	PlanStepKey         string
 	InputArtifactID     string
@@ -818,10 +819,11 @@ const planApprovalRequestColumns = `id, tenant_id, plan_execution_id, step_execu
 
 const planApprovalRequestJoinedColumns = `par.id, par.tenant_id, par.plan_execution_id, par.step_execution_id, par.plan_step_key,
 	COALESCE(par.input_artifact_id, ''), par.status, COALESCE(par.decision_reason, ''),
-	par.requested_at, par.decided_at, par.created_at, par.updated_at, pe.plan_configuration_id`
+	par.requested_at, par.decided_at, par.created_at, par.updated_at, pe.plan_configuration_id, pc.thread_id`
 
 const planApprovalRequestFromJoin = ` FROM plan_approval_requests par
-	JOIN plan_executions pe ON pe.id = par.plan_execution_id AND pe.tenant_id = par.tenant_id`
+	JOIN plan_executions pe ON pe.id = par.plan_execution_id AND pe.tenant_id = par.tenant_id
+	JOIN plan_configurations pc ON pc.id = pe.plan_configuration_id AND pc.tenant_id = pe.tenant_id`
 
 func scanPlanApprovalRequest(row pgx.Row, dest *PlanApprovalRequest) error {
 	return row.Scan(
@@ -836,7 +838,7 @@ func scanPlanApprovalRequestJoined(row pgx.Row, dest *PlanApprovalRequest) error
 		&dest.ID, &dest.TenantID, &dest.PlanExecutionID, &dest.StepExecutionID,
 		&dest.PlanStepKey, &dest.InputArtifactID, &dest.Status, &dest.DecisionReason,
 		&dest.RequestedAt, &dest.DecidedAt, &dest.CreatedAt, &dest.UpdatedAt,
-		&dest.PlanConfigurationID,
+		&dest.PlanConfigurationID, &dest.ThreadID,
 	)
 }
 

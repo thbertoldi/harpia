@@ -221,6 +221,35 @@ artifacts" grid that duplicates data already sitting in messages it has in hand.
    messages already in memory.
 Frontend-only; no proto/backend changes required for any of the three.
 
+**Current stabilization pass (2026-07-06):** user walkthrough exposed additional
+journey polish gaps: catalog/PlanStep labels leaking English in `pt-BR`, post-create
+actions still in English, execution card width mismatch after **Run now**, artifact
+preview feeling pinned/disconnected from chat scroll, and approval notifications without
+an actionable approval in the running execution thread. These are now scoped in
+`openspec/changes/stabilize-chat-plan-journey` as a stabilization layer over the existing
+chat-first execution/artifact work.
+
+### 💡 Rich LinkedIn content plan variants
+**Taxonomy:** PlanTemplate, PlanStep, Artifact, ArtifactType, ExecutorSKU,
+ExecutorInstallation, SlotBinding, PlanConfiguration.
+The weekly-newsletter LinkedIn template should evolve beyond “fetch news → write draft →
+adapt → publish” into a richer creator workflow that explicitly asks for and previews the
+shape of the LinkedIn output: stronger hook, non-generic language, anti-AI-jargon rules,
+post format choices, carousel draft, and optional generated image/post asset.
+
+**Product shape:** during conversational configuration, Harpia can ask whether the user wants
+a text post, carousel outline, image-backed post, or a simpler approval-only publish flow.
+The preview should show the selected format before publishing, with approval in the chat
+thread when required.
+
+**Architecture boundary:** this is not just copy polish. Carousel/image variants may require
+new ArtifactType fields/messages, new renderer support, new agent output schemas, and
+possibly new ExecutorSKUs for image/asset generation. Keep feed/OAuth/renderer configuration
+on ExecutorInstallation and keep the resulting outputs in the Artifact stream.
+
+**Next:** create a separate OpenSpec exploration/proposal after
+`stabilize-chat-plan-journey` lands.
+
 ### 💡 Proactive memory capture from conversational configuration
 **Taxonomy:** PlanConfiguration, PlanBehaviorPolicies, MemoryResource, MemoryBinding,
 Artifact.

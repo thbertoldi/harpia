@@ -181,25 +181,17 @@
       <div class="min-w-0">
         <p class="font-body text-[13px] text-cream">
           {translate("assistant.prompt.overseerStep", $locale, {
-            step: focusedRow.step_title || payload.step_key || "",
+            step:
+              focusedRow.step_title ||
+              translate("assistant.overseerStep.thisStep", $locale),
           })}
         </p>
-        <div
-          class="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-crown-ash"
-        >
-          <span
-            class="rounded border border-plumage bg-surface-hover px-2 py-1 font-mono text-[10px] text-crown-ash"
-          >
-            {focusedRow.contracts.input || "—"} → {focusedRow.contracts
-              .output || "—"}
-          </span>
-          <span>
-            {translate("assistant.overseerStep.progress", $locale, {
-              bound: overseerCount,
-              total: totalRequired,
-            })}
-          </span>
-        </div>
+        <p class="mt-2 text-[11px] text-crown-ash">
+          {translate("assistant.overseerStep.progress", $locale, {
+            bound: overseerCount,
+            total: totalRequired,
+          })}
+        </p>
       </div>
       {#if isAnswered && !isLive}
         <button
@@ -252,14 +244,16 @@
         {translate("assistant.overseerStep.required", $locale)}
       </p>
       <div class="mt-2 grid gap-2">
-        {#each requiredRows as row (row.step_key)}
+        {#each requiredRows as row, i (row.step_key)}
           <div
             class="grid grid-cols-[minmax(0,1fr)_minmax(120px,180px)] gap-3 text-[12px]"
           >
             <div class="min-w-0">
-              <p class="truncate text-cream">{row.step_title}</p>
-              <p class="font-mono text-[10px] text-crown-ash-dark">
-                {row.contracts.input || "—"} → {row.contracts.output || "—"}
+              <p class="truncate text-cream">
+                {row.step_title ||
+                  translate("assistant.overseerStep.agentStep", $locale, {
+                    n: i + 1,
+                  })}
               </p>
             </div>
             <p class="truncate text-crown-ash">

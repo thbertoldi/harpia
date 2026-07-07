@@ -4507,8 +4507,10 @@ type ApprovalRequest struct {
 	RequestedAt         string                `protobuf:"bytes,9,opt,name=requested_at,json=requestedAt,proto3" json:"requested_at,omitempty"`
 	DecidedAt           string                `protobuf:"bytes,10,opt,name=decided_at,json=decidedAt,proto3" json:"decided_at,omitempty"`
 	PlanConfigurationId string                `protobuf:"bytes,11,opt,name=plan_configuration_id,json=planConfigurationId,proto3" json:"plan_configuration_id,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// Owning chat thread for returning to the in-context approval card.
+	ThreadId      string `protobuf:"bytes,12,opt,name=thread_id,json=threadId,proto3" json:"thread_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ApprovalRequest) Reset() {
@@ -4614,6 +4616,13 @@ func (x *ApprovalRequest) GetDecidedAt() string {
 func (x *ApprovalRequest) GetPlanConfigurationId() string {
 	if x != nil {
 		return x.PlanConfigurationId
+	}
+	return ""
+}
+
+func (x *ApprovalRequest) GetThreadId() string {
+	if x != nil {
+		return x.ThreadId
 	}
 	return ""
 }
@@ -5388,7 +5397,7 @@ const file_harpia_plans_v1_plans_proto_rawDesc = "" +
 	"\x0faddressed_to_me\x18\x03 \x01(\bR\raddressedToMeB\x14\n" +
 	"\x12_step_execution_id\"d\n" +
 	"\x19WatchElicitationsResponse\x12G\n" +
-	"\felicitations\x18\x01 \x03(\v2#.harpia.plans.v1.ElicitationRequestR\felicitations\"\xc5\x03\n" +
+	"\felicitations\x18\x01 \x03(\v2#.harpia.plans.v1.ElicitationRequestR\felicitations\"\xe2\x03\n" +
 	"\x0fApprovalRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12*\n" +
@@ -5402,7 +5411,8 @@ const file_harpia_plans_v1_plans_proto_rawDesc = "" +
 	"\n" +
 	"decided_at\x18\n" +
 	" \x01(\tR\tdecidedAt\x122\n" +
-	"\x15plan_configuration_id\x18\v \x01(\tR\x13planConfigurationId\"\xd4\x02\n" +
+	"\x15plan_configuration_id\x18\v \x01(\tR\x13planConfigurationId\x12\x1b\n" +
+	"\tthread_id\x18\f \x01(\tR\bthreadId\"\xd4\x02\n" +
 	"\x1bListApprovalRequestsRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12/\n" +
 	"\x11step_execution_id\x18\x02 \x01(\tH\x00R\x0fstepExecutionId\x88\x01\x01\x12/\n" +

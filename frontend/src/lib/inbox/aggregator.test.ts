@@ -102,6 +102,7 @@ describe("watchInbox", () => {
           makeApproval({
             id: "approval-publish",
             planConfigurationId: "config-linkedin",
+            threadId: "thread-linkedin",
             planExecutionId: "exec-linkedin",
             planStepKey: "publish-linkedin",
             stepExecutionId: "step-publish",
@@ -124,6 +125,7 @@ describe("watchInbox", () => {
       throw new Error("expected approval inbox item");
     }
     expect(item.configurationId).toBe("config-linkedin");
+    expect(item.threadId).toBe("thread-linkedin");
     expect(item.planExecutionId).toBe("exec-linkedin");
     expect(item.stepExecutionId).toBe("step-publish");
     expect(item.inputArtifactId).toBe("artifact-linkedin-draft");

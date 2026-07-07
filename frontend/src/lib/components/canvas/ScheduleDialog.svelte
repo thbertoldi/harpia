@@ -94,7 +94,7 @@
 
       <div class="space-y-3">
         <div class="flex flex-wrap gap-2">
-          {#each ["manual", "daily", "weekly", "monthly", "custom"] as c (c)}
+          {#each ["manual", "daily", "weekly", "monthly"] as c (c)}
             <button
               type="button"
               onclick={() => (cadence = c as Cadence)}

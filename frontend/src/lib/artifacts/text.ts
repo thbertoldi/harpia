@@ -22,7 +22,43 @@ export function artifactTitle(
     case "harpia.artifacts.v1.PublishConfirmation":
       return "Publish confirmation";
     default:
-      return artifact.id;
+      return "Artifact";
+  }
+}
+
+export function artifactTypeLabelKey(artifactTypeKey: string): string {
+  switch (artifactTypeKey) {
+    case "harpia.artifacts.v1.DateRange":
+      return "artifact.type.dateRange";
+    case "harpia.artifacts.v1.NewsList":
+      return "artifact.type.newsList";
+    case "harpia.artifacts.v1.TextDraft":
+      return "artifact.type.textDraft";
+    case "harpia.artifacts.v1.LinkedInPostDraft":
+      return "artifact.type.linkedInPostDraft";
+    case "harpia.artifacts.v1.PublishConfirmation":
+      return "artifact.type.publishConfirmation";
+    default:
+      return "artifact.type.unknown";
+  }
+}
+
+export function artifactStatusLabelKey(status: ArtifactStatus): string {
+  switch (status) {
+    case ArtifactStatus.GENERATED:
+      return "artifact.status.generated";
+    case ArtifactStatus.EDITED:
+      return "artifact.status.edited";
+    case ArtifactStatus.APPROVED:
+      return "artifact.status.approved";
+    case ArtifactStatus.REJECTED:
+      return "artifact.status.rejected";
+    case ArtifactStatus.SUPERSEDED:
+      return "artifact.status.superseded";
+    case ArtifactStatus.FAILED:
+      return "artifact.status.failed";
+    default:
+      return "artifact.status.unspecified";
   }
 }
 

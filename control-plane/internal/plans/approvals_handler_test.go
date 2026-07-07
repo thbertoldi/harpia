@@ -125,14 +125,18 @@ func (f *fakeApprovalSignaler) SignalPlanApprovalDecision(_ context.Context, _ s
 func TestRespondToApprovalRequestSignalsWorkflow(t *testing.T) {
 	tenantID := uuid.New()
 	planExecutionID := uuid.New()
+	planConfigurationID := uuid.New()
+	threadID := uuid.New()
 	stepExecutionID := uuid.New()
 	approvalID := "approval-1"
 	store := &fakeApprovalStore{approval: &PlanApprovalRequest{
-		ID:              approvalID,
-		TenantID:        tenantID,
-		PlanExecutionID: planExecutionID,
-		StepExecutionID: stepExecutionID,
-		Status:          ApprovalRequestStatusPending,
+		ID:                  approvalID,
+		TenantID:            tenantID,
+		PlanExecutionID:     planExecutionID,
+		PlanConfigurationID: planConfigurationID,
+		ThreadID:            threadID,
+		StepExecutionID:     stepExecutionID,
+		Status:              ApprovalRequestStatusPending,
 	}}
 	var received workflow.ApprovalDecisionSignal
 	signaler := &fakeApprovalSignaler{deliver: func(signal workflow.ApprovalDecisionSignal) {
@@ -166,5 +170,11 @@ func TestRespondToApprovalRequestSignalsWorkflow(t *testing.T) {
 	}
 	if resp.Msg.GetApprovalRequest().GetStatus() != plansv1.ApprovalRequestStatus_APPROVAL_REQUEST_STATUS_APPROVED {
 		t.Fatalf("status = %v", resp.Msg.GetApprovalRequest().GetStatus())
+	}
+	if resp.Msg.GetApprovalRequest().GetPlanConfigurationId() != planConfigurationID.String() {
+		t.Fatalf("plan configuration id = %q, want %q", resp.Msg.GetApprovalRequest().GetPlanConfigurationId(), planConfigurationID)
+	}
+	if resp.Msg.GetApprovalRequest().GetThreadId() != threadID.String() {
+		t.Fatalf("thread id = %q, want %q", resp.Msg.GetApprovalRequest().GetThreadId(), threadID)
 	}
 }

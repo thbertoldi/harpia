@@ -24,6 +24,11 @@
      * SystemEventCard.
      */
     stepTitleFor,
+    /**
+     * Forwarded to ThreadMessage so an in-thread approval decision can
+     * trigger a data refresh on the chat page.
+     */
+    onApprovalDecided,
   }: {
     tenantId: string;
     configurationId: string;
@@ -34,6 +39,7 @@
       message: ChatMessage,
     ) => PlanConfiguration | undefined;
     stepTitleFor?: StepTitleResolver;
+    onApprovalDecided?: () => void;
   } = $props();
 
   function isSelectionAnswerFor(
@@ -78,6 +84,7 @@
           isAnswered={message.kind === "ASSISTANT_PROMPT" && !livePrompt}
           existingConfiguration={existingConfigurationFor?.(message)}
           {stepTitleFor}
+          {onApprovalDecided}
         />
       {/each}
     </div>

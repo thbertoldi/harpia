@@ -41,6 +41,11 @@
      * arrived later and flip to its terminal state.
      */
     messages?: ChatMessage[];
+    /**
+     * Invoked after an in-thread approval decision succeeds. The chat page
+     * uses this to invalidate load data so downstream surfaces refresh.
+     */
+    onApprovalDecided?: () => void;
   }
   let {
     message,
@@ -53,6 +58,7 @@
     existingConfiguration,
     stepTitleFor,
     messages = [],
+    onApprovalDecided,
   }: Props = $props();
 
   const promptState = $derived(
@@ -149,7 +155,13 @@
 {:else if message.kind === "ELICITATION_RAISED" || message.kind === "ELICITATION_ANSWERED"}
   <ElicitationRefCard {message} />
 {:else if message.kind === "APPROVAL_RAISED" || message.kind === "APPROVAL_DECIDED"}
-  <ApprovalRefCard {message} {tenantId} {messages} />
+  <ApprovalRefCard
+    {message}
+    {tenantId}
+    {messages}
+    {onOpenArtifact}
+    onDecided={onApprovalDecided}
+  />
 {:else}
   <SystemEventCard
     {message}

@@ -95,9 +95,6 @@
     <Icon class="size-4 text-talon-gold" />
     <div class="min-w-0 flex-1">
       <p class="truncate text-cream">{eventText}</p>
-      <p class="truncate font-mono text-[10px] text-crown-ash-dark">
-        {outputArtifactId}
-      </p>
     </div>
     <button
       type="button"

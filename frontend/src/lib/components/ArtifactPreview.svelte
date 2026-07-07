@@ -147,6 +147,17 @@
     color: var(--color-text);
   }
 
+  .artifact-preview-body:not(.artifact-preview-body--constrained) {
+    min-height: 100%;
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in srgb, var(--color-energy) 8%, transparent),
+        transparent 18rem
+      ),
+      var(--color-surface-deep);
+  }
+
   .artifact-preview-body--constrained {
     max-height: 24rem;
     overflow-y: auto;
@@ -176,9 +187,27 @@
   }
 
   .artifact-preview--markdown {
-    font-size: 0.9rem;
-    line-height: 1.6;
+    font-size: 0.95rem;
+    line-height: 1.65;
     white-space: normal;
+  }
+
+  .artifact-preview-body:not(.artifact-preview-body--constrained)
+    .artifact-preview--markdown,
+  .artifact-preview-body:not(.artifact-preview-body--constrained)
+    .artifact-preview--text {
+    box-sizing: border-box;
+    width: min(100%, 58rem);
+    margin: 0 auto;
+    padding: clamp(1.25rem, 3vw, 2.5rem);
+  }
+
+  .artifact-preview-body:not(.artifact-preview-body--constrained)
+    .artifact-preview--text {
+    font-family: var(--font-body, ui-sans-serif, system-ui, sans-serif);
+    font-size: clamp(0.95rem, 0.4vw + 0.85rem, 1.08rem);
+    line-height: 1.7;
+    white-space: pre-wrap;
   }
   .artifact-preview--markdown :global(h1),
   .artifact-preview--markdown :global(h2),
@@ -239,7 +268,7 @@
   }
 
   .artifact-preview--json,
-  .artifact-preview--text {
+  .artifact-preview-body--constrained .artifact-preview--text {
     font-family: var(--font-mono, ui-monospace, monospace);
     font-size: 0.875rem;
   }

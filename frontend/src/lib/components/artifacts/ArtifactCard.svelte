@@ -2,7 +2,7 @@
   import { Eye } from "lucide-svelte";
   import ArtifactPreview from "$lib/components/ArtifactPreview.svelte";
   import { locale, translate } from "$lib/i18n";
-  import { artifactStatusLabel, artifactTitle } from "$lib/artifacts/text";
+  import { artifactStatusLabelKey, artifactTitle } from "$lib/artifacts/text";
   import type { Artifact } from "$lib/gen/harpia/artifacts/v1/artifacts_pb";
 
   let {
@@ -29,7 +29,7 @@
         {title}
       </h3>
       <p class="mt-0.5 truncate font-mono text-[10px] text-crown-ash-dark">
-        {artifactStatusLabel(artifact.status)}
+        {translate(artifactStatusLabelKey(artifact.status), $locale)}
       </p>
     </div>
     <div class="flex gap-1">
@@ -46,9 +46,6 @@
       {/if}
     </div>
   </div>
-  <p class="mb-2 truncate font-mono text-[10px] text-crown-ash-dark">
-    {artifact.id}
-  </p>
   {#if !compact}
     <ArtifactPreview {tenantId} artifactId={artifact.id} />
   {/if}

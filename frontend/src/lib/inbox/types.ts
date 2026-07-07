@@ -32,6 +32,7 @@ export interface InboxApprovalItem extends InboxItemBase {
   stepExecutionId: string;
   inputArtifactId: string;
   configurationId: string;
+  threadId: string;
   raw: ApprovalRequest;
 }
 

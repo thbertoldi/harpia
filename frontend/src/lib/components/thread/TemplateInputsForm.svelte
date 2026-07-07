@@ -259,7 +259,7 @@
                 {translate("thread.propose.createSourceGroup", $locale)}
               </a>
             {:else}
-              {#each sourceInstallations as inst (inst.id)}
+              {#each sourceInstallations as inst, i (inst.id)}
                 {@const checked = selected.includes(inst.id)}
                 <button
                   type="button"
@@ -269,7 +269,14 @@
                     : 'border-plumage text-crown-ash hover:border-talon-gold hover:text-cream'}"
                   onclick={() => toggleStringListValue(p.key, inst.id)}
                 >
-                  {inst.displayName || inst.id}
+                  {inst.displayName ||
+                    translate(
+                      "thread.propose.unnamedIntegrationNumbered",
+                      $locale,
+                      {
+                        n: i + 1,
+                      },
+                    )}
                 </button>
               {/each}
             {/if}
@@ -285,8 +292,17 @@
               >
             {:else}
               <option value="">—</option>
-              {#each installations as inst (inst.id)}
-                <option value={inst.id}>{inst.displayName || inst.id}</option>
+              {#each installations as inst, i (inst.id)}
+                <option value={inst.id}>
+                  {inst.displayName ||
+                    translate(
+                      "thread.propose.unnamedIntegrationNumbered",
+                      $locale,
+                      {
+                        n: i + 1,
+                      },
+                    )}
+                </option>
               {/each}
             {/if}
           </select>

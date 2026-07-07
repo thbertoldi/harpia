@@ -577,6 +577,8 @@ message ApprovalRequest {
   string requested_at = 9;
   string decided_at = 10;
   string plan_configuration_id = 11;
+  // Owning chat thread for returning to the in-context approval card.
+  string thread_id = 12;
 }
 
 enum ApprovalRequestStatus {

@@ -123,8 +123,13 @@
    * backend title (and finally the stepKey) when no entry exists.
    */
   function stepLabel(stepKey: string, fallbackTitle: string): string {
-    if (template) return localizedStepTitle(template, stepKey, $locale);
-    return fallbackTitle || stepKey;
+    if (template) {
+      const title = localizedStepTitle(template, stepKey, $locale);
+      if (title && title !== stepKey) return title;
+    }
+    return (
+      fallbackTitle || translate("assistant.bindingStep.genericStep", $locale)
+    );
   }
 
   async function onPickFocused(option: MatrixOption) {
@@ -206,7 +211,8 @@
           {translate("assistant.prompt.bindingStep", $locale, {
             step: stepLabel(
               focusedRow.step_key,
-              focusedRow.step_title || payload.step_key || "",
+              focusedRow.step_title ||
+                translate("assistant.bindingStep.thisStep", $locale),
             ),
           })}
         </p>

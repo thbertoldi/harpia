@@ -3,6 +3,7 @@
   import { resolve } from "$app/paths";
   import { locale, translate } from "$lib/i18n";
   import type { InboxApprovalItem } from "$lib/inbox/types";
+  import { inboxApprovalThreadPath } from "$lib/inbox/links";
   import InboxRow from "./InboxRow.svelte";
   import CanvasApprovalForm from "$lib/components/canvas/CanvasApprovalForm.svelte";
 
@@ -23,7 +24,7 @@
 })}
   {#snippet rowActions()}
     <a
-      href={resolve("/runs")}
+      href={resolve(inboxApprovalThreadPath(item))}
       class="rounded border border-plumage bg-transparent px-3 py-1.5 text-[11px] font-medium text-crown-ash hover:border-talon-gold hover:text-talon-gold"
     >
       {translate("inbox.actions.openThread", $locale)}

@@ -130,11 +130,18 @@
   // "Step Write draft started." rather than the raw step id. Resolved via the
   // catalog content keys (catalog.plan.<key>.step.<stepKey>.title) so Brazilian
   // users see pt-BR titles; falls back to the stepKey when no template is loaded.
-  const stepTitleFor = $derived((stepKey: string) =>
-    focusedTemplate
-      ? localizedStepTitle(focusedTemplate, stepKey, $locale)
-      : stepKey,
-  );
+  const stepTitleFor = $derived.by(() => {
+    const template = focusedTemplate;
+    const currentLocale = $locale;
+    return (stepKey: string) => {
+      if (!template)
+        return translate("assistant.bindingStep.genericStep", currentLocale);
+      const title = localizedStepTitle(template, stepKey, currentLocale);
+      return title && title !== stepKey
+        ? title
+        : translate("assistant.bindingStep.genericStep", currentLocale);
+    };
+  });
   let workspaceArtifacts = $state<Artifact[]>([]);
   let workspaceLoadError = $state(false);
 
@@ -366,8 +373,10 @@
     }
   }
 
-  function shortConfigurationId(id: string) {
-    return id.length <= 8 ? id : id.slice(0, 8);
+  function fallbackPlanLabel(index?: number): string {
+    return typeof index === "number"
+      ? translate("thread.planFallbackNumbered", $locale, { n: index + 1 })
+      : translate("thread.planFallback", $locale);
   }
 
   function statusTextForConfiguration(configuration?: PlanConfiguration) {
@@ -796,7 +805,7 @@
           <div
             class="flex flex-wrap gap-2 rounded border border-plumage/60 bg-obsidian-light/30 p-2"
           >
-            {#each data.configurations as configuration (configuration.id)}
+            {#each data.configurations as configuration, index (configuration.id)}
               {@const template = data.templateByConfigurationId.get(
                 configuration.id,
               )}
@@ -812,11 +821,11 @@
                 <span class="block text-[12px] font-medium">
                   {template
                     ? localizedPlanName(template, $locale)
-                    : shortConfigurationId(configuration.id)}
+                    : fallbackPlanLabel(index)}
                 </span>
                 <span class="mt-0.5 block text-[10px] text-crown-ash-dark">
-                  {statusTextForConfiguration(configuration)} · {shortConfigurationId(
-                    configuration.id,
+                  {statusTextForConfiguration(configuration)} · {fallbackPlanLabel(
+                    index,
                   )}
                 </span>
               </button>
@@ -831,7 +840,7 @@
               ? planSummary.intent
               : focusedTemplate
                 ? localizedPlanName(focusedTemplate, $locale)
-                : "") || shortConfigurationId(focusedConfiguration.id)}
+                : "") || fallbackPlanLabel()}
             {statusLabel}
             {cost}
             onOpenSchedule={() => (scheduleOpen = true)}
@@ -925,6 +934,7 @@
             onOpenArtifact={openArtifact}
             {existingConfigurationFor}
             {stepTitleFor}
+            onApprovalDecided={() => void invalidateAll()}
           />
         {/if}
 

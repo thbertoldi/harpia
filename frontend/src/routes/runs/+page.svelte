@@ -1,6 +1,7 @@
 <script lang="ts">
   import { resolve } from "$app/paths";
   import { invalidateAll } from "$app/navigation";
+  import { chatPlanPath } from "$lib/inbox/links";
   import { Pencil, CalendarClock, Activity } from "lucide-svelte";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
   import ScheduleDialog from "$lib/components/canvas/ScheduleDialog.svelte";
@@ -167,9 +168,6 @@
         {@const inline = canInlineEdit(configuration)}
         {@const active = countActiveExecutions(group)}
         {@const threadId = originThreadId(group)}
-        {@const planParam = configuration?.id
-          ? `?plan=${encodeURIComponent(configuration.id)}`
-          : ""}
         {@const template = configuration
           ? templateByConfigurationId.get(configuration.id)
           : undefined}
@@ -252,7 +250,7 @@
               {/if}
               {#if threadId}
                 <a
-                  href={resolve(`/chat/${threadId}${planParam}`)}
+                  href={resolve(chatPlanPath(threadId, configuration?.id ?? ""))}
                   class="flex cursor-pointer items-center gap-1 rounded-md border border-primary px-2.5 py-1.5 text-[11px] font-semibold text-primary transition hover:bg-primary/10"
                 >
                   <Pencil class="size-3.5" />
@@ -290,7 +288,13 @@
                   <span class="flex-1"></span>
                   {#if threadId}
                     <a
-                      href={resolve(`/chat/${threadId}${planParam}`)}
+                      href={resolve(
+                        chatPlanPath(
+                          threadId,
+                          configuration?.id ?? "",
+                          execution.id,
+                        ),
+                      )}
                       class="font-body text-[11px] text-primary transition hover:opacity-80"
                     >
                       {translate("runs.execution.openThread", $locale)}

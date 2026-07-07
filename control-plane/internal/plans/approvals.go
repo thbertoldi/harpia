@@ -16,6 +16,7 @@ type ApprovalRequest struct {
 	TenantID            string
 	PlanExecutionID     string
 	PlanConfigurationID string
+	ThreadID            string
 	StepExecutionID     string
 	PlanStepKey         string
 	InputArtifactID     string
@@ -81,6 +82,9 @@ func approvalRequestToProto(approval *ApprovalRequest) *plansv1.ApprovalRequest 
 	if approval.PlanConfigurationID != "" {
 		out.PlanConfigurationId = approval.PlanConfigurationID
 	}
+	if approval.ThreadID != "" {
+		out.ThreadId = approval.ThreadID
+	}
 	return out
 }
 
@@ -92,11 +96,16 @@ func planApprovalRequestToDomain(row *PlanApprovalRequest) *ApprovalRequest {
 	if row.PlanConfigurationID != uuid.Nil {
 		configID = row.PlanConfigurationID.String()
 	}
+	threadID := ""
+	if row.ThreadID != uuid.Nil {
+		threadID = row.ThreadID.String()
+	}
 	return &ApprovalRequest{
 		ID:                  row.ID,
 		TenantID:            row.TenantID.String(),
 		PlanExecutionID:     row.PlanExecutionID.String(),
 		PlanConfigurationID: configID,
+		ThreadID:            threadID,
 		StepExecutionID:     row.StepExecutionID.String(),
 		PlanStepKey:         row.PlanStepKey,
 		InputArtifactID:     row.InputArtifactID,

@@ -31,7 +31,10 @@
 
   const displaySummary = $derived(
     item.kind === "approval"
-      ? translate("inbox.summary.approval", $locale)
+      ? translate("inbox.summary.approval", $locale).replace(
+          "{task}",
+          item.taskName,
+        )
       : item.summary,
   );
 </script>
