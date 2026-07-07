@@ -52,10 +52,17 @@ Two corollaries constrain every design decision:
 1. **The catalog is content, not code.** Plans are declarative catalog entries
    ([§7](#7-the-plan-centric-model), [§13](#13-authoring-the-catalog)), not hand-coded
    vertical modules. Adding a plan should not mean adding a module.
-2. **Surfaces are browsers over streams.** Plans emit typed **Artifacts**; every UI
-   surface (gallery, runs, artifact library, conversation) is a *view* over the artifact
-   and execution streams. There is no out-of-band CRUD that bypasses the plan/artifact
-   model.
+2. **Surfaces are browsers/editors over the artifact & resource model — not bespoke CRUD
+   stores.** Business state and knowledge live as typed **Artifacts** (plan step I/O) and
+   **Resources** (the shared layer, [§8](#8-the-resource-layer-the-shared-layer)), governed
+   by that model — versioned, permissioned, Área-gated, auditable. UI surfaces are *views
+   and governed editors* over those streams, never hand-coded CRUD modules that write
+   business state the model doesn't know about. This is what keeps Harpia a *generic*
+   platform instead of a vertical CRM/ERP. It does **not** mean everything must pass through
+   a plan: **Resources have two legitimate creation paths — governed direct upload/authoring
+   (e.g. a brand kit) and promotion from a plan output** — and plan *configuration* inputs
+   and executor *connection config* (feed URLs, OAuth) are entered directly too. The
+   invariant is *how* state is modeled and governed, not *that a plan produced it*.
 
 The **first commercial front** (Aiuna "Growth Front": Marketing + Sales) is *content on
 top of this platform*, not a rewrite of it. See [§12](#12-mvp-scope) and the
@@ -303,9 +310,21 @@ brand kit that agents consume" and "one plan's output becomes another plan's inp
 **same concept**. ADR-014 already defined the primitive — it just framed it narrowly as
 *agent memory*. We generalize it.
 
-**A Resource is a promoted, typed, versioned, permissioned artifact at tenant/workspace/
-brand/user scope.** It is the only layer that crosses plan-run boundaries. It can be bound
-two ways:
+**A Resource is a typed, versioned, permissioned knowledge object at tenant/workspace/
+brand/user scope.** It is the only layer that crosses plan-run boundaries.
+
+**Two creation paths** (both yield the same governed object; provenance records which):
+
+1. **Governed direct upload/authoring** — the user uploads or authors a Resource directly
+   (a brand kit, design system, company/brand profile). This is *not* raw CRUD: the payload
+   is validated against the Resource type's schema, versioned, permissioned, Área-gated, and
+   audited, with provenance `user-upload`. This is the primary path for branding the user
+   feeds the platform.
+2. **Promotion from a plan output** — an artifact produced by a plan run is promoted into a
+   Resource (e.g. a design-system plan's output becomes a reusable `DesignSystem`), with
+   provenance back to the originating PlanExecution/StepExecution/artifact/approver.
+
+Once created (either way), a Resource can be bound two ways:
 
 1. **As agent-readable memory** via `MemoryBinding` — the agent's declared tools may read
    it during a step (e.g. the LinkedIn writer reads the brand voice).
@@ -340,9 +359,10 @@ approved-content examples, audience notes.
   permissions, versions, provenance. Indexes/embeddings are derived views, not canonical.
 - Áreas gate Resource visibility ([§11](#11-áreas--rbac)).
 
-**One browser, one promotion flow.** The Artifact Library ([§9](#9-navigation--lifecycle))
-is the surface for both browsing artifacts and managing Resources; "Save as Resource /
-brand kit" is the single promotion action. Cross-plan reuse falls out of this for free.
+**One browser, two governed entry points.** The Artifact Library ([§9](#9-navigation--lifecycle))
+is the surface for browsing artifacts and managing Resources; **"Upload / Create Resource"**
+(direct) and **"Save as Resource"** (promote a plan output) are the two entry points. Both
+land in the same versioned, permissioned registry, so cross-plan reuse falls out for free.
 
 ---
 

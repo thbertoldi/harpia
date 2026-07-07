@@ -82,7 +82,9 @@ backbone. Implements constitution [§8](harpia-platform.md#8-the-resource-layer-
   provenance (origin PlanExecution/StepExecution/artifact/approver), permissions, backing
   artifact ref. Reuses Garage tenant-safe storage.
 - Proto: generalize ADR-014's `MemoryResource` into `Resource` in `harpia.artifacts.v1`;
-  `PromoteArtifactToResource`, `ListResources`, `GetResource`, resource-version RPCs.
+  both creation paths — `CreateResource`/`UploadResourceVersion` (direct upload/authoring)
+  and `PromoteArtifactToResource` (from a plan output) — plus `ListResources`, `GetResource`,
+  and resource-version RPCs.
 
 **New ArtifactTypes:** `CompanyProfile` (N01: tone of voice, audience, services,
 differentiators, communication limits), `BrandKit` (logos, colors, fonts references,
@@ -95,8 +97,12 @@ by `MemoryBinding`; wire `MemoryUsageRecord` audit.
 **Binding:** support `MemoryBinding` on PlanConfiguration/ExecutorInstallation and
 `SeedArtifactBinding` from a Resource; freeze resolved bindings into the execution snapshot.
 
-**Promotion flow:** "Save as Resource / brand kit" action on an artifact, with provenance;
-a controlled (human-approved) promotion, not silent accumulation.
+**Two creation paths (both governed):**
+- **Direct upload/authoring** — the *primary* path for branding the user feeds the platform
+  (upload a brand kit, author a company profile). Validated against the Resource type schema,
+  versioned, permissioned, Área-gated, audited; provenance `user-upload`.
+- **Promotion from a plan output** — "Save as Resource" on an artifact, controlled
+  (human-approved), with provenance to the origin run; not silent accumulation.
 
 **OpenSpec changes:** `resource-model-and-promotion`, `brand-kit-resources`,
 `agent-resource-consumption`.
