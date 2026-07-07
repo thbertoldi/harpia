@@ -7,11 +7,21 @@ entry files (e.g. `CLAUDE.md`) must import this, not duplicate it.
 Harpia is a chat-first, AI-enabled **operations platform** — a *generic* platform,
 **not** a vertical CRM/ERP. The plan catalog is **content**, not hand-coded modules.
 
+> **Architecture & taxonomy source of truth:** the **[Platform Constitution](docs/architecture/harpia-platform.md)**.
+> It supersedes ADR-001…017 as the reading order (the ADRs remain as dated history).
+> Read the constitution before modeling anything; the **[MVP Roadmap](docs/architecture/mvp-roadmap.md)**
+> and **[Cleanup Backlog](docs/architecture/cleanup-backlog.md)** are its companions.
+> This file (AGENTS.md) remains the source of truth for *how we work* — delivery
+> constraints, workflow, and verification gates below.
+
 ## Ubiquitous language (use these terms exactly)
 
-The domain taxonomy is authoritative. Read before modeling anything:
-- **[ADR-012 Plan-Centric Task Model](docs/adr/ADR-012-plan-centric-task-model.md)** — the core taxonomy.
-- **[ADR-006 Domain-Driven Design](docs/adr/ADR-006-domain-driven-design.md)** — bounded contexts.
+The domain taxonomy is authoritative. The reconciled glossary lives in the
+**[Platform Constitution §4](docs/architecture/harpia-platform.md#4-ubiquitous-language-the-reconciled-glossary)** —
+read it before modeling anything. The ADRs below are retained as historical rationale, but
+where they disagree with the constitution, **the constitution wins**:
+- **[ADR-012 Plan-Centric Task Model](docs/adr/ADR-012-plan-centric-task-model.md)** — the core taxonomy (as amended by ADR-015/017).
+- **[ADR-006 Domain-Driven Design](docs/adr/ADR-006-domain-driven-design.md)** — bounded contexts (now six; see constitution §5).
 - **[ADR-008 Tenant-Safe Boundaries](docs/adr/ADR-008-tenant-safe-generic-infra-boundaries.md)** — generic-infra isolation.
 
 Key terms (see ADR-012 for full definitions):
@@ -47,7 +57,9 @@ Ideas arrive at different altitudes; route each to the right home so nothing is 
 
 - **Trunk-based**, small logical commits. Never add a `Co-Authored-By: Claude` trailer.
 - **Pre-v1**: break schemas/routes/protocols freely — no migrations, deprecation shims, or transitional redirects until v1 is cut.
-- **Design tokens (colors, fonts) are LOCKED.** Animate layout/opacity/transform only.
+- **Fonts are LOCKED; color/depth is governed** by the Harpy Eclipse token system
+  (constitution §10) — change tokens only through the system, never ad hoc. Animate
+  layout/opacity/transform only.
 - **All user-facing copy needs `en` + `pt-BR`** via flat `translate()` keys in `frontend/src/lib/i18n/{en,pt-BR}.json`.
   Template/catalog content localizes via `catalog.plan.<key>.*` and `plans.inputs.<key>.label`.
 - **Protect the domain**: keep infrastructure/deps out of domain packages (hexagonal / ports & adapters).
@@ -80,8 +92,11 @@ changed files:
 
 ## Active direction
 
-- **Epic — fully conversational configuration:** the entire PlanConfiguration
-  (slot bindings, overseer, behavior policies, schedule) should be completed in chat,
-  ending in a **RUNNABLE** plan (ADR-012 §10). Today only the proposal/confirmation
-  step is conversational; binding still happens on the matrix/configured surface.
-  See the idea log for status.
+- **Epic — fully conversational configuration:** a **conversation** is a PlanConfiguration
+  assistant that may produce **several** plans (constitution §9); the entire configuration
+  (slot bindings, overseer, behavior policies, schedule) should be completed in chat, ending
+  in a **RUNNABLE** plan. Today only the proposal/confirmation step is conversational;
+  binding still happens on the matrix/configured surface. See the idea log for status.
+- **Current build target:** the [MVP Roadmap](docs/architecture/mvp-roadmap.md) —
+  content-depth-first (Resource layer → browsers → rich content). Phase 0 cleanup is in the
+  [backlog](docs/architecture/cleanup-backlog.md).
