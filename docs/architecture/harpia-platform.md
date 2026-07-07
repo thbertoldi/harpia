@@ -108,6 +108,11 @@ and the accepted ADRs, reconciled.
     `plans.inputs.<key>.label`.
 13. **Highest quality bar.** Value decisions belong to the human and are not relitigated as
     "overengineering."
+14. **Templates are outcome-shaped; genericity in the catalog, ease in the assistant.** A
+    PlanTemplate's identity is the *job/outcome*, never a fixed cadence/channel/format tuple.
+    Those are **configuration axes** ([§7.6](#76-template-granularity-identity-is-the-outcome)).
+    The extra flexibility does not become user burden because the conversational assistant
+    infers and pre-fills defaults ([§9](#9-navigation--lifecycle)).
 
 ---
 
@@ -316,6 +321,38 @@ executors during configuration, so it has no per-dispatch selection gate — onl
 and approval at run time. Template plans are the product's spine; adaptive mode is a
 retained secondary entry point.
 
+### 7.6 Template granularity: identity is the outcome
+
+A template's identity is the **job-to-be-done**, not a specific cadence/channel/format tuple.
+The current example `weekly-newsletter-linkedin` is the anti-pattern: it bakes **three
+configuration axes into its name** — cadence ("weekly"), channel ("linkedin"), and format
+("newsletter", itself misleading since it publishes a post). Each belongs in configuration:
+
+| Axis | Where it belongs | Notes |
+|---|---|---|
+| **Cadence** | `PlanSchedule` + `PlanConfiguration.kind` | Never in template identity. The `DateRange` seed should be *derived from the schedule window*, not hardcoded (`last_7_days`). |
+| **Format** | A configuration choice (post / carousel / image-backed / later email) | The "rich content" work ([roadmap](mvp-roadmap.md) Phase 3). |
+| **Channel** | `SlotBinding` (which channel executor fills the adapt/publish slots) | The structural one — see below. |
+| **Tone / audience / theme** | Template `input_parameters` (already so) | Pre-filled by the assistant. |
+
+**Channel as a configuration axis — preserving typed contracts.** Typed drafts
+(`LinkedInPostDraft` vs `BlogPostDraft`) are the safety linchpin ([§7.3](#73-platform-adaptation-is-its-own-step))
+but make channel *structurally fixed*. The resolution is neither a template-per-channel
+(catalog explosion) nor an untyped blob (loses safety), but a **channel-discriminated
+artifact family**: a neutral `TextDraft` feeds generic `adapt-to-channel (TextDraft →
+ChannelPostDraft)` and `publish-to-channel (ChannelPostDraft → PublishConfirmation)` steps,
+where the specific channel is chosen at configuration time by the **SlotBinding** (bind the
+LinkedIn adapter+publisher, or Instagram, …) and an **ExecutorRequirement** keeps adapter and
+publisher on the same channel. **Multi-channel is fan-out** from one `TextDraft` to several
+channel slots, with the user *enabling* the channels they want — not editing the DAG. (This
+needs new channel executors + artifact types, so it is post-MVP; the *shape* is what makes
+plans generic.)
+
+**Do not over-rotate to a god-template.** Too generic ("do content") loses both
+intent-matching (the assistant can't suggest the right template) and typed-contract safety.
+Outcome-shaped templates keep matching easy (match on outcome, extract the rest as
+parameters) while making cadence/channel/format configurable.
+
 ---
 
 ## 8. The Resource layer (the shared layer)
@@ -485,6 +522,10 @@ full catalog service with CRUD/UI and Áreas RBAC — is deferred.
 Adding a genuinely new plan generally requires new **ExecutorSKUs** and **ArtifactTypes**;
 with only four executors on one content chain today, templates can otherwise only recombine
 the existing four. The roadmap tracks which executors/artifact types each phase adds.
+
+Author templates by the **outcome**, keeping cadence/channel/format out of their identity
+([§7.6](#76-template-granularity-identity-is-the-outcome)) — including localization keys
+(`catalog.plan.<key>.*`) that describe the job, not a one-off cadence/channel.
 
 ---
 

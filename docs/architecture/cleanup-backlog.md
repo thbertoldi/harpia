@@ -96,16 +96,26 @@ ADR-012 deprecated "subtask," but `harpia.budget.v1` and `harpia.mcp.v1` still s
 (pre-v1, free to break):** rename to `step_*` / `StepCostEstimate` for consistency with the
 canonical taxonomy.
 
-### AGENTS.md wording
-- "the chat interface is a PlanConfiguration assistant" reads singular/1:1 → update to the
-  1:N conversation framing (constitution §9).
-- "Design tokens (colors, fonts) are LOCKED" → clarify to **fonts locked, color/depth
-  governed by the Harpy Eclipse token system** (constitution §10).
-- Add the pointer to `docs/architecture/harpia-platform.md` as source of truth.
+### T1 — Example template bakes configuration into its identity
+`weekly-newsletter-linkedin` encodes three configuration axes in its name — cadence
+("weekly"), channel ("linkedin"), format ("newsletter") — violating the outcome-shaped
+template principle (constitution §7.6). **Fix (mostly catalog content, pre-v1 free):** rename
+to an outcome name; move cadence to `PlanSchedule` and derive the `DateRange` seed from the
+schedule window instead of a hardcoded `last_7_days`. The channel-discriminated artifact
+family (generic `adapt-to-channel`/`publish-to-channel` + channel `SlotBinding`) is the
+post-MVP structural piece that makes channel a config axis; roadmap Phase 0 item T1 covers
+the cheap rename now.
 
-### ADR stamping
-Add a "superseded-by-constitution" banner to each ADR header and create
-`docs/adr/README.md` with the supersession map (constitution §15).
+### AGENTS.md wording — ✅ done (this consolidation pass)
+- "the chat interface is a PlanConfiguration assistant" → updated to the 1:N conversation
+  framing (constitution §9).
+- "Design tokens (colors, fonts) are LOCKED" → clarified to fonts locked, color/depth
+  governed by the Harpy Eclipse token system (constitution §10).
+- Pointer to `docs/architecture/harpia-platform.md` added as source of truth.
+
+### ADR stamping — ✅ done (this consolidation pass)
+All 17 ADRs stamped with a "superseded-by-constitution" banner; `docs/adr/README.md` created
+with the supersession map (constitution §15).
 
 ---
 

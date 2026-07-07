@@ -65,6 +65,12 @@ Ordered work (→ OpenSpec change `phase0-consolidation-cleanup`):
    still works; a second template's inputs render with no code change.
 4. **D2/D3/D4:** delete orphaned `ArtifactRail`/`TextArtifactEditor`, dead e2e
    plan-thread mock branches, and stale proto/doc comments.
+5. **T1 (template factoring):** rename `weekly-newsletter-linkedin` to an outcome name
+   (cadence/channel/format out of identity, constitution §7.6); make cadence purely
+   `PlanSchedule` and derive the `DateRange` seed from the schedule window instead of a
+   hardcoded `last_7_days`. *Verify:* a ONE_SHOT and a weekly RECURRING configuration of the
+   same template both run, with the date window matching the schedule. (Channel genericity is
+   the post-MVP structural piece — §7.)
 
 **Also in Phase 0 (doc-level, this effort):** proto `subtask_*` → `step_*` renames (C4,
 pre-v1 free), AGENTS.md wording fixes, ADR banners. Tracked in the backlog.
@@ -178,7 +184,8 @@ hook; the graph self-critiques and revises; a single preview shows the branded c
 Kept out of the 6-week window, with rationale in the constitution: all Sales plans
 (V02–V08), CRM/customer/history (N02/N03), offer catalog as a full plan (N04), pipeline
 (N05), reporting/dashboards/indicators (N09/N10/M08/V08), paid media (M07), strategic
-diagnosis agents (M01), multi-channel publishing (Instagram/blog/email/X), full
+diagnosis agents (M01), multi-channel publishing (Instagram/blog/email/X) via the channel-discriminated artifact
+family (constitution §7.6), full
 catalog-authoring service + marketplace, the **credit/subscription monetization layer**
 (constitution §14), overseer re-delegation, and adaptive→PlanExecution migration. Each
 becomes its own spec → plan cycle after the MVP demo. The credit layer's hooks (Budget
