@@ -12,6 +12,7 @@ export interface ExecutionStepView {
   key: string;
   title: string;
   status: StepStatus;
+  outputArtifactId: string | null;
 }
 
 export interface ExecutionViewModel {
@@ -88,6 +89,7 @@ export function buildExecutionViewModel(
     key: s.key,
     title: s.title,
     status: "pending",
+    outputArtifactId: null,
   }));
   const byKey = new Map(steps.map((s) => [s.key, s]));
   let state: ExecutionState = "idle";
@@ -122,11 +124,19 @@ export function buildExecutionViewModel(
       }
       case "STEP_BOUND": {
         const key = parseStepKey(m.payloadJson);
-        if (key && byKey.has(key)) byKey.get(key)!.status = "done";
+        const outputArtifactId = parseOutputArtifactId(m.payloadJson);
+        if (key && byKey.has(key)) {
+          const step = byKey.get(key)!;
+          step.status = "done";
+          step.outputArtifactId = outputArtifactId;
+        }
         if (key && runningKey === key) runningKey = null;
         else if (!key && runningKey) {
           // No key on the bound event: assume the running step completed.
           settle(runningKey);
+          if (outputArtifactId && byKey.has(runningKey)) {
+            byKey.get(runningKey)!.outputArtifactId = outputArtifactId;
+          }
           runningKey = null;
         }
         break;

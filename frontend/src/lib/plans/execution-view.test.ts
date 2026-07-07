@@ -145,8 +145,37 @@ describe("buildExecutionViewModel", () => {
       STEPS,
     );
     expect(vm.steps.map((s) => s.status)).toEqual(["done", "done", "pending"]);
+    expect(vm.steps.map((s) => s.outputArtifactId)).toEqual([
+      "fetch-a",
+      "draft-a",
+      null,
+    ]);
     expect(vm.doneCount).toBe(2);
     expect(vm.progress).toBeCloseTo(2 / 3, 5);
+  });
+
+  it("carries output artifact ids onto completed steps", () => {
+    reset();
+    const vm = buildExecutionViewModel(
+      {
+        executionId: "exec-1",
+        runNumber: 1,
+        messages: [
+          msg("RUN_STARTED"),
+          started("fetch"),
+          msg("STEP_BOUND", {
+            payload: JSON.stringify({
+              step_key: "fetch",
+              output_artifact_id: "artifact-news-list",
+            }),
+          }),
+        ],
+      },
+      STEPS,
+    );
+
+    expect(vm.steps[0].status).toBe("done");
+    expect(vm.steps[0].outputArtifactId).toBe("artifact-news-list");
   });
 
   it("RUN_COMPLETED settles any still-running step to done", () => {

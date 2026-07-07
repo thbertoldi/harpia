@@ -928,7 +928,11 @@
           <div class="flex flex-col gap-2">
             {#each executionViewModels as vm (vm.executionId)}
               <div in:chatEnterStaggered={{ delay: 0 }}>
-                <PlanExecutionCard {vm} initiallyCollapsed />
+                <PlanExecutionCard
+                  {vm}
+                  initiallyCollapsed
+                  onOpenArtifact={openArtifact}
+                />
               </div>
             {/each}
           </div>

@@ -1,5 +1,11 @@
 <script lang="ts">
-  import { Check, AlertTriangle, Loader2, ChevronDown } from "lucide-svelte";
+  import {
+    Check,
+    AlertTriangle,
+    Loader2,
+    ChevronDown,
+    Eye,
+  } from "lucide-svelte";
   import { locale, translate } from "$lib/i18n";
   import type {
     ExecutionViewModel,
@@ -9,8 +15,9 @@
   interface Props {
     vm: ExecutionViewModel;
     initiallyCollapsed?: boolean;
+    onOpenArtifact?: (artifactId: string) => void;
   }
-  let { vm, initiallyCollapsed = false }: Props = $props();
+  let { vm, initiallyCollapsed = false, onOpenArtifact }: Props = $props();
 
   // svelte-ignore state_referenced_locally
   // Seed the initial expanded/collapsed state from the prop; the card is then
@@ -189,6 +196,16 @@
             >
               {translate("thread.execution.runningChip", $locale)}
             </span>
+          {:else if step.outputArtifactId && onOpenArtifact}
+            <button
+              type="button"
+              class="ml-auto inline-flex size-7 shrink-0 items-center justify-center rounded-md border border-plumage text-crown-ash transition-colors hover:border-talon-gold hover:text-talon-gold"
+              aria-label={translate("artifacts.actions.open", $locale)}
+              title={translate("artifacts.actions.open", $locale)}
+              onclick={() => onOpenArtifact(step.outputArtifactId!)}
+            >
+              <Eye class="size-3.5" />
+            </button>
           {/if}
         </li>
       {/each}
