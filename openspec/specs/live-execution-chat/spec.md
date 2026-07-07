@@ -4,7 +4,16 @@
 TBD - created by archiving change live-execution-chat. Update Purpose after archive.
 ## Requirements
 ### Requirement: Live execution progress card
-The chat thread SHALL render one collapsible progress card per `PlanExecution` section, derived solely from the existing execution event stream, showing each `PlanStep`'s status and an overall progress bar.
+The chat thread SHALL render one collapsible progress card per `PlanExecution` section,
+derived solely from the existing execution event stream, showing each `PlanStep`'s status
+and an overall progress bar. When collapsed and running, the card header SHALL remain
+informative: it SHALL surface the current running step's title/detail and a `done/total`
+progress indication without requiring the user to expand the card.
+
+#### Scenario: Collapsed running card shows the current step
+- **WHEN** an execution card is collapsed and one of its steps is `running`
+- **THEN** the header shows the current running step's title/detail
+- **AND** the header shows a `done/total` progress indication
 
 #### Scenario: Running step shows progress
 - **WHEN** a thread section for `executionId` contains `RUN_STARTED` and `STEP_STARTED` for `step_key="draft"`
@@ -21,6 +30,7 @@ The chat thread SHALL render one collapsible progress card per `PlanExecution` s
 - **WHEN** a section contains `RUN_COMPLETED`
 - **THEN** every step still marked `running` is forced to `done`
 - **AND** the execution card header reports the plan as completed
+- **AND** the collapsed header no longer shows a current running step
 
 #### Scenario: Run failure marks the failing step
 - **WHEN** a section contains `RUN_FAILED` while a step is `running`
