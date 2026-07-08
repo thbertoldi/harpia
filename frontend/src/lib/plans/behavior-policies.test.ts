@@ -22,8 +22,8 @@ import {
   type PlanConfiguration,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
 import {
-  mockWeeklyNewsletterLinkedInTemplate,
-  WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_ID,
+  mockNewsToSocialPostTemplate,
+  NEWS_TO_SOCIAL_POST_TEMPLATE_ID,
 } from "$lib/plans/plan-template";
 
 const {
@@ -129,7 +129,7 @@ describe("behavior policies", () => {
       id: CONFIGURATION_ID,
       tenantId: "dev",
       workspaceId: "",
-      planTemplateId: WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_ID,
+      planTemplateId: NEWS_TO_SOCIAL_POST_TEMPLATE_ID,
       planTemplateVersion: 1,
       status: PlanConfigurationStatus.DRAFT,
       behaviorPolicies: create(PlanBehaviorPoliciesSchema, {
@@ -144,7 +144,7 @@ describe("behavior policies", () => {
     listPlanConfigurations.mockReturnValue(listConfigurations([configuration]));
 
     const result = await loadBehaviorPoliciesForTemplate(
-      WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_ID,
+      NEWS_TO_SOCIAL_POST_TEMPLATE_ID,
     );
 
     expect(result.source).toBe("api");
@@ -158,12 +158,12 @@ describe("behavior policies", () => {
     });
 
     await expect(
-      loadBehaviorPoliciesForTemplate(WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_ID),
+      loadBehaviorPoliciesForTemplate(NEWS_TO_SOCIAL_POST_TEMPLATE_ID),
     ).rejects.toThrow("network error");
   });
 
   it("creates a configuration through the API", async () => {
-    const template = mockWeeklyNewsletterLinkedInTemplate();
+    const template = mockNewsToSocialPostTemplate();
     const saved = create(PlanConfigurationSchema, {
       id: CONFIGURATION_ID,
       tenantId: "dev",
@@ -198,7 +198,7 @@ describe("behavior policies", () => {
   });
 
   it("updates an existing configuration through the API without dropping other fields", async () => {
-    const template = mockWeeklyNewsletterLinkedInTemplate();
+    const template = mockNewsToSocialPostTemplate();
     const existing = create(PlanConfigurationSchema, {
       id: CONFIGURATION_ID,
       tenantId: "dev",
@@ -259,7 +259,7 @@ describe("behavior policies", () => {
   });
 
   it("rejects when the API save fails", async () => {
-    const template = mockWeeklyNewsletterLinkedInTemplate();
+    const template = mockNewsToSocialPostTemplate();
     createPlanConfiguration.mockRejectedValue(new Error("network error"));
 
     await expect(

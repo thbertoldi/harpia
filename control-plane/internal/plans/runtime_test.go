@@ -1,14 +1,154 @@
 package plans
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 
+	chatv1 "github.com/harpia/control-plane/gen/harpia/chat/v1"
 	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
+	"github.com/harpia/control-plane/internal/chat"
 	"github.com/harpia/control-plane/internal/workflow"
 )
+
+func TestRuntimeInteractionEventsUseConfigurationOriginThread(t *testing.T) {
+	tenantID := uuid.New()
+	configurationID := uuid.New()
+	executionID := uuid.New()
+	stepID := uuid.New()
+	originThreadID := uuid.New()
+	store := &fakeRuntimePlanStore{
+		configuration: &PlanConfiguration{
+			ID:             configurationID,
+			TenantID:       tenantID,
+			OriginThreadID: originThreadID,
+		},
+		execution: &PlanExecution{
+			ID:                  executionID,
+			TenantID:            tenantID,
+			PlanConfigurationID: configurationID,
+			Status:              ExecutionStatusRunning,
+		},
+		stepID: stepID,
+	}
+	messages := &fakeRuntimeChat{}
+	runtime := &RuntimeRepository{plans: store, chat: messages}
+
+	_, err := runtime.CreateStepExecution(context.Background(), workflow.CreateStepExecutionInput{
+		TenantID:                     tenantID.String(),
+		PlanExecutionID:              executionID.String(),
+		PlanStepKey:                  "publish",
+		ExecutorInstallationSnapshot: workflow.ExecutorInstallationSnapshot{ID: "installation-publish"},
+	})
+	if err != nil {
+		t.Fatalf("CreateStepExecution: %v", err)
+	}
+	if err := runtime.CreateApprovalRequest(context.Background(), workflow.CreateApprovalRequestInput{
+		TenantID:          tenantID.String(),
+		PlanExecutionID:   executionID.String(),
+		StepExecutionID:   stepID.String(),
+		PlanStepKey:       "publish",
+		ApprovalRequestID: "approval-1",
+		InputArtifactID:   "artifact-1",
+	}); err != nil {
+		t.Fatalf("CreateApprovalRequest: %v", err)
+	}
+
+	if len(messages.appended) != 2 {
+		t.Fatalf("appended messages = %d, want 2", len(messages.appended))
+	}
+	wantThreadID := originThreadID.String()
+	for _, input := range messages.appended {
+		if input.ThreadID != wantThreadID {
+			t.Fatalf("message kind %s thread = %q, want %q", input.Kind, input.ThreadID, wantThreadID)
+		}
+	}
+	if messages.appended[0].Kind != chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_STEP_STARTED {
+		t.Fatalf("first message kind = %s, want STEP_STARTED", messages.appended[0].Kind)
+	}
+	if messages.appended[1].Kind != chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_APPROVAL_RAISED {
+		t.Fatalf("second message kind = %s, want APPROVAL_RAISED", messages.appended[1].Kind)
+	}
+}
+
+type fakeRuntimePlanStore struct {
+	configuration *PlanConfiguration
+	execution     *PlanExecution
+	stepID        uuid.UUID
+}
+
+func (f *fakeRuntimePlanStore) GetConfiguration(_ context.Context, _, _ uuid.UUID) (*PlanConfiguration, error) {
+	return f.configuration, nil
+}
+
+func (f *fakeRuntimePlanStore) GetTemplateByID(context.Context, uuid.UUID) (*PlanTemplate, error) {
+	return &PlanTemplate{}, nil
+}
+
+func (f *fakeRuntimePlanStore) CreateExecution(_ context.Context, execution *PlanExecution) (*PlanExecution, error) {
+	return execution, nil
+}
+
+func (f *fakeRuntimePlanStore) GetExecution(context.Context, uuid.UUID, uuid.UUID) (*PlanExecution, error) {
+	return f.execution, nil
+}
+
+func (f *fakeRuntimePlanStore) UpdateExecutionStatus(context.Context, uuid.UUID, uuid.UUID, string, *time.Time) error {
+	return nil
+}
+
+func (f *fakeRuntimePlanStore) GetPlanConfigurationIDForExecution(context.Context, uuid.UUID, uuid.UUID) (uuid.UUID, error) {
+	return f.configuration.ID, nil
+}
+
+func (f *fakeRuntimePlanStore) CreateStepExecution(_ context.Context, step *StepExecution) (*StepExecution, error) {
+	created := *step
+	created.ID = f.stepID
+	created.Attempt = 1
+	return &created, nil
+}
+
+func (f *fakeRuntimePlanStore) UpdateStepExecutionStatus(context.Context, uuid.UUID, uuid.UUID, string, string, string, string) error {
+	return nil
+}
+
+func (f *fakeRuntimePlanStore) UpsertElicitation(_ context.Context, elicitation *Elicitation) (*Elicitation, error) {
+	return elicitation, nil
+}
+
+func (f *fakeRuntimePlanStore) MarkElicitationTimedOutByStep(context.Context, uuid.UUID, uuid.UUID, string) error {
+	return nil
+}
+
+func (f *fakeRuntimePlanStore) CreatePlanApprovalRequest(context.Context, *PlanApprovalRequest) error {
+	return nil
+}
+
+func (f *fakeRuntimePlanStore) ResolvePlanApprovalRequest(context.Context, uuid.UUID, string, uuid.UUID, bool, string) error {
+	return nil
+}
+
+type fakeRuntimeChat struct {
+	appended []chat.AppendInput
+}
+
+func (f *fakeRuntimeChat) AppendMessage(_ context.Context, _ uuid.UUID, input chat.AppendInput) (*chatv1.ThreadMessage, error) {
+	f.appended = append(f.appended, input)
+	return &chatv1.ThreadMessage{Id: uuid.NewString(), ThreadId: input.ThreadID, Kind: input.Kind, PayloadJson: input.PayloadJSON}, nil
+}
+
+func (f *fakeRuntimeChat) ListMessages(_ context.Context, _ uuid.UUID, threadID string, _ int64, _ int) ([]*chatv1.ThreadMessage, error) {
+	messages := make([]*chatv1.ThreadMessage, 0, len(f.appended))
+	for _, input := range f.appended {
+		if input.ThreadID != threadID {
+			continue
+		}
+		messages = append(messages, &chatv1.ThreadMessage{ThreadId: input.ThreadID, Kind: input.Kind, PayloadJson: input.PayloadJSON})
+	}
+	return messages, nil
+}
 
 func TestExecutionFailureReasonUsesLatestFailedStep(t *testing.T) {
 	now := time.Now().UTC()

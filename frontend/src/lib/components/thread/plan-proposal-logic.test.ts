@@ -135,7 +135,7 @@ describe("applyRefinementSelection", () => {
     const afterCandidate = applyRefinementSelection(undefined, {
       kind: "candidate",
       label: "Plano",
-      value: "weekly-newsletter-linkedin",
+      value: "news-to-social-post",
     });
     const afterAudience = applyRefinementSelection(afterCandidate, {
       kind: "audience",

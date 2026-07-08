@@ -360,8 +360,7 @@ func (x *Thread) GetUpdatedAt() *timestamppb.Timestamp {
 
 // ThreadMessage is a single durable record in a chat thread.
 //
-// thread_id is the owning Thread.id. During Path B migration, legacy
-// plan-thread RPCs resolve plan_configuration_id to the owning thread_id.
+// thread_id is the owning Thread.id used by chat message list/watch APIs.
 type ThreadMessage struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                      // UUID
@@ -373,7 +372,7 @@ type ThreadMessage struct {
 	Text           string                 `protobuf:"bytes,7,opt,name=text,proto3" json:"text,omitempty"`                                             // user/assistant text or human-readable summary
 	PayloadJson    string                 `protobuf:"bytes,8,opt,name=payload_json,json=payloadJson,proto3" json:"payload_json,omitempty"`            // per-kind structured payload (see Kind-specific schemas)
 	AuthorUserId   string                 `protobuf:"bytes,9,opt,name=author_user_id,json=authorUserId,proto3" json:"author_user_id,omitempty"`       // optional; NULL for SYSTEM role
-	SequenceNumber int64                  `protobuf:"varint,10,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number,omitempty"` // per-thread monotonic; used for WatchPlanThreadMessages resume
+	SequenceNumber int64                  `protobuf:"varint,10,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number,omitempty"` // per-thread monotonic; used for WatchThreadMessages resume
 	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache

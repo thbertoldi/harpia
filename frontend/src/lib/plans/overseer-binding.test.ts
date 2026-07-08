@@ -5,7 +5,7 @@ import {
   PlanConfigurationStatus,
   SlotBindingSchema,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
-import { mockWeeklyNewsletterLinkedInTemplate } from "$lib/plans/plan-template";
+import { mockNewsToSocialPostTemplate } from "$lib/plans/plan-template";
 import {
   assignSelfAsOverseerForSteps,
   formatOverseerPromotionErrors,
@@ -17,7 +17,7 @@ import {
 } from "$lib/plans/overseer-binding";
 
 describe("overseer binding helpers", () => {
-  const template = mockWeeklyNewsletterLinkedInTemplate();
+  const template = mockNewsToSocialPostTemplate();
   const sessionUser = { sub: "dev-overseer" };
 
   it("identifies agent-backed steps from the weekly newsletter template", () => {

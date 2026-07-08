@@ -79,7 +79,7 @@ func TestSeedThread_EmitsConfigurationStartedThenBindingStep(t *testing.T) {
 	tpl.Id = testTemplateUUID
 	cfg := &plansv1.PlanConfiguration{
 		Id:             uuid.NewString(),
-		ThreadId:       testThreadUUID,
+		OriginThreadId: testThreadUUID,
 		PlanTemplateId: testTemplateUUID,
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
 	}
@@ -114,7 +114,7 @@ func TestNextTurn_AdvancesThroughUnboundStepsThenMatrix(t *testing.T) {
 	tpl.Id = testTemplateUUID
 	cfg := &plansv1.PlanConfiguration{
 		Id:             uuid.NewString(),
-		ThreadId:       testThreadUUID,
+		OriginThreadId: testThreadUUID,
 		PlanTemplateId: testTemplateUUID,
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
 	}
@@ -138,7 +138,7 @@ func TestNextTurn_AdvancesThroughUnboundStepsThenMatrix(t *testing.T) {
 
 	configs.cur = &plansv1.PlanConfiguration{
 		Id:             cfg.Id,
-		ThreadId:       testThreadUUID,
+		OriginThreadId: testThreadUUID,
 		PlanTemplateId: testTemplateUUID,
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
 		SlotBindings:   []*plansv1.SlotBinding{{StepKey: "fetch-news", ExecutorInstallationId: "rss-tech"}},
@@ -153,7 +153,7 @@ func TestNextTurn_AdvancesThroughUnboundStepsThenMatrix(t *testing.T) {
 
 	configs.cur = &plansv1.PlanConfiguration{
 		Id:             cfg.Id,
-		ThreadId:       testThreadUUID,
+		OriginThreadId: testThreadUUID,
 		PlanTemplateId: testTemplateUUID,
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
 		SlotBindings: []*plansv1.SlotBinding{
@@ -170,7 +170,7 @@ func TestNextTurn_AdvancesThroughUnboundStepsThenMatrix(t *testing.T) {
 
 	configs.cur = &plansv1.PlanConfiguration{
 		Id:             cfg.Id,
-		ThreadId:       testThreadUUID,
+		OriginThreadId: testThreadUUID,
 		PlanTemplateId: testTemplateUUID,
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
 		SlotBindings: []*plansv1.SlotBinding{
@@ -199,7 +199,7 @@ func TestNextTurn_AdvancesFromBindingsToOverseerThenMatrix(t *testing.T) {
 	cfgID := uuid.NewString()
 	configs := &fakeConfigs{cur: &plansv1.PlanConfiguration{
 		Id:             cfgID,
-		ThreadId:       testThreadUUID,
+		OriginThreadId: testThreadUUID,
 		PlanTemplateId: testTemplateUUID,
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
 		SlotBindings: []*plansv1.SlotBinding{
@@ -228,7 +228,7 @@ func TestNextTurn_AdvancesFromBindingsToOverseerThenMatrix(t *testing.T) {
 
 	configs.cur = &plansv1.PlanConfiguration{
 		Id:             cfgID,
-		ThreadId:       testThreadUUID,
+		OriginThreadId: testThreadUUID,
 		PlanTemplateId: testTemplateUUID,
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
 		SlotBindings: []*plansv1.SlotBinding{
@@ -248,7 +248,7 @@ func TestNextTurn_AdvancesFromBindingsToOverseerThenMatrix(t *testing.T) {
 
 	configs.cur = &plansv1.PlanConfiguration{
 		Id:             cfgID,
-		ThreadId:       testThreadUUID,
+		OriginThreadId: testThreadUUID,
 		PlanTemplateId: testTemplateUUID,
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
 		SlotBindings: []*plansv1.SlotBinding{
@@ -277,7 +277,7 @@ func TestNextTurn_DedupsIdenticalMatrix(t *testing.T) {
 	tpl.Id = testTemplateUUID
 	cfg := &plansv1.PlanConfiguration{
 		Id:             uuid.NewString(),
-		ThreadId:       testThreadUUID,
+		OriginThreadId: testThreadUUID,
 		PlanTemplateId: testTemplateUUID,
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
 	}
@@ -299,7 +299,7 @@ func TestNextTurn_EmitsLandingOnPromotion(t *testing.T) {
 	tpl.Id = testTemplateUUID
 	cfg := &plansv1.PlanConfiguration{
 		Id:             uuid.NewString(),
-		ThreadId:       testThreadUUID,
+		OriginThreadId: testThreadUUID,
 		PlanTemplateId: testTemplateUUID,
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
 	}
@@ -321,7 +321,7 @@ func TestNextTurn_LandingIsIdempotent(t *testing.T) {
 	tpl.Id = testTemplateUUID
 	cfg := &plansv1.PlanConfiguration{
 		Id:             uuid.NewString(),
-		ThreadId:       testThreadUUID,
+		OriginThreadId: testThreadUUID,
 		PlanTemplateId: testTemplateUUID,
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
 	}
@@ -364,7 +364,7 @@ func TestNextTurn_DedupsByFingerprintNotBytes(t *testing.T) {
 	cfgID := uuid.NewString()
 	cfg := &plansv1.PlanConfiguration{
 		Id:             cfgID,
-		ThreadId:       testThreadUUID,
+		OriginThreadId: testThreadUUID,
 		PlanTemplateId: testTemplateUUID,
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
 	}
@@ -393,7 +393,7 @@ func TestNextTurn_DoesNotDedupAcrossConfigurations(t *testing.T) {
 	cfgID := uuid.NewString()
 	cfg := &plansv1.PlanConfiguration{
 		Id:             cfgID,
-		ThreadId:       testThreadUUID,
+		OriginThreadId: testThreadUUID,
 		PlanTemplateId: testTemplateUUID,
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
 	}
@@ -423,7 +423,7 @@ func TestNextTurn_DedupIsStepScoped(t *testing.T) {
 	cfgID := uuid.NewString()
 	cfg := &plansv1.PlanConfiguration{
 		Id:             cfgID,
-		ThreadId:       testThreadUUID,
+		OriginThreadId: testThreadUUID,
 		PlanTemplateId: testTemplateUUID,
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
 		SlotBindings:   []*plansv1.SlotBinding{{StepKey: "fetch-news", ExecutorInstallationId: "rss-tech"}},
@@ -457,7 +457,7 @@ func TestNextTurn_LandingIsConfigScoped(t *testing.T) {
 	cfgID := uuid.NewString()
 	cfg := &plansv1.PlanConfiguration{
 		Id:             cfgID,
-		ThreadId:       testThreadUUID,
+		OriginThreadId: testThreadUUID,
 		PlanTemplateId: testTemplateUUID,
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
 	}
@@ -493,7 +493,7 @@ func TestNextTurn_ProgressionEmitsExactlyOnePromptPerStep(t *testing.T) {
 	cfgID := uuid.NewString()
 	configs := &fakeConfigs{cur: &plansv1.PlanConfiguration{
 		Id:             cfgID,
-		ThreadId:       testThreadUUID,
+		OriginThreadId: testThreadUUID,
 		PlanTemplateId: testTemplateUUID,
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
 	}}
@@ -519,7 +519,7 @@ func TestNextTurn_ProgressionEmitsExactlyOnePromptPerStep(t *testing.T) {
 
 	// Step 2: BINDING_STEP/write-draft.
 	configs.cur = &plansv1.PlanConfiguration{
-		Id: cfgID, ThreadId: testThreadUUID, PlanTemplateId: testTemplateUUID,
+		Id: cfgID, OriginThreadId: testThreadUUID, PlanTemplateId: testTemplateUUID,
 		Status: plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
 		SlotBindings: []*plansv1.SlotBinding{
 			{StepKey: "fetch-news", ExecutorInstallationId: "rss-tech"},
@@ -534,7 +534,7 @@ func TestNextTurn_ProgressionEmitsExactlyOnePromptPerStep(t *testing.T) {
 
 	// Step 3: OVERSEER_STEP/write-draft (write-draft is agent-backed).
 	configs.cur = &plansv1.PlanConfiguration{
-		Id: cfgID, ThreadId: testThreadUUID, PlanTemplateId: testTemplateUUID,
+		Id: cfgID, OriginThreadId: testThreadUUID, PlanTemplateId: testTemplateUUID,
 		Status: plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
 		SlotBindings: []*plansv1.SlotBinding{
 			{StepKey: "fetch-news", ExecutorInstallationId: "rss-tech"},
@@ -550,7 +550,7 @@ func TestNextTurn_ProgressionEmitsExactlyOnePromptPerStep(t *testing.T) {
 
 	// Step 4: POLICIES_STEP.
 	configs.cur = &plansv1.PlanConfiguration{
-		Id: cfgID, ThreadId: testThreadUUID, PlanTemplateId: testTemplateUUID,
+		Id: cfgID, OriginThreadId: testThreadUUID, PlanTemplateId: testTemplateUUID,
 		Status: plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
 		SlotBindings: []*plansv1.SlotBinding{
 			{StepKey: "fetch-news", ExecutorInstallationId: "rss-tech"},
@@ -571,7 +571,7 @@ func TestNextTurn_ProgressionEmitsExactlyOnePromptPerStep(t *testing.T) {
 
 	// Step 5: BINDING_MATRIX.
 	configs.cur = &plansv1.PlanConfiguration{
-		Id: cfgID, ThreadId: testThreadUUID, PlanTemplateId: testTemplateUUID,
+		Id: cfgID, OriginThreadId: testThreadUUID, PlanTemplateId: testTemplateUUID,
 		Status: plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
 		SlotBindings: []*plansv1.SlotBinding{
 			{StepKey: "fetch-news", ExecutorInstallationId: "rss-tech"},
@@ -593,7 +593,7 @@ func TestNextTurn_ProgressionEmitsExactlyOnePromptPerStep(t *testing.T) {
 
 	// Step 6: landing on promotion to RUNNABLE. Re-fire to confirm idempotency.
 	configs.cur = &plansv1.PlanConfiguration{
-		Id: cfgID, ThreadId: testThreadUUID, PlanTemplateId: testTemplateUUID,
+		Id: cfgID, OriginThreadId: testThreadUUID, PlanTemplateId: testTemplateUUID,
 		Status: plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
 		SlotBindings: []*plansv1.SlotBinding{
 			{StepKey: "fetch-news", ExecutorInstallationId: "rss-tech"},

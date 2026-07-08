@@ -23,7 +23,7 @@ func TestMaterializePlanConfigurationFromParameterValues(t *testing.T) {
 		"tone":                         "analytical",
 		"audience":                     "operations leaders",
 		"topics_to_avoid":              "crypto hype",
-		"date_range":                   map[string]any{"preset": "last_7_days"},
+		"date_range":                   map[string]any{"preset": "schedule_window"},
 		"source_group":                 sourceGroupID,
 		"approval_mode":                "require_approval",
 		"elicitation_timeout_behavior": "pause_until_answered",
@@ -52,7 +52,7 @@ func TestMaterializePlanConfigurationFromParameterValues(t *testing.T) {
 	if dateSeed == nil {
 		t.Fatal("missing fetch-news date_range seed")
 	}
-	assertJSONEqual(t, dateSeed.LiteralJson, `{"preset":"last_7_days"}`)
+	assertJSONEqual(t, dateSeed.LiteralJson, `{"preset":"schedule_window"}`)
 
 	if len(slots) != 1 {
 		t.Fatalf("slot binding count = %d, want 1: %#v", len(slots), slots)
@@ -182,7 +182,7 @@ func TestResolveDefaultSlotBindingsReturnsPreconditionForMissingRequiredDefault(
 
 func weeklyNewsletterMaterializeTemplate() *plansv1.PlanTemplate {
 	return &plansv1.PlanTemplate{
-		Key: "weekly-newsletter-linkedin",
+		Key: "news-to-social-post",
 		InputParameters: []*plansv1.TemplateInputParameter{
 			seedParam("theme", "write-draft", "harpia.internal.ContentPreferences", "$.topic"),
 			seedParam("language", "write-draft", "harpia.internal.ContentPreferences", "$.language"),

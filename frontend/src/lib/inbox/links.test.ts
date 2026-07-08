@@ -30,9 +30,7 @@ describe("inbox links", () => {
     );
   });
 
-  it("falls back to configuration id for older approval responses", () => {
-    expect(inboxApprovalThreadPath({ ...item, threadId: "" })).toBe(
-      "/chat/config-1?plan=config-1&execution=exec-1#m-approval-approval-1",
-    );
+  it("falls back to runs when an approval has no canonical thread", () => {
+    expect(inboxApprovalThreadPath({ ...item, threadId: "" })).toBe("/runs");
   });
 });

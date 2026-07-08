@@ -266,9 +266,9 @@ func reservationFromProto(tenantID uuid.UUID, msg *budgetv1.ReserveBudgetRequest
 	if err != nil {
 		return Reservation{}, fmt.Errorf("invalid task_id: %w", err)
 	}
-	subtaskID, err := nullableUUID(msg.SubtaskId)
+	stepID, err := nullableUUID(msg.StepId)
 	if err != nil {
-		return Reservation{}, fmt.Errorf("invalid subtask_id: %w", err)
+		return Reservation{}, fmt.Errorf("invalid step_id: %w", err)
 	}
 	planExecutionID, err := nullableUUID(msg.PlanExecutionId)
 	if err != nil {
@@ -283,7 +283,7 @@ func reservationFromProto(tenantID uuid.UUID, msg *budgetv1.ReserveBudgetRequest
 		TenantID:        tenantID,
 		Provider:        normalizeProvider(msg.Provider),
 		TaskID:          taskID,
-		SubtaskID:       subtaskID,
+		StepID:          stepID,
 		PlanExecutionID: planExecutionID,
 		StepExecutionID: stepExecutionID,
 		AgentType:       msg.AgentType,
@@ -302,9 +302,9 @@ func usageEventFromProto(tenantID uuid.UUID, msg *budgetv1.RecordUsageRequest, n
 	if err != nil {
 		return UsageEvent{}, fmt.Errorf("invalid task_id: %w", err)
 	}
-	subtaskID, err := nullableUUID(msg.SubtaskId)
+	stepID, err := nullableUUID(msg.StepId)
 	if err != nil {
-		return UsageEvent{}, fmt.Errorf("invalid subtask_id: %w", err)
+		return UsageEvent{}, fmt.Errorf("invalid step_id: %w", err)
 	}
 	planExecutionID, err := nullableUUID(msg.PlanExecutionId)
 	if err != nil {
@@ -335,7 +335,7 @@ func usageEventFromProto(tenantID uuid.UUID, msg *budgetv1.RecordUsageRequest, n
 		TenantID:        tenantID,
 		ReservationID:   reservationID,
 		TaskID:          taskID,
-		SubtaskID:       subtaskID,
+		StepID:          stepID,
 		PlanExecutionID: planExecutionID,
 		StepExecutionID: stepExecutionID,
 		AgentType:       msg.AgentType,

@@ -27,7 +27,7 @@ import { planConfigDraftFromConfiguration } from "$lib/plans/plan-config-draft";
 import {
   mockExecutorContext,
   SKU_IDS,
-  WEEKLY_NEWSLETTER_TEMPLATE,
+  NEWS_TO_SOCIAL_POST_TEMPLATE,
 } from "$lib/mocks/plan-catalog";
 
 describe("config summary", () => {
@@ -35,8 +35,8 @@ describe("config summary", () => {
     create(PlanConfigurationSchema, {
       id: "config-weekly-newsletter",
       tenantId: "dev",
-      planTemplateId: WEEKLY_NEWSLETTER_TEMPLATE.id,
-      planTemplateVersion: WEEKLY_NEWSLETTER_TEMPLATE.version,
+      planTemplateId: NEWS_TO_SOCIAL_POST_TEMPLATE.id,
+      planTemplateVersion: NEWS_TO_SOCIAL_POST_TEMPLATE.version,
       slotBindings: [
         create(SlotBindingSchema, {
           stepKey: "fetch-news",
@@ -113,7 +113,11 @@ describe("config summary", () => {
   });
 
   it("builds step, executor, overseer, and policy line items", () => {
-    const items = buildConfigLineItems(WEEKLY_NEWSLETTER_TEMPLATE, draft, skus);
+    const items = buildConfigLineItems(
+      NEWS_TO_SOCIAL_POST_TEMPLATE,
+      draft,
+      skus,
+    );
 
     expect(items.some((item) => item.kind === "step")).toBe(true);
     expect(items.some((item) => item.kind === "executor")).toBe(true);
@@ -121,7 +125,9 @@ describe("config summary", () => {
     expect(items.some((item) => item.kind === "policy")).toBe(true);
 
     const executorItems = items.filter((item) => item.kind === "executor");
-    expect(executorItems).toHaveLength(WEEKLY_NEWSLETTER_TEMPLATE.steps.length);
+    expect(executorItems).toHaveLength(
+      NEWS_TO_SOCIAL_POST_TEMPLATE.steps.length,
+    );
     expect(executorItems.map((item) => item.priceCents)).toEqual([
       500, 200, 150, 1000,
     ]);
@@ -129,7 +135,7 @@ describe("config summary", () => {
 
   it("sums line item costs into total estimated cost per run", () => {
     const summary = buildConfigCostSummary(
-      WEEKLY_NEWSLETTER_TEMPLATE,
+      NEWS_TO_SOCIAL_POST_TEMPLATE,
       draft,
       skus,
     );
@@ -151,7 +157,7 @@ describe("config summary", () => {
     };
 
     const policyItems = buildConfigLineItems(
-      WEEKLY_NEWSLETTER_TEMPLATE,
+      NEWS_TO_SOCIAL_POST_TEMPLATE,
       policyDraft,
       skus,
     ).filter((item) => item.kind === "policy");
@@ -170,7 +176,7 @@ describe("config summary", () => {
   it("builds shared plan summary vocabulary", () => {
     const configuration = create(PlanConfigurationSchema, {
       id: "config-weekly-newsletter",
-      planTemplateId: WEEKLY_NEWSLETTER_TEMPLATE.id,
+      planTemplateId: NEWS_TO_SOCIAL_POST_TEMPLATE.id,
       status: PlanConfigurationStatus.RUNNABLE,
       parameterValuesJson:
         '{"theme":"AI","audience":"founders","source_groups":["rss-tech","rss-business"]}',
@@ -188,21 +194,21 @@ describe("config summary", () => {
       ],
     });
 
-    expect(buildPlanSummary(WEEKLY_NEWSLETTER_TEMPLATE, configuration)).toEqual(
-      {
-        id: "config-weekly-newsletter",
-        templateName: WEEKLY_NEWSLETTER_TEMPLATE.name,
-        intent: "AI",
-        status: PlanConfigurationStatus.RUNNABLE,
-        executorBindings: [
-          { stepKey: "fetch-news", installationId: "rss-aggregate" },
-        ],
-        overseerBindings: [
-          { stepKey: "write-draft", overseerUserId: "overseer-1" },
-        ],
-        sourceGroups: ["rss-tech", "rss-business"],
-        audience: "founders",
-      },
-    );
+    expect(
+      buildPlanSummary(NEWS_TO_SOCIAL_POST_TEMPLATE, configuration),
+    ).toEqual({
+      id: "config-weekly-newsletter",
+      templateName: NEWS_TO_SOCIAL_POST_TEMPLATE.name,
+      intent: "AI",
+      status: PlanConfigurationStatus.RUNNABLE,
+      executorBindings: [
+        { stepKey: "fetch-news", installationId: "rss-aggregate" },
+      ],
+      overseerBindings: [
+        { stepKey: "write-draft", overseerUserId: "overseer-1" },
+      ],
+      sourceGroups: ["rss-tech", "rss-business"],
+      audience: "founders",
+    });
   });
 });

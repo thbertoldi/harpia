@@ -51,7 +51,7 @@ func (c *Controller) SeedThread(ctx context.Context, tenantID, configID uuid.UUI
 	if cfg == nil {
 		return errors.New("planassistant: configuration not found")
 	}
-	threadID := cfg.GetThreadId()
+	threadID := cfg.GetOriginThreadId()
 	if threadID == "" {
 		return errors.New("planassistant: configuration has no owning thread")
 	}
@@ -84,7 +84,7 @@ func (c *Controller) NextTurn(ctx context.Context, tenantID, configID uuid.UUID)
 }
 
 func (c *Controller) emitCurrentPrompt(ctx context.Context, tenantID uuid.UUID, cfg *plansv1.PlanConfiguration) error {
-	threadID := cfg.GetThreadId()
+	threadID := cfg.GetOriginThreadId()
 	if threadID == "" {
 		return errors.New("planassistant: configuration has no owning thread")
 	}

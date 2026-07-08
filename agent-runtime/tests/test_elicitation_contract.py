@@ -48,7 +48,7 @@ async def test_execute_task_surfaces_structured_elicitation(monkeypatch) -> None
     request = ExecuteTaskRequest(
         tenant_id="dev",
         agent_type_id="newsletter-writer-senior",
-        subtask_id="sub-1",
+        step_id="step-1",
         task_description="{}",
     )
 

@@ -996,6 +996,7 @@
   "plans.inputs.date_range.label": "Date range",
   "plans.inputs.date_range.description": "Publication window for source articles.",
   "plans.inputs.date_range.rolling.last_7_days": "Last week (refreshed every run)",
+  "plans.inputs.date_range.rolling.schedule_window": "Schedule window (refreshed every run)",
   "plans.inputs.approval_mode.label": "Approval mode",
   "plans.inputs.approval_mode.description": "Whether publishing requires your approval first.",
   "plans.inputs.approval_mode.option.require_approval": "Require approval",

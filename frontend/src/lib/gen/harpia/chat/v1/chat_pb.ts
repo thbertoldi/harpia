@@ -74,8 +74,7 @@ export const ThreadSchema: GenMessage<Thread> = /*@__PURE__*/
 /**
  * ThreadMessage is a single durable record in a chat thread.
  *
- * thread_id is the owning Thread.id. During Path B migration, legacy
- * plan-thread RPCs resolve plan_configuration_id to the owning thread_id.
+ * thread_id is the owning Thread.id used by chat message list/watch APIs.
  *
  * @generated from message harpia.chat.v1.ThreadMessage
  */
@@ -140,7 +139,7 @@ export type ThreadMessage = Message<"harpia.chat.v1.ThreadMessage"> & {
   authorUserId: string;
 
   /**
-   * per-thread monotonic; used for WatchPlanThreadMessages resume
+   * per-thread monotonic; used for WatchThreadMessages resume
    *
    * @generated from field: int64 sequence_number = 10;
    */

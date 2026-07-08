@@ -28,10 +28,14 @@ export interface InboxSources {
 }
 
 export const DEFAULT_INBOX_SOURCES: InboxSources = {
-  watchElicitations: (tenantId, signal) =>
-    watchElicitations(tenantId, { addressedToMe: true, signal }),
-  watchApprovalRequests: (tenantId, signal) =>
-    watchApprovalRequests(tenantId, { signal }),
+  watchElicitations: async function* (tenantId, signal) {
+    yield await loadInboxElicitations(tenantId);
+    yield* watchElicitations(tenantId, { addressedToMe: true, signal });
+  },
+  watchApprovalRequests: async function* (tenantId, signal) {
+    yield await loadInboxApprovals(tenantId);
+    yield* watchApprovalRequests(tenantId, { signal });
+  },
 };
 
 export interface WatchInboxOptions {

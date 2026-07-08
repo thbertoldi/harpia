@@ -20,11 +20,10 @@ export interface PlanTemplateResult {
   error?: string;
 }
 
-export const WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_ID =
+export const NEWS_TO_SOCIAL_POST_TEMPLATE_ID =
   "a1000000-0000-4000-8000-000000000001";
 
-export const WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_KEY =
-  "weekly-newsletter-linkedin";
+export const NEWS_TO_SOCIAL_POST_TEMPLATE_KEY = "news-to-social-post";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -33,18 +32,18 @@ export function isPlanTemplateUuid(value: string): boolean {
   return UUID_REGEX.test(value);
 }
 
-export function mockWeeklyNewsletterLinkedInTemplate(
+export function mockNewsToSocialPostTemplate(
   locale: Locale = "en",
 ): PlanTemplate {
   return create(PlanTemplateSchema, {
-    id: WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_ID,
-    key: WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_KEY,
+    id: NEWS_TO_SOCIAL_POST_TEMPLATE_ID,
+    key: NEWS_TO_SOCIAL_POST_TEMPLATE_KEY,
     name: resolveLocalizedContent(
-      "catalog.plan.weekly-newsletter-linkedin.name",
+      "catalog.plan.news-to-social-post.name",
       locale,
     ),
     description: resolveLocalizedContent(
-      "catalog.plan.weekly-newsletter-linkedin.description",
+      "catalog.plan.news-to-social-post.description",
       locale,
     ),
     vertical: "creator-economy",
@@ -54,11 +53,11 @@ export function mockWeeklyNewsletterLinkedInTemplate(
         id: "b1000000-0000-4000-8000-000000000001",
         key: "fetch-news",
         title: resolveLocalizedContent(
-          "catalog.plan.weekly-newsletter-linkedin.step.fetch-news.title",
+          "catalog.plan.news-to-social-post.step.fetch-news.title",
           locale,
         ),
         description: resolveLocalizedContent(
-          "catalog.plan.weekly-newsletter-linkedin.step.fetch-news.description",
+          "catalog.plan.news-to-social-post.step.fetch-news.description",
           locale,
         ),
         inputArtifactTypeId: "harpia.artifacts.v1.DateRange",
@@ -74,11 +73,11 @@ export function mockWeeklyNewsletterLinkedInTemplate(
         id: "b1000000-0000-4000-8000-000000000002",
         key: "write-draft",
         title: resolveLocalizedContent(
-          "catalog.plan.weekly-newsletter-linkedin.step.write-draft.title",
+          "catalog.plan.news-to-social-post.step.write-draft.title",
           locale,
         ),
         description: resolveLocalizedContent(
-          "catalog.plan.weekly-newsletter-linkedin.step.write-draft.description",
+          "catalog.plan.news-to-social-post.step.write-draft.description",
           locale,
         ),
         inputArtifactTypeId: "harpia.artifacts.v1.NewsList",
@@ -94,11 +93,11 @@ export function mockWeeklyNewsletterLinkedInTemplate(
         id: "b1000000-0000-4000-8000-000000000003",
         key: "adapt-for-linkedin",
         title: resolveLocalizedContent(
-          "catalog.plan.weekly-newsletter-linkedin.step.adapt-for-linkedin.title",
+          "catalog.plan.news-to-social-post.step.adapt-for-linkedin.title",
           locale,
         ),
         description: resolveLocalizedContent(
-          "catalog.plan.weekly-newsletter-linkedin.step.adapt-for-linkedin.description",
+          "catalog.plan.news-to-social-post.step.adapt-for-linkedin.description",
           locale,
         ),
         inputArtifactTypeId: "harpia.artifacts.v1.TextDraft",
@@ -114,11 +113,11 @@ export function mockWeeklyNewsletterLinkedInTemplate(
         id: "b1000000-0000-4000-8000-000000000004",
         key: "publish-linkedin",
         title: resolveLocalizedContent(
-          "catalog.plan.weekly-newsletter-linkedin.step.publish-linkedin.title",
+          "catalog.plan.news-to-social-post.step.publish-linkedin.title",
           locale,
         ),
         description: resolveLocalizedContent(
-          "catalog.plan.weekly-newsletter-linkedin.step.publish-linkedin.description",
+          "catalog.plan.news-to-social-post.step.publish-linkedin.description",
           locale,
         ),
         inputArtifactTypeId: "harpia.artifacts.v1.LinkedInPostDraft",
@@ -154,7 +153,7 @@ export function localizePlanTemplate(
   template: PlanTemplate,
   locale: Locale,
 ): PlanTemplate {
-  if (template.key !== WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_KEY) {
+  if (template.key !== NEWS_TO_SOCIAL_POST_TEMPLATE_KEY) {
     return template;
   }
 
@@ -185,8 +184,8 @@ export function localizePlanTemplate(
 
 function matchesMockTemplate(templateIdOrKey: string): boolean {
   return (
-    templateIdOrKey === WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_ID ||
-    templateIdOrKey === WEEKLY_NEWSLETTER_LINKEDIN_TEMPLATE_KEY
+    templateIdOrKey === NEWS_TO_SOCIAL_POST_TEMPLATE_ID ||
+    templateIdOrKey === NEWS_TO_SOCIAL_POST_TEMPLATE_KEY
   );
 }
 
@@ -216,7 +215,7 @@ export async function loadPlanTemplate(
     if (!template) {
       if (allowsMockFallback() && matchesMockTemplate(templateIdOrKey)) {
         return {
-          template: mockWeeklyNewsletterLinkedInTemplate(locale),
+          template: mockNewsToSocialPostTemplate(locale),
           source: "mock",
           error: "Empty response from plan service",
         };
@@ -231,7 +230,7 @@ export async function loadPlanTemplate(
   } catch (error) {
     if (allowsMockFallback() && matchesMockTemplate(templateIdOrKey)) {
       return {
-        template: mockWeeklyNewsletterLinkedInTemplate(locale),
+        template: mockNewsToSocialPostTemplate(locale),
         source: "mock",
         error: toUserMessage(error),
       };

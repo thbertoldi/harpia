@@ -65,13 +65,13 @@ describe("genericInputInitialValues", () => {
       param(
         "date_range",
         TemplateInputParameterType.DATE_RANGE,
-        '{"preset":"last_7_days"}',
+        '{"preset":"schedule_window"}',
       ),
     ];
     const got = genericInputInitialValues(params, {});
     // The preset is preserved verbatim so a scheduled plan rolls forward each
     // run rather than being pinned to a single week at configuration time.
-    expect(got.date_range).toEqual({ preset: "last_7_days" });
+    expect(got.date_range).toEqual({ preset: "schedule_window" });
   });
 });
 

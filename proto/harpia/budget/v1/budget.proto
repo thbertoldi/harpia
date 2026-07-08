@@ -89,7 +89,7 @@ message ReserveBudgetRequest {
   string tenant_id = 1;
   string provider = 2;
   string task_id = 3;
-  string subtask_id = 4;
+  string step_id = 4;
   string plan_execution_id = 5;
   string step_execution_id = 6;
   string agent_type = 7;
@@ -110,7 +110,7 @@ message RecordUsageRequest {
   string reservation_id = 2;
   string idempotency_key = 3;
   string task_id = 4;
-  string subtask_id = 5;
+  string step_id = 5;
   string plan_execution_id = 6;
   string step_execution_id = 7;
   string agent_type = 8;

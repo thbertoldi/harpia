@@ -1,7 +1,8 @@
 <script lang="ts">
+  import { onMount } from "svelte";
+  import { resolve } from "$app/paths";
   import type { TemplateInputParameter } from "$lib/gen/harpia/plans/v1/plans_pb";
   import { TemplateInputParameterType } from "$lib/gen/harpia/plans/v1/plans_pb";
-  import { resolve } from "$app/paths";
   import {
     isDateRangePreset,
     resolveDateRangePreset,
@@ -32,8 +33,8 @@
   let installations = $state<ExecutorInstallation[]>([]);
   let installationsLoading = $state(false);
 
-  // Load executor installations once when the component mounts
-  $effect(() => {
+  // Load executor installations once when the component mounts.
+  onMount(() => {
     if (!tenantId) return;
     installationsLoading = true;
     (async () => {
@@ -236,7 +237,7 @@
             <button
               type="button"
               class="mt-1 self-start text-[11px] text-crown-ash underline hover:text-cream"
-              onclick={() => useRollingWindow(p.key, "last_7_days")}
+              onclick={() => useRollingWindow(p.key, "schedule_window")}
             >
               {translate("thread.propose.dateRangeUseRolling", $locale)}
             </button>

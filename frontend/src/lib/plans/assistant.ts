@@ -1,11 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import { appendThreadMessage } from "$lib/chat/client";
-import { buildDefaultLinkedInInputValues } from "$lib/plans/linkedin-template-inputs";
-import {
-  parseParameterValuesJson,
-  parameterValuesJson,
-  type LinkedInTemplateInputValues,
-} from "$lib/plans/template-inputs";
+import { parseParameterValuesJson } from "$lib/plans/template-inputs";
 import { planClient } from "$lib/rpc";
 import {
   OverseerBindingSchema,
@@ -169,43 +164,6 @@ export async function appendStepRebound(args: {
       new_policy_value: args.newPolicyValue,
     }),
   );
-}
-
-export async function applyLinkedInSuggestion(args: {
-  tenantId: string;
-  configurationId: string;
-  existingConfiguration: PlanConfiguration;
-  template: PlanTemplate;
-  topic: string;
-  values?: LinkedInTemplateInputValues;
-  installationIdsByStep: Record<string, string>;
-  today?: Date;
-}): Promise<PlanConfiguration> {
-  const values = args.values
-    ? { ...args.values, dateRange: { ...args.values.dateRange } }
-    : buildDefaultLinkedInInputValues(args.today ?? new Date());
-  values.theme = args.topic.trim() || values.theme;
-  values.aggregateSourceGroupInstallationId =
-    values.aggregateSourceGroupInstallationId.trim() ||
-    values.sourceGroupInstallationIds.find((id) => id.trim())?.trim() ||
-    args.installationIdsByStep["fetch-news"] ||
-    "";
-  // Suggest is an incremental edit (announce_saved=false, no thread event):
-  // the user reviews the populated matrix and then explicitly saves.
-  const response = await planClient.updatePlanConfiguration({
-    tenantId: args.tenantId,
-    planConfigurationId: args.configurationId,
-    status: args.existingConfiguration.status,
-    overseerBindings: args.existingConfiguration.overseerBindings,
-    schedule: args.existingConfiguration.schedule,
-    parameterValuesJson: parameterValuesJson(values),
-  });
-  if (!response.planConfiguration) {
-    throw new Error(
-      "applyLinkedInSuggestion: UpdatePlanConfiguration returned no configuration",
-    );
-  }
-  return response.planConfiguration;
 }
 
 function parameterValuesWithSlotBinding(

@@ -1,6 +1,6 @@
-key: weekly-newsletter-linkedin
-name: Weekly Newsletter (LinkedIn)
-description: Fetch news, write a draft, adapt for LinkedIn, and publish.
+key: news-to-social-post
+name: News to Social Post
+description: Turn selected news into an approved, publishable social post.
 vertical: creator-economy
 version: 1
 steps:
@@ -15,23 +15,23 @@ steps:
     default_executor_sku_key: rss-news-feed
   - key: write-draft
     title: Write Draft
-    description: Synthesize a platform-neutral newsletter draft.
+    description: Synthesize a platform-neutral content draft.
     input_artifact_type: harpia.artifacts.v1.NewsList
     output_artifact_type: harpia.artifacts.v1.TextDraft
     executor_requirement:
       executor_kind: 1
     default_executor_sku_key: newsletter-writer-senior
   - key: adapt-for-linkedin
-    title: Adapt for LinkedIn
-    description: Transform the draft into a LinkedIn-specific post.
+    title: Adapt for Channel
+    description: Transform the draft into a channel-ready post.
     input_artifact_type: harpia.artifacts.v1.TextDraft
     output_artifact_type: harpia.artifacts.v1.LinkedInPostDraft
     executor_requirement:
       executor_kind: 1
     default_executor_sku_key: linkedin-voice-senior
   - key: publish-linkedin
-    title: Publish LinkedIn
-    description: Publish the adapted post to LinkedIn.
+    title: Publish Post
+    description: Publish the approved post.
     input_artifact_type: harpia.artifacts.v1.LinkedInPostDraft
     output_artifact_type: harpia.artifacts.v1.PublishConfirmation
     executor_requirement:
@@ -117,7 +117,7 @@ input_parameters:
     description: Article publication window.
     type: TEMPLATE_INPUT_PARAMETER_TYPE_DATE_RANGE
     required: true
-    defaultValueJson: '{"preset":"last_7_days"}'
+    defaultValueJson: '{"preset":"schedule_window"}'
     runtimeMappings:
       - target: TEMPLATE_INPUT_RUNTIME_TARGET_SEED_ARTIFACT
         stepKey: fetch-news

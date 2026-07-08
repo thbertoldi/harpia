@@ -109,18 +109,18 @@ func (r *Repository) ReserveBudget(ctx context.Context, reservation Reservation)
 
 		row := q.QueryRow(ctx,
 			`INSERT INTO llm_budget_reservations (
-				id, tenant_id, provider, task_id, subtask_id, plan_execution_id,
+				id, tenant_id, provider, task_id, step_id, plan_execution_id,
 				step_execution_id, agent_type, estimated_cost_usd, idempotency_key, expires_at
 			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 			ON CONFLICT (tenant_id, idempotency_key) WHERE idempotency_key <> ''
 			DO UPDATE SET expires_at = llm_budget_reservations.expires_at
-			RETURNING id, tenant_id, provider, task_id, subtask_id, plan_execution_id,
+			RETURNING id, tenant_id, provider, task_id, step_id, plan_execution_id,
 				step_execution_id, agent_type, estimated_cost_usd, idempotency_key, expires_at`,
 			reservation.ID,
 			reservation.TenantID,
 			reservation.Provider,
 			nullUUIDValue(reservation.TaskID),
-			nullUUIDValue(reservation.SubtaskID),
+			nullUUIDValue(reservation.StepID),
 			nullUUIDValue(reservation.PlanExecutionID),
 			nullUUIDValue(reservation.StepExecutionID),
 			reservation.AgentType,
@@ -176,7 +176,7 @@ func (r *Repository) RecordUsage(ctx context.Context, event UsageEvent) (*UsageR
 		}
 		if _, err := q.Exec(ctx,
 			`INSERT INTO llm_usage_events (
-				id, tenant_id, reservation_id, task_id, subtask_id, plan_execution_id,
+				id, tenant_id, reservation_id, task_id, step_id, plan_execution_id,
 				step_execution_id, agent_type, provider, model, input_tokens,
 				output_tokens, cost_usd, idempotency_key, ts
 			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
@@ -184,7 +184,7 @@ func (r *Repository) RecordUsage(ctx context.Context, event UsageEvent) (*UsageR
 			event.TenantID,
 			nullUUIDValue(event.ReservationID),
 			nullUUIDValue(event.TaskID),
-			nullUUIDValue(event.SubtaskID),
+			nullUUIDValue(event.StepID),
 			nullUUIDValue(event.PlanExecutionID),
 			nullUUIDValue(event.StepExecutionID),
 			event.AgentType,
@@ -326,7 +326,7 @@ func scanReservation(s scanner, r *Reservation) error {
 		&r.TenantID,
 		&r.Provider,
 		&r.TaskID,
-		&r.SubtaskID,
+		&r.StepID,
 		&r.PlanExecutionID,
 		&r.StepExecutionID,
 		&r.AgentType,

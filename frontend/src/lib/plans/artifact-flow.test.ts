@@ -7,10 +7,10 @@ import {
   orderPlanStepsLinear,
   terminalStepKeys,
 } from "$lib/plans/artifact-flow";
-import { mockWeeklyNewsletterLinkedInTemplate } from "$lib/plans/plan-template";
+import { mockNewsToSocialPostTemplate } from "$lib/plans/plan-template";
 
 describe("artifact flow helpers", () => {
-  const template = mockWeeklyNewsletterLinkedInTemplate();
+  const template = mockNewsToSocialPostTemplate();
 
   it("extracts short artifact type keys from proto ids", () => {
     expect(extractArtifactTypeKey("harpia.artifacts.v1.DateRange")).toBe(

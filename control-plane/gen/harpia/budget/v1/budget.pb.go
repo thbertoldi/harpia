@@ -594,7 +594,7 @@ type ReserveBudgetRequest struct {
 	TenantId        string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
 	Provider        string                 `protobuf:"bytes,2,opt,name=provider,proto3" json:"provider,omitempty"`
 	TaskId          string                 `protobuf:"bytes,3,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
-	SubtaskId       string                 `protobuf:"bytes,4,opt,name=subtask_id,json=subtaskId,proto3" json:"subtask_id,omitempty"`
+	StepId          string                 `protobuf:"bytes,4,opt,name=step_id,json=stepId,proto3" json:"step_id,omitempty"`
 	PlanExecutionId string                 `protobuf:"bytes,5,opt,name=plan_execution_id,json=planExecutionId,proto3" json:"plan_execution_id,omitempty"`
 	StepExecutionId string                 `protobuf:"bytes,6,opt,name=step_execution_id,json=stepExecutionId,proto3" json:"step_execution_id,omitempty"`
 	AgentType       string                 `protobuf:"bytes,7,opt,name=agent_type,json=agentType,proto3" json:"agent_type,omitempty"`
@@ -656,9 +656,9 @@ func (x *ReserveBudgetRequest) GetTaskId() string {
 	return ""
 }
 
-func (x *ReserveBudgetRequest) GetSubtaskId() string {
+func (x *ReserveBudgetRequest) GetStepId() string {
 	if x != nil {
-		return x.SubtaskId
+		return x.StepId
 	}
 	return ""
 }
@@ -779,7 +779,7 @@ type RecordUsageRequest struct {
 	ReservationId   string                 `protobuf:"bytes,2,opt,name=reservation_id,json=reservationId,proto3" json:"reservation_id,omitempty"`
 	IdempotencyKey  string                 `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	TaskId          string                 `protobuf:"bytes,4,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
-	SubtaskId       string                 `protobuf:"bytes,5,opt,name=subtask_id,json=subtaskId,proto3" json:"subtask_id,omitempty"`
+	StepId          string                 `protobuf:"bytes,5,opt,name=step_id,json=stepId,proto3" json:"step_id,omitempty"`
 	PlanExecutionId string                 `protobuf:"bytes,6,opt,name=plan_execution_id,json=planExecutionId,proto3" json:"plan_execution_id,omitempty"`
 	StepExecutionId string                 `protobuf:"bytes,7,opt,name=step_execution_id,json=stepExecutionId,proto3" json:"step_execution_id,omitempty"`
 	AgentType       string                 `protobuf:"bytes,8,opt,name=agent_type,json=agentType,proto3" json:"agent_type,omitempty"`
@@ -851,9 +851,9 @@ func (x *RecordUsageRequest) GetTaskId() string {
 	return ""
 }
 
-func (x *RecordUsageRequest) GetSubtaskId() string {
+func (x *RecordUsageRequest) GetStepId() string {
 	if x != nil {
-		return x.SubtaskId
+		return x.StepId
 	}
 	return ""
 }
@@ -1125,13 +1125,12 @@ const file_harpia_budget_v1_budget_proto_rawDesc = "" +
 	"\n" +
 	"period_end\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tperiodEnd\"K\n" +
 	"\x10GetQuotaResponse\x127\n" +
-	"\x06quotas\x18\x01 \x03(\v2\x1f.harpia.budget.v1.ProviderQuotaR\x06quotas\"\xa2\x03\n" +
+	"\x06quotas\x18\x01 \x03(\v2\x1f.harpia.budget.v1.ProviderQuotaR\x06quotas\"\x9c\x03\n" +
 	"\x14ReserveBudgetRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1a\n" +
 	"\bprovider\x18\x02 \x01(\tR\bprovider\x12\x17\n" +
-	"\atask_id\x18\x03 \x01(\tR\x06taskId\x12\x1d\n" +
-	"\n" +
-	"subtask_id\x18\x04 \x01(\tR\tsubtaskId\x12*\n" +
+	"\atask_id\x18\x03 \x01(\tR\x06taskId\x12\x17\n" +
+	"\astep_id\x18\x04 \x01(\tR\x06stepId\x12*\n" +
 	"\x11plan_execution_id\x18\x05 \x01(\tR\x0fplanExecutionId\x12*\n" +
 	"\x11step_execution_id\x18\x06 \x01(\tR\x0fstepExecutionId\x12\x1d\n" +
 	"\n" +
@@ -1146,14 +1145,13 @@ const file_harpia_budget_v1_budget_proto_rawDesc = "" +
 	"\tremaining\x18\x02 \x01(\v2\x17.harpia.budget.v1.MoneyR\tremaining\x12#\n" +
 	"\rquota_warning\x18\x03 \x01(\bR\fquotaWarning\x129\n" +
 	"\n" +
-	"expires_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\"\x94\x04\n" +
+	"expires_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\"\x8e\x04\n" +
 	"\x12RecordUsageRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12%\n" +
 	"\x0ereservation_id\x18\x02 \x01(\tR\rreservationId\x12'\n" +
 	"\x0fidempotency_key\x18\x03 \x01(\tR\x0eidempotencyKey\x12\x17\n" +
-	"\atask_id\x18\x04 \x01(\tR\x06taskId\x12\x1d\n" +
-	"\n" +
-	"subtask_id\x18\x05 \x01(\tR\tsubtaskId\x12*\n" +
+	"\atask_id\x18\x04 \x01(\tR\x06taskId\x12\x17\n" +
+	"\astep_id\x18\x05 \x01(\tR\x06stepId\x12*\n" +
 	"\x11plan_execution_id\x18\x06 \x01(\tR\x0fplanExecutionId\x12*\n" +
 	"\x11step_execution_id\x18\a \x01(\tR\x0fstepExecutionId\x12\x1d\n" +
 	"\n" +

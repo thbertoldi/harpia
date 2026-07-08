@@ -15,7 +15,7 @@ import {
 } from "$lib/gen/harpia/plans/v1/plans_pb";
 import {
   mockExecutorContext,
-  WEEKLY_NEWSLETTER_TEMPLATE,
+  NEWS_TO_SOCIAL_POST_TEMPLATE,
 } from "$lib/mocks/plan-catalog";
 import {
   catalogExecutorKindToPlanKind,
@@ -28,9 +28,9 @@ import {
   validateSlotBindings,
 } from "$lib/plans/slot-binding";
 
-const RSS_STEP = WEEKLY_NEWSLETTER_TEMPLATE.steps[0]!;
-const WRITER_STEP = WEEKLY_NEWSLETTER_TEMPLATE.steps[1]!;
-const VOICE_STEP = WEEKLY_NEWSLETTER_TEMPLATE.steps[2]!;
+const RSS_STEP = NEWS_TO_SOCIAL_POST_TEMPLATE.steps[0]!;
+const WRITER_STEP = NEWS_TO_SOCIAL_POST_TEMPLATE.steps[1]!;
+const VOICE_STEP = NEWS_TO_SOCIAL_POST_TEMPLATE.steps[2]!;
 
 describe("slot binding compatibility", () => {
   it("maps executor kinds between plan and catalog enums", () => {
@@ -133,7 +133,7 @@ describe("slot binding validation and lock state", () => {
   it("allows partial draft bindings with warnings", () => {
     const context = mockExecutorContext();
     const bindings = selectionsToSlotBindings(
-      WEEKLY_NEWSLETTER_TEMPLATE,
+      NEWS_TO_SOCIAL_POST_TEMPLATE,
       {
         "fetch-news": "inst-rss",
         "write-draft": "inst-writer",
@@ -142,7 +142,7 @@ describe("slot binding validation and lock state", () => {
     );
 
     const validation = validateSlotBindings(
-      WEEKLY_NEWSLETTER_TEMPLATE,
+      NEWS_TO_SOCIAL_POST_TEMPLATE,
       bindings,
       context,
     );
@@ -200,12 +200,12 @@ describe("slot binding validation and lock state", () => {
     };
 
     const bindings = selectionsToSlotBindings(
-      WEEKLY_NEWSLETTER_TEMPLATE,
+      NEWS_TO_SOCIAL_POST_TEMPLATE,
       completeSelections,
       enrichedContext,
     );
     const validation = validateSlotBindings(
-      WEEKLY_NEWSLETTER_TEMPLATE,
+      NEWS_TO_SOCIAL_POST_TEMPLATE,
       bindings,
       enrichedContext,
     );
@@ -232,13 +232,13 @@ describe("slot binding validation and lock state", () => {
   it("marks disconnected integration bindings as not ready", () => {
     const context = mockExecutorContext();
     const bindings = selectionsToSlotBindings(
-      WEEKLY_NEWSLETTER_TEMPLATE,
+      NEWS_TO_SOCIAL_POST_TEMPLATE,
       { "publish-linkedin": "inst-linkedin" },
       context,
     );
 
     const validation = validateSlotBindings(
-      WEEKLY_NEWSLETTER_TEMPLATE,
+      NEWS_TO_SOCIAL_POST_TEMPLATE,
       bindings,
       context,
     );

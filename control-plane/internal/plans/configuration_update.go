@@ -100,7 +100,6 @@ func (h *PlanHandler) applyConfigurationUpdate(
 	config.PlanTemplateVersion = existing.PlanTemplateVersion
 	config.WorkspaceID = existing.WorkspaceID
 	config.ParameterValues = parameterValues
-	config.ThreadID = existing.ThreadID
 	config.OriginThreadID = existing.OriginThreadID
 
 	var updated PlanConfiguration

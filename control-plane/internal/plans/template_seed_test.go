@@ -30,7 +30,7 @@ var testExecutorSKUs = map[string]struct{}{
 
 func TestLoadPlanTemplateCatalogLoadsValidYAML(t *testing.T) {
 	catalog, err := loadPlanTemplateCatalog(map[string][]byte{
-		"weekly.yaml": []byte(validTemplateYAML("weekly-newsletter-linkedin")),
+		"weekly.yaml": []byte(validTemplateYAML("news-to-social-post")),
 	}, testArtifactTypes, testExecutorSKUs)
 	if err != nil {
 		t.Fatalf("load valid catalog: %v", err)
@@ -40,8 +40,8 @@ func TestLoadPlanTemplateCatalogLoadsValidYAML(t *testing.T) {
 		t.Fatalf("template count = %d, want 1", len(catalog))
 	}
 	got := catalog[0]
-	if got.Key != "weekly-newsletter-linkedin" {
-		t.Fatalf("key = %q, want weekly-newsletter-linkedin", got.Key)
+	if got.Key != "news-to-social-post" {
+		t.Fatalf("key = %q, want news-to-social-post", got.Key)
 	}
 	if len(got.Steps) != 2 {
 		t.Fatalf("step count = %d, want 2", len(got.Steps))
@@ -53,8 +53,8 @@ func TestLoadPlanTemplateCatalogLoadsValidYAML(t *testing.T) {
 
 func TestLoadPlanTemplateCatalogRejectsDuplicateTemplateKeys(t *testing.T) {
 	_, err := loadPlanTemplateCatalog(map[string][]byte{
-		"one.yaml": []byte(validTemplateYAML("weekly-newsletter-linkedin")),
-		"two.yaml": []byte(validTemplateYAML("weekly-newsletter-linkedin")),
+		"one.yaml": []byte(validTemplateYAML("news-to-social-post")),
+		"two.yaml": []byte(validTemplateYAML("news-to-social-post")),
 	}, testArtifactTypes, testExecutorSKUs)
 	if err == nil || !strings.Contains(err.Error(), "duplicate template key") {
 		t.Fatalf("err = %v, want duplicate template key", err)
@@ -143,7 +143,7 @@ func TestValidatePlanTemplateRejectsFailures(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			seed := validTemplateSeed("weekly-newsletter-linkedin")
+			seed := validTemplateSeed("news-to-social-post")
 			tt.mutate(&seed)
 			err := validatePlanTemplateCatalog([]planTemplateSeed{seed}, testArtifactTypes, testExecutorSKUs)
 			if err == nil || !strings.Contains(err.Error(), tt.wantError) {
@@ -305,7 +305,7 @@ input_parameters:
     description: Article publication window.
     type: TEMPLATE_INPUT_PARAMETER_TYPE_DATE_RANGE
     required: true
-    defaultValueJson: '{"preset":"last_7_days"}'
+    defaultValueJson: '{"preset":"schedule_window"}'
     runtimeMappings:
       - target: TEMPLATE_INPUT_RUNTIME_TARGET_SEED_ARTIFACT
         stepKey: fetch-news
@@ -350,7 +350,7 @@ func validTemplateSeed(key string) planTemplateSeed {
 				Description:      "Article publication window.",
 				Type:             "TEMPLATE_INPUT_PARAMETER_TYPE_DATE_RANGE",
 				Required:         true,
-				DefaultValueJSON: `{"preset":"last_7_days"}`,
+				DefaultValueJSON: `{"preset":"schedule_window"}`,
 				RuntimeMappings: []templateInputRuntimeMappingSeed{
 					{
 						Target:    "TEMPLATE_INPUT_RUNTIME_TARGET_SEED_ARTIFACT",

@@ -76,7 +76,7 @@ func buildPlanExecutionSnapshot(
 	}
 
 	configuration := configurationToProto(config)
-	resolveDateRangePresetSeeds(configuration, now)
+	resolveDateRangePresetSeeds(configuration, configuration.GetSchedule(), now)
 
 	return workflow.PlanExecutionSnapshot{
 		SchemaVersion:         executionSnapshotSchemaVersion,
@@ -87,7 +87,7 @@ func buildPlanExecutionSnapshot(
 	}, nil
 }
 
-func resolveDateRangePresetSeeds(config *plansv1.PlanConfiguration, now time.Time) {
+func resolveDateRangePresetSeeds(config *plansv1.PlanConfiguration, schedule *plansv1.PlanSchedule, now time.Time) {
 	if config == nil {
 		return
 	}
@@ -107,7 +107,7 @@ func resolveDateRangePresetSeeds(config *plansv1.PlanConfiguration, now time.Tim
 		if strings.TrimSpace(payload.Preset) == "" {
 			continue
 		}
-		dateRange, ok := ResolveDateRangePreset(payload.Preset, now)
+		dateRange, ok := ResolveDateRangePresetForSchedule(payload.Preset, schedule, now)
 		if !ok {
 			continue
 		}

@@ -38,7 +38,7 @@
       {#each threads as thread (thread.id)}
         <li>
           <a
-            href={resolve(`/chat/${thread.id}`)}
+            href={resolve(`/chat/${encodeURIComponent(thread.id)}`)}
             class="flex items-center gap-3 bg-obsidian-light/40 px-4 py-2.5 transition-colors hover:bg-obsidian-light"
           >
             <MessageSquare class="size-4 shrink-0 text-crown-ash-dark" />

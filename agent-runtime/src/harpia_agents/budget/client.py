@@ -59,7 +59,7 @@ class BudgetContext:
     tenant_id: str
     agent_type: str
     task_id: str = ""
-    subtask_id: str = ""
+    step_id: str = ""
     plan_execution_id: str = ""
     step_execution_id: str = ""
 
@@ -130,7 +130,7 @@ class BudgetClient:
                 tenant_id=context.tenant_id,
                 provider=provider,
                 task_id=context.task_id,
-                subtask_id=context.subtask_id,
+                step_id=context.step_id,
                 plan_execution_id=context.plan_execution_id,
                 step_execution_id=context.step_execution_id,
                 agent_type=context.agent_type,
@@ -163,7 +163,7 @@ class BudgetClient:
                 reservation_id=reservation.reservation_id,
                 idempotency_key=reservation.idempotency_key,
                 task_id=context.task_id,
-                subtask_id=context.subtask_id,
+                step_id=context.step_id,
                 plan_execution_id=context.plan_execution_id,
                 step_execution_id=context.step_execution_id,
                 agent_type=context.agent_type,

@@ -40,8 +40,7 @@ enum ThreadStatus {
 
 // ThreadMessage is a single durable record in a chat thread.
 //
-// thread_id is the owning Thread.id. During Path B migration, legacy
-// plan-thread RPCs resolve plan_configuration_id to the owning thread_id.
+// thread_id is the owning Thread.id used by chat message list/watch APIs.
 message ThreadMessage {
   string id = 1;                                // UUID
   string tenant_id = 2;                          // UUID
@@ -52,7 +51,7 @@ message ThreadMessage {
   string text = 7;                               // user/assistant text or human-readable summary
   string payload_json = 8;                       // per-kind structured payload (see Kind-specific schemas)
   string author_user_id = 9;                     // optional; NULL for SYSTEM role
-  int64 sequence_number = 10;                    // per-thread monotonic; used for WatchPlanThreadMessages resume
+  int64 sequence_number = 10;                    // per-thread monotonic; used for WatchThreadMessages resume
   google.protobuf.Timestamp created_at = 11;
 }
 

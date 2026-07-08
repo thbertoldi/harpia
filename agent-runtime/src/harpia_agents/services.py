@@ -106,7 +106,7 @@ class AgentServiceImpl(AgentService):
                             status=AgentInstanceStatus.AGENT_INSTANCE_STATUS_AWAITING_FEEDBACK,
                             message="elicitation requested",
                             feedback_request=FeedbackRequest(
-                                subtask_id=request.subtask_id,
+                                step_id=request.step_id,
                                 question=result.question,
                                 options=list(result.required_fields),
                             ),

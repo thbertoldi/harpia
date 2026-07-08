@@ -20,7 +20,6 @@ import {
   editBinding,
   editOverseerBinding,
   editPolicyParameter,
-  applyLinkedInSuggestion,
 } from "./assistant";
 import {
   PlanConfigurationStatus,
@@ -97,65 +96,6 @@ describe("selectChip", () => {
     });
     expect(appendThreadMessage).not.toHaveBeenCalled();
     expect(updatePlanConfiguration).not.toHaveBeenCalled();
-  });
-});
-
-describe("applyLinkedInSuggestion", () => {
-  it("stores LinkedIn parameter values and leaves materialization to the server", async () => {
-    appendThreadMessage.mockResolvedValueOnce({});
-    updatePlanConfiguration.mockResolvedValueOnce({
-      planConfiguration: { id: "c" },
-    });
-    const config = {
-      id: "c",
-      status: PlanConfigurationStatus.DRAFT,
-      seedArtifacts: [],
-      slotBindings: [],
-      overseerBindings: [],
-      behaviorPolicies: undefined,
-      schedule: undefined,
-    } as unknown as PlanConfiguration;
-    const template = {
-      id: "tpl",
-      steps: [
-        { key: "fetch-news", defaultExecutorSkuKey: "rss-news-feed" },
-        {
-          key: "write-draft",
-          defaultExecutorSkuKey: "newsletter-writer-senior",
-        },
-        {
-          key: "adapt-for-linkedin",
-          defaultExecutorSkuKey: "linkedin-voice-senior",
-        },
-        { key: "publish-linkedin", defaultExecutorSkuKey: "linkedin-publish" },
-      ],
-    } as PlanTemplate;
-
-    await applyLinkedInSuggestion({
-      tenantId: "t",
-      configurationId: "c",
-      existingConfiguration: config,
-      template,
-      topic: "sports",
-      installationIdsByStep: {
-        "fetch-news": "inst-rss-sports",
-        "write-draft": "inst-newsletter",
-        "adapt-for-linkedin": "inst-linkedin-voice",
-        "publish-linkedin": "inst-linkedin-approval",
-      },
-      today: new Date("2026-06-26T12:00:00Z"),
-    });
-
-    const call = updatePlanConfiguration.mock.calls[0][0];
-    expect(call.seedArtifacts).toBeUndefined();
-    expect(call.slotBindings).toBeUndefined();
-    expect(call.behaviorPolicies).toBeUndefined();
-    expect(JSON.parse(call.parameterValuesJson)).toMatchObject({
-      theme: "sports",
-      language: "pt-BR",
-      source_group: "inst-rss-sports",
-      approval_mode: "require_approval",
-    });
   });
 });
 

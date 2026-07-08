@@ -134,9 +134,11 @@
     <div class="mt-1 space-y-0.5">
       {#each plans as plan (plan.id)}
         <a
-          href={plan.originThreadId
-            ? resolve(`/chat/${plan.originThreadId}`)
-            : resolve("/runs")}
+          href={resolve(
+            plan.originThreadId
+              ? `/chat/${encodeURIComponent(plan.originThreadId)}`
+              : "/runs",
+          )}
           class="flex items-center gap-2 rounded-md px-3 py-1.5 text-[12px] text-crown-ash hover:bg-obsidian-light hover:text-cream"
         >
           <span class="flex-1 truncate">{planLabel(plan, $locale)}</span>

@@ -4,7 +4,7 @@
 This is the prioritized inventory of contradictions, duplication, and dead code to retire —
 the substance of **[Phase 0](mvp-roadmap.md#3-phase-0--cleanup--correctness)**.
 
-**Last updated:** 2026-07-07 · Verified against trunk with `file:line` evidence.
+**Last updated:** 2026-07-08 · Phase 0 cleanup items C1, C2, C4, D1-D4, and T1 completed.
 
 **Suggested order:** C1 (correctness) → D1 (largest dead cluster) → C2 (blocks
 multi-template) → D2/D3/D4 → doc-level fixes.
@@ -13,7 +13,7 @@ multi-template) → D2/D3/D4 → doc-level fixes.
 
 ## Code findings
 
-### C1 — HIGH — Two incompatible resolvers for a PlanConfiguration's owning thread
+### C1 — ✅ done — Two incompatible resolvers for a PlanConfiguration's owning thread
 The owning thread is resolved two ways that read different columns with different fallbacks,
 so runtime events and assistant/approval/elicitation events for the **same** configuration
 can land on **different** thread IDs. Masked today only because both columns get the same
@@ -33,7 +33,7 @@ value at creation.
 **Category:** contradiction · **Fix:** collapse to a single owning-thread field + single
 resolver; delete the config-id fallback; route all callers through one path.
 
-### D1 — HIGH — Entire PlanCanvas DAG subsystem is orphaned
+### D1 — ✅ done — Entire PlanCanvas DAG subsystem is orphaned
 The visual plan-canvas UI — including its own artifact-detail/approval/elicitation panel
 state machine (the "second preview-owning path") — is never mounted.
 
@@ -50,7 +50,7 @@ SettingsDrawer/CanvasDrawer + tests. The chat page's `previewOpen`/`activeArtifa
 machine (`routes/chat/[threadId]/+page.svelte:156-252`) becomes the single artifact-preview
 state machine.
 
-### C2 / DUP1 — MEDIUM — LinkedIn-hardcoded template inputs duplicate the server materializer
+### C2 / DUP1 — ✅ done — LinkedIn-hardcoded template inputs duplicate the server materializer
 The server expands arbitrary template inputs generically, but the frontend carries a
 parallel LinkedIn-specific model hardcoding keys/defaults/serialization for one template —
 blocking any second template and risking FE/BE key drift.
@@ -68,18 +68,18 @@ blocking any second template and risking FE/BE key drift.
 generic `TemplateInputParameter[]`; delete the LinkedIn-specific input model; the server
 owns materialization.
 
-### D2 — MEDIUM — Orphaned artifact components
+### D2 — ✅ done — Orphaned artifact components
 `frontend/src/lib/components/artifacts/ArtifactRail.svelte` (0 importers) and
 `TextArtifactEditor.svelte` (0 references). **Fix:** delete both + tests. (For contrast,
 `ArtifactPreviewSheet` and `ArtifactCard` are live and canonical.)
 
-### D3 — MEDIUM — Dead legacy plan-thread RPC mocks in e2e
+### D3 — ✅ done — Dead legacy plan-thread RPC mocks in e2e
 `frontend/e2e/engineer-journey.spec.ts:724,732,737` still mock `ListPlanThreadMessages` /
 `WatchPlanThreadMessages` / `AppendPlanThreadMessage`, which no longer exist in proto or
 backend (`ThreadService` only has `List/Watch/AppendThreadMessages`). Live branches at
 `:829,837,842` already cover the real RPCs. **Fix:** delete the three dead branches.
 
-### D4 — LOW — Stale proto/doc comments referencing deleted RPCs
+### D4 — ✅ done — Stale proto/doc comments referencing deleted RPCs
 `proto/harpia/chat/v1/chat.proto:55,42-44` reference `WatchPlanThreadMessages` / "legacy
 plan-thread RPCs" (mirrored in generated `chat.pb.go:376`, `chat_pb.ts:143`). **Fix:**
 reword to `WatchThreadMessages`; drop the legacy note.
@@ -90,13 +90,13 @@ reword to `WatchThreadMessages`; drop the legacy note.
 
 These are resolved *in text* by the constitution; the residual work is code/proto/wording.
 
-### C4 — Legacy `subtask_*` nouns in new protos
+### C4 — ✅ done — Legacy `subtask_*` nouns in new protos
 ADR-012 deprecated "subtask," but `harpia.budget.v1` and `harpia.mcp.v1` still ship
 `subtask_key` / `SubtaskCostEstimate` / `subtask` references (ADR-010, ADR-011). **Fix
 (pre-v1, free to break):** rename to `step_*` / `StepCostEstimate` for consistency with the
 canonical taxonomy.
 
-### T1 — Example template bakes configuration into its identity
+### T1 — ✅ done — Example template bakes configuration into its identity
 `weekly-newsletter-linkedin` encodes three configuration axes in its name — cadence
 ("weekly"), channel ("linkedin"), format ("newsletter") — violating the outcome-shaped
 template principle (constitution §7.6). **Fix (mostly catalog content, pre-v1 free):** rename

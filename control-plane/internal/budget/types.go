@@ -55,7 +55,7 @@ type Reservation struct {
 	TenantID        uuid.UUID
 	Provider        string
 	TaskID          uuid.NullUUID
-	SubtaskID       uuid.NullUUID
+	StepID          uuid.NullUUID
 	PlanExecutionID uuid.NullUUID
 	StepExecutionID uuid.NullUUID
 	AgentType       string
@@ -75,7 +75,7 @@ type UsageEvent struct {
 	TenantID        uuid.UUID
 	ReservationID   uuid.NullUUID
 	TaskID          uuid.NullUUID
-	SubtaskID       uuid.NullUUID
+	StepID          uuid.NullUUID
 	PlanExecutionID uuid.NullUUID
 	StepExecutionID uuid.NullUUID
 	AgentType       string

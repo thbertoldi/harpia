@@ -144,7 +144,7 @@ export async function savePlanConfigurationRecord({
         status: nextStatus,
         overseerBindings: nextOverseerBindings,
         schedule: nextSchedule,
-        threadId: threadId ?? existing?.threadId ?? "",
+        threadId: threadId ?? existing?.originThreadId ?? "",
         parameterValuesJson: nextParameterValuesJson,
       });
 

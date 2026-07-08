@@ -12,7 +12,7 @@ import (
 	"github.com/harpia/control-plane/internal/executors"
 )
 
-func TestBuildPlanExecutionSnapshotResolvesDateRangePresetSeed(t *testing.T) {
+func TestBuildPlanExecutionSnapshotLeavesExplicitDateRangeSeed(t *testing.T) {
 	tenantID := uuid.New()
 	templateID := uuid.New()
 	skuID := uuid.New()
@@ -25,7 +25,7 @@ func TestBuildPlanExecutionSnapshotResolvesDateRangePresetSeed(t *testing.T) {
 		PlanTemplateVersion: 1,
 		Status:              ConfigurationStatusRunnable,
 		SeedArtifacts: mustMarshalSeeds(t, []*plansv1.SeedArtifactBinding{
-			{StepKey: "fetch-news", InputName: "date_range", LiteralJson: `{"preset":"last_7_days"}`},
+			{StepKey: "fetch-news", InputName: "date_range", LiteralJson: `{"startDate":"2026-01-01","endDate":"2026-01-31"}`},
 		}),
 		SlotBindings: mustMarshalBindings(t, []*plansv1.SlotBinding{
 			{StepKey: "fetch-news", ExecutorInstallationId: installationID.String()},
@@ -33,7 +33,7 @@ func TestBuildPlanExecutionSnapshotResolvesDateRangePresetSeed(t *testing.T) {
 	}
 	template := &PlanTemplate{
 		ID:      templateID,
-		Key:     "weekly-newsletter-linkedin",
+		Key:     "news-to-social-post",
 		Version: 1,
 		Steps: []PlanStep{{
 			Key:                   "fetch-news",
@@ -74,10 +74,10 @@ func TestBuildPlanExecutionSnapshotResolvesDateRangePresetSeed(t *testing.T) {
 	if seed == nil {
 		t.Fatal("missing date_range seed in snapshot")
 	}
-	assertJSONEqual(t, seed.GetLiteralJson(), `{"startDate":"2026-06-24","endDate":"2026-06-30"}`)
+	assertJSONEqual(t, seed.GetLiteralJson(), `{"startDate":"2026-01-01","endDate":"2026-01-31"}`)
 }
 
-func TestBuildPlanExecutionSnapshotResolvesFreshDateRangePresetPerRun(t *testing.T) {
+func TestBuildPlanExecutionSnapshotResolvesScheduleWindowPerRun(t *testing.T) {
 	tenantID := uuid.New()
 	templateID := uuid.New()
 	skuID := uuid.New()
@@ -89,8 +89,9 @@ func TestBuildPlanExecutionSnapshotResolvesFreshDateRangePresetPerRun(t *testing
 		PlanTemplateID:      templateID,
 		PlanTemplateVersion: 1,
 		Status:              ConfigurationStatusScheduled,
+		Schedule:            json.RawMessage(`{"cronExpression":"0 9 * * MON","timezone":"UTC"}`),
 		SeedArtifacts: mustMarshalSeeds(t, []*plansv1.SeedArtifactBinding{
-			{StepKey: "fetch-news", InputName: "date_range", LiteralJson: `{"preset":"last_7_days"}`},
+			{StepKey: "fetch-news", InputName: "date_range", LiteralJson: `{"preset":"schedule_window"}`},
 		}),
 		SlotBindings: mustMarshalBindings(t, []*plansv1.SlotBinding{
 			{StepKey: "fetch-news", ExecutorInstallationId: installationID.String()},
@@ -98,7 +99,7 @@ func TestBuildPlanExecutionSnapshotResolvesFreshDateRangePresetPerRun(t *testing
 	}
 	template := &PlanTemplate{
 		ID:      templateID,
-		Key:     "weekly-newsletter-linkedin",
+		Key:     "news-to-social-post",
 		Version: 1,
 		Steps: []PlanStep{{
 			Key:                  "fetch-news",

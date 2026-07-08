@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { resolve } from "$app/paths";
   import { invalidateAll } from "$app/navigation";
-  import { chatPlanPath } from "$lib/inbox/links";
+  import { resolve } from "$app/paths";
   import { Pencil, CalendarClock, Activity } from "lucide-svelte";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
   import ScheduleDialog from "$lib/components/canvas/ScheduleDialog.svelte";
+  import { chatPlanPath } from "$lib/inbox/links";
   import { locale, translate } from "$lib/i18n";
   import { formatRelativeTime } from "$lib/i18n/format";
   import { statusKeyForPlanExecution } from "$lib/plans/plan-execution";
@@ -53,14 +53,9 @@
     }
   }
 
-  // The origin thread a plan belongs to. origin_thread_id is the canonical link
-  // (ADR-017); thread_id is a legacy fallback for older records.
+  // The origin thread a plan belongs to. origin_thread_id is canonical.
   function originThreadId(group: PlanRunGroup): string | null {
-    return (
-      group.configuration?.originThreadId ||
-      group.configuration?.threadId ||
-      null
-    );
+    return group.configuration?.originThreadId || null;
   }
 
   function planTitle(group: PlanRunGroup): string {
@@ -251,7 +246,9 @@
               {#if threadId}
                 <a
                   href={resolve(
-                    chatPlanPath(threadId, configuration?.id ?? ""),
+                    chatPlanPath(threadId, configuration?.id ?? "") as
+                      | "/runs"
+                      | `/chat/${string}`,
                   )}
                   class="flex cursor-pointer items-center gap-1 rounded-md border border-primary px-2.5 py-1.5 text-[11px] font-semibold text-primary transition hover:bg-primary/10"
                 >
@@ -295,7 +292,7 @@
                           threadId,
                           configuration?.id ?? "",
                           execution.id,
-                        ),
+                        ) as "/runs" | `/chat/${string}`,
                       )}
                       class="font-body text-[11px] text-primary transition hover:opacity-80"
                     >

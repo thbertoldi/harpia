@@ -9,7 +9,7 @@ import {
   SlotBindingSchema,
   type PlanConfiguration,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
-import { mockWeeklyNewsletterLinkedInTemplate } from "$lib/plans/plan-template";
+import { mockNewsToSocialPostTemplate } from "$lib/plans/plan-template";
 import {
   loadPlanConfigurationForTemplate,
   pickPreferredPlanConfiguration,
@@ -46,7 +46,7 @@ function listConfigurations(configurations: PlanConfiguration[]) {
 }
 
 describe("plan configuration persistence", () => {
-  const template = mockWeeklyNewsletterLinkedInTemplate();
+  const template = mockNewsToSocialPostTemplate();
 
   beforeEach(() => {
     listPlanConfigurations.mockReset();
@@ -155,7 +155,7 @@ describe("plan configuration persistence", () => {
       workspaceId: "",
       planTemplateId: template.id,
       status: PlanConfigurationStatus.DRAFT,
-      threadId: "thread-a",
+      originThreadId: "thread-a",
     });
     listPlanConfigurations.mockReturnValue(listConfigurations([existing]));
     createPlanConfiguration.mockResolvedValue({ planConfiguration: saved });

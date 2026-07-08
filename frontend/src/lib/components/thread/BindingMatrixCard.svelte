@@ -1,23 +1,24 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { fade } from "svelte/transition";
   import type { ChatMessage } from "$lib/chat/types";
   import { locale, translate } from "$lib/i18n";
-  import { applyLinkedInSuggestion, editBinding } from "$lib/plans/assistant";
-  import {
-    buildDefaultLinkedInInputValues,
-    linkedInInputValuesFromParameterValuesJson,
-  } from "$lib/plans/linkedin-template-inputs";
+  import { editBinding } from "$lib/plans/assistant";
+  import TemplateInputsForm from "$lib/components/thread/TemplateInputsForm.svelte";
   import { localizedStepTitleByKey } from "$lib/plans/catalog-i18n";
+  import {
+    genericInputInitialValues,
+    genericParameterValuesJson,
+    parseParameterValuesJson,
+  } from "$lib/plans/template-inputs";
   import {
     parseMatrixPayload,
     computeRunCostBRL,
     hydrateMatrixPayload,
     isMatrixComplete,
     type MatrixPayload,
-    type MatrixOption,
     type MatrixRow,
   } from "$lib/plans/matrix";
-  import type { LinkedInTemplateInputValues } from "$lib/plans/template-inputs";
   import { cardLift, chipFlash } from "$lib/motion/transitions";
   import { planClient } from "$lib/rpc";
   import type {
@@ -62,7 +63,7 @@
   let configuration = $state<PlanConfiguration | null>(null);
   let template = $state<PlanTemplate | null>(null);
 
-  $effect(() => {
+  onMount(() => {
     if (!tenantId || !configurationId) return;
     const controller = new AbortController();
     (async () => {
@@ -80,15 +81,20 @@
             policiesSet: !!cfgRes.planConfiguration.behaviorPolicies,
           });
         }
-        inputValues = linkedInInputValuesFromParameterValuesJson(
-          cfgRes.planConfiguration.parameterValuesJson,
-        );
         const tplRes = await planClient.getPlanTemplate(
           { planTemplateId: cfgRes.planConfiguration.planTemplateId },
           { signal: controller.signal },
         );
         if (controller.signal.aborted) return;
         template = tplRes.planTemplate ?? null;
+        if (tplRes.planTemplate) {
+          inputValues = genericInputInitialValues(
+            tplRes.planTemplate.inputParameters,
+            parseParameterValuesJson(
+              cfgRes.planConfiguration.parameterValuesJson,
+            ),
+          );
+        }
       } catch {
         // best-effort; pickers stay read-only until the load lands
       }
@@ -108,9 +114,7 @@
   let submitted = $state(false);
   let saveError = $state(false);
   let suggestOpen = $state(false);
-  let inputValues = $state<LinkedInTemplateInputValues>(
-    buildDefaultLinkedInInputValues(),
-  );
+  let inputValues = $state<Record<string, unknown>>({});
 
   function stepTitle(row: MatrixRow): string {
     return localizedStepTitleByKey(
@@ -119,22 +123,6 @@
       $locale,
       row.step_title || row.step_key,
     );
-  }
-
-  function translatedInputLabel(inputKey: string, fallback: string): string {
-    const key = `plans.inputs.${inputKey}.label`;
-    const translated = translate(key, $locale);
-    return translated === key ? fallback : translated;
-  }
-
-  function translatedInputOption(
-    inputKey: string,
-    value: string,
-    fallback: string,
-  ): string {
-    const key = `plans.inputs.${inputKey}.option.${value}`;
-    const translated = translate(key, $locale);
-    return translated === key ? fallback : translated;
   }
 
   async function onPickExecutor(row: MatrixRow, optionId: string) {
@@ -169,59 +157,32 @@
     }
   }
 
-  function optionMatchesTopic(option: MatrixOption, topic: string): boolean {
-    if (!topic) return false;
-    return [option.label, option.sublabel ?? "", option.value]
-      .join(" ")
-      .toLowerCase()
-      .includes(topic);
-  }
-
-  function installationIdsByStep(): Record<string, string> {
-    const ids: Record<string, string> = {};
-    const topic = inputValues.theme.trim().toLowerCase();
-    for (const row of rows) {
-      const preferred = row.options.find((option) =>
-        optionMatchesTopic(option, topic),
-      );
-      const fallback = row.options.find((option) => option.id.trim() !== "");
-      const selected = preferred ?? fallback;
-      if (selected?.id) ids[row.step_key] = selected.id;
-    }
-    return ids;
-  }
-
   async function onSuggest() {
     if (!configuration || !template) return;
     saving = true;
     saveError = false;
     try {
-      const next = await applyLinkedInSuggestion({
+      const res = await planClient.updatePlanConfiguration({
         tenantId,
-        configurationId,
-        existingConfiguration: configuration,
-        template,
-        topic: inputValues.theme,
-        values: inputValues,
-        installationIdsByStep: installationIdsByStep(),
+        planConfigurationId: configurationId,
+        status: configuration.status,
+        overseerBindings: configuration.overseerBindings,
+        schedule: configuration.schedule,
+        parameterValuesJson: genericParameterValuesJson(inputValues),
       });
+      if (!res.planConfiguration) {
+        throw new Error(
+          "onSuggest: UpdatePlanConfiguration returned no configuration",
+        );
+      }
+      const next = res.planConfiguration;
       configuration = next;
-      const nextBindings = new Map(
-        next.slotBindings.map((binding) => [
-          binding.stepKey,
-          binding.executorInstallationId,
-        ]),
-      );
       if (payload) {
-        payload = {
-          ...payload,
-          policies_set: true,
-          rows: payload.rows.map((row) => ({
-            ...row,
-            current_executor_id:
-              nextBindings.get(row.step_key) ?? row.current_executor_id,
-          })),
-        };
+        payload = hydrateMatrixPayload(payload, {
+          slotBindings: next.slotBindings,
+          overseerBindings: next.overseerBindings,
+          policiesSet: !!next.behaviorPolicies,
+        });
       }
       suggestOpen = false;
     } catch {
@@ -317,124 +278,13 @@
 
       {#if suggestOpen}
         <div class="border-b border-plumage bg-surface-deep px-5 py-4">
-          <div class="grid gap-3 md:grid-cols-2">
-            <label class="block">
-              <span class="mb-1 block text-[11px] font-medium text-crown-ash"
-                >{translatedInputLabel("theme", "Theme")}</span
-              >
-              <input
-                value={inputValues.theme}
-                oninput={(event) =>
-                  (inputValues = {
-                    ...inputValues,
-                    theme: (event.currentTarget as HTMLInputElement).value,
-                  })}
-                class="w-full rounded-md border border-plumage bg-surface-hover px-3 py-2 text-[13px] text-cream outline-none focus:border-talon-gold"
-              />
-            </label>
-            <label class="block">
-              <span class="mb-1 block text-[11px] font-medium text-crown-ash"
-                >{translatedInputLabel("language", "Language")}</span
-              >
-              <select
-                value={inputValues.language}
-                onchange={(event) =>
-                  (inputValues = {
-                    ...inputValues,
-                    language: (event.currentTarget as HTMLSelectElement)
-                      .value as LinkedInTemplateInputValues["language"],
-                  })}
-                class="w-full rounded-md border border-plumage bg-surface-hover px-3 py-2 text-[13px] text-cream outline-none focus:border-talon-gold"
-              >
-                <option value="pt-BR"
-                  >{translatedInputOption(
-                    "language",
-                    "pt-BR",
-                    "Portuguese",
-                  )}</option
-                >
-                <option value="en-US"
-                  >{translatedInputOption(
-                    "language",
-                    "en-US",
-                    "English",
-                  )}</option
-                >
-                <option value="es"
-                  >{translatedInputOption("language", "es", "Spanish")}</option
-                >
-              </select>
-            </label>
-            <label class="block">
-              <span class="mb-1 block text-[11px] font-medium text-crown-ash"
-                >{translatedInputLabel("tone", "Tone")}</span
-              >
-              <select
-                value={inputValues.tone}
-                onchange={(event) =>
-                  (inputValues = {
-                    ...inputValues,
-                    tone: (event.currentTarget as HTMLSelectElement).value,
-                  })}
-                class="w-full rounded-md border border-plumage bg-surface-hover px-3 py-2 text-[13px] text-cream outline-none focus:border-talon-gold"
-              >
-                <option value="analytical, concise, and practical">
-                  {translatedInputOption(
-                    "tone",
-                    "analytical, concise, and practical",
-                    "Analytical",
-                  )}
-                </option>
-                <option value="friendly and clear"
-                  >{translatedInputOption(
-                    "tone",
-                    "friendly and clear",
-                    "Friendly",
-                  )}</option
-                >
-                <option value="executive and direct"
-                  >{translatedInputOption(
-                    "tone",
-                    "executive and direct",
-                    "Executive",
-                  )}</option
-                >
-              </select>
-            </label>
-            <label class="block">
-              <span class="mb-1 block text-[11px] font-medium text-crown-ash"
-                >{translatedInputLabel("audience", "Audience")}</span
-              >
-              <input
-                value={inputValues.audience}
-                oninput={(event) =>
-                  (inputValues = {
-                    ...inputValues,
-                    audience: (event.currentTarget as HTMLInputElement).value,
-                  })}
-                class="w-full rounded-md border border-plumage bg-surface-hover px-3 py-2 text-[13px] text-cream outline-none focus:border-talon-gold"
-              />
-            </label>
-            <label class="block md:col-span-2">
-              <span class="mb-1 block text-[11px] font-medium text-crown-ash"
-                >{translatedInputLabel(
-                  "topics_to_avoid",
-                  "Topics to avoid",
-                )}</span
-              >
-              <textarea
-                value={inputValues.topicsToAvoid}
-                oninput={(event) =>
-                  (inputValues = {
-                    ...inputValues,
-                    topicsToAvoid: (event.currentTarget as HTMLTextAreaElement)
-                      .value,
-                  })}
-                rows="2"
-                class="w-full resize-none rounded-md border border-plumage bg-surface-hover px-3 py-2 text-[13px] text-cream outline-none focus:border-talon-gold"
-              ></textarea>
-            </label>
-          </div>
+          {#if template}
+            <TemplateInputsForm
+              params={template.inputParameters}
+              bind:values={inputValues}
+              {tenantId}
+            />
+          {/if}
           <div class="mt-3 flex justify-end">
             <button
               type="button"

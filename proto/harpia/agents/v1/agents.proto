@@ -53,7 +53,7 @@ message AgentInstance {
   string agent_type_id = 2;
   string tenant_id = 3;
   string task_id = 4;
-  string subtask_id = 5;
+  string step_id = 5;
   AgentInstanceStatus status = 6;
   string created_at = 7;
   string updated_at = 8;
@@ -108,7 +108,7 @@ message AgentMatch {
 message ExecuteTaskRequest {
   string tenant_id = 1;
   string task_id = 2;
-  string subtask_id = 3;
+  string step_id = 3;
   string agent_type_id = 4;
   string task_description = 5;
   // Context from the parent task decomposition.
@@ -125,7 +125,7 @@ message ExecuteTaskResponse {
 }
 
 message FeedbackRequest {
-  string subtask_id = 1;
+  string step_id = 1;
   string question = 2;
   repeated string options = 3;
 }

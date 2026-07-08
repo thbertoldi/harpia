@@ -934,7 +934,7 @@ func testPlanSnapshot() PlanExecutionSnapshot {
 		},
 		Template: &plansv1.PlanTemplate{
 			Id:      "template-1",
-			Key:     "weekly-newsletter-linkedin",
+			Key:     "news-to-social-post",
 			Version: 1,
 			Steps: []*plansv1.PlanStep{
 				{

@@ -18,8 +18,23 @@ import (
 
 type RuntimeRepository struct {
 	chat      chat.Store
-	plans     *Repository
+	plans     runtimePlanStore
 	executors ExecutorLookup
+}
+
+type runtimePlanStore interface {
+	GetConfiguration(ctx context.Context, tenantID, configID uuid.UUID) (*PlanConfiguration, error)
+	GetTemplateByID(ctx context.Context, id uuid.UUID) (*PlanTemplate, error)
+	CreateExecution(ctx context.Context, execution *PlanExecution) (*PlanExecution, error)
+	GetExecution(ctx context.Context, tenantID, executionID uuid.UUID) (*PlanExecution, error)
+	UpdateExecutionStatus(ctx context.Context, tenantID, executionID uuid.UUID, status string, completedAt *time.Time) error
+	GetPlanConfigurationIDForExecution(ctx context.Context, tenantID, executionID uuid.UUID) (uuid.UUID, error)
+	CreateStepExecution(ctx context.Context, step *StepExecution) (*StepExecution, error)
+	UpdateStepExecutionStatus(ctx context.Context, tenantID, stepID uuid.UUID, status, outputArtifactID, elicitationThreadID, approvalRequestID string) error
+	UpsertElicitation(ctx context.Context, elicitation *Elicitation) (*Elicitation, error)
+	MarkElicitationTimedOutByStep(ctx context.Context, tenantID, stepID uuid.UUID, threadID string) error
+	CreatePlanApprovalRequest(ctx context.Context, request *PlanApprovalRequest) error
+	ResolvePlanApprovalRequest(ctx context.Context, tenantID uuid.UUID, requestID string, stepExecutionID uuid.UUID, approved bool, reason string) error
 }
 
 func NewRuntimeRepository(planRepo *Repository, executors ExecutorLookup, chatStore chat.Store) *RuntimeRepository {
@@ -28,18 +43,6 @@ func NewRuntimeRepository(planRepo *Repository, executors ExecutorLookup, chatSt
 		plans:     planRepo,
 		executors: executors,
 	}
-}
-
-// resolveThreadID maps a plan configuration id to its owning thread id so
-// runtime chat messages land on threads.id (Path B). It falls back to the
-// configuration id when the thread cannot be resolved, matching pre-migration
-// behavior for partially migrated development databases.
-func (r *RuntimeRepository) resolveThreadID(ctx context.Context, tenantID, configID uuid.UUID) string {
-	threadID, err := r.plans.GetThreadIDForConfiguration(ctx, tenantID, configID)
-	if err != nil || threadID == uuid.Nil {
-		return configID.String()
-	}
-	return threadID.String()
 }
 
 func (r *RuntimeRepository) CreateScheduledExecution(ctx context.Context, tenantID, configID, executionID uuid.UUID) (workflow.PlanWorkflowInput, error) {
@@ -121,16 +124,21 @@ func (r *RuntimeRepository) StartPlanExecution(ctx context.Context, tenantID, ex
 	if r.chat != nil {
 		execID := executionID
 		configID, lookupErr := r.plans.GetPlanConfigurationIDForExecution(ctx, tenantID, executionID)
-		if lookupErr == nil {
-			_, _ = r.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
-				ThreadID:    r.resolveThreadID(ctx, tenantID, configID),
-				ExecutionID: &execID,
-				Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
-				Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_RUN_STARTED,
-				Text:        "Run started.",
-				PayloadJSON: chat.BuildRunStartedPayload(),
-			})
+		if lookupErr != nil {
+			return fmt.Errorf("resolve plan configuration for execution: %w", lookupErr)
 		}
+		threadID, err := r.owningThreadID(ctx, tenantID, configID)
+		if err != nil {
+			return err
+		}
+		_, _ = r.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
+			ThreadID:    threadID,
+			ExecutionID: &execID,
+			Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
+			Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_RUN_STARTED,
+			Text:        "Run started.",
+			PayloadJSON: chat.BuildRunStartedPayload(),
+		})
 	}
 	return nil
 }
@@ -160,18 +168,22 @@ func (r *RuntimeRepository) CreateStepExecution(ctx context.Context, input workf
 	if r.chat != nil && step.Attempt == 1 {
 		execID := executionID
 		configID, lookupErr := r.plans.GetPlanConfigurationIDForExecution(ctx, tenantID, executionID)
-		if lookupErr == nil {
-			threadID := r.resolveThreadID(ctx, tenantID, configID)
-			if !r.stepStartedChatMessageExists(ctx, tenantID, threadID, step.ID.String()) {
-				_, _ = r.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
-					ThreadID:    threadID,
-					ExecutionID: &execID,
-					Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
-					Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_STEP_STARTED,
-					Text:        "Step " + input.PlanStepKey + " started.",
-					PayloadJSON: chat.BuildStepStartedPayload(input.PlanStepKey, step.ID.String()),
-				})
-			}
+		if lookupErr != nil {
+			return workflow.StepExecutionRecord{}, fmt.Errorf("resolve plan configuration for execution: %w", lookupErr)
+		}
+		threadID, err := r.owningThreadID(ctx, tenantID, configID)
+		if err != nil {
+			return workflow.StepExecutionRecord{}, err
+		}
+		if !r.stepStartedChatMessageExists(ctx, tenantID, threadID, step.ID.String()) {
+			_, _ = r.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
+				ThreadID:    threadID,
+				ExecutionID: &execID,
+				Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
+				Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_STEP_STARTED,
+				Text:        "Step " + input.PlanStepKey + " started.",
+				PayloadJSON: chat.BuildStepStartedPayload(input.PlanStepKey, step.ID.String()),
+			})
 		}
 	}
 
@@ -204,16 +216,21 @@ func (r *RuntimeRepository) CompleteStepExecution(ctx context.Context, input wor
 		if parseErr == nil {
 			execID := planExecutionID
 			configID, lookupErr := r.plans.GetPlanConfigurationIDForExecution(ctx, tenantID, planExecutionID)
-			if lookupErr == nil {
-				_, _ = r.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
-					ThreadID:    r.resolveThreadID(ctx, tenantID, configID),
-					ExecutionID: &execID,
-					Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
-					Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_STEP_BOUND,
-					Text:        "Step " + input.PlanStepKey + " completed.",
-					PayloadJSON: chat.BuildStepBoundPayload(input.PlanStepKey, input.OutputArtifactID),
-				})
+			if lookupErr != nil {
+				return fmt.Errorf("resolve plan configuration for execution: %w", lookupErr)
 			}
+			threadID, err := r.owningThreadID(ctx, tenantID, configID)
+			if err != nil {
+				return err
+			}
+			_, _ = r.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
+				ThreadID:    threadID,
+				ExecutionID: &execID,
+				Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
+				Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_STEP_BOUND,
+				Text:        "Step " + input.PlanStepKey + " completed.",
+				PayloadJSON: chat.BuildStepBoundPayload(input.PlanStepKey, input.OutputArtifactID),
+			})
 		}
 	}
 	return nil
@@ -285,16 +302,21 @@ func (r *RuntimeRepository) persistElicitation(ctx context.Context, tenantID, st
 	if r.chat != nil {
 		execID := executionID
 		configID, lookupErr := r.plans.GetPlanConfigurationIDForExecution(ctx, tenantID, executionID)
-		if lookupErr == nil {
-			_, _ = r.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
-				ThreadID:    r.resolveThreadID(ctx, tenantID, configID),
-				ExecutionID: &execID,
-				Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
-				Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_ELICITATION_RAISED,
-				Text:        "Elicitation raised on step " + input.PlanStepKey + ".",
-				PayloadJSON: chat.BuildElicitationRaisedPayload(created.ID),
-			})
+		if lookupErr != nil {
+			return fmt.Errorf("resolve plan configuration for execution: %w", lookupErr)
 		}
+		threadID, err := r.owningThreadID(ctx, tenantID, configID)
+		if err != nil {
+			return err
+		}
+		_, _ = r.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
+			ThreadID:    threadID,
+			ExecutionID: &execID,
+			Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
+			Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_ELICITATION_RAISED,
+			Text:        "Elicitation raised on step " + input.PlanStepKey + ".",
+			PayloadJSON: chat.BuildElicitationRaisedPayload(created.ID),
+		})
 	}
 	return nil
 }
@@ -358,22 +380,27 @@ func (r *RuntimeRepository) CreateApprovalRequest(ctx context.Context, input wor
 	if r.chat != nil {
 		execID := executionID
 		configID, lookupErr := r.plans.GetPlanConfigurationIDForExecution(ctx, tenantID, executionID)
-		if lookupErr == nil {
-			_, _ = r.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
-				ThreadID:    r.resolveThreadID(ctx, tenantID, configID),
-				ExecutionID: &execID,
-				Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
-				Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_APPROVAL_RAISED,
-				Text:        "Approval required on step " + input.PlanStepKey + ".",
-				PayloadJSON: chat.BuildApprovalRaisedPayload(input.ApprovalRequestID, chat.ApprovalRaisedContext{
-					PlanConfigurationID: configID.String(),
-					PlanExecutionID:     input.PlanExecutionID,
-					StepExecutionID:     input.StepExecutionID,
-					PlanStepKey:         input.PlanStepKey,
-					InputArtifactID:     input.InputArtifactID,
-				}),
-			})
+		if lookupErr != nil {
+			return fmt.Errorf("resolve plan configuration for execution: %w", lookupErr)
 		}
+		threadID, err := r.owningThreadID(ctx, tenantID, configID)
+		if err != nil {
+			return err
+		}
+		_, _ = r.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
+			ThreadID:    threadID,
+			ExecutionID: &execID,
+			Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
+			Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_APPROVAL_RAISED,
+			Text:        "Approval required on step " + input.PlanStepKey + ".",
+			PayloadJSON: chat.BuildApprovalRaisedPayload(input.ApprovalRequestID, chat.ApprovalRaisedContext{
+				PlanConfigurationID: configID.String(),
+				PlanExecutionID:     input.PlanExecutionID,
+				StepExecutionID:     input.StepExecutionID,
+				PlanStepKey:         input.PlanStepKey,
+				InputArtifactID:     input.InputArtifactID,
+			}),
+		})
 	}
 	return r.plans.UpdateStepExecutionStatus(ctx, tenantID, stepID, StepStatusAwaitingApproval, "", "", input.ApprovalRequestID)
 }
@@ -391,8 +418,7 @@ func (r *RuntimeRepository) CompletePlanExecution(ctx context.Context, tenantID,
 	if err := r.plans.UpdateExecutionStatus(ctx, tenantID, executionID, ExecutionStatusCompleted, &now); err != nil {
 		return err
 	}
-	r.appendRunFinishedChatMessage(ctx, tenantID, executionID)
-	return nil
+	return r.appendRunFinishedChatMessage(ctx, tenantID, executionID)
 }
 
 func (r *RuntimeRepository) FailPlanExecution(ctx context.Context, tenantID, executionID uuid.UUID, reason string) error {
@@ -400,18 +426,17 @@ func (r *RuntimeRepository) FailPlanExecution(ctx context.Context, tenantID, exe
 	if err := r.plans.UpdateExecutionStatus(ctx, tenantID, executionID, ExecutionStatusFailed, &now); err != nil {
 		return err
 	}
-	r.appendRunFinishedChatMessage(ctx, tenantID, executionID, reason)
-	return nil
+	return r.appendRunFinishedChatMessage(ctx, tenantID, executionID, reason)
 }
 
-func (r *RuntimeRepository) appendRunFinishedChatMessage(ctx context.Context, tenantID, executionID uuid.UUID, failureReasonOverride ...string) {
+func (r *RuntimeRepository) appendRunFinishedChatMessage(ctx context.Context, tenantID, executionID uuid.UUID, failureReasonOverride ...string) error {
 	if r.chat == nil {
-		return
+		return nil
 	}
 	execID := executionID
 	exec, lookupErr := r.plans.GetExecution(ctx, tenantID, executionID)
 	if lookupErr != nil {
-		return
+		return fmt.Errorf("load plan execution for run-finished message: %w", lookupErr)
 	}
 	configID := exec.PlanConfigurationID
 	var kind chatv1.ThreadMessageKind
@@ -435,14 +460,31 @@ func (r *RuntimeRepository) appendRunFinishedChatMessage(ctx context.Context, te
 		text = "Run completed."
 		payload = chat.BuildRunCompletedPayload()
 	}
+	threadID, err := r.owningThreadID(ctx, tenantID, configID)
+	if err != nil {
+		return err
+	}
 	_, _ = r.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
-		ThreadID:    r.resolveThreadID(ctx, tenantID, configID),
+		ThreadID:    threadID,
 		ExecutionID: &execID,
 		Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
 		Kind:        kind,
 		Text:        text,
 		PayloadJSON: payload,
 	})
+	return nil
+}
+
+func (r *RuntimeRepository) owningThreadID(ctx context.Context, tenantID, configID uuid.UUID) (string, error) {
+	config, err := r.plans.GetConfiguration(ctx, tenantID, configID)
+	if err != nil {
+		return "", fmt.Errorf("load plan configuration for owning thread: %w", err)
+	}
+	threadID := configurationThreadID(config)
+	if threadID == uuid.Nil {
+		return "", fmt.Errorf("plan configuration %s has no owning origin thread", configID)
+	}
+	return threadID.String(), nil
 }
 
 // stepStartedChatMessageExists reports whether STEP_STARTED was already appended

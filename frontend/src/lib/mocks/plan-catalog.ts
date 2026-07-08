@@ -122,16 +122,16 @@ function mockSkus(locale: Locale): ExecutorSKU[] {
   ];
 }
 
-function mockWeeklyNewsletterTemplate(locale: Locale): PlanTemplate {
+function mockNewsToSocialPostTemplate(locale: Locale): PlanTemplate {
   return create(PlanTemplateSchema, {
     id: "a1000000-0000-4000-8000-000000000001",
-    key: "weekly-newsletter-linkedin",
+    key: "news-to-social-post",
     name: resolveLocalizedContent(
-      "catalog.plan.weekly-newsletter-linkedin.name",
+      "catalog.plan.news-to-social-post.name",
       locale,
     ),
     description: resolveLocalizedContent(
-      "catalog.plan.weekly-newsletter-linkedin.description",
+      "catalog.plan.news-to-social-post.description",
       locale,
     ),
     vertical: "creator-economy",
@@ -141,11 +141,11 @@ function mockWeeklyNewsletterTemplate(locale: Locale): PlanTemplate {
         id: "step-fetch-news",
         key: "fetch-news",
         title: resolveLocalizedContent(
-          "catalog.plan.weekly-newsletter-linkedin.step.fetch-news.title",
+          "catalog.plan.news-to-social-post.step.fetch-news.title",
           locale,
         ),
         description: resolveLocalizedContent(
-          "catalog.plan.weekly-newsletter-linkedin.step.fetch-news.description",
+          "catalog.plan.news-to-social-post.step.fetch-news.description",
           locale,
         ),
         inputArtifactTypeId: "harpia.artifacts.v1.DateRange",
@@ -160,11 +160,11 @@ function mockWeeklyNewsletterTemplate(locale: Locale): PlanTemplate {
         id: "step-write-draft",
         key: "write-draft",
         title: resolveLocalizedContent(
-          "catalog.plan.weekly-newsletter-linkedin.step.write-draft.title",
+          "catalog.plan.news-to-social-post.step.write-draft.title",
           locale,
         ),
         description: resolveLocalizedContent(
-          "catalog.plan.weekly-newsletter-linkedin.step.write-draft.description",
+          "catalog.plan.news-to-social-post.step.write-draft.description",
           locale,
         ),
         inputArtifactTypeId: "harpia.artifacts.v1.NewsList",
@@ -178,11 +178,11 @@ function mockWeeklyNewsletterTemplate(locale: Locale): PlanTemplate {
         id: "step-adapt-linkedin",
         key: "adapt-for-linkedin",
         title: resolveLocalizedContent(
-          "catalog.plan.weekly-newsletter-linkedin.step.adapt-for-linkedin.title",
+          "catalog.plan.news-to-social-post.step.adapt-for-linkedin.title",
           locale,
         ),
         description: resolveLocalizedContent(
-          "catalog.plan.weekly-newsletter-linkedin.step.adapt-for-linkedin.description",
+          "catalog.plan.news-to-social-post.step.adapt-for-linkedin.description",
           locale,
         ),
         inputArtifactTypeId: "harpia.artifacts.v1.TextDraft",
@@ -196,11 +196,11 @@ function mockWeeklyNewsletterTemplate(locale: Locale): PlanTemplate {
         id: "step-publish-linkedin",
         key: "publish-linkedin",
         title: resolveLocalizedContent(
-          "catalog.plan.weekly-newsletter-linkedin.step.publish-linkedin.title",
+          "catalog.plan.news-to-social-post.step.publish-linkedin.title",
           locale,
         ),
         description: resolveLocalizedContent(
-          "catalog.plan.weekly-newsletter-linkedin.step.publish-linkedin.description",
+          "catalog.plan.news-to-social-post.step.publish-linkedin.description",
           locale,
         ),
         inputArtifactTypeId: "harpia.artifacts.v1.LinkedInPostDraft",
@@ -231,11 +231,11 @@ function mockWeeklyNewsletterTemplate(locale: Locale): PlanTemplate {
   });
 }
 
-export const WEEKLY_NEWSLETTER_TEMPLATE: PlanTemplate =
-  mockWeeklyNewsletterTemplate("en");
+export const NEWS_TO_SOCIAL_POST_TEMPLATE: PlanTemplate =
+  mockNewsToSocialPostTemplate("en");
 
 export function mockPlanTemplates(locale: Locale = "en"): PlanTemplate[] {
-  return [mockWeeklyNewsletterTemplate(locale)];
+  return [mockNewsToSocialPostTemplate(locale)];
 }
 
 /** Mock tenant executor state with mixed lock reasons for local development. */

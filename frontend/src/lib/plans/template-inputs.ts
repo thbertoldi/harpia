@@ -83,7 +83,7 @@ export function resolveDateRangePreset(
   preset: string,
   now: Date,
 ): DateRangeValue | null {
-  if (preset === "last_7_days") {
+  if (preset === "last_7_days" || preset === "schedule_window") {
     const end = addDays(now, -1);
     const start = addDays(now, -7);
     return { startDate: isoDate(start), endDate: isoDate(end) };
@@ -167,18 +167,6 @@ export function selectOptions(optionsJson: string): SelectOption[] {
   }
 }
 
-export interface LinkedInTemplateInputValues {
-  theme: string;
-  language: "pt-BR" | "en-US" | "es";
-  tone: string;
-  audience: string;
-  topicsToAvoid: string;
-  sourceGroupInstallationIds: string[];
-  aggregateSourceGroupInstallationId: string;
-  dateRange: DateRangeValue;
-  approvalMode: "require_approval" | "auto_publish";
-}
-
 export function parseParameterValuesJson(
   raw: string | undefined,
 ): Record<string, unknown> {
@@ -191,25 +179,4 @@ export function parseParameterValuesJson(
   } catch {
     return {};
   }
-}
-
-export function parameterValuesJson(
-  values: LinkedInTemplateInputValues,
-): string {
-  const sourceGroup =
-    values.aggregateSourceGroupInstallationId.trim() ||
-    values.sourceGroupInstallationIds.find((id) => id.trim())?.trim() ||
-    "";
-  return JSON.stringify({
-    theme: values.theme,
-    language: values.language,
-    tone: values.tone,
-    audience: values.audience,
-    topics_to_avoid: values.topicsToAvoid,
-    source_group: sourceGroup,
-    source_groups: values.sourceGroupInstallationIds,
-    aggregate_source_group: values.aggregateSourceGroupInstallationId,
-    date_range: values.dateRange,
-    approval_mode: values.approvalMode,
-  });
 }

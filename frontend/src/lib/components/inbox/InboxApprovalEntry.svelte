@@ -24,7 +24,9 @@
 })}
   {#snippet rowActions()}
     <a
-      href={resolve(inboxApprovalThreadPath(item))}
+      href={resolve(
+        inboxApprovalThreadPath(item) as "/runs" | `/chat/${string}`,
+      )}
       class="rounded border border-plumage bg-transparent px-3 py-1.5 text-[11px] font-medium text-crown-ash hover:border-talon-gold hover:text-talon-gold"
     >
       {translate("inbox.actions.openThread", $locale)}

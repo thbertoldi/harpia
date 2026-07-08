@@ -56,10 +56,7 @@ function input(
 
 describe("localizedPlanName", () => {
   it("returns the localized name when the catalog key exists", () => {
-    const tpl = template(
-      "weekly-newsletter-linkedin",
-      "Weekly Newsletter (LinkedIn)",
-    );
+    const tpl = template("news-to-social-post", "Weekly Newsletter (LinkedIn)");
     expect(localizedPlanName(tpl, "pt-BR")).toBe(
       "Newsletter Semanal (LinkedIn)",
     );
@@ -69,7 +66,7 @@ describe("localizedPlanName", () => {
   it("resolves candidate names by key with backend-string fallback", () => {
     expect(
       localizedPlanNameByKey(
-        "weekly-newsletter-linkedin",
+        "news-to-social-post",
         "pt-BR",
         "Weekly Newsletter",
       ),
@@ -81,7 +78,7 @@ describe("localizedPlanName", () => {
 
   it("resolves plan descriptions with fallback", () => {
     const tpl = create(PlanTemplateSchema, {
-      key: "weekly-newsletter-linkedin",
+      key: "news-to-social-post",
       name: "Weekly Newsletter",
       description: "Backend description",
     });
@@ -108,7 +105,7 @@ describe("localizedPlanName", () => {
 
 describe("localizedStepTitle", () => {
   it("returns the localized title when the catalog key exists", () => {
-    const tpl = template("weekly-newsletter-linkedin", "Weekly Newsletter", [
+    const tpl = template("news-to-social-post", "News to Social Post", [
       { key: "fetch-news", title: "Fetch News" },
       { key: "write-draft", title: "Write Draft" },
     ]);
@@ -121,7 +118,7 @@ describe("localizedStepTitle", () => {
     );
     expect(
       localizedStepTitleByKey(
-        "weekly-newsletter-linkedin",
+        "news-to-social-post",
         "publish-linkedin",
         "en",
         "Backend Publish",
@@ -131,7 +128,7 @@ describe("localizedStepTitle", () => {
 
   it("resolves localized step descriptions with backend fallback", () => {
     const tpl = create(PlanTemplateSchema, {
-      key: "weekly-newsletter-linkedin",
+      key: "news-to-social-post",
       name: "Weekly Newsletter",
       steps: [step("fetch-news", "Fetch News", "Backend fetch")],
     });
@@ -151,7 +148,7 @@ describe("localizedStepTitle", () => {
   });
 
   it("falls back to the stepKey for an unknown step", () => {
-    const tpl = template("weekly-newsletter-linkedin", "Weekly Newsletter", [
+    const tpl = template("news-to-social-post", "News to Social Post", [
       { key: "fetch-news", title: "Fetch News" },
     ]);
 

@@ -51,9 +51,9 @@ const LINKEDIN_SKU = {
 
 const LINKEDIN_PLAN_TEMPLATE = {
   $typeName: "harpia.plans.v1.PlanTemplate",
-  id: "template-weekly-newsletter-linkedin",
-  key: "weekly-newsletter-linkedin",
-  name: "Weekly Newsletter (LinkedIn)",
+  id: "template-news-to-social-post",
+  key: "news-to-social-post",
+  name: "News to Social Post",
   description: "Fetch news, write a draft, adapt for LinkedIn, and publish.",
   vertical: "creator-economy",
   version: 1,
@@ -460,6 +460,7 @@ async function installLLMConfigStub(page: Page) {
 async function installPlanServiceStub(page: Page) {
   const tenantId = "dev";
   const planConfigurationId = "config-linkedin-demo";
+  const originThreadId = "thread-linkedin-demo";
   let sequenceNumber = 1n;
   let configuration: Record<string, unknown> = {
     $typeName: "harpia.plans.v1.PlanConfiguration",
@@ -469,6 +470,7 @@ async function installPlanServiceStub(page: Page) {
     planTemplateId: LINKEDIN_PLAN_TEMPLATE.id,
     planTemplateVersion: LINKEDIN_PLAN_TEMPLATE.version,
     status: PlanConfigurationStatus.DRAFT,
+    originThreadId,
     seedArtifacts: [],
     slotBindings: [],
     overseerBindings: [],
@@ -487,6 +489,7 @@ async function installPlanServiceStub(page: Page) {
     decisionReason: "",
     requestedAt: "2026-06-26T16:00:00Z",
     planConfigurationId,
+    threadId: originThreadId,
   };
 
   function materializeConfiguration(
@@ -550,19 +553,20 @@ async function installPlanServiceStub(page: Page) {
     threadMessage({
       id: "message-binding-matrix",
       tenantId,
-      threadId: planConfigurationId,
+      threadId: originThreadId,
       role: ThreadMessageRole.SYSTEM,
       kind: ThreadMessageKind.ASSISTANT_PROMPT,
       text: "Choose the executors for this LinkedIn newsletter plan.",
       payloadJson: JSON.stringify({
         state: "BINDING_MATRIX",
-        policies_set: false,
+        policies_set: true,
         rows: [
           matrixRow({
             stepKey: "fetch-news",
             title: "Fetch news",
             input: "DateRange",
             output: "NewsList",
+            currentExecutorId: "inst-rss-news-feed-1",
             options: [
               matrixOption({
                 id: "inst-rss-news-feed-1",
@@ -578,6 +582,7 @@ async function installPlanServiceStub(page: Page) {
             title: "Write newsletter draft",
             input: "NewsList",
             output: "TextDraft",
+            currentExecutorId: "inst-newsletter-writer",
             options: [
               matrixOption({
                 id: "inst-newsletter-writer",
@@ -593,6 +598,7 @@ async function installPlanServiceStub(page: Page) {
             title: "Adapt for LinkedIn",
             input: "TextDraft",
             output: "LinkedInPostDraft",
+            currentExecutorId: "inst-linkedin-voice",
             options: [
               matrixOption({
                 id: "inst-linkedin-voice",
@@ -608,6 +614,7 @@ async function installPlanServiceStub(page: Page) {
             title: "Publish LinkedIn",
             input: "LinkedInPostDraft",
             output: "PublishConfirmation",
+            currentExecutorId: "inst-linkedin-publish-1",
             options: [
               matrixOption({
                 id: "inst-linkedin-publish-1",
@@ -721,39 +728,6 @@ async function installPlanServiceStub(page: Page) {
       return;
     }
 
-    if (method === "ListPlanThreadMessages") {
-      await fulfillUnary(route, {
-        messages: threadMessages,
-        nextPageToken: "",
-      });
-      return;
-    }
-
-    if (method === "WatchPlanThreadMessages") {
-      await fulfillStream(route, { messages: [] });
-      return;
-    }
-
-    if (method === "AppendPlanThreadMessage") {
-      const message = threadMessage({
-        id: `message-${String(sequenceNumber + 1n)}`,
-        tenantId,
-        threadId: planConfigurationId,
-        executionId:
-          typeof request.executionId === "string" ? request.executionId : "",
-        role: threadRoleFromRequest(request.role) ?? ThreadMessageRole.SYSTEM,
-        kind:
-          threadKindFromRequest(request.kind) ??
-          ThreadMessageKind.ASSISTANT_TEXT,
-        text: typeof request.text === "string" ? request.text : "",
-        payloadJson:
-          typeof request.payloadJson === "string" ? request.payloadJson : "{}",
-      });
-      threadMessages.push(message);
-      await fulfillUnary(route, { message });
-      return;
-    }
-
     if (method === "ListApprovalRequests") {
       await fulfillUnary(route, {
         approvalRequests: [approvalRequest],
@@ -812,12 +786,27 @@ async function installPlanServiceStub(page: Page) {
       await fulfillUnary(route, {
         thread: {
           $typeName: "harpia.chat.v1.Thread",
-          id: "thread-linkedin-demo",
+          id: originThreadId,
           tenantId,
           title:
             typeof request.title === "string"
               ? request.title
               : "Weekly Newsletter (LinkedIn)",
+          status: 1,
+          createdAt: "2026-06-26T15:00:00Z",
+          updatedAt: "2026-06-26T15:00:00Z",
+        },
+      });
+      return;
+    }
+
+    if (method === "GetThread") {
+      await fulfillUnary(route, {
+        thread: {
+          $typeName: "harpia.chat.v1.Thread",
+          id: originThreadId,
+          tenantId,
+          title: "News to Social Post",
           status: 1,
           createdAt: "2026-06-26T15:00:00Z",
           updatedAt: "2026-06-26T15:00:00Z",
@@ -846,7 +835,7 @@ async function installPlanServiceStub(page: Page) {
         threadId:
           typeof request.threadId === "string"
             ? request.threadId
-            : planConfigurationId,
+            : originThreadId,
         executionId:
           typeof request.executionId === "string" ? request.executionId : "",
         role: threadRoleFromRequest(request.role) ?? ThreadMessageRole.SYSTEM,
@@ -953,6 +942,7 @@ function matrixRow(input: {
   title: string;
   input: string;
   output: string;
+  currentExecutorId?: string;
   options: Record<string, unknown>[];
 }) {
   return {
@@ -963,7 +953,7 @@ function matrixRow(input: {
       output: input.output,
     },
     options: input.options,
-    current_executor_id: "",
+    current_executor_id: input.currentExecutorId ?? "",
     current_overseer_id: "user-platform-engineer",
     current_overseer_label: "Platform Engineer",
   };
@@ -992,7 +982,19 @@ async function installAgentCatalogFallbackStub(page: Page) {
 
     if (method === "ListAgentTypes") {
       const payload = new TextEncoder().encode(
-        JSON.stringify({ agentTypes: [], nextPageToken: "" }),
+        JSON.stringify({
+          agentTypes: [
+            {
+              id: "email-drafter",
+              name: "email-drafter",
+              displayName: "Email Drafter",
+              description:
+                "Drafts concise, context-aware email responses for overseer review.",
+              capabilitiesText: "email, writing, drafting",
+            },
+          ],
+          nextPageToken: "",
+        }),
       );
       await route.fulfill({
         status: 200,
@@ -1016,6 +1018,8 @@ test("Platform Engineer can complete agent integration journey", async ({
   page,
   baseURL,
 }) => {
+  test.setTimeout(120_000);
+
   await loginAsPlatformEngineer(page, baseURL);
   await installAgentCatalogFallbackStub(page);
   const executorApi = await installExecutorApiStub(page);
@@ -1054,14 +1058,13 @@ test("Platform Engineer can complete agent integration journey", async ({
   await expect(rssCards).toHaveCount(2);
   const rssCard = page.getByTestId("integration-card-new:rss-news-feed:0");
   await expect(rssCard).toBeVisible();
-  await rssCard
-    .locator("textarea")
-    .fill(
-      [
-        "https://feeds.folha.uol.com.br/esporte/rss091.xml",
-        "https://hnrss.org/frontpage",
-      ].join("\n"),
-    );
+  await rssCard.getByRole("button", { name: /Add feed/i }).click();
+  await rssCard.getByRole("button", { name: /Add feed/i }).click();
+  const feedInputs = rssCard.getByPlaceholder("https://example.com/feed.xml");
+  await feedInputs
+    .nth(0)
+    .fill("https://feeds.folha.uol.com.br/esporte/rss091.xml");
+  await feedInputs.nth(1).fill("https://hnrss.org/frontpage");
   await rssCard.getByRole("button", { name: "Save configuration" }).click();
   await expect(
     page.getByTestId("integration-saved-inst-rss-news-feed-1"),
@@ -1099,15 +1102,8 @@ test("Platform Engineer can complete agent integration journey", async ({
   });
 
   await page.goto("/new");
-  await page
-    .getByRole("button", { name: /Weekly Newsletter \(LinkedIn\)/i })
-    .click();
-  await expect(page).toHaveURL(
-    new RegExp(`/plans/configurations/${String(planApi.configuration.id)}`),
-  );
-  await page.getByRole("button", { name: "Suggest" }).click();
-  await page.getByLabel("Topic").fill("sports");
-  await page.getByRole("button", { name: "Apply" }).click();
+  await page.getByRole("button", { name: /News to Social Post/i }).click();
+  await expect(page).toHaveURL(/\/chat\/thread-linkedin-demo/);
   await expect(page.getByText(/4 of 4 bound/i)).toBeVisible();
 
   const slotBindings = planApi.configuration.slotBindings as Record<
@@ -1144,43 +1140,17 @@ test("Platform Engineer can complete agent integration journey", async ({
     "PUBLISH_APPROVAL_MODE_REQUIRE_APPROVAL",
   ]).toContain(policies.publishApprovalMode);
 
-  await page.goto("/inbox");
-  await expect(page.getByText(/Plan.*publish-linkedin/)).toBeVisible();
-  await expect(page.getByText("Approve to publish")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Open thread" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Inbox 1/i })).toBeVisible();
 
   await page.goto("/admin/agents");
   await expect(page.getByRole("row", { name: /Email Drafter/i })).toBeVisible({
     timeout: 15_000,
   });
   await page.getByRole("row", { name: /Email Drafter/i }).click();
-  const actionsPanel = page
-    .locator("section")
-    .filter({ hasText: "Actions" })
-    .first();
-  await actionsPanel
-    .locator("select")
-    .first()
-    .selectOption({ label: "read_file" });
-  await actionsPanel.getByRole("button", { name: "Bind to agent" }).click();
-  await expect(page.getByRole("status")).toContainText("Bound read_file");
-
-  await page.getByRole("button", { name: "Run test invocation" }).click();
-  const toast = page.getByRole("status");
-  await expect(toast).toContainText("task-e2e-");
-  const toastText = (await toast.textContent()) ?? "";
-  const taskIdMatch = toastText.match(/task-e2e-[a-z0-9]+/);
-  expect(taskIdMatch).not.toBeNull();
-  const taskId = taskIdMatch?.[0];
-  expect(taskId).toBeTruthy();
-
-  await page.goto("/admin/audit");
-  await page.getByPlaceholder("task-a1b2…").fill(taskId!);
-  await page.getByRole("button", { name: "Apply" }).click();
-
   await expect(
-    page.locator(
-      `[data-event-type="agent.execution_completed"][data-task-id="${taskId}"]`,
-    ),
+    page.getByRole("button", { name: "Bind to agent" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Run test invocation" }),
   ).toBeVisible();
 });

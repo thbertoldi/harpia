@@ -145,7 +145,6 @@ message PlanConfiguration {
   string created_at = 12;
   string updated_at = 13;
   string parameter_values_json = 14;
-  string thread_id = 15;
   PlanConfigurationKind kind = 16;
   string origin_thread_id = 17;
 }

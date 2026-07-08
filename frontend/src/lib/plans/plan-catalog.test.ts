@@ -18,7 +18,7 @@ import {
 import {
   mockExecutorContext,
   mockPlanTemplates,
-  WEEKLY_NEWSLETTER_TEMPLATE,
+  NEWS_TO_SOCIAL_POST_TEMPLATE,
 } from "$lib/mocks/plan-catalog";
 
 const RSS_SKU = create(ExecutorSKUSchema, {
@@ -33,7 +33,7 @@ const RSS_SKU = create(ExecutorSKUSchema, {
 
 describe("plan catalog lock state", () => {
   it("collects unique executor SKU keys from plan steps", () => {
-    const required = collectRequiredSkuKeys(WEEKLY_NEWSLETTER_TEMPLATE.steps);
+    const required = collectRequiredSkuKeys(NEWS_TO_SOCIAL_POST_TEMPLATE.steps);
 
     expect([...required.keys()].sort()).toEqual([
       "linkedin-publish",
@@ -143,11 +143,11 @@ describe("plan catalog lock state", () => {
 
   it("builds an available catalog entry from mock executor context", () => {
     const entry = buildPlanCatalogEntry(
-      WEEKLY_NEWSLETTER_TEMPLATE,
+      NEWS_TO_SOCIAL_POST_TEMPLATE,
       mockExecutorContext(),
     );
 
-    expect(entry.template.key).toBe("weekly-newsletter-linkedin");
+    expect(entry.template.key).toBe("news-to-social-post");
     expect(entry.requiredSkus).toHaveLength(4);
     expect(entry.isLocked).toBe(false);
     expect(entry.requiredSkus.every((sku) => sku.reason === "available")).toBe(

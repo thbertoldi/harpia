@@ -86,7 +86,6 @@ func configurationFromProto(proto *plansv1.PlanConfiguration, existing *PlanConf
 		BehaviorPolicies:    policiesJSON,
 		Schedule:            scheduleJSON,
 		ParameterValues:     parameterValuesJSON,
-		ThreadID:            existing.ThreadID,
 		OriginThreadID:      existing.OriginThreadID,
 		CreatedAt:           existing.CreatedAt,
 		UpdatedAt:           existing.UpdatedAt,
@@ -333,7 +332,6 @@ func (h *PlanHandler) CreatePlanConfiguration(ctx context.Context, req *connect.
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
-	config.ThreadID = threadID
 	config.OriginThreadID = threadID
 
 	created, err := h.repo.CreateConfiguration(ctx, config)
@@ -347,9 +345,9 @@ func (h *PlanHandler) CreatePlanConfiguration(ctx context.Context, req *connect.
 
 	// Path B: announce that a plan was attached to the owning thread, before the
 	// assistant seeds the binding-matrix prompt.
-	if h.chat != nil && created.ThreadID != uuid.Nil {
+	if h.chat != nil && created.OriginThreadID != uuid.Nil {
 		_, _ = h.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
-			ThreadID:    created.ThreadID.String(),
+			ThreadID:    created.OriginThreadID.String(),
 			Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
 			Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_PLAN_ATTACHED,
 			Text:        "Plan attached.",
@@ -1256,9 +1254,6 @@ func configurationToProto(c *PlanConfiguration) *plansv1.PlanConfiguration {
 	if c.WorkspaceID.Valid {
 		config.WorkspaceId = c.WorkspaceID.UUID.String()
 	}
-	if c.ThreadID != uuid.Nil {
-		config.ThreadId = c.ThreadID.String()
-	}
 	if c.OriginThreadID != uuid.Nil {
 		config.OriginThreadId = c.OriginThreadID.String()
 	}
@@ -1372,7 +1367,7 @@ func configurationThreadID(config *PlanConfiguration) uuid.UUID {
 	if config.OriginThreadID != uuid.Nil {
 		return config.OriginThreadID
 	}
-	return config.ThreadID
+	return uuid.Nil
 }
 
 func configurationStatusToString(status plansv1.PlanConfigurationStatus) (string, error) {

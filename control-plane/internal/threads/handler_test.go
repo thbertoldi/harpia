@@ -415,7 +415,7 @@ func TestProposePlanAddsRefinementDefaultsAndCandidateMetadata(t *testing.T) {
 		},
 		{
 			ID:   highID,
-			Key:  "weekly-newsletter-linkedin",
+			Key:  "news-to-social-post",
 			Name: "LinkedIn News Digest",
 			Inputs: []copilot.InputParamSummary{
 				{Key: "theme", Label: "Theme"},

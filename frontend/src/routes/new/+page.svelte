@@ -45,7 +45,7 @@
       });
       const threadId = threadResponse.thread?.id;
       if (!threadId) throw new Error("createThread returned no id");
-      await goto(resolve(`/chat/${threadId}`));
+      await goto(resolve(`/chat/${encodeURIComponent(threadId)}`));
     } catch (e) {
       createError = e instanceof Error ? e.message : "Failed to start";
     } finally {
@@ -84,7 +84,7 @@
       if (!configId) throw new Error("createPlanConfiguration returned no id");
       // The standalone configuration surface was removed (stabilize-user-journey);
       // plans are configured in-conversation, so land on the freshly created thread.
-      await goto(resolve(`/chat/${threadId}`));
+      await goto(resolve(`/chat/${encodeURIComponent(threadId)}`));
     } catch (e) {
       createError = e instanceof Error ? e.message : "Failed to create plan";
     } finally {

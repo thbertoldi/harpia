@@ -33,7 +33,7 @@
       });
       const threadId = response.thread?.id;
       if (!threadId) throw new Error("createThread returned no id");
-      await goto(resolve(`/chat/${threadId}`));
+      await goto(resolve(`/chat/${encodeURIComponent(threadId)}`));
     } catch (e) {
       error = toUserMessage(e);
     } finally {

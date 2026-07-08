@@ -278,7 +278,9 @@
                 {translate("plans.readyHint", $locale)}
               </p>
               <a
-                href={resolve(`/new?template=${entry.template.id}`)}
+                href={resolve(
+                  `/new?template=${encodeURIComponent(entry.template.id)}`,
+                )}
                 in:chipFlash
                 class="shrink-0 rounded-md bg-primary px-3 py-1.5 font-body text-xs font-medium text-primary-foreground transition-colors hover:opacity-90"
               >

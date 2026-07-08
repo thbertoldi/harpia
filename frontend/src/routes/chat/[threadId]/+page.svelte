@@ -389,10 +389,7 @@
     if (browser) {
       replaceState(
         resolve(
-          `/chat/[threadId]?plan=${encodeURIComponent(configurationId)}`,
-          {
-            threadId: routeThreadId,
-          },
+          `/chat/${encodeURIComponent(routeThreadId)}?plan=${encodeURIComponent(configurationId)}`,
         ),
         {},
       );

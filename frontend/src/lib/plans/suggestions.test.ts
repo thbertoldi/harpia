@@ -41,13 +41,13 @@ describe("suggestionForTemplate", () => {
   it("uses the catalog suggestion prompt when the content key exists", () => {
     const s = suggestionForTemplate(
       template({
-        key: "weekly-newsletter-linkedin",
+        key: "news-to-social-post",
         name: "Weekly Newsletter (LinkedIn)",
         vertical: "social-media",
       }),
       "en",
     );
-    expect(s.templateKey).toBe("weekly-newsletter-linkedin");
+    expect(s.templateKey).toBe("news-to-social-post");
     expect(s.iconKey).toBe("share");
     expect(s.label).toBe("Weekly Newsletter (LinkedIn)");
     // Resolves to the localized suggestion content key (not the composed fallback)

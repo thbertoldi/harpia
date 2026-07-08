@@ -248,7 +248,7 @@ type AgentInstance struct {
 	AgentTypeId   string                 `protobuf:"bytes,2,opt,name=agent_type_id,json=agentTypeId,proto3" json:"agent_type_id,omitempty"`
 	TenantId      string                 `protobuf:"bytes,3,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
 	TaskId        string                 `protobuf:"bytes,4,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
-	SubtaskId     string                 `protobuf:"bytes,5,opt,name=subtask_id,json=subtaskId,proto3" json:"subtask_id,omitempty"`
+	StepId        string                 `protobuf:"bytes,5,opt,name=step_id,json=stepId,proto3" json:"step_id,omitempty"`
 	Status        AgentInstanceStatus    `protobuf:"varint,6,opt,name=status,proto3,enum=harpia.agents.v1.AgentInstanceStatus" json:"status,omitempty"`
 	CreatedAt     string                 `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt     string                 `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
@@ -314,9 +314,9 @@ func (x *AgentInstance) GetTaskId() string {
 	return ""
 }
 
-func (x *AgentInstance) GetSubtaskId() string {
+func (x *AgentInstance) GetStepId() string {
 	if x != nil {
-		return x.SubtaskId
+		return x.StepId
 	}
 	return ""
 }
@@ -718,7 +718,7 @@ type ExecuteTaskRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	TenantId        string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
 	TaskId          string                 `protobuf:"bytes,2,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
-	SubtaskId       string                 `protobuf:"bytes,3,opt,name=subtask_id,json=subtaskId,proto3" json:"subtask_id,omitempty"`
+	StepId          string                 `protobuf:"bytes,3,opt,name=step_id,json=stepId,proto3" json:"step_id,omitempty"`
 	AgentTypeId     string                 `protobuf:"bytes,4,opt,name=agent_type_id,json=agentTypeId,proto3" json:"agent_type_id,omitempty"`
 	TaskDescription string                 `protobuf:"bytes,5,opt,name=task_description,json=taskDescription,proto3" json:"task_description,omitempty"`
 	// Context from the parent task decomposition.
@@ -771,9 +771,9 @@ func (x *ExecuteTaskRequest) GetTaskId() string {
 	return ""
 }
 
-func (x *ExecuteTaskRequest) GetSubtaskId() string {
+func (x *ExecuteTaskRequest) GetStepId() string {
 	if x != nil {
-		return x.SubtaskId
+		return x.StepId
 	}
 	return ""
 }
@@ -885,7 +885,7 @@ func (x *ExecuteTaskResponse) GetFeedbackRequest() *FeedbackRequest {
 
 type FeedbackRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	SubtaskId     string                 `protobuf:"bytes,1,opt,name=subtask_id,json=subtaskId,proto3" json:"subtask_id,omitempty"`
+	StepId        string                 `protobuf:"bytes,1,opt,name=step_id,json=stepId,proto3" json:"step_id,omitempty"`
 	Question      string                 `protobuf:"bytes,2,opt,name=question,proto3" json:"question,omitempty"`
 	Options       []string               `protobuf:"bytes,3,rep,name=options,proto3" json:"options,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -922,9 +922,9 @@ func (*FeedbackRequest) Descriptor() ([]byte, []int) {
 	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{11}
 }
 
-func (x *FeedbackRequest) GetSubtaskId() string {
+func (x *FeedbackRequest) GetStepId() string {
 	if x != nil {
-		return x.SubtaskId
+		return x.StepId
 	}
 	return ""
 }
@@ -1093,14 +1093,13 @@ const file_harpia_agents_v1_agents_proto_rawDesc = "" +
 	"\finput_schema\x18\f \x01(\v2\x17.google.protobuf.StructR\vinputSchema\x12<\n" +
 	"\routput_schema\x18\r \x01(\v2\x17.google.protobuf.StructR\foutputSchema\x12#\n" +
 	"\rcost_estimate\x18\x0e \x01(\x01R\fcostEstimate\x123\n" +
-	"\bmetadata\x18\x0f \x01(\v2\x17.google.protobuf.StructR\bmetadata\"\x95\x02\n" +
+	"\bmetadata\x18\x0f \x01(\v2\x17.google.protobuf.StructR\bmetadata\"\x8f\x02\n" +
 	"\rAgentInstance\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\"\n" +
 	"\ragent_type_id\x18\x02 \x01(\tR\vagentTypeId\x12\x1b\n" +
 	"\ttenant_id\x18\x03 \x01(\tR\btenantId\x12\x17\n" +
-	"\atask_id\x18\x04 \x01(\tR\x06taskId\x12\x1d\n" +
-	"\n" +
-	"subtask_id\x18\x05 \x01(\tR\tsubtaskId\x12=\n" +
+	"\atask_id\x18\x04 \x01(\tR\x06taskId\x12\x17\n" +
+	"\astep_id\x18\x05 \x01(\tR\x06stepId\x12=\n" +
 	"\x06status\x18\x06 \x01(\x0e2%.harpia.agents.v1.AgentInstanceStatusR\x06status\x12\x1d\n" +
 	"\n" +
 	"created_at\x18\a \x01(\tR\tcreatedAt\x12\x1d\n" +
@@ -1134,12 +1133,11 @@ const file_harpia_agents_v1_agents_proto_rawDesc = "" +
 	"AgentMatch\x12:\n" +
 	"\n" +
 	"agent_type\x18\x01 \x01(\v2\x1b.harpia.agents.v1.AgentTypeR\tagentType\x12)\n" +
-	"\x10similarity_score\x18\x02 \x01(\x02R\x0fsimilarityScore\"\xe3\x01\n" +
+	"\x10similarity_score\x18\x02 \x01(\x02R\x0fsimilarityScore\"\xdd\x01\n" +
 	"\x12ExecuteTaskRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x17\n" +
-	"\atask_id\x18\x02 \x01(\tR\x06taskId\x12\x1d\n" +
-	"\n" +
-	"subtask_id\x18\x03 \x01(\tR\tsubtaskId\x12\"\n" +
+	"\atask_id\x18\x02 \x01(\tR\x06taskId\x12\x17\n" +
+	"\astep_id\x18\x03 \x01(\tR\x06stepId\x12\"\n" +
 	"\ragent_type_id\x18\x04 \x01(\tR\vagentTypeId\x12)\n" +
 	"\x10task_description\x18\x05 \x01(\tR\x0ftaskDescription\x12)\n" +
 	"\x10previous_results\x18\x06 \x03(\tR\x0fpreviousResults\"\xcf\x02\n" +
@@ -1152,10 +1150,9 @@ const file_harpia_agents_v1_agents_proto_rawDesc = "" +
 	"\x10feedback_request\x18\x06 \x01(\v2!.harpia.agents.v1.FeedbackRequestH\x02R\x0ffeedbackRequest\x88\x01\x01B\t\n" +
 	"\a_outputB\b\n" +
 	"\x06_errorB\x13\n" +
-	"\x11_feedback_request\"f\n" +
-	"\x0fFeedbackRequest\x12\x1d\n" +
-	"\n" +
-	"subtask_id\x18\x01 \x01(\tR\tsubtaskId\x12\x1a\n" +
+	"\x11_feedback_request\"`\n" +
+	"\x0fFeedbackRequest\x12\x17\n" +
+	"\astep_id\x18\x01 \x01(\tR\x06stepId\x12\x1a\n" +
 	"\bquestion\x18\x02 \x01(\tR\bquestion\x12\x18\n" +
 	"\aoptions\x18\x03 \x03(\tR\aoptions\"\xaa\x01\n" +
 	"\x18ContinueExecutionRequest\x12\x1b\n" +
