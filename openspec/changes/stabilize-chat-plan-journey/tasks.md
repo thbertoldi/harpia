@@ -33,8 +33,8 @@
 ## 5. Context-Preserving Navigation
 
 - [x] 5.1 Update inbox approval links so selecting an approval navigates to `/chat/[threadId]` with enough query/hash/state to select the relevant plan/execution/approval context. (Link carries `?plan=&execution=#m-approval-<id>`; chat page resolves the `?plan=` tab and scrolls to the approval card once messages render. Shared `approvalAnchorId` keeps the link hash and `ApprovalRefCard` element id in sync.)
-- [ ] 5.2 Update `/runs` execution links, if needed, so opening a run selects the origin thread, active plan, and execution context rather than landing on an ambiguous thread state. (Chat page still selects the most-recent execution rather than honoring the `?execution=` param — carried in the URL but not yet consumed for execution selection.)
-- [x] 5.3 Add tests for URL/context derivation helpers or route-state handling used by inbox/runs links. (`links.test.ts` covers `chatPlanPath`, `inboxApprovalThreadPath`, and the `approvalAnchorId` link/card contract.)
+- [x] 5.2 Update `/runs` execution links, if needed, so opening a run selects the origin thread, active plan, and execution context rather than landing on an ambiguous thread state. (Runs "open thread" uses `runExecutionThreadPath` → `?plan=&execution=#m-execution-<id>`; each execution card renders the matching `executionAnchorId` and the chat-page hash-scroll brings it into view.)
+- [x] 5.3 Add tests for URL/context derivation helpers or route-state handling used by inbox/runs links. (`links.test.ts` covers `chatPlanPath`, `inboxApprovalThreadPath`/`approvalAnchorId`, and `runExecutionThreadPath`/`executionAnchorId` link/card contracts.)
 
 ## 6. Verification
 
