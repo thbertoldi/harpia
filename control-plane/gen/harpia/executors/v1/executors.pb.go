@@ -70,6 +70,60 @@ func (ExecutorKind) EnumDescriptor() ([]byte, []int) {
 	return file_harpia_executors_v1_executors_proto_rawDescGZIP(), []int{0}
 }
 
+// Seniority tier for an agent ExecutorSKU (ADR-018). Higher tier = more
+// capable graph, more tools, higher cost-per-execution.
+type SeniorityTier int32
+
+const (
+	SeniorityTier_SENIORITY_TIER_UNSPECIFIED SeniorityTier = 0
+	SeniorityTier_SENIORITY_TIER_JUNIOR      SeniorityTier = 1
+	SeniorityTier_SENIORITY_TIER_PLENO       SeniorityTier = 2
+	SeniorityTier_SENIORITY_TIER_SENIOR      SeniorityTier = 3
+)
+
+// Enum value maps for SeniorityTier.
+var (
+	SeniorityTier_name = map[int32]string{
+		0: "SENIORITY_TIER_UNSPECIFIED",
+		1: "SENIORITY_TIER_JUNIOR",
+		2: "SENIORITY_TIER_PLENO",
+		3: "SENIORITY_TIER_SENIOR",
+	}
+	SeniorityTier_value = map[string]int32{
+		"SENIORITY_TIER_UNSPECIFIED": 0,
+		"SENIORITY_TIER_JUNIOR":      1,
+		"SENIORITY_TIER_PLENO":       2,
+		"SENIORITY_TIER_SENIOR":      3,
+	}
+)
+
+func (x SeniorityTier) Enum() *SeniorityTier {
+	p := new(SeniorityTier)
+	*p = x
+	return p
+}
+
+func (x SeniorityTier) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SeniorityTier) Descriptor() protoreflect.EnumDescriptor {
+	return file_harpia_executors_v1_executors_proto_enumTypes[1].Descriptor()
+}
+
+func (SeniorityTier) Type() protoreflect.EnumType {
+	return &file_harpia_executors_v1_executors_proto_enumTypes[1]
+}
+
+func (x SeniorityTier) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SeniorityTier.Descriptor instead.
+func (SeniorityTier) EnumDescriptor() ([]byte, []int) {
+	return file_harpia_executors_v1_executors_proto_rawDescGZIP(), []int{1}
+}
+
 type ConnectionStatus int32
 
 const (
@@ -109,11 +163,11 @@ func (x ConnectionStatus) String() string {
 }
 
 func (ConnectionStatus) Descriptor() protoreflect.EnumDescriptor {
-	return file_harpia_executors_v1_executors_proto_enumTypes[1].Descriptor()
+	return file_harpia_executors_v1_executors_proto_enumTypes[2].Descriptor()
 }
 
 func (ConnectionStatus) Type() protoreflect.EnumType {
-	return &file_harpia_executors_v1_executors_proto_enumTypes[1]
+	return &file_harpia_executors_v1_executors_proto_enumTypes[2]
 }
 
 func (x ConnectionStatus) Number() protoreflect.EnumNumber {
@@ -122,7 +176,7 @@ func (x ConnectionStatus) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ConnectionStatus.Descriptor instead.
 func (ConnectionStatus) EnumDescriptor() ([]byte, []int) {
-	return file_harpia_executors_v1_executors_proto_rawDescGZIP(), []int{1}
+	return file_harpia_executors_v1_executors_proto_rawDescGZIP(), []int{2}
 }
 
 type ListPrice struct {
@@ -184,6 +238,8 @@ type CompatibilityMetadata struct {
 	ConnectionType         string                 `protobuf:"bytes,3,opt,name=connection_type,json=connectionType,proto3" json:"connection_type,omitempty"`
 	ManifestId             string                 `protobuf:"bytes,4,opt,name=manifest_id,json=manifestId,proto3" json:"manifest_id,omitempty"`
 	ManifestVersion        string                 `protobuf:"bytes,5,opt,name=manifest_version,json=manifestVersion,proto3" json:"manifest_version,omitempty"`
+	Capabilities           []string               `protobuf:"bytes,6,rep,name=capabilities,proto3" json:"capabilities,omitempty"`                         // capabilities this agent/executor provides (ADR-018)
+	Tier                   SeniorityTier          `protobuf:"varint,7,opt,name=tier,proto3,enum=harpia.executors.v1.SeniorityTier" json:"tier,omitempty"` // seniority tier for agent SKUs (ADR-018)
 	unknownFields          protoimpl.UnknownFields
 	sizeCache              protoimpl.SizeCache
 }
@@ -251,6 +307,20 @@ func (x *CompatibilityMetadata) GetManifestVersion() string {
 		return x.ManifestVersion
 	}
 	return ""
+}
+
+func (x *CompatibilityMetadata) GetCapabilities() []string {
+	if x != nil {
+		return x.Capabilities
+	}
+	return nil
+}
+
+func (x *CompatibilityMetadata) GetTier() SeniorityTier {
+	if x != nil {
+		return x.Tier
+	}
+	return SeniorityTier_SENIORITY_TIER_UNSPECIFIED
 }
 
 type ExecutorSKU struct {
@@ -1874,14 +1944,16 @@ const file_harpia_executors_v1_executors_proto_rawDesc = "" +
 	"\tListPrice\x12\x1f\n" +
 	"\vprice_cents\x18\x01 \x01(\x03R\n" +
 	"priceCents\x12\x1a\n" +
-	"\bcurrency\x18\x02 \x01(\tR\bcurrency\"\x80\x02\n" +
+	"\bcurrency\x18\x02 \x01(\tR\bcurrency\"\xdc\x02\n" +
 	"\x15CompatibilityMetadata\x127\n" +
 	"\x18input_artifact_type_keys\x18\x01 \x03(\tR\x15inputArtifactTypeKeys\x129\n" +
 	"\x19output_artifact_type_keys\x18\x02 \x03(\tR\x16outputArtifactTypeKeys\x12'\n" +
 	"\x0fconnection_type\x18\x03 \x01(\tR\x0econnectionType\x12\x1f\n" +
 	"\vmanifest_id\x18\x04 \x01(\tR\n" +
 	"manifestId\x12)\n" +
-	"\x10manifest_version\x18\x05 \x01(\tR\x0fmanifestVersion\"\xfa\x02\n" +
+	"\x10manifest_version\x18\x05 \x01(\tR\x0fmanifestVersion\x12\"\n" +
+	"\fcapabilities\x18\x06 \x03(\tR\fcapabilities\x126\n" +
+	"\x04tier\x18\a \x01(\x0e2\".harpia.executors.v1.SeniorityTierR\x04tier\"\xfa\x02\n" +
 	"\vExecutorSKU\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
 	"\x03key\x18\x02 \x01(\tR\x03key\x12!\n" +
@@ -2013,7 +2085,12 @@ const file_harpia_executors_v1_executors_proto_rawDesc = "" +
 	"\fExecutorKind\x12\x1d\n" +
 	"\x19EXECUTOR_KIND_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19EXECUTOR_KIND_INTEGRATION\x10\x01\x12\x17\n" +
-	"\x13EXECUTOR_KIND_AGENT\x10\x02*\xb9\x01\n" +
+	"\x13EXECUTOR_KIND_AGENT\x10\x02*\x7f\n" +
+	"\rSeniorityTier\x12\x1e\n" +
+	"\x1aSENIORITY_TIER_UNSPECIFIED\x10\x00\x12\x19\n" +
+	"\x15SENIORITY_TIER_JUNIOR\x10\x01\x12\x18\n" +
+	"\x14SENIORITY_TIER_PLENO\x10\x02\x12\x19\n" +
+	"\x15SENIORITY_TIER_SENIOR\x10\x03*\xb9\x01\n" +
 	"\x10ConnectionStatus\x12!\n" +
 	"\x1dCONNECTION_STATUS_UNSPECIFIED\x10\x00\x12\"\n" +
 	"\x1eCONNECTION_STATUS_DISCONNECTED\x10\x01\x12 \n" +
@@ -2046,87 +2123,89 @@ func file_harpia_executors_v1_executors_proto_rawDescGZIP() []byte {
 	return file_harpia_executors_v1_executors_proto_rawDescData
 }
 
-var file_harpia_executors_v1_executors_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_harpia_executors_v1_executors_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
 var file_harpia_executors_v1_executors_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
 var file_harpia_executors_v1_executors_proto_goTypes = []any{
 	(ExecutorKind)(0),                          // 0: harpia.executors.v1.ExecutorKind
-	(ConnectionStatus)(0),                      // 1: harpia.executors.v1.ConnectionStatus
-	(*ListPrice)(nil),                          // 2: harpia.executors.v1.ListPrice
-	(*CompatibilityMetadata)(nil),              // 3: harpia.executors.v1.CompatibilityMetadata
-	(*ExecutorSKU)(nil),                        // 4: harpia.executors.v1.ExecutorSKU
-	(*ExecutorEntitlement)(nil),                // 5: harpia.executors.v1.ExecutorEntitlement
-	(*IntegrationInstallation)(nil),            // 6: harpia.executors.v1.IntegrationInstallation
-	(*AgentInstallation)(nil),                  // 7: harpia.executors.v1.AgentInstallation
-	(*ExecutorInstallation)(nil),               // 8: harpia.executors.v1.ExecutorInstallation
-	(*ListExecutorSKUsRequest)(nil),            // 9: harpia.executors.v1.ListExecutorSKUsRequest
-	(*ListExecutorSKUsResponse)(nil),           // 10: harpia.executors.v1.ListExecutorSKUsResponse
-	(*GetExecutorSKURequest)(nil),              // 11: harpia.executors.v1.GetExecutorSKURequest
-	(*GetExecutorSKUResponse)(nil),             // 12: harpia.executors.v1.GetExecutorSKUResponse
-	(*ListExecutorEntitlementsRequest)(nil),    // 13: harpia.executors.v1.ListExecutorEntitlementsRequest
-	(*ListExecutorEntitlementsResponse)(nil),   // 14: harpia.executors.v1.ListExecutorEntitlementsResponse
-	(*GetExecutorEntitlementRequest)(nil),      // 15: harpia.executors.v1.GetExecutorEntitlementRequest
-	(*GetExecutorEntitlementResponse)(nil),     // 16: harpia.executors.v1.GetExecutorEntitlementResponse
-	(*CreateExecutorEntitlementRequest)(nil),   // 17: harpia.executors.v1.CreateExecutorEntitlementRequest
-	(*CreateExecutorEntitlementResponse)(nil),  // 18: harpia.executors.v1.CreateExecutorEntitlementResponse
-	(*ListExecutorInstallationsRequest)(nil),   // 19: harpia.executors.v1.ListExecutorInstallationsRequest
-	(*ListExecutorInstallationsResponse)(nil),  // 20: harpia.executors.v1.ListExecutorInstallationsResponse
-	(*GetExecutorInstallationRequest)(nil),     // 21: harpia.executors.v1.GetExecutorInstallationRequest
-	(*GetExecutorInstallationResponse)(nil),    // 22: harpia.executors.v1.GetExecutorInstallationResponse
-	(*CreateExecutorInstallationRequest)(nil),  // 23: harpia.executors.v1.CreateExecutorInstallationRequest
-	(*CreateExecutorInstallationResponse)(nil), // 24: harpia.executors.v1.CreateExecutorInstallationResponse
-	(*UpdateExecutorInstallationRequest)(nil),  // 25: harpia.executors.v1.UpdateExecutorInstallationRequest
-	(*UpdateExecutorInstallationResponse)(nil), // 26: harpia.executors.v1.UpdateExecutorInstallationResponse
-	(*DeleteExecutorInstallationRequest)(nil),  // 27: harpia.executors.v1.DeleteExecutorInstallationRequest
-	(*DeleteExecutorInstallationResponse)(nil), // 28: harpia.executors.v1.DeleteExecutorInstallationResponse
+	(SeniorityTier)(0),                         // 1: harpia.executors.v1.SeniorityTier
+	(ConnectionStatus)(0),                      // 2: harpia.executors.v1.ConnectionStatus
+	(*ListPrice)(nil),                          // 3: harpia.executors.v1.ListPrice
+	(*CompatibilityMetadata)(nil),              // 4: harpia.executors.v1.CompatibilityMetadata
+	(*ExecutorSKU)(nil),                        // 5: harpia.executors.v1.ExecutorSKU
+	(*ExecutorEntitlement)(nil),                // 6: harpia.executors.v1.ExecutorEntitlement
+	(*IntegrationInstallation)(nil),            // 7: harpia.executors.v1.IntegrationInstallation
+	(*AgentInstallation)(nil),                  // 8: harpia.executors.v1.AgentInstallation
+	(*ExecutorInstallation)(nil),               // 9: harpia.executors.v1.ExecutorInstallation
+	(*ListExecutorSKUsRequest)(nil),            // 10: harpia.executors.v1.ListExecutorSKUsRequest
+	(*ListExecutorSKUsResponse)(nil),           // 11: harpia.executors.v1.ListExecutorSKUsResponse
+	(*GetExecutorSKURequest)(nil),              // 12: harpia.executors.v1.GetExecutorSKURequest
+	(*GetExecutorSKUResponse)(nil),             // 13: harpia.executors.v1.GetExecutorSKUResponse
+	(*ListExecutorEntitlementsRequest)(nil),    // 14: harpia.executors.v1.ListExecutorEntitlementsRequest
+	(*ListExecutorEntitlementsResponse)(nil),   // 15: harpia.executors.v1.ListExecutorEntitlementsResponse
+	(*GetExecutorEntitlementRequest)(nil),      // 16: harpia.executors.v1.GetExecutorEntitlementRequest
+	(*GetExecutorEntitlementResponse)(nil),     // 17: harpia.executors.v1.GetExecutorEntitlementResponse
+	(*CreateExecutorEntitlementRequest)(nil),   // 18: harpia.executors.v1.CreateExecutorEntitlementRequest
+	(*CreateExecutorEntitlementResponse)(nil),  // 19: harpia.executors.v1.CreateExecutorEntitlementResponse
+	(*ListExecutorInstallationsRequest)(nil),   // 20: harpia.executors.v1.ListExecutorInstallationsRequest
+	(*ListExecutorInstallationsResponse)(nil),  // 21: harpia.executors.v1.ListExecutorInstallationsResponse
+	(*GetExecutorInstallationRequest)(nil),     // 22: harpia.executors.v1.GetExecutorInstallationRequest
+	(*GetExecutorInstallationResponse)(nil),    // 23: harpia.executors.v1.GetExecutorInstallationResponse
+	(*CreateExecutorInstallationRequest)(nil),  // 24: harpia.executors.v1.CreateExecutorInstallationRequest
+	(*CreateExecutorInstallationResponse)(nil), // 25: harpia.executors.v1.CreateExecutorInstallationResponse
+	(*UpdateExecutorInstallationRequest)(nil),  // 26: harpia.executors.v1.UpdateExecutorInstallationRequest
+	(*UpdateExecutorInstallationResponse)(nil), // 27: harpia.executors.v1.UpdateExecutorInstallationResponse
+	(*DeleteExecutorInstallationRequest)(nil),  // 28: harpia.executors.v1.DeleteExecutorInstallationRequest
+	(*DeleteExecutorInstallationResponse)(nil), // 29: harpia.executors.v1.DeleteExecutorInstallationResponse
 }
 var file_harpia_executors_v1_executors_proto_depIdxs = []int32{
-	0,  // 0: harpia.executors.v1.ExecutorSKU.kind:type_name -> harpia.executors.v1.ExecutorKind
-	2,  // 1: harpia.executors.v1.ExecutorSKU.list_price:type_name -> harpia.executors.v1.ListPrice
-	3,  // 2: harpia.executors.v1.ExecutorSKU.compatibility:type_name -> harpia.executors.v1.CompatibilityMetadata
-	1,  // 3: harpia.executors.v1.IntegrationInstallation.connection_status:type_name -> harpia.executors.v1.ConnectionStatus
-	0,  // 4: harpia.executors.v1.ExecutorInstallation.kind:type_name -> harpia.executors.v1.ExecutorKind
-	6,  // 5: harpia.executors.v1.ExecutorInstallation.integration:type_name -> harpia.executors.v1.IntegrationInstallation
-	7,  // 6: harpia.executors.v1.ExecutorInstallation.agent:type_name -> harpia.executors.v1.AgentInstallation
-	0,  // 7: harpia.executors.v1.ListExecutorSKUsRequest.kind_filter:type_name -> harpia.executors.v1.ExecutorKind
-	4,  // 8: harpia.executors.v1.ListExecutorSKUsResponse.executor_skus:type_name -> harpia.executors.v1.ExecutorSKU
-	4,  // 9: harpia.executors.v1.GetExecutorSKUResponse.executor_sku:type_name -> harpia.executors.v1.ExecutorSKU
-	5,  // 10: harpia.executors.v1.ListExecutorEntitlementsResponse.entitlements:type_name -> harpia.executors.v1.ExecutorEntitlement
-	5,  // 11: harpia.executors.v1.GetExecutorEntitlementResponse.entitlement:type_name -> harpia.executors.v1.ExecutorEntitlement
-	5,  // 12: harpia.executors.v1.CreateExecutorEntitlementResponse.entitlement:type_name -> harpia.executors.v1.ExecutorEntitlement
-	0,  // 13: harpia.executors.v1.ListExecutorInstallationsRequest.kind_filter:type_name -> harpia.executors.v1.ExecutorKind
-	8,  // 14: harpia.executors.v1.ListExecutorInstallationsResponse.installations:type_name -> harpia.executors.v1.ExecutorInstallation
-	8,  // 15: harpia.executors.v1.GetExecutorInstallationResponse.installation:type_name -> harpia.executors.v1.ExecutorInstallation
-	6,  // 16: harpia.executors.v1.CreateExecutorInstallationRequest.integration:type_name -> harpia.executors.v1.IntegrationInstallation
-	7,  // 17: harpia.executors.v1.CreateExecutorInstallationRequest.agent:type_name -> harpia.executors.v1.AgentInstallation
-	8,  // 18: harpia.executors.v1.CreateExecutorInstallationResponse.installation:type_name -> harpia.executors.v1.ExecutorInstallation
-	6,  // 19: harpia.executors.v1.UpdateExecutorInstallationRequest.integration:type_name -> harpia.executors.v1.IntegrationInstallation
-	7,  // 20: harpia.executors.v1.UpdateExecutorInstallationRequest.agent:type_name -> harpia.executors.v1.AgentInstallation
-	8,  // 21: harpia.executors.v1.UpdateExecutorInstallationResponse.installation:type_name -> harpia.executors.v1.ExecutorInstallation
-	9,  // 22: harpia.executors.v1.ExecutorService.ListExecutorSKUs:input_type -> harpia.executors.v1.ListExecutorSKUsRequest
-	11, // 23: harpia.executors.v1.ExecutorService.GetExecutorSKU:input_type -> harpia.executors.v1.GetExecutorSKURequest
-	13, // 24: harpia.executors.v1.ExecutorService.ListExecutorEntitlements:input_type -> harpia.executors.v1.ListExecutorEntitlementsRequest
-	15, // 25: harpia.executors.v1.ExecutorService.GetExecutorEntitlement:input_type -> harpia.executors.v1.GetExecutorEntitlementRequest
-	17, // 26: harpia.executors.v1.ExecutorService.CreateExecutorEntitlement:input_type -> harpia.executors.v1.CreateExecutorEntitlementRequest
-	19, // 27: harpia.executors.v1.ExecutorService.ListExecutorInstallations:input_type -> harpia.executors.v1.ListExecutorInstallationsRequest
-	21, // 28: harpia.executors.v1.ExecutorService.GetExecutorInstallation:input_type -> harpia.executors.v1.GetExecutorInstallationRequest
-	23, // 29: harpia.executors.v1.ExecutorService.CreateExecutorInstallation:input_type -> harpia.executors.v1.CreateExecutorInstallationRequest
-	25, // 30: harpia.executors.v1.ExecutorService.UpdateExecutorInstallation:input_type -> harpia.executors.v1.UpdateExecutorInstallationRequest
-	27, // 31: harpia.executors.v1.ExecutorService.DeleteExecutorInstallation:input_type -> harpia.executors.v1.DeleteExecutorInstallationRequest
-	10, // 32: harpia.executors.v1.ExecutorService.ListExecutorSKUs:output_type -> harpia.executors.v1.ListExecutorSKUsResponse
-	12, // 33: harpia.executors.v1.ExecutorService.GetExecutorSKU:output_type -> harpia.executors.v1.GetExecutorSKUResponse
-	14, // 34: harpia.executors.v1.ExecutorService.ListExecutorEntitlements:output_type -> harpia.executors.v1.ListExecutorEntitlementsResponse
-	16, // 35: harpia.executors.v1.ExecutorService.GetExecutorEntitlement:output_type -> harpia.executors.v1.GetExecutorEntitlementResponse
-	18, // 36: harpia.executors.v1.ExecutorService.CreateExecutorEntitlement:output_type -> harpia.executors.v1.CreateExecutorEntitlementResponse
-	20, // 37: harpia.executors.v1.ExecutorService.ListExecutorInstallations:output_type -> harpia.executors.v1.ListExecutorInstallationsResponse
-	22, // 38: harpia.executors.v1.ExecutorService.GetExecutorInstallation:output_type -> harpia.executors.v1.GetExecutorInstallationResponse
-	24, // 39: harpia.executors.v1.ExecutorService.CreateExecutorInstallation:output_type -> harpia.executors.v1.CreateExecutorInstallationResponse
-	26, // 40: harpia.executors.v1.ExecutorService.UpdateExecutorInstallation:output_type -> harpia.executors.v1.UpdateExecutorInstallationResponse
-	28, // 41: harpia.executors.v1.ExecutorService.DeleteExecutorInstallation:output_type -> harpia.executors.v1.DeleteExecutorInstallationResponse
-	32, // [32:42] is the sub-list for method output_type
-	22, // [22:32] is the sub-list for method input_type
-	22, // [22:22] is the sub-list for extension type_name
-	22, // [22:22] is the sub-list for extension extendee
-	0,  // [0:22] is the sub-list for field type_name
+	1,  // 0: harpia.executors.v1.CompatibilityMetadata.tier:type_name -> harpia.executors.v1.SeniorityTier
+	0,  // 1: harpia.executors.v1.ExecutorSKU.kind:type_name -> harpia.executors.v1.ExecutorKind
+	3,  // 2: harpia.executors.v1.ExecutorSKU.list_price:type_name -> harpia.executors.v1.ListPrice
+	4,  // 3: harpia.executors.v1.ExecutorSKU.compatibility:type_name -> harpia.executors.v1.CompatibilityMetadata
+	2,  // 4: harpia.executors.v1.IntegrationInstallation.connection_status:type_name -> harpia.executors.v1.ConnectionStatus
+	0,  // 5: harpia.executors.v1.ExecutorInstallation.kind:type_name -> harpia.executors.v1.ExecutorKind
+	7,  // 6: harpia.executors.v1.ExecutorInstallation.integration:type_name -> harpia.executors.v1.IntegrationInstallation
+	8,  // 7: harpia.executors.v1.ExecutorInstallation.agent:type_name -> harpia.executors.v1.AgentInstallation
+	0,  // 8: harpia.executors.v1.ListExecutorSKUsRequest.kind_filter:type_name -> harpia.executors.v1.ExecutorKind
+	5,  // 9: harpia.executors.v1.ListExecutorSKUsResponse.executor_skus:type_name -> harpia.executors.v1.ExecutorSKU
+	5,  // 10: harpia.executors.v1.GetExecutorSKUResponse.executor_sku:type_name -> harpia.executors.v1.ExecutorSKU
+	6,  // 11: harpia.executors.v1.ListExecutorEntitlementsResponse.entitlements:type_name -> harpia.executors.v1.ExecutorEntitlement
+	6,  // 12: harpia.executors.v1.GetExecutorEntitlementResponse.entitlement:type_name -> harpia.executors.v1.ExecutorEntitlement
+	6,  // 13: harpia.executors.v1.CreateExecutorEntitlementResponse.entitlement:type_name -> harpia.executors.v1.ExecutorEntitlement
+	0,  // 14: harpia.executors.v1.ListExecutorInstallationsRequest.kind_filter:type_name -> harpia.executors.v1.ExecutorKind
+	9,  // 15: harpia.executors.v1.ListExecutorInstallationsResponse.installations:type_name -> harpia.executors.v1.ExecutorInstallation
+	9,  // 16: harpia.executors.v1.GetExecutorInstallationResponse.installation:type_name -> harpia.executors.v1.ExecutorInstallation
+	7,  // 17: harpia.executors.v1.CreateExecutorInstallationRequest.integration:type_name -> harpia.executors.v1.IntegrationInstallation
+	8,  // 18: harpia.executors.v1.CreateExecutorInstallationRequest.agent:type_name -> harpia.executors.v1.AgentInstallation
+	9,  // 19: harpia.executors.v1.CreateExecutorInstallationResponse.installation:type_name -> harpia.executors.v1.ExecutorInstallation
+	7,  // 20: harpia.executors.v1.UpdateExecutorInstallationRequest.integration:type_name -> harpia.executors.v1.IntegrationInstallation
+	8,  // 21: harpia.executors.v1.UpdateExecutorInstallationRequest.agent:type_name -> harpia.executors.v1.AgentInstallation
+	9,  // 22: harpia.executors.v1.UpdateExecutorInstallationResponse.installation:type_name -> harpia.executors.v1.ExecutorInstallation
+	10, // 23: harpia.executors.v1.ExecutorService.ListExecutorSKUs:input_type -> harpia.executors.v1.ListExecutorSKUsRequest
+	12, // 24: harpia.executors.v1.ExecutorService.GetExecutorSKU:input_type -> harpia.executors.v1.GetExecutorSKURequest
+	14, // 25: harpia.executors.v1.ExecutorService.ListExecutorEntitlements:input_type -> harpia.executors.v1.ListExecutorEntitlementsRequest
+	16, // 26: harpia.executors.v1.ExecutorService.GetExecutorEntitlement:input_type -> harpia.executors.v1.GetExecutorEntitlementRequest
+	18, // 27: harpia.executors.v1.ExecutorService.CreateExecutorEntitlement:input_type -> harpia.executors.v1.CreateExecutorEntitlementRequest
+	20, // 28: harpia.executors.v1.ExecutorService.ListExecutorInstallations:input_type -> harpia.executors.v1.ListExecutorInstallationsRequest
+	22, // 29: harpia.executors.v1.ExecutorService.GetExecutorInstallation:input_type -> harpia.executors.v1.GetExecutorInstallationRequest
+	24, // 30: harpia.executors.v1.ExecutorService.CreateExecutorInstallation:input_type -> harpia.executors.v1.CreateExecutorInstallationRequest
+	26, // 31: harpia.executors.v1.ExecutorService.UpdateExecutorInstallation:input_type -> harpia.executors.v1.UpdateExecutorInstallationRequest
+	28, // 32: harpia.executors.v1.ExecutorService.DeleteExecutorInstallation:input_type -> harpia.executors.v1.DeleteExecutorInstallationRequest
+	11, // 33: harpia.executors.v1.ExecutorService.ListExecutorSKUs:output_type -> harpia.executors.v1.ListExecutorSKUsResponse
+	13, // 34: harpia.executors.v1.ExecutorService.GetExecutorSKU:output_type -> harpia.executors.v1.GetExecutorSKUResponse
+	15, // 35: harpia.executors.v1.ExecutorService.ListExecutorEntitlements:output_type -> harpia.executors.v1.ListExecutorEntitlementsResponse
+	17, // 36: harpia.executors.v1.ExecutorService.GetExecutorEntitlement:output_type -> harpia.executors.v1.GetExecutorEntitlementResponse
+	19, // 37: harpia.executors.v1.ExecutorService.CreateExecutorEntitlement:output_type -> harpia.executors.v1.CreateExecutorEntitlementResponse
+	21, // 38: harpia.executors.v1.ExecutorService.ListExecutorInstallations:output_type -> harpia.executors.v1.ListExecutorInstallationsResponse
+	23, // 39: harpia.executors.v1.ExecutorService.GetExecutorInstallation:output_type -> harpia.executors.v1.GetExecutorInstallationResponse
+	25, // 40: harpia.executors.v1.ExecutorService.CreateExecutorInstallation:output_type -> harpia.executors.v1.CreateExecutorInstallationResponse
+	27, // 41: harpia.executors.v1.ExecutorService.UpdateExecutorInstallation:output_type -> harpia.executors.v1.UpdateExecutorInstallationResponse
+	29, // 42: harpia.executors.v1.ExecutorService.DeleteExecutorInstallation:output_type -> harpia.executors.v1.DeleteExecutorInstallationResponse
+	33, // [33:43] is the sub-list for method output_type
+	23, // [23:33] is the sub-list for method input_type
+	23, // [23:23] is the sub-list for extension type_name
+	23, // [23:23] is the sub-list for extension extendee
+	0,  // [0:23] is the sub-list for field type_name
 }
 
 func init() { file_harpia_executors_v1_executors_proto_init() }
@@ -2159,7 +2238,7 @@ func file_harpia_executors_v1_executors_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_harpia_executors_v1_executors_proto_rawDesc), len(file_harpia_executors_v1_executors_proto_rawDesc)),
-			NumEnums:      2,
+			NumEnums:      3,
 			NumMessages:   27,
 			NumExtensions: 0,
 			NumServices:   1,

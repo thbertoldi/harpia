@@ -42,6 +42,15 @@ enum ExecutorKind {
   EXECUTOR_KIND_AGENT = 2;
 }
 
+// Seniority tier for an agent ExecutorSKU (ADR-018). Higher tier = more
+// capable graph, more tools, higher cost-per-execution.
+enum SeniorityTier {
+  SENIORITY_TIER_UNSPECIFIED = 0;
+  SENIORITY_TIER_JUNIOR = 1;
+  SENIORITY_TIER_PLENO = 2;
+  SENIORITY_TIER_SENIOR = 3;
+}
+
 enum ConnectionStatus {
   CONNECTION_STATUS_UNSPECIFIED = 0;
   CONNECTION_STATUS_DISCONNECTED = 1;
@@ -61,6 +70,8 @@ message CompatibilityMetadata {
   string connection_type = 3;
   string manifest_id = 4;
   string manifest_version = 5;
+  repeated string capabilities = 6; // capabilities this agent/executor provides (ADR-018)
+  SeniorityTier tier = 7;           // seniority tier for agent SKUs (ADR-018)
 }
 
 message ExecutorSKU {

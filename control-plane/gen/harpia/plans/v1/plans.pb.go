@@ -1259,8 +1259,12 @@ type PlanConfiguration struct {
 	ParameterValuesJson string                  `protobuf:"bytes,14,opt,name=parameter_values_json,json=parameterValuesJson,proto3" json:"parameter_values_json,omitempty"`
 	Kind                PlanConfigurationKind   `protobuf:"varint,16,opt,name=kind,proto3,enum=harpia.plans.v1.PlanConfigurationKind" json:"kind,omitempty"`
 	OriginThreadId      string                  `protobuf:"bytes,17,opt,name=origin_thread_id,json=originThreadId,proto3" json:"origin_thread_id,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// Optional capabilities the user explicitly included for this run (ADR-018).
+	// Steps whose required capability is optional but not listed here are excluded
+	// from the run (skipped, no binding needed).
+	IncludedOptionalCapabilities []string `protobuf:"bytes,18,rep,name=included_optional_capabilities,json=includedOptionalCapabilities,proto3" json:"included_optional_capabilities,omitempty"`
+	unknownFields                protoimpl.UnknownFields
+	sizeCache                    protoimpl.SizeCache
 }
 
 func (x *PlanConfiguration) Reset() {
@@ -1403,6 +1407,13 @@ func (x *PlanConfiguration) GetOriginThreadId() string {
 		return x.OriginThreadId
 	}
 	return ""
+}
+
+func (x *PlanConfiguration) GetIncludedOptionalCapabilities() []string {
+	if x != nil {
+		return x.IncludedOptionalCapabilities
+	}
+	return nil
 }
 
 type SeedArtifactBinding struct {
@@ -5186,7 +5197,7 @@ const file_harpia_plans_v1_plans_proto_rawDesc = "" +
 	"\x13ExecutorRequirement\x12B\n" +
 	"\rexecutor_kind\x18\x01 \x01(\x0e2\x1d.harpia.plans.v1.ExecutorKindR\fexecutorKind\x123\n" +
 	"\x15required_capabilities\x18\x02 \x03(\tR\x14requiredCapabilities\x12'\n" +
-	"\x0fconnection_type\x18\x03 \x01(\tR\x0econnectionType\"\xc9\x06\n" +
+	"\x0fconnection_type\x18\x03 \x01(\tR\x0econnectionType\"\x8f\a\n" +
 	"\x11PlanConfiguration\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12!\n" +
@@ -5206,7 +5217,8 @@ const file_harpia_plans_v1_plans_proto_rawDesc = "" +
 	"updated_at\x18\r \x01(\tR\tupdatedAt\x122\n" +
 	"\x15parameter_values_json\x18\x0e \x01(\tR\x13parameterValuesJson\x12:\n" +
 	"\x04kind\x18\x10 \x01(\x0e2&.harpia.plans.v1.PlanConfigurationKindR\x04kind\x12(\n" +
-	"\x10origin_thread_id\x18\x11 \x01(\tR\x0eoriginThreadId\"\x93\x01\n" +
+	"\x10origin_thread_id\x18\x11 \x01(\tR\x0eoriginThreadId\x12D\n" +
+	"\x1eincluded_optional_capabilities\x18\x12 \x03(\tR\x1cincludedOptionalCapabilities\"\x93\x01\n" +
 	"\x13SeedArtifactBinding\x12\x19\n" +
 	"\bstep_key\x18\x01 \x01(\tR\astepKey\x12\x1d\n" +
 	"\n" +

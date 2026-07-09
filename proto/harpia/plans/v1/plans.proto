@@ -147,6 +147,10 @@ message PlanConfiguration {
   string parameter_values_json = 14;
   PlanConfigurationKind kind = 16;
   string origin_thread_id = 17;
+  // Optional capabilities the user explicitly included for this run (ADR-018).
+  // Steps whose required capability is optional but not listed here are excluded
+  // from the run (skipped, no binding needed).
+  repeated string included_optional_capabilities = 18;
 }
 
 enum PlanConfigurationKind {

@@ -24,6 +24,8 @@ type CompatibilityMetadata struct {
 	ConnectionType         string   `json:"connection_type,omitempty"`
 	ManifestID             string   `json:"manifest_id,omitempty"`
 	ManifestVersion        string   `json:"manifest_version,omitempty"`
+	Capabilities           []string `json:"capabilities,omitempty"`
+	Tier                   string   `json:"tier,omitempty"` // "junior" | "pleno" | "senior"
 }
 
 type ExecutorSKU struct {
