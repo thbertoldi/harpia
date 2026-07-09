@@ -12,6 +12,7 @@
     type ApprovalDecision,
   } from "$lib/plans/approval-card";
   import { toUserMessage } from "$lib/connect-errors";
+  import { approvalAnchorId } from "$lib/inbox/links";
   import { chipFlash } from "$lib/motion/transitions";
 
   interface Props {
@@ -179,6 +180,11 @@
     ? 'border-danger/40 bg-danger/10'
     : 'border-talon-gold/40 bg-talon-gold/10'}"
 >
+  {#if parsed?.approvalRequestId}
+    <!-- Deep-link target for inbox/runs approval links (#m-approval-<id>). -->
+    <span id={approvalAnchorId(parsed.approvalRequestId)} aria-hidden="true"
+    ></span>
+  {/if}
   <div class="flex items-center gap-3">
     <Icon
       class="size-4 {effectiveDecision === 'rejected'

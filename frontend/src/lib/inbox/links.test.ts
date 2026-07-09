@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { InboxApprovalItem } from "./types";
-import { chatPlanPath, inboxApprovalThreadPath } from "./links";
+import {
+  approvalAnchorId,
+  chatPlanPath,
+  inboxApprovalThreadPath,
+} from "./links";
 
 const item = {
   id: "approval-1",
@@ -28,6 +32,15 @@ describe("inbox links", () => {
   it("anchors approval links to the matching chat approval card", () => {
     expect(inboxApprovalThreadPath(item)).toBe(
       "/chat/thread-1?plan=config-1&execution=exec-1#m-approval-approval-1",
+    );
+  });
+
+  it("derives the approval anchor id the chat card renders", () => {
+    // The deep-link hash and the ApprovalRefCard element id must agree so the
+    // chat page can scroll to the right card.
+    expect(approvalAnchorId("approval-1")).toBe("m-approval-approval-1");
+    expect(inboxApprovalThreadPath(item)).toContain(
+      `#${approvalAnchorId(item.approvalRequestId)}`,
     );
   });
 

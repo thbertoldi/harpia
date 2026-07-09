@@ -28,6 +28,16 @@ export function chatPlanPath(
   });
 }
 
+/**
+ * DOM id / URL-hash anchor for an in-thread approval card. Inbox and runs deep
+ * links append `#<approvalAnchorId>` so the chat page can scroll to the matching
+ * APPROVAL_RAISED card; ApprovalRefCard renders the same id. Approval ids are
+ * UUIDs (URL-safe), so the hash and the DOM id are byte-identical.
+ */
+export function approvalAnchorId(approvalId: string): string {
+  return `m-approval-${approvalId.trim()}`;
+}
+
 export function inboxApprovalThreadPath(
   item: InboxApprovalItem,
 ): ChatOrRunsPath {
@@ -38,5 +48,5 @@ export function inboxApprovalThreadPath(
     item.configurationId,
     item.planExecutionId,
   );
-  return `${path}#m-approval-${encodeURIComponent(item.id)}` as ChatOrRunsPath;
+  return `${path}#${approvalAnchorId(item.id)}` as ChatOrRunsPath;
 }

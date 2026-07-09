@@ -148,6 +148,23 @@
   let workspaceArtifacts = $state<Artifact[]>([]);
   let workspaceLoadError = $state(false);
 
+  // Deep links from the inbox/runs surfaces carry a `#m-approval-<id>` (or
+  // `#m-<messageId>`) hash to land on a specific card. Thread messages stream in
+  // after navigation, so SvelteKit's built-in hash scroll can fire before the
+  // target card exists. Re-scroll once the anchor has rendered, tracking the
+  // hash we already handled so this fires at most once per deep link.
+  let scrolledHash = $state("");
+  $effect(() => {
+    if (!browser) return;
+    const hash = $page.url.hash;
+    if (!hash || hash === scrolledHash) return;
+    if (messages.length === 0) return;
+    const el = document.getElementById(decodeURIComponent(hash.slice(1)));
+    if (!el) return;
+    scrolledHash = hash;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+
   // Canonical artifact preview state — single source of truth for BOTH the
   // auto-surfaced final artifact and any manually-opened artifact (final-
   // artifact button, inline STEP_BOUND cards). Intermediate
