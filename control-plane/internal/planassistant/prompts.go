@@ -122,7 +122,6 @@ func buildPoliciesStepPrompt(state AssistantState, in PromptInput) (string, stri
 			Options: []chat.AssistantOption{
 				{ID: "text_post", Label: "Text post", Value: "text_post"},
 				{ID: "carousel", Label: "Carousel", Value: "carousel"},
-				{ID: "image_backed_post", Label: "Image-backed post", Value: "image_backed_post"},
 				{ID: "approval_only", Label: "Approval only (text)", Value: "approval_only"},
 			},
 		},

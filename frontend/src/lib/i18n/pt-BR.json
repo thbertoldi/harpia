@@ -1018,7 +1018,6 @@
   "plans.inputs.output_format.description": "Qual formato de saída do LinkedIn deve ser produzido.",
   "plans.inputs.output_format.option.text_post": "Post de texto",
   "plans.inputs.output_format.option.carousel": "Carrossel",
-  "plans.inputs.output_format.option.image_backed_post": "Post com imagem",
   "plans.inputs.output_format.option.approval_only": "Apenas aprovação (texto)",
   "plans.inputs.hook_style.label": "Estilo de gancho",
   "plans.inputs.hook_style.description": "Estilo do gancho de abertura para a saída do LinkedIn.",

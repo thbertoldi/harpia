@@ -37,15 +37,6 @@ steps:
     executor_requirement:
       executor_kind: 1
     default_executor_sku_key: linkedin-carousel-senior
-  - key: generate-image
-    title: Generate Image
-    description: Generate a branded image asset from the draft brief.
-    input_artifact_type: harpia.artifacts.v1.TextDraft
-    output_artifact_type: harpia.artifacts.v1.ImageAsset
-    executor_requirement:
-      executor_kind: 2
-      connection_type: image_provider
-    default_executor_sku_key: image-asset-generator
   - key: publish-post
     title: Publish Post
     description: Publish the approved LinkedIn text post.
@@ -64,15 +55,6 @@ steps:
       executor_kind: 2
       connection_type: oauth_linkedin
     default_executor_sku_key: linkedin-publish
-  - key: publish-image
-    title: Publish Image Post
-    description: Publish the approved LinkedIn image-backed post.
-    input_artifact_type: harpia.artifacts.v1.ImageAsset
-    output_artifact_type: harpia.artifacts.v1.PublishConfirmation
-    executor_requirement:
-      executor_kind: 2
-      connection_type: oauth_linkedin
-    default_executor_sku_key: linkedin-publish
 edges:
   - from_step_key: fetch-news
     to_step_key: write-draft
@@ -80,14 +62,10 @@ edges:
     to_step_key: adapt-for-linkedin
   - from_step_key: write-draft
     to_step_key: draft-carousel
-  - from_step_key: write-draft
-    to_step_key: generate-image
   - from_step_key: adapt-for-linkedin
     to_step_key: publish-post
   - from_step_key: draft-carousel
     to_step_key: publish-carousel
-  - from_step_key: generate-image
-    to_step_key: publish-image
 input_parameters:
   - key: theme
     label: Theme
@@ -206,7 +184,7 @@ input_parameters:
     type: TEMPLATE_INPUT_PARAMETER_TYPE_SELECT
     required: true
     defaultValueJson: '"text_post"'
-    optionsJson: '[{"value":"text_post","label":"Text post"},{"value":"carousel","label":"Carousel"},{"value":"image_backed_post","label":"Image-backed post"},{"value":"approval_only","label":"Approval only (text)"}]'
+    optionsJson: '[{"value":"text_post","label":"Text post"},{"value":"carousel","label":"Carousel"},{"value":"approval_only","label":"Approval only (text)"}]'
     runtimeMappings:
       - target: TEMPLATE_INPUT_RUNTIME_TARGET_BEHAVIOR_POLICY
         policyKey: content_output_format

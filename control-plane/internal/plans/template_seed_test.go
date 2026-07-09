@@ -276,13 +276,13 @@ func TestEmbeddedPlanTemplatesLoadLinkedInContentStudio(t *testing.T) {
 		t.Fatalf("embedded catalog does not contain linkedin-content-studio (keys: %v)", templateKeys(catalog))
 	}
 
-	if len(linkedin.Steps) != 8 {
-		t.Fatalf("step count = %d, want 8", len(linkedin.Steps))
+	if len(linkedin.Steps) != 6 {
+		t.Fatalf("step count = %d, want 6", len(linkedin.Steps))
 	}
-	if len(linkedin.Edges) != 7 {
-		t.Fatalf("edge count = %d, want 7", len(linkedin.Edges))
+	if len(linkedin.Edges) != 5 {
+		t.Fatalf("edge count = %d, want 5", len(linkedin.Edges))
 	}
-	// The template branches at write-draft: three downstream steps must consume
+	// The template branches at write-draft: two downstream steps must consume
 	// the same TextDraft output type, which only validates under edge-based checking.
 	branchCount := 0
 	for _, edge := range linkedin.Edges {
@@ -290,8 +290,8 @@ func TestEmbeddedPlanTemplatesLoadLinkedInContentStudio(t *testing.T) {
 			branchCount++
 		}
 	}
-	if branchCount != 3 {
-		t.Fatalf("write-draft branch count = %d, want 3", branchCount)
+	if branchCount != 2 {
+		t.Fatalf("write-draft branch count = %d, want 2", branchCount)
 	}
 }
 

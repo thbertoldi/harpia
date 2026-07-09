@@ -308,3 +308,38 @@ K verification. Slices F/G/H are the hard+sensitive core and ship last behind te
 - **Catalog fragmentation** → mitigated by extending `linkedin-voice-senior` rather than adding
   a voice SKU, and by keeping a single `linkedin-content-studio` variant rather than one
   template per format.
+
+## Revision R1 — carousel is markup; image generation is user-triggered, not a core branch
+
+Smoke-test feedback corrected two assumptions:
+
+1. **Carousel is a markup artifact, not an image artifact.** A carousel is a structured
+   document (slides with heading/body) — renderable to markdown, HTML/CSS, or PDF. It does
+   **not** require image generation. `CarouselDraft` already is this; `CarouselSlide.
+   image_artifact_id` is an **optional** future enhancement, never a dependency.
+2. **Image generation is a separate, user-triggered decision**, not a top-level output
+   format. The user opts into it ("add a cover image to this carousel"), it is never a
+   mandatory branch of every content plan.
+
+**Consequence — the `image_backed_post` branch is removed from `linkedin-content-studio`.**
+The `generate-image` and `publish-image` steps and their edges are deleted; `output_format`
+offers only `text_post` | `carousel` | `approval_only`. This also **unblocks configuration**:
+the assistant binds *every* template step before the format is even chosen (DeriveState
+binds → overseers → policies), so a step with no installable executor (`image-asset-generator`,
+an integration with no provider) made every configuration unable to reach RUNNABLE. With the
+image branch gone, every remaining step binds to a real agent/integration.
+
+**Retained as scaffolding (not wired into the core plan):** the `ImageAsset` proto, the
+`CONTENT_OUTPUT_FORMAT_IMAGE_BACKED_POST` enum value, the `image-asset-generator` SKU, and
+the engine's `ImageAsset → image_backed` inference. A future, user-triggered image capability
+(a separate plan or an in-run elicitation "generate an image?") can build on these.
+
+**Known journey imperfection (deferred):** because binding precedes format selection, a
+`text_post` configuration still binds the `linkedin-carousel-senior` executor (and vice
+versa). This is **not a blocker** — both are bindable agents — but the ideal is format-aware
+binding (only bind the selected branch's steps), which requires reordering the state machine
+to choose format before binding. Tracked as a follow-up, not in this change.
+
+**Future carousel fidelity (deferred):** HTML/CSS → PDF rendering of `CarouselDraft` for
+download/export. The structured `CarouselDraft` is the source of truth; rendering is an
+additive presentation layer.

@@ -1018,7 +1018,6 @@
   "plans.inputs.output_format.description": "Which LinkedIn output format to produce.",
   "plans.inputs.output_format.option.text_post": "Text post",
   "plans.inputs.output_format.option.carousel": "Carousel",
-  "plans.inputs.output_format.option.image_backed_post": "Image-backed post",
   "plans.inputs.output_format.option.approval_only": "Approval only (text)",
   "plans.inputs.hook_style.label": "Hook style",
   "plans.inputs.hook_style.description": "Opening-hook style for the LinkedIn output.",

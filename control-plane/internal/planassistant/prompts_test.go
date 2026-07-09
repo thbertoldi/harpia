@@ -296,7 +296,9 @@ func TestBuildPrompt_PoliciesStep_RendersPolicyFields(t *testing.T) {
 // TestBuildPrompt_PoliciesStep_RendersContentOutputFormat confirms the
 // content_output_format behavior policy is prompted when a template (e.g.
 // linkedin-content-studio) declares it. It should be the first policy
-// prompted (orderedPolicyKeys puts it first) and surface all four formats.
+// prompted (orderedPolicyKeys puts it first) and surface the three offered
+// formats (image_backed_post is no longer offered — image generation is a
+// separate, user-triggered decision, not a plan output format).
 func TestBuildPrompt_PoliciesStep_RendersContentOutputFormat(t *testing.T) {
 	tpl := mkTemplate("draft", "publish")
 	tpl.InputParameters = []*plansv1.TemplateInputParameter{
@@ -367,10 +369,9 @@ func TestBuildPrompt_PoliciesStep_RendersContentOutputFormat(t *testing.T) {
 		t.Fatalf("unset content_output_format should map to empty current_value, got %q", field.CurrentValue)
 	}
 	wantOptionValues := map[string]string{
-		"text_post":         "Text post",
-		"carousel":          "Carousel",
-		"image_backed_post": "Image-backed post",
-		"approval_only":     "Approval only (text)",
+		"text_post":     "Text post",
+		"carousel":      "Carousel",
+		"approval_only": "Approval only (text)",
 	}
 	if len(field.Options) != len(wantOptionValues) {
 		t.Fatalf("want %d options, got %d (%+v)", len(wantOptionValues), len(field.Options), field.Options)
@@ -385,6 +386,13 @@ func TestBuildPrompt_PoliciesStep_RendersContentOutputFormat(t *testing.T) {
 		}
 		if opt.Label != wantLabel {
 			t.Fatalf("option %q label = %q, want %q", opt.Value, opt.Label, wantLabel)
+		}
+	}
+	// image_backed_post must no longer be offered (image generation is a
+	// separate user-triggered decision, not a plan output format).
+	for _, opt := range field.Options {
+		if opt.Value == "image_backed_post" {
+			t.Fatalf("image_backed_post should not be offered in content_output_format: %+v", field.Options)
 		}
 	}
 }
