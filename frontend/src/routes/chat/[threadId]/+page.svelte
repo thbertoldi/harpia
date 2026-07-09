@@ -36,6 +36,7 @@
   import PlanThreadTopBar from "$lib/components/PlanThreadTopBar.svelte";
   import ScheduleDialog from "$lib/components/canvas/ScheduleDialog.svelte";
   import { computeRunCost, type ExecutorPriceLookup } from "$lib/plans/cost";
+  import { executionAnchorId } from "$lib/inbox/links";
   import {
     PlanConfigurationStatus,
     type PlanConfiguration,
@@ -1043,7 +1044,10 @@
         {#if executionViewModels.length > 0}
           <div class="flex flex-col gap-2">
             {#each executionViewModels as vm (vm.executionId)}
-              <div in:chatEnterStaggered={{ delay: 0 }}>
+              <div
+                id={executionAnchorId(vm.executionId)}
+                in:chatEnterStaggered={{ delay: 0 }}
+              >
                 <PlanExecutionCard
                   {vm}
                   initiallyCollapsed

@@ -4,7 +4,7 @@
   import { Pencil, CalendarClock, Activity } from "lucide-svelte";
   import HarpyHeading from "$lib/components/ui/HarpyHeading.svelte";
   import ScheduleDialog from "$lib/components/canvas/ScheduleDialog.svelte";
-  import { chatPlanPath } from "$lib/inbox/links";
+  import { chatPlanPath, runExecutionThreadPath } from "$lib/inbox/links";
   import { locale, translate } from "$lib/i18n";
   import { formatRelativeTime } from "$lib/i18n/format";
   import { statusKeyForPlanExecution } from "$lib/plans/plan-execution";
@@ -288,7 +288,7 @@
                   {#if threadId}
                     <a
                       href={resolve(
-                        chatPlanPath(
+                        runExecutionThreadPath(
                           threadId,
                           configuration?.id ?? "",
                           execution.id,

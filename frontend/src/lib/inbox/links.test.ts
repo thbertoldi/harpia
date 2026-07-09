@@ -3,7 +3,9 @@ import type { InboxApprovalItem } from "./types";
 import {
   approvalAnchorId,
   chatPlanPath,
+  executionAnchorId,
   inboxApprovalThreadPath,
+  runExecutionThreadPath,
 } from "./links";
 
 const item = {
@@ -46,5 +48,24 @@ describe("inbox links", () => {
 
   it("falls back to runs when an approval has no canonical thread", () => {
     expect(inboxApprovalThreadPath({ ...item, threadId: "" })).toBe("/runs");
+  });
+
+  it("anchors runs execution links to the matching execution card", () => {
+    expect(runExecutionThreadPath("thread-1", "config-1", "exec-1")).toBe(
+      "/chat/thread-1?plan=config-1&execution=exec-1#m-execution-exec-1",
+    );
+    expect(runExecutionThreadPath("thread-1", "config-1", "exec-1")).toContain(
+      `#${executionAnchorId("exec-1")}`,
+    );
+  });
+
+  it("omits the execution anchor when there is no execution id", () => {
+    expect(runExecutionThreadPath("thread-1", "config-1", "")).toBe(
+      "/chat/thread-1?plan=config-1",
+    );
+  });
+
+  it("falls back to runs when an execution link has no thread", () => {
+    expect(runExecutionThreadPath("", "config-1", "exec-1")).toBe("/runs");
   });
 });

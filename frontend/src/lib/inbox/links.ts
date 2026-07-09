@@ -38,6 +38,31 @@ export function approvalAnchorId(approvalId: string): string {
   return `m-approval-${approvalId.trim()}`;
 }
 
+/**
+ * DOM id / URL-hash anchor for an execution card in a chat thread. Runs deep
+ * links append `#<executionAnchorId>` so the chat page scrolls to the specific
+ * execution; the chat page renders the same id on each execution card.
+ */
+export function executionAnchorId(executionId: string): string {
+  return `m-execution-${executionId.trim()}`;
+}
+
+/**
+ * Deep link from the Runs panel to a specific execution inside its origin chat
+ * thread: selects the plan tab (`?plan=`), carries the execution id
+ * (`?execution=`), and anchors to the matching execution card.
+ */
+export function runExecutionThreadPath(
+  threadId: string,
+  configurationId: string,
+  executionId: string,
+): ChatOrRunsPath {
+  const path = chatPlanPath(threadId, configurationId, executionId);
+  const exec = executionId.trim();
+  if (path === "/runs" || !exec) return path;
+  return `${path}#${executionAnchorId(exec)}` as ChatOrRunsPath;
+}
+
 export function inboxApprovalThreadPath(
   item: InboxApprovalItem,
 ): ChatOrRunsPath {
