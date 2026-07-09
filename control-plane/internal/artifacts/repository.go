@@ -87,6 +87,28 @@ func (r *Repository) RegisterType(ctx context.Context, artifactType *ArtifactTyp
 	return &created, nil
 }
 
+// UpsertType inserts an artifact type, or updates the mutable fields when the
+// key already exists. It is the idempotent counterpart to RegisterType used by
+// the startup seeder (catalog data lives in Go, not in migrations — see
+// Platform Constitution §13).
+func (r *Repository) UpsertType(ctx context.Context, artifactType *ArtifactType) (*ArtifactType, error) {
+	var upserted ArtifactType
+	err := r.pool.QueryRow(ctx,
+		`INSERT INTO artifact_types (key, schema_ref, version, description)
+		 VALUES ($1, $2, $3, $4)
+		 ON CONFLICT (key) DO UPDATE SET
+		     schema_ref = EXCLUDED.schema_ref,
+		     version = EXCLUDED.version,
+		     description = EXCLUDED.description
+		 RETURNING id, key, schema_ref, version, description`,
+		artifactType.Key, artifactType.SchemaRef, artifactType.Version, artifactType.Description,
+	).Scan(&upserted.ID, &upserted.Key, &upserted.SchemaRef, &upserted.Version, &upserted.Description)
+	if err != nil {
+		return nil, fmt.Errorf("upsert artifact type: %w", err)
+	}
+	return &upserted, nil
+}
+
 func (r *Repository) GetTypeByID(ctx context.Context, typeID uuid.UUID) (*ArtifactType, error) {
 	var artifactType ArtifactType
 	err := r.pool.QueryRow(ctx,

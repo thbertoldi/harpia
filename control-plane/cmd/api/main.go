@@ -208,6 +208,9 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	if err := executors.EnsureCatalog(ctx, pool); err != nil {
 		fatal("seed executor catalog failed", "error", err)
 	}
+	if err := artifacts.EnsureArtifactTypes(ctx, pool); err != nil {
+		fatal("seed artifact types failed", "error", err)
+	}
 	if err := plans.EnsurePlanTemplates(ctx, pool); err != nil {
 		fatal("seed plan templates failed", "error", err)
 	}
