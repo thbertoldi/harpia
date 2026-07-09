@@ -211,6 +211,11 @@ func (r *RuntimeRepository) CreateSkippedStepExecution(ctx context.Context, inpu
 		PlanExecutionID: executionID,
 		PlanStepKey:     input.PlanStepKey,
 		Status:          StepStatusSkipped,
+		// The step_executions.executor_installation_snapshot column is NOT NULL,
+		// but a skipped branch step runs no executor. Record a self-documenting
+		// placeholder so the row satisfies the constraint without implying an
+		// installation exists.
+		ExecutorInstallationSnapshot: json.RawMessage(`{"skipped":true}`),
 	})
 	return err
 }
