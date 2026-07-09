@@ -23,12 +23,12 @@
 
 ## 4. In-Thread Approval And Inbox Context
 
-- [ ] 4.1 Trace the current approval request lifecycle and payloads across control-plane, chat watch messages, `frontend/src/lib/inbox/aggregator.ts`, and `frontend/src/routes/inbox/+page.svelte`; decide whether existing payloads carry enough artifact/plan context or need backend enrichment.
-- [ ] 4.2 If context is missing, enrich approval request/thread payload shaping in control-plane so pending approvals expose approval request id, plan/configuration id, execution id, artifact id/title, and a localized-safe summary source.
-- [ ] 4.3 Update `frontend/src/lib/inbox/aggregator.ts` and `frontend/src/lib/components/inbox/InboxRow.svelte` so inbox approval rows show meaningful localized context and link back to the origin chat thread.
-- [ ] 4.4 Implement or complete `frontend/src/lib/components/thread/ApprovalRefCard.svelte` so pending approvals render in the chat thread with preview, approve, and reject actions.
-- [ ] 4.5 Wire approval/rejection actions from the chat card through the same API path used by inbox decisions, then refresh/invalidate both thread and inbox state after a decision.
-- [ ] 4.6 Add tests for approval aggregation, approval-card view-model/action behavior, and pending/resolved synchronization. Add backend tests if task 4.2 changes control-plane payloads.
+- [x] 4.1 Trace the current approval request lifecycle and payloads across control-plane, chat watch messages, `frontend/src/lib/inbox/aggregator.ts`, and `frontend/src/routes/inbox/+page.svelte`; decide whether existing payloads carry enough artifact/plan context or need backend enrichment.
+- [x] 4.2 If context is missing, enrich approval request/thread payload shaping in control-plane so pending approvals expose approval request id, plan/configuration id, execution id, artifact id/title, and a localized-safe summary source.
+- [x] 4.3 Update `frontend/src/lib/inbox/aggregator.ts` and `frontend/src/lib/components/inbox/InboxRow.svelte` so inbox approval rows show meaningful localized context and link back to the origin chat thread.
+- [x] 4.4 Implement or complete `frontend/src/lib/components/thread/ApprovalRefCard.svelte` so pending approvals render in the chat thread with preview, approve, and reject actions.
+- [x] 4.5 Wire approval/rejection actions from the chat card through the same API path used by inbox decisions, then refresh/invalidate both thread and inbox state after a decision.
+- [x] 4.6 Add tests for approval aggregation, approval-card view-model/action behavior, and pending/resolved synchronization. Add backend tests if task 4.2 changes control-plane payloads.
 
 ## 5. Context-Preserving Navigation
 

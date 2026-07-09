@@ -75,6 +75,19 @@
       : null,
   );
 
+  const policySelectionKeys: Record<string, string> = {
+    require_approval:
+      "assistant.policiesStep.option.publish_approval_mode.require_approval",
+    auto_publish:
+      "assistant.policiesStep.option.publish_approval_mode.auto_publish",
+    pause_until_answered:
+      "assistant.policiesStep.option.elicitation_timeout_behavior.pause_until_answered",
+    fail_step:
+      "assistant.policiesStep.option.elicitation_timeout_behavior.fail_step",
+    fail_plan:
+      "assistant.policiesStep.option.elicitation_timeout_behavior.fail_plan",
+  };
+
   function userSelectionLabel(): string {
     try {
       const payload = JSON.parse(message.payloadJson || "{}") as {
@@ -92,6 +105,14 @@
         payload.option_id === "save-draft"
       ) {
         return translate("assistant.bindingMatrix.saveSecondary", $locale);
+      }
+      const policyKey =
+        (payload.value ? policySelectionKeys[payload.value] : undefined) ??
+        (payload.option_id
+          ? policySelectionKeys[payload.option_id]
+          : undefined);
+      if (policyKey) {
+        return translate(policyKey, $locale);
       }
       return message.text || payload.value || "—";
     } catch {

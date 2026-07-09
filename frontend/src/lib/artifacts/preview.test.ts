@@ -200,6 +200,22 @@ describe("artifact preview state helpers", () => {
     );
   });
 
+  it("does not select a preview artifact without the canonical active id", () => {
+    expect(
+      resolvePreviewArtifact(null, [finalArtifact], fallbackArtifact),
+    ).toBe(null);
+  });
+
+  it("uses explicit intermediate artifact selection without promoting the final artifact", () => {
+    expect(
+      resolvePreviewArtifact(
+        "artifact-linkedin-draft",
+        [finalArtifact, linkedInDraft],
+        null,
+      ),
+    ).toBe(linkedInDraft);
+  });
+
   it("keeps final artifact auto-open suppressed only for the dismissed final artifact", () => {
     expect(
       shouldAutoOpenFinalArtifact("artifact-final", "artifact-final"),

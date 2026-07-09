@@ -129,6 +129,9 @@ describe("watchInbox", () => {
     expect(item.planExecutionId).toBe("exec-linkedin");
     expect(item.stepExecutionId).toBe("step-publish");
     expect(item.inputArtifactId).toBe("artifact-linkedin-draft");
+    expect(item.approvalRequestId).toBe("approval-publish");
+    expect(item.planName).toBe("Plan config-l");
+    expect(item.taskName).toBe("Publish Linkedin");
   });
 
   it("re-emits when a stream produces a new batch", async () => {

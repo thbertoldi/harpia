@@ -33,6 +33,7 @@ export interface InboxApprovalItem extends InboxItemBase {
   inputArtifactId: string;
   configurationId: string;
   threadId: string;
+  approvalRequestId: string;
   raw: ApprovalRequest;
 }
 

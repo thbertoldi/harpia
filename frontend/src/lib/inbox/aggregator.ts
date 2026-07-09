@@ -16,6 +16,26 @@ import type {
   InboxItem,
 } from "./types";
 
+function fallbackName(prefix: string, value: string): string {
+  const trimmed = (value ?? "").trim();
+  if (!trimmed) return prefix;
+  const short = trimmed.length > 12 ? trimmed.slice(0, 8) : trimmed;
+  return `${prefix} ${short}`;
+}
+
+function readableStepName(
+  planStepKey: string,
+  stepExecutionId: string,
+): string {
+  const raw = (planStepKey ?? "").trim() || (stepExecutionId ?? "").trim();
+  if (!raw) return "Task";
+  return raw
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 export interface InboxSources {
   watchElicitations: (
     tenantId: string,
@@ -153,8 +173,8 @@ function toInboxApproval(req: ApprovalRequest): InboxApprovalItem {
     id: req.id,
     kind: "approval",
     createdAt: req.requestedAt,
-    planName: "Plan",
-    taskName: req.planStepKey || req.stepExecutionId || "Task",
+    planName: fallbackName("Plan", req.planConfigurationId),
+    taskName: readableStepName(req.planStepKey, req.stepExecutionId),
     // Approval summaries are computed by the renderer (InboxRow) via i18n
     // — keeping aggregator output locale-free.
     summary: "",
@@ -163,6 +183,7 @@ function toInboxApproval(req: ApprovalRequest): InboxApprovalItem {
     inputArtifactId: req.inputArtifactId,
     configurationId: req.planConfigurationId,
     threadId: req.threadId,
+    approvalRequestId: req.id,
     raw: req,
   };
 }

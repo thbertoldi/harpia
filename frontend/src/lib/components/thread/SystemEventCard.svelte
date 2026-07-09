@@ -77,10 +77,12 @@
   );
 
   // Resolve the localized event text from the message kind + payload. Kinds
-  // without a canonical key (STEP_REBOUND echoes a dynamic user-selection
-  // label; unknown kinds) fall back to the backend's English `text`.
+  // without a canonical key (dynamic STEP_REBOUND echoes, unknown kinds) fall
+  // back to the backend's English `text`.
   const eventText = $derived.by(() => {
-    const resolved = eventTextKey(message, stepTitleFor);
+    const resolved = eventTextKey(message, stepTitleFor, (key: string) =>
+      translate(key, $locale),
+    );
     if (!resolved) return message.text;
     return translate(resolved.key, $locale, resolved.params);
   });

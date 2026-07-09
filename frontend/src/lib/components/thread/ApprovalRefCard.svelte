@@ -5,6 +5,12 @@
   import { locale, translate } from "$lib/i18n";
   import { formatRelativeTime } from "$lib/i18n/format";
   import { loadApproval, respondToApprovalRequest } from "$lib/plans/approvals";
+  import {
+    effectiveApprovalDecision,
+    parseApprovalPayloadContext,
+    shortApprovalContextId,
+    type ApprovalDecision,
+  } from "$lib/plans/approval-card";
   import { toUserMessage } from "$lib/connect-errors";
   import { chipFlash } from "$lib/motion/transitions";
 
@@ -32,65 +38,11 @@
     onDecided,
   }: Props = $props();
 
-  const isDecidedMessage = $derived(message.kind === "APPROVAL_DECIDED");
-
-  // Parse approval_request_id (and, for APPROVAL_DECIDED, the `approved`
-  // flag) out of the per-kind payload. Backend builders live in
-  // control-plane/internal/chat/messages.go:
-  //   BuildApprovalRaisedPayload  -> { "approval_request_id": string }
-  //   BuildApprovalDecidedPayload -> { "approval_request_id": string, "approved": bool }
-  const parsed = $derived.by<{
-    approvalRequestId: string;
-    approved: boolean | null;
-    inputArtifactId: string;
-    planStepKey: string;
-  } | null>(() => {
-    try {
-      const raw = JSON.parse(message.payloadJson);
-      const id =
-        typeof raw.approval_request_id === "string"
-          ? raw.approval_request_id
-          : "";
-      if (!id) return null;
-      const approved = typeof raw.approved === "boolean" ? raw.approved : null;
-      return {
-        approvalRequestId: id,
-        approved,
-        inputArtifactId:
-          typeof raw.input_artifact_id === "string"
-            ? raw.input_artifact_id
-            : "",
-        planStepKey:
-          typeof raw.plan_step_key === "string" ? raw.plan_step_key : "",
-      };
-    } catch {
-      return null;
-    }
-  });
-
-  // Whether a later APPROVAL_DECIDED message in this thread already closed
-  // this same approval request. Returns the decision (true/false) or null.
-  // Prevents double-rendering the buttons once the decision has streamed in.
-  const decidedElsewhere = $derived.by<boolean | null>(() => {
-    if (!parsed) return null;
-    for (const candidate of messages) {
-      if (candidate.kind !== "APPROVAL_DECIDED") continue;
-      if (candidate.id === message.id) continue;
-      try {
-        const raw = JSON.parse(candidate.payloadJson);
-        if (raw.approval_request_id === parsed.approvalRequestId) {
-          return typeof raw.approved === "boolean" ? raw.approved : null;
-        }
-      } catch {
-        continue;
-      }
-    }
-    return null;
-  });
+  const parsed = $derived(parseApprovalPayloadContext(message.payloadJson));
 
   // Local optimistic decision after a successful RPC, before the
   // APPROVAL_DECIDED message streams in.
-  let localDecision = $state<"approved" | "rejected" | null>(null);
+  let localDecision = $state<ApprovalDecision>(null);
   let submitting = $state(false);
   let rejectMode = $state(false);
   let rejectReason = $state("");
@@ -99,6 +51,9 @@
 
   const effectiveInputArtifactId = $derived(
     inputArtifactId || parsed?.inputArtifactId || loadedInputArtifactId,
+  );
+  const effectivePlanExecutionId = $derived(
+    parsed?.planExecutionId || message.executionId,
   );
 
   $effect(() => {
@@ -121,22 +76,15 @@
 
   // Effective terminal decision, if any: a real APPROVAL_DECIDED payload
   // wins, then a streamed later message, then the local optimistic state.
-  const effectiveDecision = $derived.by<"approved" | "rejected" | null>(() => {
-    if (isDecidedMessage) {
-      if (parsed?.approved === true) return "approved";
-      if (parsed?.approved === false) return "rejected";
-      return null;
-    }
-    if (decidedElsewhere === true) return "approved";
-    if (decidedElsewhere === false) return "rejected";
-    return localDecision;
-  });
+  const effectiveDecision = $derived(
+    effectiveApprovalDecision(message, parsed, messages, localDecision),
+  );
 
   // The card is actionable only while the approval is still pending: a
   // RAISED pointer, no decision yet (local or streamed), and we have the
   // inputs the RPC needs.
   const isActionable = $derived(
-    !isDecidedMessage &&
+    message.kind !== "APPROVAL_DECIDED" &&
       effectiveDecision === null &&
       !!parsed?.approvalRequestId &&
       !!tenantId,
@@ -157,6 +105,45 @@
       return translate("thread.approval.rejected", $locale);
     return translate("thread.approval.raised", $locale);
   });
+
+  const approvalContextItems = $derived.by<{ key: string; label: string }[]>(
+    () => {
+      const items: { key: string; label: string }[] = [];
+      if (parsed?.planStepKey) {
+        items.push({
+          key: "step",
+          label: translate("thread.approval.context.step", $locale, {
+            value: parsed.planStepKey,
+          }),
+        });
+      }
+      if (effectiveInputArtifactId) {
+        items.push({
+          key: "artifact",
+          label: translate("thread.approval.context.artifact", $locale, {
+            value: shortApprovalContextId(effectiveInputArtifactId),
+          }),
+        });
+      }
+      if (effectivePlanExecutionId) {
+        items.push({
+          key: "execution",
+          label: translate("thread.approval.context.execution", $locale, {
+            value: shortApprovalContextId(effectivePlanExecutionId),
+          }),
+        });
+      }
+      if (parsed?.approvalRequestId) {
+        items.push({
+          key: "request",
+          label: translate("thread.approval.context.request", $locale, {
+            value: shortApprovalContextId(parsed.approvalRequestId),
+          }),
+        });
+      }
+      return items;
+    },
+  );
 
   async function submit(approved: boolean) {
     if (!tenantId || !parsed?.approvalRequestId || submitting) return;
@@ -198,7 +185,18 @@
         ? 'text-danger'
         : 'text-talon-gold'}"
     />
-    <span class="flex-1 text-[13px] text-cream">{labelText}</span>
+    <div class="min-w-0 flex-1">
+      <div class="text-[13px] text-cream">{labelText}</div>
+      {#if approvalContextItems.length > 0}
+        <div
+          class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-crown-ash-dark"
+        >
+          {#each approvalContextItems as contextItem (contextItem.key)}
+            <span>{contextItem.label}</span>
+          {/each}
+        </div>
+      {/if}
+    </div>
     <span class="text-[10px] text-crown-ash-dark">
       {formatRelativeTime(message.createdAt, $locale)}
     </span>

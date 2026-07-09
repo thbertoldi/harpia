@@ -30,6 +30,7 @@ function approval(id: string): InboxItem {
     inputArtifactId: "art",
     configurationId: "cfg",
     threadId: "thread",
+    approvalRequestId: id,
     raw: {} as never,
   };
 }

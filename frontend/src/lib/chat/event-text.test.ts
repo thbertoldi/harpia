@@ -155,15 +155,63 @@ describe("eventTextKey — step events use the title resolver", () => {
 });
 
 describe("eventTextKey — fallbacks", () => {
-  it("returns null for STEP_REBOUND (dynamic user-selection echo)", () => {
+  it("returns null for non-policy STEP_REBOUND (dynamic user-selection echo)", () => {
     expect(
       eventTextKey(message("STEP_REBOUND", '{"step_key": "write-draft"}')),
     ).toBeNull();
+  });
+
+  it("maps policy STEP_REBOUND with an unknown option to the raw value", () => {
+    expect(
+      eventTextKey(
+        message(
+          "STEP_REBOUND",
+          '{"policy_key": "publish_approval_mode", "new_policy_value": "custom"}',
+        ),
+      ),
+    ).toEqual({
+      key: "thread.event.policy_rebound",
+      params: { value: "custom" },
+    });
   });
 
   it("returns null for unknown / user-authored kinds", () => {
     expect(eventTextKey(message("USER_TEXT"))).toBeNull();
     expect(eventTextKey(message("USER_SELECTION"))).toBeNull();
     expect(eventTextKey(message("ASSISTANT_TEXT"))).toBeNull();
+  });
+});
+
+describe("eventTextKey — policy rebound events", () => {
+  it("maps publish approval rebound with the localized option label", () => {
+    expect(
+      eventTextKey(
+        message(
+          "STEP_REBOUND",
+          '{"policy_key": "publish_approval_mode", "new_policy_value": "require_approval"}',
+        ),
+        titles,
+        (key) => (key.endsWith("require_approval") ? "Require approval" : key),
+      ),
+    ).toEqual({
+      key: "thread.event.policy_rebound",
+      params: { value: "Require approval" },
+    });
+  });
+
+  it("maps elicitation timeout rebound with the localized option label", () => {
+    expect(
+      eventTextKey(
+        message(
+          "STEP_REBOUND",
+          '{"policy_key": "elicitation_timeout_behavior", "new_policy_value": "fail_plan"}',
+        ),
+        titles,
+        (key) => (key.endsWith("fail_plan") ? "Fail the plan" : key),
+      ),
+    ).toEqual({
+      key: "thread.event.policy_rebound",
+      params: { value: "Fail the plan" },
+    });
   });
 });

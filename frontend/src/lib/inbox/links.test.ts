@@ -14,6 +14,7 @@ const item = {
   inputArtifactId: "artifact-1",
   configurationId: "config-1",
   threadId: "thread-1",
+  approvalRequestId: "approval-1",
   raw: {},
 } as InboxApprovalItem;
 

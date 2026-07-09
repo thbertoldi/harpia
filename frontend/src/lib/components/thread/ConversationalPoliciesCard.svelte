@@ -132,6 +132,20 @@
     return selected ? optionLabel(field, selected) : "";
   }
 
+  function scrollToBottomSoon() {
+    if (typeof window === "undefined") return;
+    for (const delay of [50, 250, 600]) {
+      window.setTimeout(() => {
+        window.requestAnimationFrame(() => {
+          window.scrollTo({
+            top: document.body.scrollHeight,
+            behavior: "smooth",
+          });
+        });
+      }, delay);
+    }
+  }
+
   async function onPick(field: PolicyField, option: MatrixOption) {
     if (!payload || !configuration || !template) return;
     const value = option.value || option.id;
@@ -149,6 +163,7 @@
       });
       configuration = next;
       reflectPolicy(field.key, value);
+      scrollToBottomSoon();
     } catch {
       saveError = true;
     } finally {
