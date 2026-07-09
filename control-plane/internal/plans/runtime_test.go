@@ -270,6 +270,86 @@ func TestBuildRetryPlanWorkflowInputBuildsReusableArtifacts(t *testing.T) {
 	}
 }
 
+func TestBuildRetryPlanWorkflowInputToleratesSkippedUpstreamSteps(t *testing.T) {
+	executionID := uuid.MustParse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+	failedStepID := uuid.MustParse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee")
+	now := time.Now().UTC()
+	snapshot := workflow.PlanExecutionSnapshot{
+		SchemaVersion: 1,
+		Configuration: &plansv1.PlanConfiguration{
+			Id:     "cfg-1",
+			Status: plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
+		},
+		Template: &plansv1.PlanTemplate{
+			Key: "retry-template-skipped",
+			Steps: []*plansv1.PlanStep{
+				{Key: "skipped-step", OutputArtifactTypeId: "harpia.artifacts.v1.LinkedInPostDraft"},
+				{Key: "completed-step", OutputArtifactTypeId: "harpia.artifacts.v1.TextDraft"},
+				{Key: "failed-step", OutputArtifactTypeId: "harpia.artifacts.v1.NewsList"},
+			},
+			Edges: []*plansv1.PlanStepDependency{
+				{FromStepKey: "skipped-step", ToStepKey: "completed-step"},
+				{FromStepKey: "completed-step", ToStepKey: "failed-step"},
+			},
+		},
+		ExecutorInstallations: map[string]workflow.ExecutorInstallationSnapshot{
+			"skipped-step":   {ID: "install-skipped", Kind: workflow.ExecutorKindAgent},
+			"completed-step": {ID: "install-completed", Kind: workflow.ExecutorKindAgent},
+			"failed-step":    {ID: "install-failed", Kind: workflow.ExecutorKindIntegration},
+		},
+	}
+	result, err := buildRetryPlanWorkflowInput(snapshot, &PlanExecution{
+		ID:     executionID,
+		Status: ExecutionStatusFailed,
+		StepExecutions: []StepExecution{
+			{
+				ID:               uuid.MustParse("11111111-1111-1111-1111-111111111111"),
+				PlanExecutionID:  executionID,
+				PlanStepKey:      "skipped-step",
+				Status:           StepStatusSkipped,
+				OutputArtifactID: "", // skipped steps have no artifact
+				Attempt:          1,
+				CreatedAt:        now,
+			},
+			{
+				ID:               uuid.MustParse("22222222-2222-2222-2222-222222222222"),
+				PlanExecutionID:  executionID,
+				PlanStepKey:      "completed-step",
+				Status:           StepStatusCompleted,
+				OutputArtifactID: "artifact-completed-step",
+				Attempt:          1,
+				CreatedAt:        now.Add(time.Minute),
+			},
+			{
+				ID:               failedStepID,
+				PlanExecutionID:  executionID,
+				PlanStepKey:      "failed-step",
+				Status:           StepStatusFailed,
+				Attempt:          1,
+				CreatedAt:        now.Add(2 * time.Minute),
+			},
+		},
+	}, failedStepID)
+	if err != nil {
+		t.Fatalf("build retry input: %v", err)
+	}
+	if result.retryFromStepKey != "failed-step" {
+		t.Fatalf("retry from step = %q, want failed-step", result.retryFromStepKey)
+	}
+	// The skipped upstream must not appear in the reusable artifacts map, and
+	// the builder must not error on its missing output artifact.
+	if _, ok := result.reusedArtifactsByStep["skipped-step"]; ok {
+		t.Fatal("skipped-step should not contribute a reusable artifact")
+	}
+	reused, ok := result.reusedArtifactsByStep["completed-step"]
+	if !ok {
+		t.Fatal("missing reused artifact for completed-step")
+	}
+	if reused.ArtifactID != "artifact-completed-step" {
+		t.Fatalf("artifact id = %q, want artifact-completed-step", reused.ArtifactID)
+	}
+}
+
 func testRetrySnapshot() workflow.PlanExecutionSnapshot {
 	return workflow.PlanExecutionSnapshot{
 		SchemaVersion: 1,

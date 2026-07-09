@@ -19,6 +19,8 @@ const (
 	TypeKeyTextDraft           = "harpia.artifacts.v1.TextDraft"
 	TypeKeyLinkedInPostDraft   = "harpia.artifacts.v1.LinkedInPostDraft"
 	TypeKeyPublishConfirmation = "harpia.artifacts.v1.PublishConfirmation"
+	TypeKeyCarouselDraft       = "harpia.artifacts.v1.CarouselDraft"
+	TypeKeyImageAsset          = "harpia.artifacts.v1.ImageAsset"
 )
 
 func ValidatePayload(typeKey string, payload []byte) error {
@@ -70,6 +72,25 @@ func ValidatePayload(typeKey string, payload []byte) error {
 		return validateProtoJSON(payload, &artifactsv1.PublishConfirmation{}, func(msg *artifactsv1.PublishConfirmation) error {
 			if strings.TrimSpace(msg.Platform) == "" {
 				return fmt.Errorf("%w: platform is required", ErrInvalidPayload)
+			}
+			return nil
+		})
+	case TypeKeyCarouselDraft:
+		return validateProtoJSON(payload, &artifactsv1.CarouselDraft{}, func(msg *artifactsv1.CarouselDraft) error {
+			if strings.TrimSpace(msg.Title) == "" || len(msg.Slides) == 0 {
+				return fmt.Errorf("%w: title and at least one slide are required", ErrInvalidPayload)
+			}
+			for i, slide := range msg.Slides {
+				if strings.TrimSpace(slide.Heading) == "" && strings.TrimSpace(slide.Body) == "" {
+					return fmt.Errorf("%w: slides[%d] requires heading or body", ErrInvalidPayload, i)
+				}
+			}
+			return nil
+		})
+	case TypeKeyImageAsset:
+		return validateProtoJSON(payload, &artifactsv1.ImageAsset{}, func(msg *artifactsv1.ImageAsset) error {
+			if strings.TrimSpace(msg.MimeType) == "" {
+				return fmt.Errorf("%w: mime_type is required", ErrInvalidPayload)
 			}
 			return nil
 		})

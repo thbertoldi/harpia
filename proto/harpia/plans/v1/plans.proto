@@ -187,6 +187,7 @@ message PlanBehaviorPolicies {
   ElicitationTimeoutBehavior elicitation_timeout_behavior = 1;
   int32 elicitation_timeout_hours = 2;
   PublishApprovalMode publish_approval_mode = 3;
+  ContentOutputFormat content_output_format = 4;
 }
 
 enum ElicitationTimeoutBehavior {
@@ -201,6 +202,14 @@ enum PublishApprovalMode {
   PUBLISH_APPROVAL_MODE_UNSPECIFIED = 0;
   PUBLISH_APPROVAL_MODE_REQUIRE_APPROVAL = 1;
   PUBLISH_APPROVAL_MODE_AUTO_PUBLISH = 2;
+}
+
+enum ContentOutputFormat {
+  CONTENT_OUTPUT_FORMAT_UNSPECIFIED = 0;
+  CONTENT_OUTPUT_FORMAT_TEXT_POST = 1;
+  CONTENT_OUTPUT_FORMAT_CAROUSEL = 2;
+  CONTENT_OUTPUT_FORMAT_IMAGE_BACKED_POST = 3;
+  CONTENT_OUTPUT_FORMAT_APPROVAL_ONLY = 4;
 }
 
 message PlanSchedule {
@@ -253,6 +262,7 @@ enum StepExecutionStatus {
   STEP_EXECUTION_STATUS_AWAITING_APPROVAL = 4;
   STEP_EXECUTION_STATUS_COMPLETED = 5;
   STEP_EXECUTION_STATUS_FAILED = 6;
+  STEP_EXECUTION_STATUS_SKIPPED = 7;
 }
 
 message GetPlanTemplateRequest {

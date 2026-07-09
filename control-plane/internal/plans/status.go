@@ -21,6 +21,7 @@ const (
 	StepStatusAwaitingApproval    = "awaiting_approval"
 	StepStatusCompleted           = "completed"
 	StepStatusFailed              = "failed"
+	StepStatusSkipped             = "skipped"
 
 	ApprovalRequestStatusPending  = "pending"
 	ApprovalRequestStatusApproved = "approved"

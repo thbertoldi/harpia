@@ -7,4 +7,6 @@ const (
 	SKULinkedInPublish        = catalog.SKULinkedInPublish
 	SKUNewsletterWriterSenior = catalog.SKUNewsletterWriterSenior
 	SKULinkedInVoiceSenior    = catalog.SKULinkedInVoiceSenior
+	SKULinkedinCarouselSenior = catalog.SKULinkedinCarouselSenior
+	SKUImageAssetGenerator    = catalog.SKUImageAssetGenerator
 )

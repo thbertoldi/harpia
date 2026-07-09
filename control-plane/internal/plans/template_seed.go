@@ -140,10 +140,6 @@ func validatePlanTemplateSeed(template *planTemplateSeed, artifactTypeKeys, exec
 				return fmt.Errorf("step %q: unknown executor sku %q", step.Key, step.DefaultExecutorSKUKey)
 			}
 		}
-		if i > 0 && template.Steps[i-1].OutputArtifactTypeID != step.InputArtifactTypeID {
-			return fmt.Errorf("adjacent steps %q and %q have artifact mismatch: %q != %q",
-				template.Steps[i-1].Key, step.Key, template.Steps[i-1].OutputArtifactTypeID, step.InputArtifactTypeID)
-		}
 	}
 
 	if err := validateTemplateDAG(template, stepKeys); err != nil {
@@ -153,6 +149,11 @@ func validatePlanTemplateSeed(template *planTemplateSeed, artifactTypeKeys, exec
 }
 
 func validateTemplateDAG(template *planTemplateSeed, stepKeys map[string]int) error {
+	stepByKey := make(map[string]*planTemplateStepSeed, len(template.Steps))
+	for i := range template.Steps {
+		stepByKey[template.Steps[i].Key] = &template.Steps[i]
+	}
+
 	adjacent := make(map[string][]string, len(template.Steps))
 	for _, edge := range template.Edges {
 		from := strings.TrimSpace(edge.FromStepKey)
@@ -162,6 +163,16 @@ func validateTemplateDAG(template *planTemplateSeed, stepKeys map[string]int) er
 		}
 		if _, ok := stepKeys[to]; !ok {
 			return fmt.Errorf("edge %q -> %q references unknown step %q", from, to, to)
+		}
+		// Type-safety is enforced per edge (not per list position) so that
+		// branching DAGs are allowed: multiple downstream steps may consume
+		// the same upstream output type. Linear templates still validate
+		// because consecutive steps are connected by edges.
+		fromStep := stepByKey[from]
+		toStep := stepByKey[to]
+		if fromStep.OutputArtifactTypeID != toStep.InputArtifactTypeID {
+			return fmt.Errorf("edge %q -> %q has artifact mismatch: %q != %q",
+				from, to, fromStep.OutputArtifactTypeID, toStep.InputArtifactTypeID)
 		}
 		adjacent[from] = append(adjacent[from], to)
 	}
@@ -252,7 +263,7 @@ func validateRuntimeMapping(paramKey string, mapping *templateInputRuntimeMappin
 		}
 	case "TEMPLATE_INPUT_RUNTIME_TARGET_BEHAVIOR_POLICY":
 		switch mapping.PolicyKey {
-		case "publish_approval_mode", "elicitation_timeout_behavior":
+		case "publish_approval_mode", "elicitation_timeout_behavior", "content_output_format":
 			return nil
 		default:
 			return fmt.Errorf("input parameter %q runtime mapping references unknown behavior policy %q", paramKey, mapping.PolicyKey)

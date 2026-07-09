@@ -23,6 +23,7 @@ const (
 	LoadPlanExecutionActivityName               = "LoadPlanExecutionActivity"
 	StartPlanExecutionActivityName              = "StartPlanExecutionActivity"
 	CreateStepExecutionActivityName             = "CreateStepExecutionActivity"
+	CreateSkippedStepExecutionActivityName      = "CreateSkippedStepExecutionActivity"
 	RunIntegrationActivityName                  = "RunIntegrationActivity"
 	RunAgentActivityName                        = "RunAgentActivity"
 	CompleteStepExecutionActivityName           = "CompleteStepExecutionActivity"
@@ -138,6 +139,15 @@ type CreateStepExecutionInput struct {
 	ExecutorInstallationSnapshot ExecutorInstallationSnapshot `json:"executor_installation_snapshot"`
 }
 
+// CreateSkippedStepInput captures the identity of a step the run deliberately
+// did not execute (a non-selected output-format branch). Skipped steps record a
+// SKIPPED row with no input artifact and emit no chat message.
+type CreateSkippedStepInput struct {
+	TenantID        string `json:"tenant_id"`
+	PlanExecutionID string `json:"plan_execution_id"`
+	PlanStepKey     string `json:"plan_step_key"`
+}
+
 type StepExecutionRecord struct {
 	ID              string `json:"id"`
 	PlanStepKey     string `json:"plan_step_key"`
@@ -225,6 +235,7 @@ type PlanRuntimeStore interface {
 	LoadPlanExecution(ctx context.Context, tenantID, executionID uuid.UUID) (LoadedPlanExecution, error)
 	StartPlanExecution(ctx context.Context, tenantID, executionID uuid.UUID) error
 	CreateStepExecution(ctx context.Context, input CreateStepExecutionInput) (StepExecutionRecord, error)
+	CreateSkippedStepExecution(ctx context.Context, input CreateSkippedStepInput) error
 	ResumeStepExecution(ctx context.Context, input StepStatusUpdateInput) error
 	CompleteStepExecution(ctx context.Context, input StepStatusUpdateInput) error
 	FailStepExecution(ctx context.Context, input StepStatusUpdateInput) error
@@ -289,6 +300,13 @@ func (a *PlanActivities) CreateStepExecutionActivity(ctx context.Context, input 
 		return StepExecutionRecord{}, fmt.Errorf("plan runtime store is not configured")
 	}
 	return a.Runtime.CreateStepExecution(ctx, input)
+}
+
+func (a *PlanActivities) CreateSkippedStepExecutionActivity(ctx context.Context, input CreateSkippedStepInput) error {
+	if a == nil || a.Runtime == nil {
+		return fmt.Errorf("plan runtime store is not configured")
+	}
+	return a.Runtime.CreateSkippedStepExecution(ctx, input)
 }
 
 func (a *PlanActivities) ResumeStepExecutionActivity(ctx context.Context, input StepStatusUpdateInput) error {
@@ -478,7 +496,19 @@ func runPlanWorkflow(ctx workflow.Context, input PlanWorkflowInput) (PlanWorkflo
 		return result, failPlan(ctx, input, fmt.Errorf("retry step %q is not part of the plan template", input.RetryFromStepKey))
 	}
 
+	policies := loaded.Snapshot.Configuration.GetBehaviorPolicies()
+
 	for i, step := range order {
+		if shouldSkipStepForFormat(step, policies) {
+			if err := workflow.ExecuteActivity(ctx, CreateSkippedStepExecutionActivityName, CreateSkippedStepInput{
+				TenantID:        input.TenantID,
+				PlanExecutionID: input.PlanExecutionID,
+				PlanStepKey:     step.Key,
+			}).Get(ctx, nil); err != nil {
+				return result, failPlan(ctx, input, err)
+			}
+			continue
+		}
 		if retryIndex >= 0 && i < retryIndex {
 			reused, ok := outputs[step.Key]
 			if !ok || strings.TrimSpace(reused.ArtifactID) == "" {
@@ -501,7 +531,6 @@ func runPlanWorkflow(ctx workflow.Context, input PlanWorkflowInput) (PlanWorkflo
 			return result, failPlan(ctx, input, err)
 		}
 
-		policies := loaded.Snapshot.Configuration.GetBehaviorPolicies()
 		if requiresPublishApproval(step, policies) {
 			approvalRequestID := planApprovalRequestID(input.PlanExecutionID, stepRecord.ID)
 			if err := workflow.ExecuteActivity(ctx, CreateApprovalRequestActivityName, CreateApprovalRequestInput{
@@ -926,6 +955,55 @@ func requiresPublishApproval(step *plansv1.PlanStep, policies *plansv1.PlanBehav
 		return false
 	}
 	return publishApprovalMode(policies) != plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_AUTO_PUBLISH
+}
+
+// contentOutputFormat returns the run's selected output format, normalizing
+// APPROVAL_ONLY to TEXT_POST for step-selection purposes (approval-only runs
+// the text-post branch under a require-approval policy).
+func contentOutputFormat(policies *plansv1.PlanBehaviorPolicies) plansv1.ContentOutputFormat {
+	if policies == nil {
+		return plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_UNSPECIFIED
+	}
+	f := policies.GetContentOutputFormat()
+	if f == plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_APPROVAL_ONLY {
+		return plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_TEXT_POST
+	}
+	return f
+}
+
+// formatForStep infers a step's output format from its artifact types. A step
+// belongs to a branch when its input or output is a format-bearing type;
+// DateRange/NewsList/TextDraft/PublishConfirmation steps are format-agnostic.
+func formatForStep(step *plansv1.PlanStep) plansv1.ContentOutputFormat {
+	if step == nil {
+		return plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_UNSPECIFIED
+	}
+	for _, typeKey := range []string{step.GetInputArtifactTypeId(), step.GetOutputArtifactTypeId()} {
+		switch strings.TrimSpace(typeKey) {
+		case "harpia.artifacts.v1.LinkedInPostDraft":
+			return plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_TEXT_POST
+		case "harpia.artifacts.v1.CarouselDraft":
+			return plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_CAROUSEL
+		case "harpia.artifacts.v1.ImageAsset":
+			return plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_IMAGE_BACKED_POST
+		}
+	}
+	return plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_UNSPECIFIED
+}
+
+// shouldSkipStepForFormat is true when the step belongs to a branch that is not
+// the run's selected format. Format-agnostic steps (UNSPECIFIED) always run, and
+// an unset (UNSPECIFIED) format policy runs everything (backward-compatible).
+func shouldSkipStepForFormat(step *plansv1.PlanStep, policies *plansv1.PlanBehaviorPolicies) bool {
+	selected := contentOutputFormat(policies)
+	if selected == plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_UNSPECIFIED {
+		return false // no format policy → run everything (backward-compatible)
+	}
+	stepFormat := formatForStep(step)
+	if stepFormat == plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_UNSPECIFIED {
+		return false // format-agnostic step
+	}
+	return stepFormat != selected
 }
 
 func publishApprovalMode(policies *plansv1.PlanBehaviorPolicies) plansv1.PublishApprovalMode {

@@ -109,6 +109,32 @@ message PublishConfirmation {
   string published_at = 4;
 }
 
+message CarouselSlide {
+  string heading = 1;
+  string body = 2;
+  string image_artifact_id = 3; // optional ImageAsset ref for image-backed slides
+  string alt_text = 4;
+}
+
+message CarouselDraft {
+  string title = 1;
+  string hook = 2; // opening/cover-slide hook
+  repeated CarouselSlide slides = 3;
+  string caption = 4; // accompanying post caption
+  repeated string hashtags = 5;
+}
+
+message ImageAsset {
+  string prompt = 1; // generation prompt / brief (provenance)
+  string mime_type = 2; // e.g. image/png
+  int32 width = 3;
+  int32 height = 4;
+  string alt_text = 5;
+  string caption = 6;
+  // Bytes live in Garage; the Artifact.storage_uri/content_hash address the payload,
+  // consistent with every other ArtifactType. No inline bytes on the artifact.
+}
+
 message RegisterArtifactTypeRequest {
   string key = 1;
   string schema_ref = 2;

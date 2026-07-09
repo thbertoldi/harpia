@@ -1,0 +1,232 @@
+key: linkedin-content-studio
+name: LinkedIn Content Studio
+description: Turn selected news into a LinkedIn post, carousel, or image-backed post — choose the output format in configuration.
+vertical: creator-economy
+version: 1
+steps:
+  - key: fetch-news
+    title: Fetch News
+    description: Collect curated articles for the configured date range.
+    input_artifact_type: harpia.artifacts.v1.DateRange
+    output_artifact_type: harpia.artifacts.v1.NewsList
+    executor_requirement:
+      executor_kind: 2
+      connection_type: rss_feed
+    default_executor_sku_key: rss-news-feed
+  - key: write-draft
+    title: Write Draft
+    description: Synthesize a platform-neutral content draft.
+    input_artifact_type: harpia.artifacts.v1.NewsList
+    output_artifact_type: harpia.artifacts.v1.TextDraft
+    executor_requirement:
+      executor_kind: 1
+    default_executor_sku_key: newsletter-writer-senior
+  - key: adapt-for-linkedin
+    title: Adapt for LinkedIn
+    description: Transform the draft into a LinkedIn-ready text post.
+    input_artifact_type: harpia.artifacts.v1.TextDraft
+    output_artifact_type: harpia.artifacts.v1.LinkedInPostDraft
+    executor_requirement:
+      executor_kind: 1
+    default_executor_sku_key: linkedin-voice-senior
+  - key: draft-carousel
+    title: Draft Carousel
+    description: Transform the draft into a LinkedIn carousel outline.
+    input_artifact_type: harpia.artifacts.v1.TextDraft
+    output_artifact_type: harpia.artifacts.v1.CarouselDraft
+    executor_requirement:
+      executor_kind: 1
+    default_executor_sku_key: linkedin-carousel-senior
+  - key: generate-image
+    title: Generate Image
+    description: Generate a branded image asset from the draft brief.
+    input_artifact_type: harpia.artifacts.v1.TextDraft
+    output_artifact_type: harpia.artifacts.v1.ImageAsset
+    executor_requirement:
+      executor_kind: 2
+      connection_type: image_provider
+    default_executor_sku_key: image-asset-generator
+  - key: publish-post
+    title: Publish Post
+    description: Publish the approved LinkedIn text post.
+    input_artifact_type: harpia.artifacts.v1.LinkedInPostDraft
+    output_artifact_type: harpia.artifacts.v1.PublishConfirmation
+    executor_requirement:
+      executor_kind: 2
+      connection_type: oauth_linkedin
+    default_executor_sku_key: linkedin-publish
+  - key: publish-carousel
+    title: Publish Carousel
+    description: Publish the approved LinkedIn carousel.
+    input_artifact_type: harpia.artifacts.v1.CarouselDraft
+    output_artifact_type: harpia.artifacts.v1.PublishConfirmation
+    executor_requirement:
+      executor_kind: 2
+      connection_type: oauth_linkedin
+    default_executor_sku_key: linkedin-publish
+  - key: publish-image
+    title: Publish Image Post
+    description: Publish the approved LinkedIn image-backed post.
+    input_artifact_type: harpia.artifacts.v1.ImageAsset
+    output_artifact_type: harpia.artifacts.v1.PublishConfirmation
+    executor_requirement:
+      executor_kind: 2
+      connection_type: oauth_linkedin
+    default_executor_sku_key: linkedin-publish
+edges:
+  - from_step_key: fetch-news
+    to_step_key: write-draft
+  - from_step_key: write-draft
+    to_step_key: adapt-for-linkedin
+  - from_step_key: write-draft
+    to_step_key: draft-carousel
+  - from_step_key: write-draft
+    to_step_key: generate-image
+  - from_step_key: adapt-for-linkedin
+    to_step_key: publish-post
+  - from_step_key: draft-carousel
+    to_step_key: publish-carousel
+  - from_step_key: generate-image
+    to_step_key: publish-image
+input_parameters:
+  - key: theme
+    label: Theme
+    description: Main subject for the content.
+    type: TEMPLATE_INPUT_PARAMETER_TYPE_TEXT
+    required: true
+    defaultValueJson: '"sports"'
+    runtimeMappings:
+      - target: TEMPLATE_INPUT_RUNTIME_TARGET_SEED_ARTIFACT
+        stepKey: write-draft
+        inputName: harpia.internal.ContentPreferences
+        jsonPath: $.topic
+  - key: language
+    label: Language
+    description: Language for generated drafts.
+    type: TEMPLATE_INPUT_PARAMETER_TYPE_LANGUAGE
+    required: true
+    defaultValueJson: '"pt-BR"'
+    optionsJson: '[{"value":"pt-BR","label":"Portuguese"},{"value":"en-US","label":"English"},{"value":"es","label":"Spanish"}]'
+    runtimeMappings:
+      - target: TEMPLATE_INPUT_RUNTIME_TARGET_SEED_ARTIFACT
+        stepKey: write-draft
+        inputName: harpia.internal.ContentPreferences
+        jsonPath: $.language
+  - key: tone
+    label: Tone
+    description: Voice used by the writer.
+    type: TEMPLATE_INPUT_PARAMETER_TYPE_SELECT
+    required: true
+    defaultValueJson: '"analytical, concise, and practical"'
+    optionsJson: '[{"value":"analytical, concise, and practical","label":"Analytical"},{"value":"friendly and clear","label":"Friendly"},{"value":"executive and direct","label":"Executive"}]'
+    runtimeMappings:
+      - target: TEMPLATE_INPUT_RUNTIME_TARGET_SEED_ARTIFACT
+        stepKey: write-draft
+        inputName: harpia.internal.ContentPreferences
+        jsonPath: $.tone
+  - key: hook_style
+    label: Hook style
+    description: Opening-hook style for the LinkedIn output.
+    type: TEMPLATE_INPUT_PARAMETER_TYPE_SELECT
+    required: true
+    defaultValueJson: '"bold_claim"'
+    optionsJson: '[{"value":"bold_claim","label":"Bold claim"},{"value":"question","label":"Question"},{"value":"story","label":"Story"},{"value":"statistic","label":"Statistic"}]'
+    runtimeMappings:
+      - target: TEMPLATE_INPUT_RUNTIME_TARGET_SEED_ARTIFACT
+        stepKey: write-draft
+        inputName: harpia.internal.ContentPreferences
+        jsonPath: $.hook_style
+  - key: avoid_ai_jargon
+    label: Avoid AI jargon
+    description: Strip cliché AI phrasing from the LinkedIn output.
+    type: TEMPLATE_INPUT_PARAMETER_TYPE_SELECT
+    required: true
+    defaultValueJson: '"true"'
+    optionsJson: '[{"value":"true","label":"On"},{"value":"false","label":"Off"}]'
+    runtimeMappings:
+      - target: TEMPLATE_INPUT_RUNTIME_TARGET_SEED_ARTIFACT
+        stepKey: write-draft
+        inputName: harpia.internal.ContentPreferences
+        jsonPath: $.avoid_ai_jargon
+  - key: voice_rules
+    label: Voice rules
+    description: Free-form rules shaping the LinkedIn voice.
+    type: TEMPLATE_INPUT_PARAMETER_TYPE_TEXTAREA
+    required: false
+    defaultValueJson: '""'
+    runtimeMappings:
+      - target: TEMPLATE_INPUT_RUNTIME_TARGET_SEED_ARTIFACT
+        stepKey: write-draft
+        inputName: harpia.internal.ContentPreferences
+        jsonPath: $.voice_rules
+  - key: audience
+    label: Audience
+    description: Who the post should speak to.
+    type: TEMPLATE_INPUT_PARAMETER_TYPE_TEXT
+    required: false
+    defaultValueJson: '""'
+    runtimeMappings:
+      - target: TEMPLATE_INPUT_RUNTIME_TARGET_SEED_ARTIFACT
+        stepKey: write-draft
+        inputName: harpia.internal.ContentPreferences
+        jsonPath: $.audience
+  - key: topics_to_avoid
+    label: Topics to avoid
+    description: Comma-separated topics the writer should avoid.
+    type: TEMPLATE_INPUT_PARAMETER_TYPE_TEXTAREA
+    required: false
+    defaultValueJson: '""'
+    runtimeMappings:
+      - target: TEMPLATE_INPUT_RUNTIME_TARGET_SEED_ARTIFACT
+        stepKey: write-draft
+        inputName: harpia.internal.ContentPreferences
+        jsonPath: $.topics_to_avoid
+  - key: source_group
+    label: Source group
+    description: RSS feed group to use for source articles.
+    type: TEMPLATE_INPUT_PARAMETER_TYPE_INTEGRATION_SELECTOR
+    required: true
+    defaultValueJson: '""'
+    runtimeMappings:
+      - target: TEMPLATE_INPUT_RUNTIME_TARGET_SLOT_BINDING
+        stepKey: fetch-news
+  - key: date_range
+    label: Date range
+    description: Article publication window.
+    type: TEMPLATE_INPUT_PARAMETER_TYPE_DATE_RANGE
+    required: true
+    defaultValueJson: '{"preset":"schedule_window"}'
+    runtimeMappings:
+      - target: TEMPLATE_INPUT_RUNTIME_TARGET_SEED_ARTIFACT
+        stepKey: fetch-news
+        inputName: date_range
+  - key: output_format
+    label: Output format
+    description: Which LinkedIn output format to produce.
+    type: TEMPLATE_INPUT_PARAMETER_TYPE_SELECT
+    required: true
+    defaultValueJson: '"text_post"'
+    optionsJson: '[{"value":"text_post","label":"Text post"},{"value":"carousel","label":"Carousel"},{"value":"image_backed_post","label":"Image-backed post"},{"value":"approval_only","label":"Approval only (text)"}]'
+    runtimeMappings:
+      - target: TEMPLATE_INPUT_RUNTIME_TARGET_BEHAVIOR_POLICY
+        policyKey: content_output_format
+  - key: approval_mode
+    label: Approval mode
+    description: Whether publishing requires approval.
+    type: TEMPLATE_INPUT_PARAMETER_TYPE_SELECT
+    required: true
+    defaultValueJson: '"require_approval"'
+    optionsJson: '[{"value":"require_approval","label":"Require approval"},{"value":"auto_publish","label":"Auto publish"}]'
+    runtimeMappings:
+      - target: TEMPLATE_INPUT_RUNTIME_TARGET_BEHAVIOR_POLICY
+        policyKey: publish_approval_mode
+  - key: elicitation_timeout_behavior
+    label: Elicitation timeout behavior
+    description: What happens when a human answer is needed and not provided in time.
+    type: TEMPLATE_INPUT_PARAMETER_TYPE_SELECT
+    required: true
+    defaultValueJson: '"pause_until_answered"'
+    optionsJson: '[{"value":"pause_until_answered","label":"Pause until answered"},{"value":"fail_step","label":"Fail step"},{"value":"fail_plan","label":"Fail plan"}]'
+    runtimeMappings:
+      - target: TEMPLATE_INPUT_RUNTIME_TARGET_BEHAVIOR_POLICY
+        policyKey: elicitation_timeout_behavior

@@ -82,6 +82,33 @@ var DefaultCatalogSeeds = []CatalogSeed{
 			ManifestVersion:        "0.1.0",
 		},
 	},
+	{
+		Key:         SKULinkedinCarouselSenior,
+		DisplayName: "LinkedIn Carousel (Senior)",
+		Description: "Senior agent that drafts a LinkedIn carousel from a neutral text draft.",
+		Kind:        KindAgent,
+		PriceCents:  150,
+		Currency:    "USD",
+		Compatibility: CompatibilityMetadata{
+			InputArtifactTypeKeys:  []string{"harpia.artifacts.v1.TextDraft"},
+			OutputArtifactTypeKeys: []string{"harpia.artifacts.v1.CarouselDraft"},
+			ManifestID:             "linkedin-carousel-senior",
+			ManifestVersion:        "0.1.0",
+		},
+	},
+	{
+		Key:         SKUImageAssetGenerator,
+		DisplayName: "Image Asset Generator",
+		Description: "Generates a branded image asset from a content brief via a configured provider.",
+		Kind:        KindIntegration,
+		PriceCents:  300,
+		Currency:    "USD",
+		Compatibility: CompatibilityMetadata{
+			InputArtifactTypeKeys:  []string{"harpia.artifacts.v1.TextDraft"},
+			OutputArtifactTypeKeys: []string{"harpia.artifacts.v1.ImageAsset"},
+			ConnectionType:         "image_provider",
+		},
+	},
 }
 
 var DefaultRSSPresetSeeds = []RSSPresetSeed{

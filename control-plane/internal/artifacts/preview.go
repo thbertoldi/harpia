@@ -33,6 +33,8 @@ func BuildPreview(typeKey string, payload []byte) (*artifactsv1.PreviewArtifactR
 		return buildJSONPreview(payload, &artifactsv1.DateRange{})
 	case TypeKeyPublishConfirmation:
 		return buildJSONPreview(payload, &artifactsv1.PublishConfirmation{})
+	case TypeKeyCarouselDraft:
+		return buildCarouselDraftPreview(payload)
 	default:
 		// Forward-compatible fallback: artifact types not enumerated above can
 		// still preview if their payload carries html or image content. This
@@ -120,6 +122,56 @@ func buildLinkedInPostDraftPreview(payload []byte) (*artifactsv1.PreviewArtifact
 	return &artifactsv1.PreviewArtifactResponse{
 		Preview: &artifactsv1.PreviewArtifactResponse_MarkdownPreview{
 			MarkdownPreview: preview,
+		},
+	}, nil
+}
+
+func buildCarouselDraftPreview(payload []byte) (*artifactsv1.PreviewArtifactResponse, error) {
+	msg := &artifactsv1.CarouselDraft{}
+	if err := protojson.Unmarshal(payload, msg); err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrInvalidPayload, err)
+	}
+
+	title := strings.TrimSpace(msg.Title)
+	if title == "" || len(msg.Slides) == 0 {
+		return nil, fmt.Errorf("%w: title and at least one slide are required", ErrInvalidPayload)
+	}
+
+	var b strings.Builder
+	b.WriteString("# " + title)
+
+	if hook := strings.TrimSpace(msg.Hook); hook != "" {
+		b.WriteString("\n\n> " + hook)
+	}
+
+	for i, slide := range msg.Slides {
+		heading := strings.TrimSpace(slide.Heading)
+		body := strings.TrimSpace(slide.Body)
+		if heading == "" {
+			heading = fmt.Sprintf("Slide %d", i+1)
+		}
+		b.WriteString("\n\n## " + heading)
+		if body != "" {
+			b.WriteString("\n\n" + body)
+		}
+		if strings.TrimSpace(slide.ImageArtifactId) != "" {
+			// References an ImageAsset whose bytes live out-of-band; we
+			// acknowledge the reference rather than resolving it here.
+			b.WriteString("\n\n_[references image asset]_")
+		}
+	}
+
+	if caption := strings.TrimSpace(msg.Caption); caption != "" {
+		b.WriteString("\n\n" + caption)
+	}
+
+	if len(msg.Hashtags) > 0 {
+		b.WriteString("\n\n" + strings.Join(msg.Hashtags, " "))
+	}
+
+	return &artifactsv1.PreviewArtifactResponse{
+		Preview: &artifactsv1.PreviewArtifactResponse_MarkdownPreview{
+			MarkdownPreview: b.String(),
 		},
 	}, nil
 }

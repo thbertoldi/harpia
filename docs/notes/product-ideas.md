@@ -247,8 +247,10 @@ new ArtifactType fields/messages, new renderer support, new agent output schemas
 possibly new ExecutorSKUs for image/asset generation. Keep feed/OAuth/renderer configuration
 on ExecutorInstallation and keep the resulting outputs in the Artifact stream.
 
-**Next:** create a separate OpenSpec exploration/proposal after
-`stabilize-chat-plan-journey` lands.
+**Next:** 🛠️ proposed as `openspec/changes/rich-linkedin-content` (variant template
+`linkedin-content-studio`; new `CarouselDraft`/`ImageAsset` ArtifactTypes; new
+`linkedin-carousel-senior` + `image-asset-generator` ExecutorSKUs; format axis modeled as a
+`content_output_format` behavior policy).
 
 ### 💡 Proactive memory capture from conversational configuration
 **Taxonomy:** PlanConfiguration, PlanBehaviorPolicies, MemoryResource, MemoryBinding,

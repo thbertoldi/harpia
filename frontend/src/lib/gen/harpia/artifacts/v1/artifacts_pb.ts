@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file harpia/artifacts/v1/artifacts.proto.
  */
 export const file_harpia_artifacts_v1_artifacts: GenFile = /*@__PURE__*/
-  fileDesc("CiNoYXJwaWEvYXJ0aWZhY3RzL3YxL2FydGlmYWN0cy5wcm90bxITaGFycGlhLmFydGlmYWN0cy52MSJhCgxBcnRpZmFjdFR5cGUSCgoCaWQYASABKAkSCwoDa2V5GAIgASgJEhIKCnNjaGVtYV9yZWYYAyABKAkSDwoHdmVyc2lvbhgEIAEoBRITCgtkZXNjcmlwdGlvbhgFIAEoCSLXAgoIQXJ0aWZhY3QSCgoCaWQYASABKAkSGAoQYXJ0aWZhY3RfdHlwZV9pZBgCIAEoCRIRCgl0ZW5hbnRfaWQYAyABKAkSEwoLc3RvcmFnZV91cmkYBCABKAkSFAoMY29udGVudF9oYXNoGAUgASgJEhIKCmNyZWF0ZWRfYXQYBiABKAkSEgoKdXBkYXRlZF9hdBgHIAEoCRIaChJjdXJyZW50X3ZlcnNpb25faWQYCCABKAkSGQoRYXJ0aWZhY3RfdHlwZV9rZXkYCSABKAkSHQoVcGxhbl9jb25maWd1cmF0aW9uX2lkGAogASgJEhkKEXBsYW5fZXhlY3V0aW9uX2lkGAsgASgJEhkKEXN0ZXBfZXhlY3V0aW9uX2lkGAwgASgJEjMKBnN0YXR1cxgNIAEoDjIjLmhhcnBpYS5hcnRpZmFjdHMudjEuQXJ0aWZhY3RTdGF0dXMi5gIKD0FydGlmYWN0VmVyc2lvbhIKCgJpZBgBIAEoCRITCgthcnRpZmFjdF9pZBgCIAEoCRIWCg52ZXJzaW9uX251bWJlchgDIAEoBRITCgtzdG9yYWdlX3VyaRgEIAEoCRIUCgxjb250ZW50X2hhc2gYBSABKAkSIAoYc291cmNlX3BsYW5fZXhlY3V0aW9uX2lkGAYgASgJEiAKGHNvdXJjZV9zdGVwX2V4ZWN1dGlvbl9pZBgHIAEoCRIZChFzb3VyY2VfdmVyc2lvbl9pZBgIIAEoCRIaChJjcmVhdGVkX2J5X3VzZXJfaWQYCSABKAkSSgoPY3JlYXRlZF9ieV9raW5kGAogASgOMjEuaGFycGlhLmFydGlmYWN0cy52MS5BcnRpZmFjdFZlcnNpb25DcmVhdGVkQnlLaW5kEhQKDGVkaXRfc3VtbWFyeRgLIAEoCRISCgpjcmVhdGVkX2F0GAwgASgJIjEKCURhdGVSYW5nZRISCgpzdGFydF9kYXRlGAEgASgJEhAKCGVuZF9kYXRlGAIgASgJImAKC05ld3NBcnRpY2xlEg0KBXRpdGxlGAEgASgJEgsKA3VybBgCIAEoCRIPCgdzdW1tYXJ5GAMgASgJEg4KBnNvdXJjZRgEIAEoCRIUCgxwdWJsaXNoZWRfYXQYBSABKAkiPgoITmV3c0xpc3QSMgoIYXJ0aWNsZXMYASADKAsyIC5oYXJwaWEuYXJ0aWZhY3RzLnYxLk5ld3NBcnRpY2xlIigKCVRleHREcmFmdBINCgV0aXRsZRgBIAEoCRIMCgRib2R5GAIgASgJIkEKEUxpbmtlZEluUG9zdERyYWZ0EgwKBHRleHQYASABKAkSDAoEaG9vaxgCIAEoCRIQCghoYXNodGFncxgDIAMoCSJfChNQdWJsaXNoQ29uZmlybWF0aW9uEhAKCHBsYXRmb3JtGAEgASgJEhMKC2V4dGVybmFsX2lkGAIgASgJEgsKA3VybBgDIAEoCRIUCgxwdWJsaXNoZWRfYXQYBCABKAkiZAobUmVnaXN0ZXJBcnRpZmFjdFR5cGVSZXF1ZXN0EgsKA2tleRgBIAEoCRISCgpzY2hlbWFfcmVmGAIgASgJEg8KB3ZlcnNpb24YAyABKAUSEwoLZGVzY3JpcHRpb24YBCABKAkiWAocUmVnaXN0ZXJBcnRpZmFjdFR5cGVSZXNwb25zZRI4Cg1hcnRpZmFjdF90eXBlGAEgASgLMiEuaGFycGlhLmFydGlmYWN0cy52MS5BcnRpZmFjdFR5cGUiPwoWR2V0QXJ0aWZhY3RUeXBlUmVxdWVzdBIYChBhcnRpZmFjdF90eXBlX2lkGAEgASgJEgsKA2tleRgCIAEoCSJTChdHZXRBcnRpZmFjdFR5cGVSZXNwb25zZRI4Cg1hcnRpZmFjdF90eXBlGAEgASgLMiEuaGFycGlhLmFydGlmYWN0cy52MS5BcnRpZmFjdFR5cGUibwoVQ3JlYXRlQXJ0aWZhY3RSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRIYChBhcnRpZmFjdF90eXBlX2lkGAIgASgJEhMKC3N0b3JhZ2VfdXJpGAMgASgJEhQKDGNvbnRlbnRfaGFzaBgEIAEoCSJJChZDcmVhdGVBcnRpZmFjdFJlc3BvbnNlEi8KCGFydGlmYWN0GAEgASgLMh0uaGFycGlhLmFydGlmYWN0cy52MS5BcnRpZmFjdCKqAgogQ3JlYXRlQXJ0aWZhY3RXaXRoUGF5bG9hZFJlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgJEhgKEGFydGlmYWN0X3R5cGVfaWQYAiABKAkSGQoRYXJ0aWZhY3RfdHlwZV9rZXkYAyABKAkSFAoMcGF5bG9hZF9qc29uGAQgASgMEh4KEXN0ZXBfZXhlY3V0aW9uX2lkGAUgASgJSACIAQESIgoVcGxhbl9jb25maWd1cmF0aW9uX2lkGAYgASgJSAGIAQESHgoRcGxhbl9leGVjdXRpb25faWQYByABKAlIAogBAUIUChJfc3RlcF9leGVjdXRpb25faWRCGAoWX3BsYW5fY29uZmlndXJhdGlvbl9pZEIUChJfcGxhbl9leGVjdXRpb25faWQiVAohQ3JlYXRlQXJ0aWZhY3RXaXRoUGF5bG9hZFJlc3BvbnNlEi8KCGFydGlmYWN0GAEgASgLMh0uaGFycGlhLmFydGlmYWN0cy52MS5BcnRpZmFjdCI8ChJHZXRBcnRpZmFjdFJlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgJEhMKC2FydGlmYWN0X2lkGAIgASgJIkYKE0dldEFydGlmYWN0UmVzcG9uc2USLwoIYXJ0aWZhY3QYASABKAsyHS5oYXJwaWEuYXJ0aWZhY3RzLnYxLkFydGlmYWN0IvoBChRMaXN0QXJ0aWZhY3RzUmVxdWVzdBIRCgl0ZW5hbnRfaWQYASABKAkSIgoVcGxhbl9jb25maWd1cmF0aW9uX2lkGAIgASgJSACIAQESHgoRcGxhbl9leGVjdXRpb25faWQYAyABKAlIAYgBARIeChFhcnRpZmFjdF90eXBlX2tleRgEIAEoCUgCiAEBEhEKCXBhZ2Vfc2l6ZRgFIAEoBRISCgpwYWdlX3Rva2VuGAYgASgJQhgKFl9wbGFuX2NvbmZpZ3VyYXRpb25faWRCFAoSX3BsYW5fZXhlY3V0aW9uX2lkQhQKEl9hcnRpZmFjdF90eXBlX2tleSJiChVMaXN0QXJ0aWZhY3RzUmVzcG9uc2USMAoJYXJ0aWZhY3RzGAEgAygLMh0uaGFycGlhLmFydGlmYWN0cy52MS5BcnRpZmFjdBIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkibAobTGlzdEFydGlmYWN0VmVyc2lvbnNSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRITCgthcnRpZmFjdF9pZBgCIAEoCRIRCglwYWdlX3NpemUYAyABKAUSEgoKcGFnZV90b2tlbhgEIAEoCSJvChxMaXN0QXJ0aWZhY3RWZXJzaW9uc1Jlc3BvbnNlEjYKCHZlcnNpb25zGAEgAygLMiQuaGFycGlhLmFydGlmYWN0cy52MS5BcnRpZmFjdFZlcnNpb24SFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIpoBCh5TYXZlVGV4dEFydGlmYWN0VmVyc2lvblJlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgJEhMKC2FydGlmYWN0X2lkGAIgASgJEh0KFWV4cGVjdGVkX2NvbnRlbnRfaGFzaBgDIAEoCRINCgV0aXRsZRgEIAEoCRIMCgR0ZXh0GAUgASgJEhQKDGVkaXRfc3VtbWFyeRgGIAEoCSKJAQofU2F2ZVRleHRBcnRpZmFjdFZlcnNpb25SZXNwb25zZRIvCghhcnRpZmFjdBgBIAEoCzIdLmhhcnBpYS5hcnRpZmFjdHMudjEuQXJ0aWZhY3QSNQoHdmVyc2lvbhgCIAEoCzIkLmhhcnBpYS5hcnRpZmFjdHMudjEuQXJ0aWZhY3RWZXJzaW9uIn0KGUdldEFydGlmYWN0UGF5bG9hZFJlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgJEhMKC2FydGlmYWN0X2lkGAIgASgJEiAKE2FydGlmYWN0X3ZlcnNpb25faWQYAyABKAlIAIgBAUIWChRfYXJ0aWZhY3RfdmVyc2lvbl9pZCJIChpHZXRBcnRpZmFjdFBheWxvYWRSZXNwb25zZRIUCgxwYXlsb2FkX2pzb24YASABKAwSFAoMY29udGVudF9oYXNoGAIgASgJIjwKE0FydGlmYWN0TGlzdFN1bW1hcnkSFQoNYXJ0aWNsZV9jb3VudBgBIAEoBRIOCgZ0aXRsZXMYAiADKAkiQgoMSW1hZ2VQcmV2aWV3EgsKA3VybBgBIAEoCRITCgtpbmxpbmVfZGF0YRgCIAEoDBIQCghhbHRfdGV4dBgDIAEoCSJ6ChZQcmV2aWV3QXJ0aWZhY3RSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRITCgthcnRpZmFjdF9pZBgCIAEoCRIgChNhcnRpZmFjdF92ZXJzaW9uX2lkGAMgASgJSACIAQFCFgoUX2FydGlmYWN0X3ZlcnNpb25faWQihgIKF1ByZXZpZXdBcnRpZmFjdFJlc3BvbnNlEhYKDHRleHRfcHJldmlldxgBIAEoCUgAEkAKDGxpc3Rfc3VtbWFyeRgCIAEoCzIoLmhhcnBpYS5hcnRpZmFjdHMudjEuQXJ0aWZhY3RMaXN0U3VtbWFyeUgAEhYKDGpzb25fcHJldmlldxgDIAEoCUgAEhYKDGh0bWxfcHJldmlldxgEIAEoCUgAEhoKEG1hcmtkb3duX3ByZXZpZXcYBSABKAlIABI6Cg1pbWFnZV9wcmV2aWV3GAYgASgLMiEuaGFycGlhLmFydGlmYWN0cy52MS5JbWFnZVByZXZpZXdIAEIJCgdwcmV2aWV3KuQBCg5BcnRpZmFjdFN0YXR1cxIfChtBUlRJRkFDVF9TVEFUVVNfVU5TUEVDSUZJRUQQABIdChlBUlRJRkFDVF9TVEFUVVNfR0VORVJBVEVEEAESGgoWQVJUSUZBQ1RfU1RBVFVTX0VESVRFRBACEhwKGEFSVElGQUNUX1NUQVRVU19BUFBST1ZFRBADEhwKGEFSVElGQUNUX1NUQVRVU19SRUpFQ1RFRBAEEh4KGkFSVElGQUNUX1NUQVRVU19TVVBFUlNFREVEEAUSGgoWQVJUSUZBQ1RfU1RBVFVTX0ZBSUxFRBAGKoYCChxBcnRpZmFjdFZlcnNpb25DcmVhdGVkQnlLaW5kEjAKLEFSVElGQUNUX1ZFUlNJT05fQ1JFQVRFRF9CWV9LSU5EX1VOU1BFQ0lGSUVEEAASKwonQVJUSUZBQ1RfVkVSU0lPTl9DUkVBVEVEX0JZX0tJTkRfU1lTVEVNEAESKgomQVJUSUZBQ1RfVkVSU0lPTl9DUkVBVEVEX0JZX0tJTkRfQUdFTlQQAhIwCixBUlRJRkFDVF9WRVJTSU9OX0NSRUFURURfQllfS0lORF9JTlRFR1JBVElPThADEikKJUFSVElGQUNUX1ZFUlNJT05fQ1JFQVRFRF9CWV9LSU5EX1VTRVIQBDKpCQoPQXJ0aWZhY3RTZXJ2aWNlEnsKFFJlZ2lzdGVyQXJ0aWZhY3RUeXBlEjAuaGFycGlhLmFydGlmYWN0cy52MS5SZWdpc3RlckFydGlmYWN0VHlwZVJlcXVlc3QaMS5oYXJwaWEuYXJ0aWZhY3RzLnYxLlJlZ2lzdGVyQXJ0aWZhY3RUeXBlUmVzcG9uc2USbAoPR2V0QXJ0aWZhY3RUeXBlEisuaGFycGlhLmFydGlmYWN0cy52MS5HZXRBcnRpZmFjdFR5cGVSZXF1ZXN0GiwuaGFycGlhLmFydGlmYWN0cy52MS5HZXRBcnRpZmFjdFR5cGVSZXNwb25zZRJpCg5DcmVhdGVBcnRpZmFjdBIqLmhhcnBpYS5hcnRpZmFjdHMudjEuQ3JlYXRlQXJ0aWZhY3RSZXF1ZXN0GisuaGFycGlhLmFydGlmYWN0cy52MS5DcmVhdGVBcnRpZmFjdFJlc3BvbnNlEooBChlDcmVhdGVBcnRpZmFjdFdpdGhQYXlsb2FkEjUuaGFycGlhLmFydGlmYWN0cy52MS5DcmVhdGVBcnRpZmFjdFdpdGhQYXlsb2FkUmVxdWVzdBo2LmhhcnBpYS5hcnRpZmFjdHMudjEuQ3JlYXRlQXJ0aWZhY3RXaXRoUGF5bG9hZFJlc3BvbnNlEmAKC0dldEFydGlmYWN0EicuaGFycGlhLmFydGlmYWN0cy52MS5HZXRBcnRpZmFjdFJlcXVlc3QaKC5oYXJwaWEuYXJ0aWZhY3RzLnYxLkdldEFydGlmYWN0UmVzcG9uc2USaAoNTGlzdEFydGlmYWN0cxIpLmhhcnBpYS5hcnRpZmFjdHMudjEuTGlzdEFydGlmYWN0c1JlcXVlc3QaKi5oYXJwaWEuYXJ0aWZhY3RzLnYxLkxpc3RBcnRpZmFjdHNSZXNwb25zZTABEnsKFExpc3RBcnRpZmFjdFZlcnNpb25zEjAuaGFycGlhLmFydGlmYWN0cy52MS5MaXN0QXJ0aWZhY3RWZXJzaW9uc1JlcXVlc3QaMS5oYXJwaWEuYXJ0aWZhY3RzLnYxLkxpc3RBcnRpZmFjdFZlcnNpb25zUmVzcG9uc2UShAEKF1NhdmVUZXh0QXJ0aWZhY3RWZXJzaW9uEjMuaGFycGlhLmFydGlmYWN0cy52MS5TYXZlVGV4dEFydGlmYWN0VmVyc2lvblJlcXVlc3QaNC5oYXJwaWEuYXJ0aWZhY3RzLnYxLlNhdmVUZXh0QXJ0aWZhY3RWZXJzaW9uUmVzcG9uc2USdQoSR2V0QXJ0aWZhY3RQYXlsb2FkEi4uaGFycGlhLmFydGlmYWN0cy52MS5HZXRBcnRpZmFjdFBheWxvYWRSZXF1ZXN0Gi8uaGFycGlhLmFydGlmYWN0cy52MS5HZXRBcnRpZmFjdFBheWxvYWRSZXNwb25zZRJsCg9QcmV2aWV3QXJ0aWZhY3QSKy5oYXJwaWEuYXJ0aWZhY3RzLnYxLlByZXZpZXdBcnRpZmFjdFJlcXVlc3QaLC5oYXJwaWEuYXJ0aWZhY3RzLnYxLlByZXZpZXdBcnRpZmFjdFJlc3BvbnNlQtwBChdjb20uaGFycGlhLmFydGlmYWN0cy52MUIOQXJ0aWZhY3RzUHJvdG9QAVpDZ2l0aHViLmNvbS9oYXJwaWEvY29udHJvbC1wbGFuZS9nZW4vaGFycGlhL2FydGlmYWN0cy92MTthcnRpZmFjdHN2MaICA0hBWKoCE0hhcnBpYS5BcnRpZmFjdHMuVjHKAhNIYXJwaWFcQXJ0aWZhY3RzXFYx4gIfSGFycGlhXEFydGlmYWN0c1xWMVxHUEJNZXRhZGF0YeoCFUhhcnBpYTo6QXJ0aWZhY3RzOjpWMWIGcHJvdG8z");
+  fileDesc("CiNoYXJwaWEvYXJ0aWZhY3RzL3YxL2FydGlmYWN0cy5wcm90bxITaGFycGlhLmFydGlmYWN0cy52MSJhCgxBcnRpZmFjdFR5cGUSCgoCaWQYASABKAkSCwoDa2V5GAIgASgJEhIKCnNjaGVtYV9yZWYYAyABKAkSDwoHdmVyc2lvbhgEIAEoBRITCgtkZXNjcmlwdGlvbhgFIAEoCSLXAgoIQXJ0aWZhY3QSCgoCaWQYASABKAkSGAoQYXJ0aWZhY3RfdHlwZV9pZBgCIAEoCRIRCgl0ZW5hbnRfaWQYAyABKAkSEwoLc3RvcmFnZV91cmkYBCABKAkSFAoMY29udGVudF9oYXNoGAUgASgJEhIKCmNyZWF0ZWRfYXQYBiABKAkSEgoKdXBkYXRlZF9hdBgHIAEoCRIaChJjdXJyZW50X3ZlcnNpb25faWQYCCABKAkSGQoRYXJ0aWZhY3RfdHlwZV9rZXkYCSABKAkSHQoVcGxhbl9jb25maWd1cmF0aW9uX2lkGAogASgJEhkKEXBsYW5fZXhlY3V0aW9uX2lkGAsgASgJEhkKEXN0ZXBfZXhlY3V0aW9uX2lkGAwgASgJEjMKBnN0YXR1cxgNIAEoDjIjLmhhcnBpYS5hcnRpZmFjdHMudjEuQXJ0aWZhY3RTdGF0dXMi5gIKD0FydGlmYWN0VmVyc2lvbhIKCgJpZBgBIAEoCRITCgthcnRpZmFjdF9pZBgCIAEoCRIWCg52ZXJzaW9uX251bWJlchgDIAEoBRITCgtzdG9yYWdlX3VyaRgEIAEoCRIUCgxjb250ZW50X2hhc2gYBSABKAkSIAoYc291cmNlX3BsYW5fZXhlY3V0aW9uX2lkGAYgASgJEiAKGHNvdXJjZV9zdGVwX2V4ZWN1dGlvbl9pZBgHIAEoCRIZChFzb3VyY2VfdmVyc2lvbl9pZBgIIAEoCRIaChJjcmVhdGVkX2J5X3VzZXJfaWQYCSABKAkSSgoPY3JlYXRlZF9ieV9raW5kGAogASgOMjEuaGFycGlhLmFydGlmYWN0cy52MS5BcnRpZmFjdFZlcnNpb25DcmVhdGVkQnlLaW5kEhQKDGVkaXRfc3VtbWFyeRgLIAEoCRISCgpjcmVhdGVkX2F0GAwgASgJIjEKCURhdGVSYW5nZRISCgpzdGFydF9kYXRlGAEgASgJEhAKCGVuZF9kYXRlGAIgASgJImAKC05ld3NBcnRpY2xlEg0KBXRpdGxlGAEgASgJEgsKA3VybBgCIAEoCRIPCgdzdW1tYXJ5GAMgASgJEg4KBnNvdXJjZRgEIAEoCRIUCgxwdWJsaXNoZWRfYXQYBSABKAkiPgoITmV3c0xpc3QSMgoIYXJ0aWNsZXMYASADKAsyIC5oYXJwaWEuYXJ0aWZhY3RzLnYxLk5ld3NBcnRpY2xlIigKCVRleHREcmFmdBINCgV0aXRsZRgBIAEoCRIMCgRib2R5GAIgASgJIkEKEUxpbmtlZEluUG9zdERyYWZ0EgwKBHRleHQYASABKAkSDAoEaG9vaxgCIAEoCRIQCghoYXNodGFncxgDIAMoCSJfChNQdWJsaXNoQ29uZmlybWF0aW9uEhAKCHBsYXRmb3JtGAEgASgJEhMKC2V4dGVybmFsX2lkGAIgASgJEgsKA3VybBgDIAEoCRIUCgxwdWJsaXNoZWRfYXQYBCABKAkiWwoNQ2Fyb3VzZWxTbGlkZRIPCgdoZWFkaW5nGAEgASgJEgwKBGJvZHkYAiABKAkSGQoRaW1hZ2VfYXJ0aWZhY3RfaWQYAyABKAkSEAoIYWx0X3RleHQYBCABKAkigwEKDUNhcm91c2VsRHJhZnQSDQoFdGl0bGUYASABKAkSDAoEaG9vaxgCIAEoCRIyCgZzbGlkZXMYAyADKAsyIi5oYXJwaWEuYXJ0aWZhY3RzLnYxLkNhcm91c2VsU2xpZGUSDwoHY2FwdGlvbhgEIAEoCRIQCghoYXNodGFncxgFIAMoCSJxCgpJbWFnZUFzc2V0Eg4KBnByb21wdBgBIAEoCRIRCgltaW1lX3R5cGUYAiABKAkSDQoFd2lkdGgYAyABKAUSDgoGaGVpZ2h0GAQgASgFEhAKCGFsdF90ZXh0GAUgASgJEg8KB2NhcHRpb24YBiABKAkiZAobUmVnaXN0ZXJBcnRpZmFjdFR5cGVSZXF1ZXN0EgsKA2tleRgBIAEoCRISCgpzY2hlbWFfcmVmGAIgASgJEg8KB3ZlcnNpb24YAyABKAUSEwoLZGVzY3JpcHRpb24YBCABKAkiWAocUmVnaXN0ZXJBcnRpZmFjdFR5cGVSZXNwb25zZRI4Cg1hcnRpZmFjdF90eXBlGAEgASgLMiEuaGFycGlhLmFydGlmYWN0cy52MS5BcnRpZmFjdFR5cGUiPwoWR2V0QXJ0aWZhY3RUeXBlUmVxdWVzdBIYChBhcnRpZmFjdF90eXBlX2lkGAEgASgJEgsKA2tleRgCIAEoCSJTChdHZXRBcnRpZmFjdFR5cGVSZXNwb25zZRI4Cg1hcnRpZmFjdF90eXBlGAEgASgLMiEuaGFycGlhLmFydGlmYWN0cy52MS5BcnRpZmFjdFR5cGUibwoVQ3JlYXRlQXJ0aWZhY3RSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRIYChBhcnRpZmFjdF90eXBlX2lkGAIgASgJEhMKC3N0b3JhZ2VfdXJpGAMgASgJEhQKDGNvbnRlbnRfaGFzaBgEIAEoCSJJChZDcmVhdGVBcnRpZmFjdFJlc3BvbnNlEi8KCGFydGlmYWN0GAEgASgLMh0uaGFycGlhLmFydGlmYWN0cy52MS5BcnRpZmFjdCKqAgogQ3JlYXRlQXJ0aWZhY3RXaXRoUGF5bG9hZFJlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgJEhgKEGFydGlmYWN0X3R5cGVfaWQYAiABKAkSGQoRYXJ0aWZhY3RfdHlwZV9rZXkYAyABKAkSFAoMcGF5bG9hZF9qc29uGAQgASgMEh4KEXN0ZXBfZXhlY3V0aW9uX2lkGAUgASgJSACIAQESIgoVcGxhbl9jb25maWd1cmF0aW9uX2lkGAYgASgJSAGIAQESHgoRcGxhbl9leGVjdXRpb25faWQYByABKAlIAogBAUIUChJfc3RlcF9leGVjdXRpb25faWRCGAoWX3BsYW5fY29uZmlndXJhdGlvbl9pZEIUChJfcGxhbl9leGVjdXRpb25faWQiVAohQ3JlYXRlQXJ0aWZhY3RXaXRoUGF5bG9hZFJlc3BvbnNlEi8KCGFydGlmYWN0GAEgASgLMh0uaGFycGlhLmFydGlmYWN0cy52MS5BcnRpZmFjdCI8ChJHZXRBcnRpZmFjdFJlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgJEhMKC2FydGlmYWN0X2lkGAIgASgJIkYKE0dldEFydGlmYWN0UmVzcG9uc2USLwoIYXJ0aWZhY3QYASABKAsyHS5oYXJwaWEuYXJ0aWZhY3RzLnYxLkFydGlmYWN0IvoBChRMaXN0QXJ0aWZhY3RzUmVxdWVzdBIRCgl0ZW5hbnRfaWQYASABKAkSIgoVcGxhbl9jb25maWd1cmF0aW9uX2lkGAIgASgJSACIAQESHgoRcGxhbl9leGVjdXRpb25faWQYAyABKAlIAYgBARIeChFhcnRpZmFjdF90eXBlX2tleRgEIAEoCUgCiAEBEhEKCXBhZ2Vfc2l6ZRgFIAEoBRISCgpwYWdlX3Rva2VuGAYgASgJQhgKFl9wbGFuX2NvbmZpZ3VyYXRpb25faWRCFAoSX3BsYW5fZXhlY3V0aW9uX2lkQhQKEl9hcnRpZmFjdF90eXBlX2tleSJiChVMaXN0QXJ0aWZhY3RzUmVzcG9uc2USMAoJYXJ0aWZhY3RzGAEgAygLMh0uaGFycGlhLmFydGlmYWN0cy52MS5BcnRpZmFjdBIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkibAobTGlzdEFydGlmYWN0VmVyc2lvbnNSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRITCgthcnRpZmFjdF9pZBgCIAEoCRIRCglwYWdlX3NpemUYAyABKAUSEgoKcGFnZV90b2tlbhgEIAEoCSJvChxMaXN0QXJ0aWZhY3RWZXJzaW9uc1Jlc3BvbnNlEjYKCHZlcnNpb25zGAEgAygLMiQuaGFycGlhLmFydGlmYWN0cy52MS5BcnRpZmFjdFZlcnNpb24SFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIpoBCh5TYXZlVGV4dEFydGlmYWN0VmVyc2lvblJlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgJEhMKC2FydGlmYWN0X2lkGAIgASgJEh0KFWV4cGVjdGVkX2NvbnRlbnRfaGFzaBgDIAEoCRINCgV0aXRsZRgEIAEoCRIMCgR0ZXh0GAUgASgJEhQKDGVkaXRfc3VtbWFyeRgGIAEoCSKJAQofU2F2ZVRleHRBcnRpZmFjdFZlcnNpb25SZXNwb25zZRIvCghhcnRpZmFjdBgBIAEoCzIdLmhhcnBpYS5hcnRpZmFjdHMudjEuQXJ0aWZhY3QSNQoHdmVyc2lvbhgCIAEoCzIkLmhhcnBpYS5hcnRpZmFjdHMudjEuQXJ0aWZhY3RWZXJzaW9uIn0KGUdldEFydGlmYWN0UGF5bG9hZFJlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgJEhMKC2FydGlmYWN0X2lkGAIgASgJEiAKE2FydGlmYWN0X3ZlcnNpb25faWQYAyABKAlIAIgBAUIWChRfYXJ0aWZhY3RfdmVyc2lvbl9pZCJIChpHZXRBcnRpZmFjdFBheWxvYWRSZXNwb25zZRIUCgxwYXlsb2FkX2pzb24YASABKAwSFAoMY29udGVudF9oYXNoGAIgASgJIjwKE0FydGlmYWN0TGlzdFN1bW1hcnkSFQoNYXJ0aWNsZV9jb3VudBgBIAEoBRIOCgZ0aXRsZXMYAiADKAkiQgoMSW1hZ2VQcmV2aWV3EgsKA3VybBgBIAEoCRITCgtpbmxpbmVfZGF0YRgCIAEoDBIQCghhbHRfdGV4dBgDIAEoCSJ6ChZQcmV2aWV3QXJ0aWZhY3RSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRITCgthcnRpZmFjdF9pZBgCIAEoCRIgChNhcnRpZmFjdF92ZXJzaW9uX2lkGAMgASgJSACIAQFCFgoUX2FydGlmYWN0X3ZlcnNpb25faWQihgIKF1ByZXZpZXdBcnRpZmFjdFJlc3BvbnNlEhYKDHRleHRfcHJldmlldxgBIAEoCUgAEkAKDGxpc3Rfc3VtbWFyeRgCIAEoCzIoLmhhcnBpYS5hcnRpZmFjdHMudjEuQXJ0aWZhY3RMaXN0U3VtbWFyeUgAEhYKDGpzb25fcHJldmlldxgDIAEoCUgAEhYKDGh0bWxfcHJldmlldxgEIAEoCUgAEhoKEG1hcmtkb3duX3ByZXZpZXcYBSABKAlIABI6Cg1pbWFnZV9wcmV2aWV3GAYgASgLMiEuaGFycGlhLmFydGlmYWN0cy52MS5JbWFnZVByZXZpZXdIAEIJCgdwcmV2aWV3KuQBCg5BcnRpZmFjdFN0YXR1cxIfChtBUlRJRkFDVF9TVEFUVVNfVU5TUEVDSUZJRUQQABIdChlBUlRJRkFDVF9TVEFUVVNfR0VORVJBVEVEEAESGgoWQVJUSUZBQ1RfU1RBVFVTX0VESVRFRBACEhwKGEFSVElGQUNUX1NUQVRVU19BUFBST1ZFRBADEhwKGEFSVElGQUNUX1NUQVRVU19SRUpFQ1RFRBAEEh4KGkFSVElGQUNUX1NUQVRVU19TVVBFUlNFREVEEAUSGgoWQVJUSUZBQ1RfU1RBVFVTX0ZBSUxFRBAGKoYCChxBcnRpZmFjdFZlcnNpb25DcmVhdGVkQnlLaW5kEjAKLEFSVElGQUNUX1ZFUlNJT05fQ1JFQVRFRF9CWV9LSU5EX1VOU1BFQ0lGSUVEEAASKwonQVJUSUZBQ1RfVkVSU0lPTl9DUkVBVEVEX0JZX0tJTkRfU1lTVEVNEAESKgomQVJUSUZBQ1RfVkVSU0lPTl9DUkVBVEVEX0JZX0tJTkRfQUdFTlQQAhIwCixBUlRJRkFDVF9WRVJTSU9OX0NSRUFURURfQllfS0lORF9JTlRFR1JBVElPThADEikKJUFSVElGQUNUX1ZFUlNJT05fQ1JFQVRFRF9CWV9LSU5EX1VTRVIQBDKpCQoPQXJ0aWZhY3RTZXJ2aWNlEnsKFFJlZ2lzdGVyQXJ0aWZhY3RUeXBlEjAuaGFycGlhLmFydGlmYWN0cy52MS5SZWdpc3RlckFydGlmYWN0VHlwZVJlcXVlc3QaMS5oYXJwaWEuYXJ0aWZhY3RzLnYxLlJlZ2lzdGVyQXJ0aWZhY3RUeXBlUmVzcG9uc2USbAoPR2V0QXJ0aWZhY3RUeXBlEisuaGFycGlhLmFydGlmYWN0cy52MS5HZXRBcnRpZmFjdFR5cGVSZXF1ZXN0GiwuaGFycGlhLmFydGlmYWN0cy52MS5HZXRBcnRpZmFjdFR5cGVSZXNwb25zZRJpCg5DcmVhdGVBcnRpZmFjdBIqLmhhcnBpYS5hcnRpZmFjdHMudjEuQ3JlYXRlQXJ0aWZhY3RSZXF1ZXN0GisuaGFycGlhLmFydGlmYWN0cy52MS5DcmVhdGVBcnRpZmFjdFJlc3BvbnNlEooBChlDcmVhdGVBcnRpZmFjdFdpdGhQYXlsb2FkEjUuaGFycGlhLmFydGlmYWN0cy52MS5DcmVhdGVBcnRpZmFjdFdpdGhQYXlsb2FkUmVxdWVzdBo2LmhhcnBpYS5hcnRpZmFjdHMudjEuQ3JlYXRlQXJ0aWZhY3RXaXRoUGF5bG9hZFJlc3BvbnNlEmAKC0dldEFydGlmYWN0EicuaGFycGlhLmFydGlmYWN0cy52MS5HZXRBcnRpZmFjdFJlcXVlc3QaKC5oYXJwaWEuYXJ0aWZhY3RzLnYxLkdldEFydGlmYWN0UmVzcG9uc2USaAoNTGlzdEFydGlmYWN0cxIpLmhhcnBpYS5hcnRpZmFjdHMudjEuTGlzdEFydGlmYWN0c1JlcXVlc3QaKi5oYXJwaWEuYXJ0aWZhY3RzLnYxLkxpc3RBcnRpZmFjdHNSZXNwb25zZTABEnsKFExpc3RBcnRpZmFjdFZlcnNpb25zEjAuaGFycGlhLmFydGlmYWN0cy52MS5MaXN0QXJ0aWZhY3RWZXJzaW9uc1JlcXVlc3QaMS5oYXJwaWEuYXJ0aWZhY3RzLnYxLkxpc3RBcnRpZmFjdFZlcnNpb25zUmVzcG9uc2UShAEKF1NhdmVUZXh0QXJ0aWZhY3RWZXJzaW9uEjMuaGFycGlhLmFydGlmYWN0cy52MS5TYXZlVGV4dEFydGlmYWN0VmVyc2lvblJlcXVlc3QaNC5oYXJwaWEuYXJ0aWZhY3RzLnYxLlNhdmVUZXh0QXJ0aWZhY3RWZXJzaW9uUmVzcG9uc2USdQoSR2V0QXJ0aWZhY3RQYXlsb2FkEi4uaGFycGlhLmFydGlmYWN0cy52MS5HZXRBcnRpZmFjdFBheWxvYWRSZXF1ZXN0Gi8uaGFycGlhLmFydGlmYWN0cy52MS5HZXRBcnRpZmFjdFBheWxvYWRSZXNwb25zZRJsCg9QcmV2aWV3QXJ0aWZhY3QSKy5oYXJwaWEuYXJ0aWZhY3RzLnYxLlByZXZpZXdBcnRpZmFjdFJlcXVlc3QaLC5oYXJwaWEuYXJ0aWZhY3RzLnYxLlByZXZpZXdBcnRpZmFjdFJlc3BvbnNlQtwBChdjb20uaGFycGlhLmFydGlmYWN0cy52MUIOQXJ0aWZhY3RzUHJvdG9QAVpDZ2l0aHViLmNvbS9oYXJwaWEvY29udHJvbC1wbGFuZS9nZW4vaGFycGlhL2FydGlmYWN0cy92MTthcnRpZmFjdHN2MaICA0hBWKoCE0hhcnBpYS5BcnRpZmFjdHMuVjHKAhNIYXJwaWFcQXJ0aWZhY3RzXFYx4gIfSGFycGlhXEFydGlmYWN0c1xWMVxHUEJNZXRhZGF0YeoCFUhhcnBpYTo6QXJ0aWZhY3RzOjpWMWIGcHJvdG8z");
 
 /**
  * @generated from message harpia.artifacts.v1.ArtifactType
@@ -356,6 +356,130 @@ export const PublishConfirmationSchema: GenMessage<PublishConfirmation> = /*@__P
   messageDesc(file_harpia_artifacts_v1_artifacts, 8);
 
 /**
+ * @generated from message harpia.artifacts.v1.CarouselSlide
+ */
+export type CarouselSlide = Message<"harpia.artifacts.v1.CarouselSlide"> & {
+  /**
+   * @generated from field: string heading = 1;
+   */
+  heading: string;
+
+  /**
+   * @generated from field: string body = 2;
+   */
+  body: string;
+
+  /**
+   * optional ImageAsset ref for image-backed slides
+   *
+   * @generated from field: string image_artifact_id = 3;
+   */
+  imageArtifactId: string;
+
+  /**
+   * @generated from field: string alt_text = 4;
+   */
+  altText: string;
+};
+
+/**
+ * Describes the message harpia.artifacts.v1.CarouselSlide.
+ * Use `create(CarouselSlideSchema)` to create a new message.
+ */
+export const CarouselSlideSchema: GenMessage<CarouselSlide> = /*@__PURE__*/
+  messageDesc(file_harpia_artifacts_v1_artifacts, 9);
+
+/**
+ * @generated from message harpia.artifacts.v1.CarouselDraft
+ */
+export type CarouselDraft = Message<"harpia.artifacts.v1.CarouselDraft"> & {
+  /**
+   * @generated from field: string title = 1;
+   */
+  title: string;
+
+  /**
+   * opening/cover-slide hook
+   *
+   * @generated from field: string hook = 2;
+   */
+  hook: string;
+
+  /**
+   * @generated from field: repeated harpia.artifacts.v1.CarouselSlide slides = 3;
+   */
+  slides: CarouselSlide[];
+
+  /**
+   * accompanying post caption
+   *
+   * @generated from field: string caption = 4;
+   */
+  caption: string;
+
+  /**
+   * @generated from field: repeated string hashtags = 5;
+   */
+  hashtags: string[];
+};
+
+/**
+ * Describes the message harpia.artifacts.v1.CarouselDraft.
+ * Use `create(CarouselDraftSchema)` to create a new message.
+ */
+export const CarouselDraftSchema: GenMessage<CarouselDraft> = /*@__PURE__*/
+  messageDesc(file_harpia_artifacts_v1_artifacts, 10);
+
+/**
+ * @generated from message harpia.artifacts.v1.ImageAsset
+ */
+export type ImageAsset = Message<"harpia.artifacts.v1.ImageAsset"> & {
+  /**
+   * generation prompt / brief (provenance)
+   *
+   * @generated from field: string prompt = 1;
+   */
+  prompt: string;
+
+  /**
+   * e.g. image/png
+   *
+   * @generated from field: string mime_type = 2;
+   */
+  mimeType: string;
+
+  /**
+   * @generated from field: int32 width = 3;
+   */
+  width: number;
+
+  /**
+   * @generated from field: int32 height = 4;
+   */
+  height: number;
+
+  /**
+   * @generated from field: string alt_text = 5;
+   */
+  altText: string;
+
+  /**
+   * Bytes live in Garage; the Artifact.storage_uri/content_hash address the payload,
+   * consistent with every other ArtifactType. No inline bytes on the artifact.
+   *
+   * @generated from field: string caption = 6;
+   */
+  caption: string;
+};
+
+/**
+ * Describes the message harpia.artifacts.v1.ImageAsset.
+ * Use `create(ImageAssetSchema)` to create a new message.
+ */
+export const ImageAssetSchema: GenMessage<ImageAsset> = /*@__PURE__*/
+  messageDesc(file_harpia_artifacts_v1_artifacts, 11);
+
+/**
  * @generated from message harpia.artifacts.v1.RegisterArtifactTypeRequest
  */
 export type RegisterArtifactTypeRequest = Message<"harpia.artifacts.v1.RegisterArtifactTypeRequest"> & {
@@ -385,7 +509,7 @@ export type RegisterArtifactTypeRequest = Message<"harpia.artifacts.v1.RegisterA
  * Use `create(RegisterArtifactTypeRequestSchema)` to create a new message.
  */
 export const RegisterArtifactTypeRequestSchema: GenMessage<RegisterArtifactTypeRequest> = /*@__PURE__*/
-  messageDesc(file_harpia_artifacts_v1_artifacts, 9);
+  messageDesc(file_harpia_artifacts_v1_artifacts, 12);
 
 /**
  * @generated from message harpia.artifacts.v1.RegisterArtifactTypeResponse
@@ -402,7 +526,7 @@ export type RegisterArtifactTypeResponse = Message<"harpia.artifacts.v1.Register
  * Use `create(RegisterArtifactTypeResponseSchema)` to create a new message.
  */
 export const RegisterArtifactTypeResponseSchema: GenMessage<RegisterArtifactTypeResponse> = /*@__PURE__*/
-  messageDesc(file_harpia_artifacts_v1_artifacts, 10);
+  messageDesc(file_harpia_artifacts_v1_artifacts, 13);
 
 /**
  * @generated from message harpia.artifacts.v1.GetArtifactTypeRequest
@@ -424,7 +548,7 @@ export type GetArtifactTypeRequest = Message<"harpia.artifacts.v1.GetArtifactTyp
  * Use `create(GetArtifactTypeRequestSchema)` to create a new message.
  */
 export const GetArtifactTypeRequestSchema: GenMessage<GetArtifactTypeRequest> = /*@__PURE__*/
-  messageDesc(file_harpia_artifacts_v1_artifacts, 11);
+  messageDesc(file_harpia_artifacts_v1_artifacts, 14);
 
 /**
  * @generated from message harpia.artifacts.v1.GetArtifactTypeResponse
@@ -441,7 +565,7 @@ export type GetArtifactTypeResponse = Message<"harpia.artifacts.v1.GetArtifactTy
  * Use `create(GetArtifactTypeResponseSchema)` to create a new message.
  */
 export const GetArtifactTypeResponseSchema: GenMessage<GetArtifactTypeResponse> = /*@__PURE__*/
-  messageDesc(file_harpia_artifacts_v1_artifacts, 12);
+  messageDesc(file_harpia_artifacts_v1_artifacts, 15);
 
 /**
  * @generated from message harpia.artifacts.v1.CreateArtifactRequest
@@ -473,7 +597,7 @@ export type CreateArtifactRequest = Message<"harpia.artifacts.v1.CreateArtifactR
  * Use `create(CreateArtifactRequestSchema)` to create a new message.
  */
 export const CreateArtifactRequestSchema: GenMessage<CreateArtifactRequest> = /*@__PURE__*/
-  messageDesc(file_harpia_artifacts_v1_artifacts, 13);
+  messageDesc(file_harpia_artifacts_v1_artifacts, 16);
 
 /**
  * @generated from message harpia.artifacts.v1.CreateArtifactResponse
@@ -490,7 +614,7 @@ export type CreateArtifactResponse = Message<"harpia.artifacts.v1.CreateArtifact
  * Use `create(CreateArtifactResponseSchema)` to create a new message.
  */
 export const CreateArtifactResponseSchema: GenMessage<CreateArtifactResponse> = /*@__PURE__*/
-  messageDesc(file_harpia_artifacts_v1_artifacts, 14);
+  messageDesc(file_harpia_artifacts_v1_artifacts, 17);
 
 /**
  * @generated from message harpia.artifacts.v1.CreateArtifactWithPayloadRequest
@@ -537,7 +661,7 @@ export type CreateArtifactWithPayloadRequest = Message<"harpia.artifacts.v1.Crea
  * Use `create(CreateArtifactWithPayloadRequestSchema)` to create a new message.
  */
 export const CreateArtifactWithPayloadRequestSchema: GenMessage<CreateArtifactWithPayloadRequest> = /*@__PURE__*/
-  messageDesc(file_harpia_artifacts_v1_artifacts, 15);
+  messageDesc(file_harpia_artifacts_v1_artifacts, 18);
 
 /**
  * @generated from message harpia.artifacts.v1.CreateArtifactWithPayloadResponse
@@ -554,7 +678,7 @@ export type CreateArtifactWithPayloadResponse = Message<"harpia.artifacts.v1.Cre
  * Use `create(CreateArtifactWithPayloadResponseSchema)` to create a new message.
  */
 export const CreateArtifactWithPayloadResponseSchema: GenMessage<CreateArtifactWithPayloadResponse> = /*@__PURE__*/
-  messageDesc(file_harpia_artifacts_v1_artifacts, 16);
+  messageDesc(file_harpia_artifacts_v1_artifacts, 19);
 
 /**
  * @generated from message harpia.artifacts.v1.GetArtifactRequest
@@ -576,7 +700,7 @@ export type GetArtifactRequest = Message<"harpia.artifacts.v1.GetArtifactRequest
  * Use `create(GetArtifactRequestSchema)` to create a new message.
  */
 export const GetArtifactRequestSchema: GenMessage<GetArtifactRequest> = /*@__PURE__*/
-  messageDesc(file_harpia_artifacts_v1_artifacts, 17);
+  messageDesc(file_harpia_artifacts_v1_artifacts, 20);
 
 /**
  * @generated from message harpia.artifacts.v1.GetArtifactResponse
@@ -593,7 +717,7 @@ export type GetArtifactResponse = Message<"harpia.artifacts.v1.GetArtifactRespon
  * Use `create(GetArtifactResponseSchema)` to create a new message.
  */
 export const GetArtifactResponseSchema: GenMessage<GetArtifactResponse> = /*@__PURE__*/
-  messageDesc(file_harpia_artifacts_v1_artifacts, 18);
+  messageDesc(file_harpia_artifacts_v1_artifacts, 21);
 
 /**
  * @generated from message harpia.artifacts.v1.ListArtifactsRequest
@@ -635,7 +759,7 @@ export type ListArtifactsRequest = Message<"harpia.artifacts.v1.ListArtifactsReq
  * Use `create(ListArtifactsRequestSchema)` to create a new message.
  */
 export const ListArtifactsRequestSchema: GenMessage<ListArtifactsRequest> = /*@__PURE__*/
-  messageDesc(file_harpia_artifacts_v1_artifacts, 19);
+  messageDesc(file_harpia_artifacts_v1_artifacts, 22);
 
 /**
  * @generated from message harpia.artifacts.v1.ListArtifactsResponse
@@ -657,7 +781,7 @@ export type ListArtifactsResponse = Message<"harpia.artifacts.v1.ListArtifactsRe
  * Use `create(ListArtifactsResponseSchema)` to create a new message.
  */
 export const ListArtifactsResponseSchema: GenMessage<ListArtifactsResponse> = /*@__PURE__*/
-  messageDesc(file_harpia_artifacts_v1_artifacts, 20);
+  messageDesc(file_harpia_artifacts_v1_artifacts, 23);
 
 /**
  * @generated from message harpia.artifacts.v1.ListArtifactVersionsRequest
@@ -689,7 +813,7 @@ export type ListArtifactVersionsRequest = Message<"harpia.artifacts.v1.ListArtif
  * Use `create(ListArtifactVersionsRequestSchema)` to create a new message.
  */
 export const ListArtifactVersionsRequestSchema: GenMessage<ListArtifactVersionsRequest> = /*@__PURE__*/
-  messageDesc(file_harpia_artifacts_v1_artifacts, 21);
+  messageDesc(file_harpia_artifacts_v1_artifacts, 24);
 
 /**
  * @generated from message harpia.artifacts.v1.ListArtifactVersionsResponse
@@ -711,7 +835,7 @@ export type ListArtifactVersionsResponse = Message<"harpia.artifacts.v1.ListArti
  * Use `create(ListArtifactVersionsResponseSchema)` to create a new message.
  */
 export const ListArtifactVersionsResponseSchema: GenMessage<ListArtifactVersionsResponse> = /*@__PURE__*/
-  messageDesc(file_harpia_artifacts_v1_artifacts, 22);
+  messageDesc(file_harpia_artifacts_v1_artifacts, 25);
 
 /**
  * @generated from message harpia.artifacts.v1.SaveTextArtifactVersionRequest
@@ -753,7 +877,7 @@ export type SaveTextArtifactVersionRequest = Message<"harpia.artifacts.v1.SaveTe
  * Use `create(SaveTextArtifactVersionRequestSchema)` to create a new message.
  */
 export const SaveTextArtifactVersionRequestSchema: GenMessage<SaveTextArtifactVersionRequest> = /*@__PURE__*/
-  messageDesc(file_harpia_artifacts_v1_artifacts, 23);
+  messageDesc(file_harpia_artifacts_v1_artifacts, 26);
 
 /**
  * @generated from message harpia.artifacts.v1.SaveTextArtifactVersionResponse
@@ -775,7 +899,7 @@ export type SaveTextArtifactVersionResponse = Message<"harpia.artifacts.v1.SaveT
  * Use `create(SaveTextArtifactVersionResponseSchema)` to create a new message.
  */
 export const SaveTextArtifactVersionResponseSchema: GenMessage<SaveTextArtifactVersionResponse> = /*@__PURE__*/
-  messageDesc(file_harpia_artifacts_v1_artifacts, 24);
+  messageDesc(file_harpia_artifacts_v1_artifacts, 27);
 
 /**
  * @generated from message harpia.artifacts.v1.GetArtifactPayloadRequest
@@ -802,7 +926,7 @@ export type GetArtifactPayloadRequest = Message<"harpia.artifacts.v1.GetArtifact
  * Use `create(GetArtifactPayloadRequestSchema)` to create a new message.
  */
 export const GetArtifactPayloadRequestSchema: GenMessage<GetArtifactPayloadRequest> = /*@__PURE__*/
-  messageDesc(file_harpia_artifacts_v1_artifacts, 25);
+  messageDesc(file_harpia_artifacts_v1_artifacts, 28);
 
 /**
  * @generated from message harpia.artifacts.v1.GetArtifactPayloadResponse
@@ -824,7 +948,7 @@ export type GetArtifactPayloadResponse = Message<"harpia.artifacts.v1.GetArtifac
  * Use `create(GetArtifactPayloadResponseSchema)` to create a new message.
  */
 export const GetArtifactPayloadResponseSchema: GenMessage<GetArtifactPayloadResponse> = /*@__PURE__*/
-  messageDesc(file_harpia_artifacts_v1_artifacts, 26);
+  messageDesc(file_harpia_artifacts_v1_artifacts, 29);
 
 /**
  * @generated from message harpia.artifacts.v1.ArtifactListSummary
@@ -846,7 +970,7 @@ export type ArtifactListSummary = Message<"harpia.artifacts.v1.ArtifactListSumma
  * Use `create(ArtifactListSummarySchema)` to create a new message.
  */
 export const ArtifactListSummarySchema: GenMessage<ArtifactListSummary> = /*@__PURE__*/
-  messageDesc(file_harpia_artifacts_v1_artifacts, 27);
+  messageDesc(file_harpia_artifacts_v1_artifacts, 30);
 
 /**
  * ImagePreview carries either a resolved URL (e.g. a signed Garage URL) or
@@ -876,7 +1000,7 @@ export type ImagePreview = Message<"harpia.artifacts.v1.ImagePreview"> & {
  * Use `create(ImagePreviewSchema)` to create a new message.
  */
 export const ImagePreviewSchema: GenMessage<ImagePreview> = /*@__PURE__*/
-  messageDesc(file_harpia_artifacts_v1_artifacts, 28);
+  messageDesc(file_harpia_artifacts_v1_artifacts, 31);
 
 /**
  * @generated from message harpia.artifacts.v1.PreviewArtifactRequest
@@ -903,7 +1027,7 @@ export type PreviewArtifactRequest = Message<"harpia.artifacts.v1.PreviewArtifac
  * Use `create(PreviewArtifactRequestSchema)` to create a new message.
  */
 export const PreviewArtifactRequestSchema: GenMessage<PreviewArtifactRequest> = /*@__PURE__*/
-  messageDesc(file_harpia_artifacts_v1_artifacts, 29);
+  messageDesc(file_harpia_artifacts_v1_artifacts, 32);
 
 /**
  * @generated from message harpia.artifacts.v1.PreviewArtifactResponse
@@ -956,7 +1080,7 @@ export type PreviewArtifactResponse = Message<"harpia.artifacts.v1.PreviewArtifa
  * Use `create(PreviewArtifactResponseSchema)` to create a new message.
  */
 export const PreviewArtifactResponseSchema: GenMessage<PreviewArtifactResponse> = /*@__PURE__*/
-  messageDesc(file_harpia_artifacts_v1_artifacts, 30);
+  messageDesc(file_harpia_artifacts_v1_artifacts, 33);
 
 /**
  * @generated from enum harpia.artifacts.v1.ArtifactStatus

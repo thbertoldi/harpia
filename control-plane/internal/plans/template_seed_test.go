@@ -18,14 +18,18 @@ var testArtifactTypes = map[string]struct{}{
 	"harpia.artifacts.v1.NewsList":            {},
 	"harpia.artifacts.v1.TextDraft":           {},
 	"harpia.artifacts.v1.LinkedInPostDraft":   {},
+	"harpia.artifacts.v1.CarouselDraft":       {},
+	"harpia.artifacts.v1.ImageAsset":          {},
 	"harpia.artifacts.v1.PublishConfirmation": {},
 }
 
 var testExecutorSKUs = map[string]struct{}{
-	"rss-news-feed":            {},
-	"newsletter-writer-senior": {},
-	"linkedin-voice-senior":    {},
-	"linkedin-publish":         {},
+	"rss-news-feed":             {},
+	"newsletter-writer-senior":  {},
+	"linkedin-voice-senior":     {},
+	"linkedin-carousel-senior":  {},
+	"image-asset-generator":     {},
+	"linkedin-publish":          {},
 }
 
 func TestLoadPlanTemplateCatalogLoadsValidYAML(t *testing.T) {
@@ -70,6 +74,10 @@ func TestValidatePlanTemplateRejectsFailures(t *testing.T) {
 		{
 			name: "cycle",
 			mutate: func(seed *planTemplateSeed) {
+				// Make the back-edge type-consistent (write-draft output ==
+				// fetch-news input) so the cycle detector fires rather than the
+				// edge type-check, which now runs during edge iteration.
+				seed.Steps[1].OutputArtifactTypeID = seed.Steps[0].InputArtifactTypeID
 				seed.Edges = append(seed.Edges, planTemplateEdgeSeed{FromStepKey: "write-draft", ToStepKey: "fetch-news"})
 			},
 			wantError: "cycle",
@@ -133,11 +141,11 @@ func TestValidatePlanTemplateRejectsFailures(t *testing.T) {
 			wantError: "unknown behavior policy",
 		},
 		{
-			name: "adjacent artifact mismatch",
+			name: "edge artifact mismatch",
 			mutate: func(seed *planTemplateSeed) {
 				seed.Steps[1].InputArtifactTypeID = "harpia.artifacts.v1.DateRange"
 			},
-			wantError: "adjacent",
+			wantError: "artifact mismatch",
 		},
 	}
 
@@ -150,6 +158,170 @@ func TestValidatePlanTemplateRejectsFailures(t *testing.T) {
 				t.Fatalf("err = %v, want containing %q", err, tt.wantError)
 			}
 		})
+	}
+}
+
+// branchingTemplateSeed builds a DAG whose root fans out to two siblings that
+// both consume the root's output type. Such a shape is rejected by a naive
+// list-adjacency check (the second sibling's input would be compared against
+// the first sibling's output) but must be accepted by the edge-based check.
+func branchingTemplateSeed(key string) planTemplateSeed {
+	return planTemplateSeed{
+		Key:         key,
+		Name:        "Branching Studio",
+		Description: "Root fans out to two siblings sharing one upstream output.",
+		Vertical:    "creator-economy",
+		Version:     1,
+		Steps: []planTemplateStepSeed{
+			{
+				Key:                  "root",
+				Title:                "Root",
+				Description:          "Produces a NewsList.",
+				InputArtifactTypeID:  "harpia.artifacts.v1.DateRange",
+				OutputArtifactTypeID: "harpia.artifacts.v1.NewsList",
+				ExecutorRequirement:  map[string]any{"executor_kind": 2, "connection_type": "rss_feed"},
+				DefaultExecutorSKUKey: "rss-news-feed",
+			},
+			{
+				Key:                  "branch-text",
+				Title:                "Branch Text",
+				Description:          "Consumes the NewsList into a TextDraft.",
+				InputArtifactTypeID:  "harpia.artifacts.v1.NewsList",
+				OutputArtifactTypeID: "harpia.artifacts.v1.TextDraft",
+				ExecutorRequirement:  map[string]any{"executor_kind": 1},
+				DefaultExecutorSKUKey: "newsletter-writer-senior",
+			},
+			{
+				Key:                  "branch-post",
+				Title:                "Branch Post",
+				Description:          "Consumes the same NewsList into a LinkedInPostDraft.",
+				InputArtifactTypeID:  "harpia.artifacts.v1.NewsList",
+				OutputArtifactTypeID: "harpia.artifacts.v1.LinkedInPostDraft",
+				ExecutorRequirement:  map[string]any{"executor_kind": 1},
+				DefaultExecutorSKUKey: "linkedin-voice-senior",
+			},
+		},
+		Edges: []planTemplateEdgeSeed{
+			{FromStepKey: "root", ToStepKey: "branch-text"},
+			{FromStepKey: "root", ToStepKey: "branch-post"},
+		},
+		InputParameters: []templateInputParameterSeed{
+			{
+				Key:              "date_range",
+				Label:            "Date range",
+				Description:      "Article publication window.",
+				Type:             "TEMPLATE_INPUT_PARAMETER_TYPE_DATE_RANGE",
+				Required:         true,
+				DefaultValueJSON: `{"preset":"schedule_window"}`,
+				RuntimeMappings: []templateInputRuntimeMappingSeed{
+					{
+						Target:    "TEMPLATE_INPUT_RUNTIME_TARGET_SEED_ARTIFACT",
+						StepKey:   "root",
+						InputName: "date_range",
+					},
+				},
+			},
+		},
+	}
+}
+
+func TestValidatePlanTemplateBranchingDAG(t *testing.T) {
+	t.Run("branching DAG validates", func(t *testing.T) {
+		seed := branchingTemplateSeed("branching-studio")
+		if err := validatePlanTemplateCatalog([]planTemplateSeed{seed}, testArtifactTypes, testExecutorSKUs); err != nil {
+			t.Fatalf("branching DAG should validate, got: %v", err)
+		}
+	})
+
+	t.Run("edge artifact mismatch fails", func(t *testing.T) {
+		seed := branchingTemplateSeed("branching-studio")
+		// root outputs NewsList, but force branch-post to expect LinkedInPostDraft,
+		// so the edge root -> branch-post no longer type-matches.
+		seed.Steps[2].InputArtifactTypeID = "harpia.artifacts.v1.LinkedInPostDraft"
+		err := validatePlanTemplateCatalog([]planTemplateSeed{seed}, testArtifactTypes, testExecutorSKUs)
+		if err == nil || !strings.Contains(err.Error(), "artifact mismatch") {
+			t.Fatalf("err = %v, want containing %q", err, "artifact mismatch")
+		}
+	})
+
+	t.Run("linear template still validates", func(t *testing.T) {
+		seed := validTemplateSeed("news-to-social-post")
+		if err := validatePlanTemplateCatalog([]planTemplateSeed{seed}, testArtifactTypes, testExecutorSKUs); err != nil {
+			t.Fatalf("linear template should validate, got: %v", err)
+		}
+	})
+}
+
+// TestEmbeddedPlanTemplatesLoadLinkedInContentStudio exercises the REAL embedded
+// YAML (not synthetic) for the new branching template, asserting it loads and
+// validates against the seeder exactly as EnsurePlanTemplates would (minus the DB).
+func TestEmbeddedPlanTemplatesLoadLinkedInContentStudio(t *testing.T) {
+	files, err := embeddedPlanTemplateFiles()
+	if err != nil {
+		t.Fatalf("load embedded plan template files: %v", err)
+	}
+	catalog, err := loadPlanTemplateCatalog(files, testArtifactTypes, testExecutorSKUs)
+	if err != nil {
+		t.Fatalf("load embedded catalog: %v", err)
+	}
+
+	var linkedin *planTemplateSeed
+	for i := range catalog {
+		if catalog[i].Key == "linkedin-content-studio" {
+			linkedin = &catalog[i]
+			break
+		}
+	}
+	if linkedin == nil {
+		t.Fatalf("embedded catalog does not contain linkedin-content-studio (keys: %v)", templateKeys(catalog))
+	}
+
+	if len(linkedin.Steps) != 8 {
+		t.Fatalf("step count = %d, want 8", len(linkedin.Steps))
+	}
+	if len(linkedin.Edges) != 7 {
+		t.Fatalf("edge count = %d, want 7", len(linkedin.Edges))
+	}
+	// The template branches at write-draft: three downstream steps must consume
+	// the same TextDraft output type, which only validates under edge-based checking.
+	branchCount := 0
+	for _, edge := range linkedin.Edges {
+		if edge.FromStepKey == "write-draft" {
+			branchCount++
+		}
+	}
+	if branchCount != 3 {
+		t.Fatalf("write-draft branch count = %d, want 3", branchCount)
+	}
+}
+
+func templateKeys(catalog []planTemplateSeed) []string {
+	keys := make([]string, 0, len(catalog))
+	for _, t := range catalog {
+		keys = append(keys, t.Key)
+	}
+	return keys
+}
+
+func TestValidateRuntimeMappingBehaviorPolicyWhitelist(t *testing.T) {
+	stepKeys := map[string]int{"fetch-news": 0}
+
+	for _, policyKey := range []string{"publish_approval_mode", "elicitation_timeout_behavior", "content_output_format"} {
+		mapping := &templateInputRuntimeMappingSeed{
+			Target:    "TEMPLATE_INPUT_RUNTIME_TARGET_BEHAVIOR_POLICY",
+			PolicyKey: policyKey,
+		}
+		if err := validateRuntimeMapping("date_range", mapping, stepKeys); err != nil {
+			t.Fatalf("policyKey %q: unexpected error = %v", policyKey, err)
+		}
+	}
+
+	mapping := &templateInputRuntimeMappingSeed{
+		Target:    "TEMPLATE_INPUT_RUNTIME_TARGET_BEHAVIOR_POLICY",
+		PolicyKey: "unknown_policy",
+	}
+	if err := validateRuntimeMapping("date_range", mapping, stepKeys); err == nil {
+		t.Fatal("unknown_policy: expected error, got nil")
 	}
 }
 

@@ -91,6 +91,39 @@ func TestMaterializePlanConfigurationSkipsAbsentParameters(t *testing.T) {
 	}
 }
 
+func TestApplyBehaviorPolicyContentOutputFormat(t *testing.T) {
+	tests := []struct {
+		name  string
+		value any
+		want  plansv1.ContentOutputFormat
+		ok    bool
+	}{
+		{name: "text_post", value: "text_post", want: plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_TEXT_POST, ok: true},
+		{name: "text_post enum form", value: "content_output_format_text_post", want: plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_TEXT_POST, ok: true},
+		{name: "carousel", value: "carousel", want: plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_CAROUSEL, ok: true},
+		{name: "image_backed_post", value: "image_backed_post", want: plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_IMAGE_BACKED_POST, ok: true},
+		{name: "image_backed lenient", value: "image_backed", want: plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_IMAGE_BACKED_POST, ok: true},
+		{name: "approval_only", value: "approval_only", want: plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_APPROVAL_ONLY, ok: true},
+		{name: "bogus", value: "bogus", want: plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_UNSPECIFIED, ok: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			policies := &plansv1.PlanBehaviorPolicies{}
+			err := applyBehaviorPolicy(policies, "content_output_format", tt.value)
+			if tt.ok && err != nil {
+				t.Fatalf("applyBehaviorPolicy() unexpected error = %v", err)
+			}
+			if !tt.ok && err == nil {
+				t.Fatalf("applyBehaviorPolicy() expected error, got nil")
+			}
+			if got := policies.GetContentOutputFormat(); got != tt.want {
+				t.Fatalf("content output format = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestResolveDefaultSlotBindingsSkipsParameterBindingsAndBindsDefaults(t *testing.T) {
 	tenantID := uuid.New()
 	sourceGroupID := uuid.New()

@@ -176,6 +176,12 @@ func applyBehaviorPolicy(policies *plansv1.PlanBehaviorPolicies, key string, val
 			return fmt.Errorf("unsupported elicitation_timeout_behavior %q", fmt.Sprint(value))
 		}
 		policies.ElicitationTimeoutBehavior = behavior
+	case "content_output_format":
+		format, ok := contentOutputFormatFromValue(value)
+		if !ok {
+			return fmt.Errorf("unsupported content_output_format %q", fmt.Sprint(value))
+		}
+		policies.ContentOutputFormat = format
 	default:
 		return fmt.Errorf("unsupported behavior policy %q", key)
 	}
@@ -190,6 +196,21 @@ func publishApprovalModeFromValue(value any) (plansv1.PublishApprovalMode, bool)
 		return plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_AUTO_PUBLISH, true
 	default:
 		return plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_UNSPECIFIED, false
+	}
+}
+
+func contentOutputFormatFromValue(value any) (plansv1.ContentOutputFormat, bool) {
+	switch strings.ToLower(strings.TrimSpace(fmt.Sprint(value))) {
+	case "text_post", "content_output_format_text_post":
+		return plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_TEXT_POST, true
+	case "carousel", "content_output_format_carousel":
+		return plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_CAROUSEL, true
+	case "image_backed_post", "image_backed", "content_output_format_image_backed_post":
+		return plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_IMAGE_BACKED_POST, true
+	case "approval_only", "content_output_format_approval_only":
+		return plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_APPROVAL_ONLY, true
+	default:
+		return plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_UNSPECIFIED, false
 	}
 }
 

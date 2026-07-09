@@ -59,6 +59,40 @@ func TestValidatePayloadPublishConfirmation(t *testing.T) {
 	}
 }
 
+func TestValidatePayloadCarouselDraft(t *testing.T) {
+	valid := []byte(`{"title":"Q3 Highlights","slides":[{"heading":"Growth","body":"Up 30%"}]}`)
+	if err := ValidatePayload(TypeKeyCarouselDraft, valid); err != nil {
+		t.Fatalf("valid carousel draft rejected: %v", err)
+	}
+
+	cases := []struct {
+		name    string
+		payload []byte
+	}{
+		{"missing slides", []byte(`{"title":"Q3 Highlights"}`)},
+		{"empty slide", []byte(`{"title":"Q3 Highlights","slides":[{"heading":"","body":""}]}`)},
+		{"invalid json", []byte(`{`)},
+		{"empty payload", nil},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := ValidatePayload(TypeKeyCarouselDraft, tc.payload); err == nil {
+				t.Fatal("expected validation error")
+			}
+		})
+	}
+}
+
+func TestValidatePayloadImageAsset(t *testing.T) {
+	if err := ValidatePayload(TypeKeyImageAsset, []byte(`{"mimeType":"image/png"}`)); err != nil {
+		t.Fatalf("valid image asset rejected: %v", err)
+	}
+
+	if err := ValidatePayload(TypeKeyImageAsset, []byte(`{"prompt":"a sunset"}`)); err == nil {
+		t.Fatal("expected error for image asset without mime_type")
+	}
+}
+
 func TestValidatePayloadUnsupportedType(t *testing.T) {
 	if err := ValidatePayload("unknown.type", []byte(`{}`)); err == nil {
 		t.Fatal("expected unsupported type error")

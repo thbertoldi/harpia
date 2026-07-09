@@ -195,6 +195,26 @@ func (r *RuntimeRepository) CreateStepExecution(ctx context.Context, input workf
 	}, nil
 }
 
+// CreateSkippedStepExecution records a SKIPPED step row for a branch the run did
+// not select (e.g. a non-selected content_output_format branch). Skipped steps
+// carry no input artifact and emit no chat message — they are silent audit rows.
+func (r *RuntimeRepository) CreateSkippedStepExecution(ctx context.Context, input workflow.CreateSkippedStepInput) error {
+	if r == nil || r.plans == nil {
+		return fmt.Errorf("plan runtime repository is not configured")
+	}
+	tenantID, executionID, err := parseRuntimeTenantExecution(input.TenantID, input.PlanExecutionID)
+	if err != nil {
+		return err
+	}
+	_, err = r.plans.CreateStepExecution(ctx, &StepExecution{
+		TenantID:        tenantID,
+		PlanExecutionID: executionID,
+		PlanStepKey:     input.PlanStepKey,
+		Status:          StepStatusSkipped,
+	})
+	return err
+}
+
 func (r *RuntimeRepository) ResumeStepExecution(ctx context.Context, input workflow.StepStatusUpdateInput) error {
 	tenantID, stepID, err := parseRuntimeTenantStep(input.TenantID, input.StepExecutionID)
 	if err != nil {
@@ -646,6 +666,11 @@ func buildRetryPlanWorkflowInput(
 		attempt, exists := latestByStep[step.Key]
 		if !exists {
 			return retryPlanInput{}, fmt.Errorf("cannot retry from step %q: upstream step %q has no execution attempt", retryStepKey, step.Key)
+		}
+		if attempt.Status == StepStatusSkipped {
+			// A skipped upstream step has no artifact, but its branch is also
+			// skipped on this run, so no running step consumes it.
+			continue
 		}
 		if attempt.Status != StepStatusCompleted {
 			return retryPlanInput{}, fmt.Errorf("cannot retry from step %q: upstream step %q status is %q", retryStepKey, step.Key, attempt.Status)

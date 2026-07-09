@@ -205,6 +205,144 @@ func TestPlanWorkflowRunsWeeklyNewsletterLinkedInEndToEnd(t *testing.T) {
 	}
 }
 
+func TestPlanWorkflowSkipsNonSelectedBranch(t *testing.T) {
+	cases := []struct {
+		name          string
+		outputFormat  plansv1.ContentOutputFormat
+		wantRan       []string
+		wantSkipped   []string
+		wantSkipCalls bool
+	}{
+		{
+			name:         "carousel",
+			outputFormat: plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_CAROUSEL,
+			// Text branch (adapt-for-linkedin, publish-post) is skipped; the
+			// shared fetch/write-draft and the carousel branch run.
+			wantRan:       []string{"fetch-news", "write-draft", "draft-carousel", "publish-carousel"},
+			wantSkipped:   []string{"adapt-for-linkedin", "publish-post"},
+			wantSkipCalls: true,
+		},
+		{
+			name:         "text_post",
+			outputFormat: plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_TEXT_POST,
+			// Carousel branch (draft-carousel, publish-carousel) is skipped;
+			// the shared fetch/write-draft and the text branch run.
+			wantRan:       []string{"fetch-news", "write-draft", "adapt-for-linkedin", "publish-post"},
+			wantSkipped:   []string{"draft-carousel", "publish-carousel"},
+			wantSkipCalls: true,
+		},
+		{
+			name: "unspecified_backward_compatible",
+			// No format policy → nothing is skipped; every step runs (matches
+			// pre-change behavior for templates without content_output_format).
+			outputFormat:  plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_UNSPECIFIED,
+			wantRan:       []string{"fetch-news", "write-draft", "adapt-for-linkedin", "publish-post", "draft-carousel", "publish-carousel"},
+			wantSkipped:   nil,
+			wantSkipCalls: false,
+		},
+		{
+			name:         "approval_only_normalized_to_text_post",
+			outputFormat: plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_APPROVAL_ONLY,
+			// APPROVAL_ONLY runs the text branch (like TEXT_POST); carousel is
+			// skipped.
+			wantRan:       []string{"fetch-news", "write-draft", "adapt-for-linkedin", "publish-post"},
+			wantSkipped:   []string{"draft-carousel", "publish-carousel"},
+			wantSkipCalls: true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			env := newPlanWorkflowTestEnv(t)
+
+			input := PlanWorkflowInput{
+				TenantID:        "22222222-2222-2222-2222-222222222222",
+				PlanExecutionID: "11111111-1111-1111-1111-111111111111",
+			}
+			snapshot := multiBranchSnapshot(tc.outputFormat)
+
+			var createdSteps []string
+			var ranSteps []string
+			var skippedSteps []string
+			env.OnActivity(LoadPlanExecutionActivityName, mock.Anything, input).Return(LoadedPlanExecution{
+				PlanExecutionID: input.PlanExecutionID,
+				Status:          "pending",
+				Snapshot:        snapshot,
+			}, nil)
+			env.OnActivity(StartPlanExecutionActivityName, mock.Anything, input).Return(nil)
+			if tc.wantSkipCalls {
+				env.OnActivity(CreateSkippedStepExecutionActivityName, mock.Anything, mock.Anything).Return(
+					func(ctx context.Context, skipInput CreateSkippedStepInput) error {
+						skippedSteps = append(skippedSteps, skipInput.PlanStepKey)
+						return nil
+					},
+				)
+			}
+			env.OnActivity(CreateStepExecutionActivityName, mock.Anything, mock.Anything).Return(
+				func(ctx context.Context, stepInput CreateStepExecutionInput) (StepExecutionRecord, error) {
+					createdSteps = append(createdSteps, stepInput.PlanStepKey)
+					return StepExecutionRecord{
+						ID:              "step-" + stepInput.PlanStepKey,
+						PlanStepKey:     stepInput.PlanStepKey,
+						Attempt:         1,
+						InputArtifactID: stepInput.InputArtifactID,
+					}, nil
+				},
+			)
+			env.OnActivity(RunIntegrationActivityName, mock.Anything, mock.Anything).Return(
+				func(ctx context.Context, executorInput ExecutorActivityInput) (ExecutorActivityResult, error) {
+					ranSteps = append(ranSteps, executorInput.PlanStepKey)
+					return ExecutorActivityResult{
+						Status:           ExecutorResultStatusCompleted,
+						OutputArtifactID: "out-" + executorInput.PlanStepKey,
+					}, nil
+				},
+			)
+			env.OnActivity(RunAgentActivityName, mock.Anything, mock.Anything).Return(
+				func(ctx context.Context, executorInput ExecutorActivityInput) (ExecutorActivityResult, error) {
+					ranSteps = append(ranSteps, executorInput.PlanStepKey)
+					return ExecutorActivityResult{
+						Status:           ExecutorResultStatusCompleted,
+						OutputArtifactID: "out-" + executorInput.PlanStepKey,
+					}, nil
+				},
+			)
+			env.OnActivity(CompleteStepExecutionActivityName, mock.Anything, mock.Anything).Return(nil)
+			env.OnActivity(CompletePlanExecutionActivityName, mock.Anything, input).Return(nil)
+
+			env.ExecuteWorkflow(PlanWorkflow, input)
+
+			if !env.IsWorkflowCompleted() {
+				t.Fatal("workflow did not complete")
+			}
+			if err := env.GetWorkflowError(); err != nil {
+				t.Fatalf("workflow failed: %v", err)
+			}
+
+			var result PlanWorkflowResult
+			if err := env.GetWorkflowResult(&result); err != nil {
+				t.Fatalf("get workflow result: %v", err)
+			}
+			if result.Status != "completed" {
+				t.Fatalf("result status = %q, want completed", result.Status)
+			}
+
+			if !reflect.DeepEqual(ranSteps, tc.wantRan) {
+				t.Fatalf("ran steps = %#v, want %#v", ranSteps, tc.wantRan)
+			}
+			if !reflect.DeepEqual(skippedSteps, tc.wantSkipped) {
+				t.Fatalf("skipped steps = %#v, want %#v", skippedSteps, tc.wantSkipped)
+			}
+			if tc.wantSkipCalls && len(skippedSteps) == 0 {
+				t.Fatalf("expected CreateSkippedStepExecutionActivity to be called, got %#v", skippedSteps)
+			}
+			if !tc.wantSkipCalls && len(skippedSteps) != 0 {
+				t.Fatalf("expected no skipped steps (backward-compat), got %#v", skippedSteps)
+			}
+		})
+	}
+}
+
 func TestPlanActivityOptionsUseBoundedRetries(t *testing.T) {
 	options := planActivityOptions()
 
@@ -833,6 +971,7 @@ func newPlanWorkflowTestEnv(t *testing.T) *testsuite.TestWorkflowEnvironment {
 	env.RegisterActivity(LoadPlanExecutionActivity)
 	env.RegisterActivity(StartPlanExecutionActivity)
 	env.RegisterActivity(CreateStepExecutionActivity)
+	env.RegisterActivity(CreateSkippedStepExecutionActivity)
 	env.RegisterActivity(RunIntegrationActivity)
 	env.RegisterActivity(RunAgentActivity)
 	env.RegisterActivity(ResumeStepExecutionActivity)
@@ -857,6 +996,10 @@ func StartPlanExecutionActivity(context.Context, PlanWorkflowInput) error {
 
 func CreateStepExecutionActivity(context.Context, CreateStepExecutionInput) (StepExecutionRecord, error) {
 	return StepExecutionRecord{}, unexpectedActivityError("CreateStepExecutionActivity")
+}
+
+func CreateSkippedStepExecutionActivity(context.Context, CreateSkippedStepInput) error {
+	return unexpectedActivityError("CreateSkippedStepExecutionActivity")
 }
 
 func RunIntegrationActivity(context.Context, ExecutorActivityInput) (ExecutorActivityResult, error) {
@@ -971,6 +1114,91 @@ func testPlanSnapshot() PlanExecutionSnapshot {
 				ID:   "installation-adapt",
 				Kind: ExecutorKindAgent,
 			},
+		},
+	}
+}
+
+// multiBranchSnapshot builds a content plan that forks into a text-post branch
+// and a carousel branch, both fed by a shared fetch → write-draft stem. The
+// artifact-type keys are chosen so formatForStep classifies each branch
+// correctly (LinkedInPostDraft → TEXT_POST, CarouselDraft → CAROUSEL). The
+// publish steps are marked AUTO_PUBLISH so the approval gate does not engage.
+func multiBranchSnapshot(outputFormat plansv1.ContentOutputFormat) PlanExecutionSnapshot {
+	return PlanExecutionSnapshot{
+		SchemaVersion: 1,
+		Configuration: &plansv1.PlanConfiguration{
+			Id:                  "config-1",
+			TenantId:            "22222222-2222-2222-2222-222222222222",
+			PlanTemplateId:      "template-1",
+			PlanTemplateVersion: 1,
+			Status:              plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
+			SeedArtifacts: []*plansv1.SeedArtifactBinding{
+				{
+					StepKey:    "fetch-news",
+					InputName:  "date_range",
+					ArtifactId: "seed-date-range",
+				},
+			},
+			BehaviorPolicies: &plansv1.PlanBehaviorPolicies{
+				ElicitationTimeoutBehavior: plansv1.ElicitationTimeoutBehavior_ELICITATION_TIMEOUT_BEHAVIOR_PAUSE_UNTIL_ANSWERED,
+				PublishApprovalMode:        plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_AUTO_PUBLISH,
+				ContentOutputFormat:        outputFormat,
+			},
+		},
+		Template: &plansv1.PlanTemplate{
+			Id:      "template-1",
+			Key:     "rich-linkedin-content",
+			Version: 1,
+			Steps: []*plansv1.PlanStep{
+				// Shared stem.
+				{
+					Key:                  "fetch-news",
+					InputArtifactTypeId:  "harpia.artifacts.v1.DateRange",
+					OutputArtifactTypeId: "harpia.artifacts.v1.NewsList",
+				},
+				{
+					Key:                  "write-draft",
+					InputArtifactTypeId:  "harpia.artifacts.v1.NewsList",
+					OutputArtifactTypeId: "harpia.artifacts.v1.TextDraft",
+				},
+				// Text-post branch.
+				{
+					Key:                  "adapt-for-linkedin",
+					InputArtifactTypeId:  "harpia.artifacts.v1.TextDraft",
+					OutputArtifactTypeId: "harpia.artifacts.v1.LinkedInPostDraft",
+				},
+				{
+					Key:                  "publish-post",
+					InputArtifactTypeId:  "harpia.artifacts.v1.LinkedInPostDraft",
+					OutputArtifactTypeId: "harpia.artifacts.v1.PublishConfirmation",
+				},
+				// Carousel branch.
+				{
+					Key:                  "draft-carousel",
+					InputArtifactTypeId:  "harpia.artifacts.v1.TextDraft",
+					OutputArtifactTypeId: "harpia.artifacts.v1.CarouselDraft",
+				},
+				{
+					Key:                  "publish-carousel",
+					InputArtifactTypeId:  "harpia.artifacts.v1.CarouselDraft",
+					OutputArtifactTypeId: "harpia.artifacts.v1.PublishConfirmation",
+				},
+			},
+			Edges: []*plansv1.PlanStepDependency{
+				{FromStepKey: "fetch-news", ToStepKey: "write-draft"},
+				{FromStepKey: "write-draft", ToStepKey: "adapt-for-linkedin"},
+				{FromStepKey: "adapt-for-linkedin", ToStepKey: "publish-post"},
+				{FromStepKey: "write-draft", ToStepKey: "draft-carousel"},
+				{FromStepKey: "draft-carousel", ToStepKey: "publish-carousel"},
+			},
+		},
+		ExecutorInstallations: map[string]ExecutorInstallationSnapshot{
+			"fetch-news":        {ID: "installation-fetch", Kind: ExecutorKindIntegration},
+			"write-draft":       {ID: "installation-write", Kind: ExecutorKindAgent},
+			"adapt-for-linkedin": {ID: "installation-adapt", Kind: ExecutorKindAgent},
+			"publish-post":      {ID: "installation-publish-post", Kind: ExecutorKindIntegration},
+			"draft-carousel":    {ID: "installation-draft-carousel", Kind: ExecutorKindAgent},
+			"publish-carousel":  {ID: "installation-publish-carousel", Kind: ExecutorKindIntegration},
 		},
 	}
 }

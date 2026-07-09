@@ -6,4 +6,6 @@ const (
 	SKULinkedInPublish        = "linkedin-publish"
 	SKUNewsletterWriterSenior = "newsletter-writer-senior"
 	SKULinkedInVoiceSenior    = "linkedin-voice-senior"
+	SKULinkedinCarouselSenior = "linkedin-carousel-senior"
+	SKUImageAssetGenerator    = "image-asset-generator"
 )

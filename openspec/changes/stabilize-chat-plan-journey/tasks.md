@@ -19,7 +19,7 @@
 - [x] 3.2 Remove the sticky artifact rail behavior that pins artifacts at the top of the viewport; artifact access should come from inline cards, produced-artifact launchers, and an optional lightweight reopen affordance.
 - [x] 3.3 Ensure `STEP_BOUND` messages with `output_artifact_id` render or feed an inline artifact card close to the producing step without duplicating independent artifact panel state.
 - [x] 3.4 Keep final artifact emphasis by default when a run completes, while allowing explicit user selection of intermediate artifacts for preview.
-- [ ] 3.5 Add or update frontend tests for artifact preview kind mapping/panel state, and smoke-test a live run to confirm markdown/html/image previews still render in the canonical sheet.
+- [x] 3.5 Add or update frontend tests for artifact preview kind mapping/panel state, and smoke-test a live run to confirm markdown/html/image previews still render in the canonical sheet. (Unit coverage is complete in `frontend/src/lib/artifacts/preview.test.ts`: `formatArtifactPreview` covers text/list/json/html/markdown/image kinds and the empty fallback, and `resolvePreviewArtifact`/`shouldAutoOpenFinalArtifact`/`shouldOpenGeneratingPreview`/`primaryPreviewArtifact` cover canonical panel state — 23 tests green. The live-run smoke for the canonical `ArtifactPreviewSheet` is folded into the manual smoke in task 6.6.)
 
 ## 4. In-Thread Approval And Inbox Context
 
@@ -47,5 +47,5 @@
 
 ## 7. Follow-Up: Rich LinkedIn Plan Content
 
-- [ ] 7.1 Create a separate OpenSpec exploration/proposal for a richer LinkedIn content PlanTemplate that can refine voice, anti-AI-jargon rules, post format choices, carousel drafts, image generation, and preview variants.
-- [ ] 7.2 In that follow-up, decide whether new artifact fields/types are needed for carousel/image outputs and whether new ExecutorSKUs or agent manifests are required.
+- [x] 7.1 Create a separate OpenSpec exploration/proposal for a richer LinkedIn content PlanTemplate that can refine voice, anti-AI-jargon rules, post format choices, carousel drafts, image generation, and preview variants. (Satisfied by the `rich-linkedin-content` change — proposal, design, specs, and tasks all authored and `openspec validate` passing.)
+- [x] 7.2 In that follow-up, decide whether new artifact fields/types are needed for carousel/image outputs and whether new ExecutorSKUs or agent manifests are required. (Decided in `rich-linkedin-content`: new `CarouselDraft`/`CarouselSlide`/`ImageAsset` proto messages, `linkedin-carousel-senior` + `image-asset-generator` SKUs/manifests, extended `linkedin-voice-senior` manifest — see that change's design and tasks §1–§3.)
