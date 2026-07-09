@@ -32,9 +32,9 @@
 
 ## 5. Context-Preserving Navigation
 
-- [ ] 5.1 Update inbox approval links so selecting an approval navigates to `/chat/[threadId]` with enough query/hash/state to select the relevant plan/execution/approval context.
-- [ ] 5.2 Update `/runs` execution links, if needed, so opening a run selects the origin thread, active plan, and execution context rather than landing on an ambiguous thread state.
-- [ ] 5.3 Add tests for URL/context derivation helpers or route-state handling used by inbox/runs links.
+- [x] 5.1 Update inbox approval links so selecting an approval navigates to `/chat/[threadId]` with enough query/hash/state to select the relevant plan/execution/approval context. (Link carries `?plan=&execution=#m-approval-<id>`; chat page resolves the `?plan=` tab and scrolls to the approval card once messages render. Shared `approvalAnchorId` keeps the link hash and `ApprovalRefCard` element id in sync.)
+- [ ] 5.2 Update `/runs` execution links, if needed, so opening a run selects the origin thread, active plan, and execution context rather than landing on an ambiguous thread state. (Chat page still selects the most-recent execution rather than honoring the `?execution=` param — carried in the URL but not yet consumed for execution selection.)
+- [x] 5.3 Add tests for URL/context derivation helpers or route-state handling used by inbox/runs links. (`links.test.ts` covers `chatPlanPath`, `inboxApprovalThreadPath`, and the `approvalAnchorId` link/card contract.)
 
 ## 6. Verification
 
