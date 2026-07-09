@@ -2,6 +2,7 @@
   import { Eye, ShieldCheck, ShieldX, ShieldQuestion } from "lucide-svelte";
   import { fade } from "svelte/transition";
   import type { ChatMessage } from "$lib/chat/types";
+  import type { StepTitleResolver } from "$lib/chat/event-text";
   import { locale, translate } from "$lib/i18n";
   import { formatRelativeTime } from "$lib/i18n/format";
   import { loadApproval, respondToApprovalRequest } from "$lib/plans/approvals";
@@ -28,6 +29,12 @@
     inputArtifactId?: string;
     onOpenArtifact?: (artifactId: string) => void;
     onDecided?: () => void;
+    /**
+     * Resolves a step_key to its localized template title so the approval
+     * context reads "Etapa Publicar no LinkedIn" rather than the raw step key.
+     * Defaults to the identity function when no resolver is supplied.
+     */
+    stepTitleFor?: StepTitleResolver;
   }
 
   let {
@@ -37,6 +44,7 @@
     inputArtifactId = "",
     onOpenArtifact,
     onDecided,
+    stepTitleFor,
   }: Props = $props();
 
   const parsed = $derived(parseApprovalPayloadContext(message.payloadJson));
@@ -114,7 +122,7 @@
         items.push({
           key: "step",
           label: translate("thread.approval.context.step", $locale, {
-            value: parsed.planStepKey,
+            value: stepTitleFor?.(parsed.planStepKey) ?? parsed.planStepKey,
           }),
         });
       }

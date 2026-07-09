@@ -189,6 +189,7 @@
     {tenantId}
     {messages}
     {onOpenArtifact}
+    {stepTitleFor}
     onDecided={onApprovalDecided}
   />
 {:else}
