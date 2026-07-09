@@ -52,7 +52,7 @@ func DeriveState(template *plansv1.PlanTemplate, config *plansv1.PlanConfigurati
 		if stepKey := firstUnboundOverseerStepKey(template, config); stepKey != "" {
 			return AssistantState{Kind: StateOverseerStep, StepKey: stepKey}
 		}
-		if policyKey := firstUnsetPolicyKey(config.GetBehaviorPolicies()); policyKey != "" {
+		if policyKey := firstUnsetPolicyKey(template, config.GetBehaviorPolicies()); policyKey != "" {
 			return AssistantState{Kind: StatePoliciesStep, PolicyKey: policyKey}
 		}
 		return AssistantState{Kind: StateBindingMatrix}
@@ -63,12 +63,44 @@ func DeriveState(template *plansv1.PlanTemplate, config *plansv1.PlanConfigurati
 	}
 }
 
-func firstUnsetPolicyKey(p *plansv1.PlanBehaviorPolicies) string {
-	if p == nil || p.GetPublishApprovalMode() == plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_UNSPECIFIED {
-		return "publish_approval_mode"
+// orderedPolicyKeys is the stable order behavior policies are prompted in.
+var orderedPolicyKeys = []string{"publish_approval_mode", "elicitation_timeout_behavior"}
+
+// templateDeclaresPolicy reports whether the template has an input parameter
+// mapped to the given behavior policy. Only declared policies are prompted for:
+// a template that never publishes (e.g. news-digest-draft) declares no
+// publish_approval_mode parameter, so the assistant must not ask for it —
+// otherwise the selection has nowhere to materialize and the journey stalls.
+func templateDeclaresPolicy(template *plansv1.PlanTemplate, policyKey string) bool {
+	for _, parameter := range template.GetInputParameters() {
+		for _, mapping := range parameter.GetRuntimeMappings() {
+			if mapping.GetTarget() == plansv1.TemplateInputRuntimeTarget_TEMPLATE_INPUT_RUNTIME_TARGET_BEHAVIOR_POLICY &&
+				mapping.GetPolicyKey() == policyKey {
+				return true
+			}
+		}
 	}
-	if p.GetElicitationTimeoutBehavior() == plansv1.ElicitationTimeoutBehavior_ELICITATION_TIMEOUT_BEHAVIOR_UNSPECIFIED {
-		return "elicitation_timeout_behavior"
+	return false
+}
+
+// policyUnset reports whether the given behavior policy still holds its
+// unspecified zero value on the configuration.
+func policyUnset(p *plansv1.PlanBehaviorPolicies, policyKey string) bool {
+	switch policyKey {
+	case "publish_approval_mode":
+		return p.GetPublishApprovalMode() == plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_UNSPECIFIED
+	case "elicitation_timeout_behavior":
+		return p.GetElicitationTimeoutBehavior() == plansv1.ElicitationTimeoutBehavior_ELICITATION_TIMEOUT_BEHAVIOR_UNSPECIFIED
+	default:
+		return false
+	}
+}
+
+func firstUnsetPolicyKey(template *plansv1.PlanTemplate, p *plansv1.PlanBehaviorPolicies) string {
+	for _, key := range orderedPolicyKeys {
+		if templateDeclaresPolicy(template, key) && policyUnset(p, key) {
+			return key
+		}
 	}
 	return ""
 }
@@ -126,12 +158,14 @@ func isAgentBackedStep(step *plansv1.PlanStep) bool {
 	return step.GetExecutorRequirement().GetExecutorKind() == plansv1.ExecutorKind_EXECUTOR_KIND_AGENT
 }
 
-// policiesSet reports whether both behavior-policy fields are set. Consumed by
-// prompts.go to gate the matrix card's Save button.
-func policiesSet(p *plansv1.PlanBehaviorPolicies) bool {
-	if p == nil {
-		return false
+// policiesSet reports whether every behavior policy the template declares is
+// set. Consumed by prompts.go to gate the matrix card's Save button. A template
+// that declares no behavior policies is trivially satisfied.
+func policiesSet(template *plansv1.PlanTemplate, p *plansv1.PlanBehaviorPolicies) bool {
+	for _, key := range orderedPolicyKeys {
+		if templateDeclaresPolicy(template, key) && policyUnset(p, key) {
+			return false
+		}
 	}
-	return p.GetElicitationTimeoutBehavior() != plansv1.ElicitationTimeoutBehavior_ELICITATION_TIMEOUT_BEHAVIOR_UNSPECIFIED &&
-		p.GetPublishApprovalMode() != plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_UNSPECIFIED
+	return true
 }

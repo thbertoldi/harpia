@@ -45,6 +45,57 @@ func validPolicies() *plansv1.PlanBehaviorPolicies {
 	}
 }
 
+// withPolicyParams declares behavior-policy input parameters on a template so
+// DeriveState will prompt for them. Templates that declare no such parameters
+// (e.g. draft-only plans that never publish) must skip the policies step.
+func withPolicyParams(tpl *plansv1.PlanTemplate, policyKeys ...string) *plansv1.PlanTemplate {
+	for _, pk := range policyKeys {
+		tpl.InputParameters = append(tpl.InputParameters, &plansv1.TemplateInputParameter{
+			Key: pk,
+			RuntimeMappings: []*plansv1.TemplateInputRuntimeMapping{{
+				Target:    plansv1.TemplateInputRuntimeTarget_TEMPLATE_INPUT_RUNTIME_TARGET_BEHAVIOR_POLICY,
+				PolicyKey: pk,
+			}},
+		})
+	}
+	return tpl
+}
+
+// A draft-only template declares no behavior-policy parameters, so a fully
+// bound configuration must advance straight to the review/save matrix rather
+// than dead-ending on a policies prompt whose selection can never materialize.
+// Regression for the news-digest-draft journey stall.
+func TestDeriveState_BindingMatrix_WhenTemplateDeclaresNoPolicies(t *testing.T) {
+	cfg := &plansv1.PlanConfiguration{
+		PlanTemplateId: "tpl-1",
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+		SlotBindings:   []*plansv1.SlotBinding{{StepKey: "a", ExecutorInstallationId: "inst-a"}},
+		// no behavior policies set, and the template declares none
+	}
+	got := planassistant.DeriveState(mkTemplate("a"), cfg, nil)
+	if got.Kind != planassistant.StateBindingMatrix {
+		t.Fatalf("got %+v, want BINDING_MATRIX (template declares no policies)", got)
+	}
+}
+
+// A template that declares only the publish policy must not prompt for the
+// elicitation policy it never declared.
+func TestDeriveState_BindingMatrix_WhenOnlyDeclaredPolicySet(t *testing.T) {
+	cfg := &plansv1.PlanConfiguration{
+		PlanTemplateId: "tpl-1",
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+		SlotBindings:   []*plansv1.SlotBinding{{StepKey: "a", ExecutorInstallationId: "inst-a"}},
+		BehaviorPolicies: &plansv1.PlanBehaviorPolicies{
+			PublishApprovalMode: plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_REQUIRE_APPROVAL,
+		},
+	}
+	tpl := withPolicyParams(mkTemplate("a"), "publish_approval_mode")
+	got := planassistant.DeriveState(tpl, cfg, nil)
+	if got.Kind != planassistant.StateBindingMatrix {
+		t.Fatalf("got %+v, want BINDING_MATRIX (only declared policy is set)", got)
+	}
+}
+
 func TestDeriveState_AwaitingTemplate_WhenTemplateIdEmpty(t *testing.T) {
 	got := planassistant.DeriveState(mkTemplate("a"), &plansv1.PlanConfiguration{}, nil)
 	if got.Kind != planassistant.StateAwaitingTemplate {
@@ -76,7 +127,8 @@ func TestDeriveState_PoliciesStep_WhenPoliciesUnset(t *testing.T) {
 		SlotBindings:   []*plansv1.SlotBinding{{StepKey: "a", ExecutorInstallationId: "inst-a"}},
 		// policies unset
 	}
-	got := planassistant.DeriveState(mkTemplate("a"), cfg, nil)
+	tpl := withPolicyParams(mkTemplate("a"), "publish_approval_mode", "elicitation_timeout_behavior")
+	got := planassistant.DeriveState(tpl, cfg, nil)
 	if got.Kind != planassistant.StateKind("POLICIES_STEP") {
 		t.Fatalf("got %+v, want POLICIES_STEP (policies unset)", got)
 	}
@@ -91,7 +143,8 @@ func TestDeriveState_PoliciesStep_WhenPoliciesPartial(t *testing.T) {
 			PublishApprovalMode: plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_REQUIRE_APPROVAL,
 		},
 	}
-	got := planassistant.DeriveState(mkTemplate("a"), cfg, nil)
+	tpl := withPolicyParams(mkTemplate("a"), "publish_approval_mode", "elicitation_timeout_behavior")
+	got := planassistant.DeriveState(tpl, cfg, nil)
 	if got.Kind != planassistant.StateKind("POLICIES_STEP") {
 		t.Fatalf("got %+v, want POLICIES_STEP (policies partial)", got)
 	}
@@ -185,6 +238,7 @@ func TestDeriveState_PoliciesStep_WhenRequiredOverseersBoundButPoliciesMissing(t
 	tpl := mkTemplate("fetch-news", "write-draft")
 	markStepIntegration(tpl, "fetch-news")
 	markStepAgent(tpl, "write-draft")
+	withPolicyParams(tpl, "publish_approval_mode", "elicitation_timeout_behavior")
 	cfg := &plansv1.PlanConfiguration{
 		PlanTemplateId: "tpl-1",
 		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,

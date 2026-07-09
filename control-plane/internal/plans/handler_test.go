@@ -305,6 +305,12 @@ func autoBindTestTemplate() *PlanTemplate {
 				ExecutorRequirement: json.RawMessage(`{"executor_kind":1}`), // AGENT
 			},
 		},
+		// Declares both behavior policies so DeriveState reaches POLICIES_STEP
+		// once bindings/overseers are resolved.
+		InputParameters: json.RawMessage(`[
+			{"key":"approval_mode","runtimeMappings":[{"target":"TEMPLATE_INPUT_RUNTIME_TARGET_BEHAVIOR_POLICY","policyKey":"publish_approval_mode"}]},
+			{"key":"elicitation_timeout_behavior","runtimeMappings":[{"target":"TEMPLATE_INPUT_RUNTIME_TARGET_BEHAVIOR_POLICY","policyKey":"elicitation_timeout_behavior"}]}
+		]`),
 	}
 }
 

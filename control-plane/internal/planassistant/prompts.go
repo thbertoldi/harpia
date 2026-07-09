@@ -66,7 +66,7 @@ func buildMatrixPrompt(in PromptInput) (string, string) {
 	user := currentUserLabel(in)
 	rows := matrixRows(in)
 	text := fmt.Sprintf("Here's the plan. Pick an executor for each task — overseer defaults to %s.", user)
-	payload := chat.BuildAssistantMatrixPayload(rows, policiesSet(in.Config.GetBehaviorPolicies()))
+	payload := chat.BuildAssistantMatrixPayload(rows, policiesSet(in.Template, in.Config.GetBehaviorPolicies()))
 	return text, payload
 }
 
@@ -89,7 +89,7 @@ func buildBindingStepPrompt(state AssistantState, in PromptInput) (string, strin
 		state.StepKey,
 		focusedOptions,
 		rows,
-		policiesSet(in.Config.GetBehaviorPolicies()),
+		policiesSet(in.Template, in.Config.GetBehaviorPolicies()),
 	)
 	return text, payload
 }
@@ -135,22 +135,30 @@ func buildPoliciesStepPrompt(state AssistantState, in PromptInput) (string, stri
 			},
 		},
 	}
+	// Only offer policies the template actually declares.
+	declared := make([]chat.AssistantPolicyField, 0, len(allFields))
+	for _, field := range allFields {
+		if templateDeclaresPolicy(in.Template, field.Key) {
+			declared = append(declared, field)
+		}
+	}
+
 	policyKey := state.PolicyKey
 	if policyKey == "" {
-		policyKey = firstUnsetPolicyKey(in.Config.GetBehaviorPolicies())
+		policyKey = firstUnsetPolicyKey(in.Template, in.Config.GetBehaviorPolicies())
 	}
 	fields := make([]chat.AssistantPolicyField, 0, 1)
-	for _, field := range allFields {
+	for _, field := range declared {
 		if field.Key == policyKey {
 			fields = append(fields, field)
 			break
 		}
 	}
 	if len(fields) == 0 {
-		fields = allFields
+		fields = declared
 	}
 	text := "How should this plan behave at runtime?"
-	payload := chat.BuildAssistantPoliciesStepPayload(policyKey, fields, policiesSet(in.Config.GetBehaviorPolicies()))
+	payload := chat.BuildAssistantPoliciesStepPayload(policyKey, fields, policiesSet(in.Template, in.Config.GetBehaviorPolicies()))
 	return text, payload
 }
 

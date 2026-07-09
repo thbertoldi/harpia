@@ -112,6 +112,7 @@ func TestNextTurn_AdvancesThroughUnboundStepsThenMatrix(t *testing.T) {
 	chatStore := &fakeChat{}
 	tpl := mkTemplate("fetch-news", "write-draft")
 	tpl.Id = testTemplateUUID
+	withPolicyParams(tpl, "publish_approval_mode", "elicitation_timeout_behavior")
 	cfg := &plansv1.PlanConfiguration{
 		Id:             uuid.NewString(),
 		OriginThreadId: testThreadUUID,
@@ -196,6 +197,7 @@ func TestNextTurn_AdvancesFromBindingsToOverseerThenMatrix(t *testing.T) {
 	tpl.Id = testTemplateUUID
 	markStepIntegration(tpl, "fetch-news")
 	markStepAgent(tpl, "write-draft")
+	withPolicyParams(tpl, "publish_approval_mode", "elicitation_timeout_behavior")
 	cfgID := uuid.NewString()
 	configs := &fakeConfigs{cur: &plansv1.PlanConfiguration{
 		Id:             cfgID,
@@ -490,6 +492,7 @@ func TestNextTurn_ProgressionEmitsExactlyOnePromptPerStep(t *testing.T) {
 	markStepIntegration(tpl, "fetch-news")
 	markStepAgent(tpl, "write-draft")
 	tpl.Id = testTemplateUUID
+	withPolicyParams(tpl, "publish_approval_mode", "elicitation_timeout_behavior")
 	cfgID := uuid.NewString()
 	configs := &fakeConfigs{cur: &plansv1.PlanConfiguration{
 		Id:             cfgID,
