@@ -42,6 +42,57 @@ and `STEP_REBOUND` message kinds. No new ADR (ADR-012 §10 covers it).
 `openspec/changes/archive/2026-07-01-conversational-slot-binding`,
 `openspec/changes/archive/2026-07-01-conversational-overseer`.
 
+### 🛠️ Capability-based agent teams (roles × tiers) — realign the executor model
+**Taxonomy:** ExecutorSKU, ExecutorRequirement.required_capabilities, ExecutorInstallation,
+SlotBinding, AgentType (manifest capabilities), PlanStep, Artifact.
+
+**The problem.** The current path hardcodes *one narrow SKU per step* and treats each
+capability as a separate agent (`linkedin-voice-senior`, `linkedin-carousel-senior`, …).
+That fragments the catalog, forces a new SKU/agent for every new capability, makes binding
+rigid (a step names a specific SKU, not a capability), and — because the configuration
+assistant binds *every* step before the run — any step whose SKU has no installable
+executor blocks the whole configuration. It also split "publish" per format, when the
+carousel/image are really *content inside one post*.
+
+**The model we want.**
+- **Agents are multi-capable team members**, not one-capability specialists. A single
+  "LinkedIn Content Specialist" carries several capabilities (adapt text, author carousel,
+  tune voice, apply anti-AI-jargon). The catalog grows by *adding capabilities to agents*,
+  not by minting a new agent per capability.
+- **Seniority tiers (Júnior / Pleno / Sênior)** per role: each tier has its own graph,
+  tool access, quality, and cost-per-execution. Predefined platform agents are the defaults
+  the platform suggests.
+- **A plan step declares a *required capability*** (`ExecutorRequirement.
+  required_capabilities` already exists in the proto), not a hardcoded SKU. The
+  `default_executor_sku_key` becomes a hint/default, not the contract.
+- **The platform recommends a *team***: given the plan's steps and their required
+  capabilities, suggest a minimal set of agents (role × tier) whose combined capabilities
+  cover every step. A multi-capable agent can serve several steps, so the team stays small.
+  The user accepts or swaps members ("choose the team that executes my plan").
+- **One unified content post.** The LinkedIn output is a single post artifact that may
+  carry a text body, an optional carousel (markup slides → markdown/HTML/PDF), and optional
+  generated image(s). **One publish step**, not one per format. Carousel and image are
+  *content*; format is "what the post includes", not separate execution branches.
+- **Image generation is an *opt-in capability*** (an Image Generator role/agent), chosen by
+  the user during configuration ("include generated images?"), never a mandatory branch.
+  When opted in, the image agent joins the team and its outputs embed in the post/carousel.
+
+**Architecture boundary.** Capability-matching is a new recommendation concern (Agent
+Orchestration / Plan Management), reusing ADR-012's existing capability fields — not a
+schema revolution. The unified post may collapse the per-format branches (and the
+engine's skip logic with them). Feed/OAuth/provider config stays on ExecutorInstallation.
+
+**What this supersedes.** The narrow per-capability SKUs and the separate
+`publish-post`/`publish-carousel` steps built under `rich-linkedin-content`; the
+`content_output_format` axis as a branch selector (it becomes a "what's in the post"
+content choice). The `CarouselDraft`/`ImageAsset` protos and the carousel agent graph are
+reused as *content* produced by multi-capable agents.
+
+**Next:** needs an architecture decision (ADR or constitution amendment) on the agent
+taxonomy (roles × tiers, capability granularity, team-recommendation rules) and a revised
+`rich-linkedin-content` (or successor) OpenSpec change. Capture decisions before
+re-implementing — do not keep patching the narrow-SKU model.
+
 ## Content
 
 ### ✅ Are PlanTemplates content or coded modules? → decided (ADR-015)
@@ -250,7 +301,10 @@ on ExecutorInstallation and keep the resulting outputs in the Artifact stream.
 **Next:** 🛠️ proposed as `openspec/changes/rich-linkedin-content` (variant template
 `linkedin-content-studio`; new `CarouselDraft`/`ImageAsset` ArtifactTypes; new
 `linkedin-carousel-senior` + `image-asset-generator` ExecutorSKUs; format axis modeled as a
-`content_output_format` behavior policy).
+`content_output_format` behavior policy). **↻ realigning:** the narrow per-capability SKU
+model is being superseded — see *"Capability-based agent teams (roles × tiers)"* above;
+carousel/image become opt-in content produced by multi-capable agents, not separate
+branches/SKUs.
 
 ### 💡 Proactive memory capture from conversational configuration
 **Taxonomy:** PlanConfiguration, PlanBehaviorPolicies, MemoryResource, MemoryBinding,
