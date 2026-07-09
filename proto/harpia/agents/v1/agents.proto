@@ -26,6 +26,18 @@ service AgentService {
   rpc ContinueExecution(ContinueExecutionRequest) returns (ContinueExecutionResponse);
 }
 
+// One capability of a multi-capable agent (ADR-018 Option B). Each capability is
+// its own (input -> output) contract with its own prompt and schemas; a single
+// agent manifest may declare several. Single-capability agents use one entry.
+message AgentCapability {
+  string id = 1;                    // capability id, e.g. "linkedin-content-adaptation"
+  string artifact_input_type = 2;   // artifact type key consumed
+  string artifact_output_type = 3;  // artifact type key produced
+  string system_prompt = 4;
+  google.protobuf.Struct input_schema = 5;
+  google.protobuf.Struct output_schema = 6;
+}
+
 message AgentType {
   string id = 1;
   string name = 2;
@@ -46,6 +58,8 @@ message AgentType {
   google.protobuf.Struct output_schema = 13;
   double cost_estimate = 14;
   google.protobuf.Struct metadata = 15;
+  string tier = 16;                              // "junior" | "pleno" | "senior" (ADR-018)
+  repeated AgentCapability capability_specs = 17; // per-capability prompt/schema/I-O (Option B)
 }
 
 message AgentInstance {

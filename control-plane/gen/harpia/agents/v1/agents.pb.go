@@ -83,6 +83,93 @@ func (AgentInstanceStatus) EnumDescriptor() ([]byte, []int) {
 	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{0}
 }
 
+// One capability of a multi-capable agent (ADR-018 Option B). Each capability is
+// its own (input -> output) contract with its own prompt and schemas; a single
+// agent manifest may declare several. Single-capability agents use one entry.
+type AgentCapability struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Id                 string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                                             // capability id, e.g. "linkedin-content-adaptation"
+	ArtifactInputType  string                 `protobuf:"bytes,2,opt,name=artifact_input_type,json=artifactInputType,proto3" json:"artifact_input_type,omitempty"`    // artifact type key consumed
+	ArtifactOutputType string                 `protobuf:"bytes,3,opt,name=artifact_output_type,json=artifactOutputType,proto3" json:"artifact_output_type,omitempty"` // artifact type key produced
+	SystemPrompt       string                 `protobuf:"bytes,4,opt,name=system_prompt,json=systemPrompt,proto3" json:"system_prompt,omitempty"`
+	InputSchema        *structpb.Struct       `protobuf:"bytes,5,opt,name=input_schema,json=inputSchema,proto3" json:"input_schema,omitempty"`
+	OutputSchema       *structpb.Struct       `protobuf:"bytes,6,opt,name=output_schema,json=outputSchema,proto3" json:"output_schema,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *AgentCapability) Reset() {
+	*x = AgentCapability{}
+	mi := &file_harpia_agents_v1_agents_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AgentCapability) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AgentCapability) ProtoMessage() {}
+
+func (x *AgentCapability) ProtoReflect() protoreflect.Message {
+	mi := &file_harpia_agents_v1_agents_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AgentCapability.ProtoReflect.Descriptor instead.
+func (*AgentCapability) Descriptor() ([]byte, []int) {
+	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *AgentCapability) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *AgentCapability) GetArtifactInputType() string {
+	if x != nil {
+		return x.ArtifactInputType
+	}
+	return ""
+}
+
+func (x *AgentCapability) GetArtifactOutputType() string {
+	if x != nil {
+		return x.ArtifactOutputType
+	}
+	return ""
+}
+
+func (x *AgentCapability) GetSystemPrompt() string {
+	if x != nil {
+		return x.SystemPrompt
+	}
+	return ""
+}
+
+func (x *AgentCapability) GetInputSchema() *structpb.Struct {
+	if x != nil {
+		return x.InputSchema
+	}
+	return nil
+}
+
+func (x *AgentCapability) GetOutputSchema() *structpb.Struct {
+	if x != nil {
+		return x.OutputSchema
+	}
+	return nil
+}
+
 type AgentType struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	Id               string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -93,23 +180,25 @@ type AgentType struct {
 	// Canonical manifest fields. The original fields above stay reserved for
 	// current clients and storage adapters; new manifest-aware code should prefer
 	// these additive fields where available.
-	Version        string           `protobuf:"bytes,6,opt,name=version,proto3" json:"version,omitempty"`
-	DisplayName    string           `protobuf:"bytes,7,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	Capabilities   []string         `protobuf:"bytes,8,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
-	ModelId        string           `protobuf:"bytes,9,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
-	SystemPrompt   string           `protobuf:"bytes,10,opt,name=system_prompt,json=systemPrompt,proto3" json:"system_prompt,omitempty"`
-	AllowedToolIds []string         `protobuf:"bytes,11,rep,name=allowed_tool_ids,json=allowedToolIds,proto3" json:"allowed_tool_ids,omitempty"`
-	InputSchema    *structpb.Struct `protobuf:"bytes,12,opt,name=input_schema,json=inputSchema,proto3" json:"input_schema,omitempty"`
-	OutputSchema   *structpb.Struct `protobuf:"bytes,13,opt,name=output_schema,json=outputSchema,proto3" json:"output_schema,omitempty"`
-	CostEstimate   float64          `protobuf:"fixed64,14,opt,name=cost_estimate,json=costEstimate,proto3" json:"cost_estimate,omitempty"`
-	Metadata       *structpb.Struct `protobuf:"bytes,15,opt,name=metadata,proto3" json:"metadata,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	Version         string             `protobuf:"bytes,6,opt,name=version,proto3" json:"version,omitempty"`
+	DisplayName     string             `protobuf:"bytes,7,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Capabilities    []string           `protobuf:"bytes,8,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
+	ModelId         string             `protobuf:"bytes,9,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
+	SystemPrompt    string             `protobuf:"bytes,10,opt,name=system_prompt,json=systemPrompt,proto3" json:"system_prompt,omitempty"`
+	AllowedToolIds  []string           `protobuf:"bytes,11,rep,name=allowed_tool_ids,json=allowedToolIds,proto3" json:"allowed_tool_ids,omitempty"`
+	InputSchema     *structpb.Struct   `protobuf:"bytes,12,opt,name=input_schema,json=inputSchema,proto3" json:"input_schema,omitempty"`
+	OutputSchema    *structpb.Struct   `protobuf:"bytes,13,opt,name=output_schema,json=outputSchema,proto3" json:"output_schema,omitempty"`
+	CostEstimate    float64            `protobuf:"fixed64,14,opt,name=cost_estimate,json=costEstimate,proto3" json:"cost_estimate,omitempty"`
+	Metadata        *structpb.Struct   `protobuf:"bytes,15,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	Tier            string             `protobuf:"bytes,16,opt,name=tier,proto3" json:"tier,omitempty"`                                              // "junior" | "pleno" | "senior" (ADR-018)
+	CapabilitySpecs []*AgentCapability `protobuf:"bytes,17,rep,name=capability_specs,json=capabilitySpecs,proto3" json:"capability_specs,omitempty"` // per-capability prompt/schema/I-O (Option B)
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *AgentType) Reset() {
 	*x = AgentType{}
-	mi := &file_harpia_agents_v1_agents_proto_msgTypes[0]
+	mi := &file_harpia_agents_v1_agents_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -121,7 +210,7 @@ func (x *AgentType) String() string {
 func (*AgentType) ProtoMessage() {}
 
 func (x *AgentType) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_agents_v1_agents_proto_msgTypes[0]
+	mi := &file_harpia_agents_v1_agents_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -134,7 +223,7 @@ func (x *AgentType) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentType.ProtoReflect.Descriptor instead.
 func (*AgentType) Descriptor() ([]byte, []int) {
-	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{0}
+	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *AgentType) GetId() string {
@@ -242,6 +331,20 @@ func (x *AgentType) GetMetadata() *structpb.Struct {
 	return nil
 }
 
+func (x *AgentType) GetTier() string {
+	if x != nil {
+		return x.Tier
+	}
+	return ""
+}
+
+func (x *AgentType) GetCapabilitySpecs() []*AgentCapability {
+	if x != nil {
+		return x.CapabilitySpecs
+	}
+	return nil
+}
+
 type AgentInstance struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -258,7 +361,7 @@ type AgentInstance struct {
 
 func (x *AgentInstance) Reset() {
 	*x = AgentInstance{}
-	mi := &file_harpia_agents_v1_agents_proto_msgTypes[1]
+	mi := &file_harpia_agents_v1_agents_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -270,7 +373,7 @@ func (x *AgentInstance) String() string {
 func (*AgentInstance) ProtoMessage() {}
 
 func (x *AgentInstance) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_agents_v1_agents_proto_msgTypes[1]
+	mi := &file_harpia_agents_v1_agents_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -283,7 +386,7 @@ func (x *AgentInstance) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentInstance.ProtoReflect.Descriptor instead.
 func (*AgentInstance) Descriptor() ([]byte, []int) {
-	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{1}
+	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *AgentInstance) GetId() string {
@@ -353,7 +456,7 @@ type RegisterAgentTypeRequest struct {
 
 func (x *RegisterAgentTypeRequest) Reset() {
 	*x = RegisterAgentTypeRequest{}
-	mi := &file_harpia_agents_v1_agents_proto_msgTypes[2]
+	mi := &file_harpia_agents_v1_agents_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -365,7 +468,7 @@ func (x *RegisterAgentTypeRequest) String() string {
 func (*RegisterAgentTypeRequest) ProtoMessage() {}
 
 func (x *RegisterAgentTypeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_agents_v1_agents_proto_msgTypes[2]
+	mi := &file_harpia_agents_v1_agents_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -378,7 +481,7 @@ func (x *RegisterAgentTypeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterAgentTypeRequest.ProtoReflect.Descriptor instead.
 func (*RegisterAgentTypeRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{2}
+	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *RegisterAgentTypeRequest) GetName() string {
@@ -411,7 +514,7 @@ type RegisterAgentTypeResponse struct {
 
 func (x *RegisterAgentTypeResponse) Reset() {
 	*x = RegisterAgentTypeResponse{}
-	mi := &file_harpia_agents_v1_agents_proto_msgTypes[3]
+	mi := &file_harpia_agents_v1_agents_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -423,7 +526,7 @@ func (x *RegisterAgentTypeResponse) String() string {
 func (*RegisterAgentTypeResponse) ProtoMessage() {}
 
 func (x *RegisterAgentTypeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_agents_v1_agents_proto_msgTypes[3]
+	mi := &file_harpia_agents_v1_agents_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -436,7 +539,7 @@ func (x *RegisterAgentTypeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterAgentTypeResponse.ProtoReflect.Descriptor instead.
 func (*RegisterAgentTypeResponse) Descriptor() ([]byte, []int) {
-	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{3}
+	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *RegisterAgentTypeResponse) GetAgentType() *AgentType {
@@ -457,7 +560,7 @@ type ListAgentTypesRequest struct {
 
 func (x *ListAgentTypesRequest) Reset() {
 	*x = ListAgentTypesRequest{}
-	mi := &file_harpia_agents_v1_agents_proto_msgTypes[4]
+	mi := &file_harpia_agents_v1_agents_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -469,7 +572,7 @@ func (x *ListAgentTypesRequest) String() string {
 func (*ListAgentTypesRequest) ProtoMessage() {}
 
 func (x *ListAgentTypesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_agents_v1_agents_proto_msgTypes[4]
+	mi := &file_harpia_agents_v1_agents_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -482,7 +585,7 @@ func (x *ListAgentTypesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAgentTypesRequest.ProtoReflect.Descriptor instead.
 func (*ListAgentTypesRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{4}
+	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ListAgentTypesRequest) GetCapabilityFilter() string {
@@ -516,7 +619,7 @@ type ListAgentTypesResponse struct {
 
 func (x *ListAgentTypesResponse) Reset() {
 	*x = ListAgentTypesResponse{}
-	mi := &file_harpia_agents_v1_agents_proto_msgTypes[5]
+	mi := &file_harpia_agents_v1_agents_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -528,7 +631,7 @@ func (x *ListAgentTypesResponse) String() string {
 func (*ListAgentTypesResponse) ProtoMessage() {}
 
 func (x *ListAgentTypesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_agents_v1_agents_proto_msgTypes[5]
+	mi := &file_harpia_agents_v1_agents_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -541,7 +644,7 @@ func (x *ListAgentTypesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAgentTypesResponse.ProtoReflect.Descriptor instead.
 func (*ListAgentTypesResponse) Descriptor() ([]byte, []int) {
-	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{5}
+	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ListAgentTypesResponse) GetAgentTypes() []*AgentType {
@@ -569,7 +672,7 @@ type MatchAgentRequest struct {
 
 func (x *MatchAgentRequest) Reset() {
 	*x = MatchAgentRequest{}
-	mi := &file_harpia_agents_v1_agents_proto_msgTypes[6]
+	mi := &file_harpia_agents_v1_agents_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -581,7 +684,7 @@ func (x *MatchAgentRequest) String() string {
 func (*MatchAgentRequest) ProtoMessage() {}
 
 func (x *MatchAgentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_agents_v1_agents_proto_msgTypes[6]
+	mi := &file_harpia_agents_v1_agents_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -594,7 +697,7 @@ func (x *MatchAgentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MatchAgentRequest.ProtoReflect.Descriptor instead.
 func (*MatchAgentRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{6}
+	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *MatchAgentRequest) GetTenantId() string {
@@ -627,7 +730,7 @@ type MatchAgentResponse struct {
 
 func (x *MatchAgentResponse) Reset() {
 	*x = MatchAgentResponse{}
-	mi := &file_harpia_agents_v1_agents_proto_msgTypes[7]
+	mi := &file_harpia_agents_v1_agents_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -639,7 +742,7 @@ func (x *MatchAgentResponse) String() string {
 func (*MatchAgentResponse) ProtoMessage() {}
 
 func (x *MatchAgentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_agents_v1_agents_proto_msgTypes[7]
+	mi := &file_harpia_agents_v1_agents_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -652,7 +755,7 @@ func (x *MatchAgentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MatchAgentResponse.ProtoReflect.Descriptor instead.
 func (*MatchAgentResponse) Descriptor() ([]byte, []int) {
-	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{7}
+	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *MatchAgentResponse) GetMatches() []*AgentMatch {
@@ -672,7 +775,7 @@ type AgentMatch struct {
 
 func (x *AgentMatch) Reset() {
 	*x = AgentMatch{}
-	mi := &file_harpia_agents_v1_agents_proto_msgTypes[8]
+	mi := &file_harpia_agents_v1_agents_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -684,7 +787,7 @@ func (x *AgentMatch) String() string {
 func (*AgentMatch) ProtoMessage() {}
 
 func (x *AgentMatch) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_agents_v1_agents_proto_msgTypes[8]
+	mi := &file_harpia_agents_v1_agents_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -697,7 +800,7 @@ func (x *AgentMatch) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentMatch.ProtoReflect.Descriptor instead.
 func (*AgentMatch) Descriptor() ([]byte, []int) {
-	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{8}
+	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *AgentMatch) GetAgentType() *AgentType {
@@ -729,7 +832,7 @@ type ExecuteTaskRequest struct {
 
 func (x *ExecuteTaskRequest) Reset() {
 	*x = ExecuteTaskRequest{}
-	mi := &file_harpia_agents_v1_agents_proto_msgTypes[9]
+	mi := &file_harpia_agents_v1_agents_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -741,7 +844,7 @@ func (x *ExecuteTaskRequest) String() string {
 func (*ExecuteTaskRequest) ProtoMessage() {}
 
 func (x *ExecuteTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_agents_v1_agents_proto_msgTypes[9]
+	mi := &file_harpia_agents_v1_agents_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -754,7 +857,7 @@ func (x *ExecuteTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecuteTaskRequest.ProtoReflect.Descriptor instead.
 func (*ExecuteTaskRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{9}
+	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ExecuteTaskRequest) GetTenantId() string {
@@ -813,7 +916,7 @@ type ExecuteTaskResponse struct {
 
 func (x *ExecuteTaskResponse) Reset() {
 	*x = ExecuteTaskResponse{}
-	mi := &file_harpia_agents_v1_agents_proto_msgTypes[10]
+	mi := &file_harpia_agents_v1_agents_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -825,7 +928,7 @@ func (x *ExecuteTaskResponse) String() string {
 func (*ExecuteTaskResponse) ProtoMessage() {}
 
 func (x *ExecuteTaskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_agents_v1_agents_proto_msgTypes[10]
+	mi := &file_harpia_agents_v1_agents_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -838,7 +941,7 @@ func (x *ExecuteTaskResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecuteTaskResponse.ProtoReflect.Descriptor instead.
 func (*ExecuteTaskResponse) Descriptor() ([]byte, []int) {
-	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{10}
+	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ExecuteTaskResponse) GetAgentInstanceId() string {
@@ -894,7 +997,7 @@ type FeedbackRequest struct {
 
 func (x *FeedbackRequest) Reset() {
 	*x = FeedbackRequest{}
-	mi := &file_harpia_agents_v1_agents_proto_msgTypes[11]
+	mi := &file_harpia_agents_v1_agents_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -906,7 +1009,7 @@ func (x *FeedbackRequest) String() string {
 func (*FeedbackRequest) ProtoMessage() {}
 
 func (x *FeedbackRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_agents_v1_agents_proto_msgTypes[11]
+	mi := &file_harpia_agents_v1_agents_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -919,7 +1022,7 @@ func (x *FeedbackRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FeedbackRequest.ProtoReflect.Descriptor instead.
 func (*FeedbackRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{11}
+	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *FeedbackRequest) GetStepId() string {
@@ -955,7 +1058,7 @@ type ContinueExecutionRequest struct {
 
 func (x *ContinueExecutionRequest) Reset() {
 	*x = ContinueExecutionRequest{}
-	mi := &file_harpia_agents_v1_agents_proto_msgTypes[12]
+	mi := &file_harpia_agents_v1_agents_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -967,7 +1070,7 @@ func (x *ContinueExecutionRequest) String() string {
 func (*ContinueExecutionRequest) ProtoMessage() {}
 
 func (x *ContinueExecutionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_agents_v1_agents_proto_msgTypes[12]
+	mi := &file_harpia_agents_v1_agents_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -980,7 +1083,7 @@ func (x *ContinueExecutionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ContinueExecutionRequest.ProtoReflect.Descriptor instead.
 func (*ContinueExecutionRequest) Descriptor() ([]byte, []int) {
-	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{12}
+	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ContinueExecutionRequest) GetTenantId() string {
@@ -1022,7 +1125,7 @@ type ContinueExecutionResponse struct {
 
 func (x *ContinueExecutionResponse) Reset() {
 	*x = ContinueExecutionResponse{}
-	mi := &file_harpia_agents_v1_agents_proto_msgTypes[13]
+	mi := &file_harpia_agents_v1_agents_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1034,7 +1137,7 @@ func (x *ContinueExecutionResponse) String() string {
 func (*ContinueExecutionResponse) ProtoMessage() {}
 
 func (x *ContinueExecutionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_agents_v1_agents_proto_msgTypes[13]
+	mi := &file_harpia_agents_v1_agents_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1047,7 +1150,7 @@ func (x *ContinueExecutionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ContinueExecutionResponse.ProtoReflect.Descriptor instead.
 func (*ContinueExecutionResponse) Descriptor() ([]byte, []int) {
-	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{13}
+	return file_harpia_agents_v1_agents_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ContinueExecutionResponse) GetAgentInstanceId() string {
@@ -1075,7 +1178,14 @@ var File_harpia_agents_v1_agents_proto protoreflect.FileDescriptor
 
 const file_harpia_agents_v1_agents_proto_rawDesc = "" +
 	"\n" +
-	"\x1dharpia/agents/v1/agents.proto\x12\x10harpia.agents.v1\x1a\x1cgoogle/protobuf/struct.proto\"\xbc\x04\n" +
+	"\x1dharpia/agents/v1/agents.proto\x12\x10harpia.agents.v1\x1a\x1cgoogle/protobuf/struct.proto\"\xa2\x02\n" +
+	"\x0fAgentCapability\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12.\n" +
+	"\x13artifact_input_type\x18\x02 \x01(\tR\x11artifactInputType\x120\n" +
+	"\x14artifact_output_type\x18\x03 \x01(\tR\x12artifactOutputType\x12#\n" +
+	"\rsystem_prompt\x18\x04 \x01(\tR\fsystemPrompt\x12:\n" +
+	"\finput_schema\x18\x05 \x01(\v2\x17.google.protobuf.StructR\vinputSchema\x12<\n" +
+	"\routput_schema\x18\x06 \x01(\v2\x17.google.protobuf.StructR\foutputSchema\"\x9e\x05\n" +
 	"\tAgentType\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -1093,7 +1203,9 @@ const file_harpia_agents_v1_agents_proto_rawDesc = "" +
 	"\finput_schema\x18\f \x01(\v2\x17.google.protobuf.StructR\vinputSchema\x12<\n" +
 	"\routput_schema\x18\r \x01(\v2\x17.google.protobuf.StructR\foutputSchema\x12#\n" +
 	"\rcost_estimate\x18\x0e \x01(\x01R\fcostEstimate\x123\n" +
-	"\bmetadata\x18\x0f \x01(\v2\x17.google.protobuf.StructR\bmetadata\"\x8f\x02\n" +
+	"\bmetadata\x18\x0f \x01(\v2\x17.google.protobuf.StructR\bmetadata\x12\x12\n" +
+	"\x04tier\x18\x10 \x01(\tR\x04tier\x12L\n" +
+	"\x10capability_specs\x18\x11 \x03(\v2!.harpia.agents.v1.AgentCapabilityR\x0fcapabilitySpecs\"\x8f\x02\n" +
 	"\rAgentInstance\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\"\n" +
 	"\ragent_type_id\x18\x02 \x01(\tR\vagentTypeId\x12\x1b\n" +
@@ -1194,52 +1306,56 @@ func file_harpia_agents_v1_agents_proto_rawDescGZIP() []byte {
 }
 
 var file_harpia_agents_v1_agents_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_harpia_agents_v1_agents_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_harpia_agents_v1_agents_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_harpia_agents_v1_agents_proto_goTypes = []any{
 	(AgentInstanceStatus)(0),          // 0: harpia.agents.v1.AgentInstanceStatus
-	(*AgentType)(nil),                 // 1: harpia.agents.v1.AgentType
-	(*AgentInstance)(nil),             // 2: harpia.agents.v1.AgentInstance
-	(*RegisterAgentTypeRequest)(nil),  // 3: harpia.agents.v1.RegisterAgentTypeRequest
-	(*RegisterAgentTypeResponse)(nil), // 4: harpia.agents.v1.RegisterAgentTypeResponse
-	(*ListAgentTypesRequest)(nil),     // 5: harpia.agents.v1.ListAgentTypesRequest
-	(*ListAgentTypesResponse)(nil),    // 6: harpia.agents.v1.ListAgentTypesResponse
-	(*MatchAgentRequest)(nil),         // 7: harpia.agents.v1.MatchAgentRequest
-	(*MatchAgentResponse)(nil),        // 8: harpia.agents.v1.MatchAgentResponse
-	(*AgentMatch)(nil),                // 9: harpia.agents.v1.AgentMatch
-	(*ExecuteTaskRequest)(nil),        // 10: harpia.agents.v1.ExecuteTaskRequest
-	(*ExecuteTaskResponse)(nil),       // 11: harpia.agents.v1.ExecuteTaskResponse
-	(*FeedbackRequest)(nil),           // 12: harpia.agents.v1.FeedbackRequest
-	(*ContinueExecutionRequest)(nil),  // 13: harpia.agents.v1.ContinueExecutionRequest
-	(*ContinueExecutionResponse)(nil), // 14: harpia.agents.v1.ContinueExecutionResponse
-	(*structpb.Struct)(nil),           // 15: google.protobuf.Struct
+	(*AgentCapability)(nil),           // 1: harpia.agents.v1.AgentCapability
+	(*AgentType)(nil),                 // 2: harpia.agents.v1.AgentType
+	(*AgentInstance)(nil),             // 3: harpia.agents.v1.AgentInstance
+	(*RegisterAgentTypeRequest)(nil),  // 4: harpia.agents.v1.RegisterAgentTypeRequest
+	(*RegisterAgentTypeResponse)(nil), // 5: harpia.agents.v1.RegisterAgentTypeResponse
+	(*ListAgentTypesRequest)(nil),     // 6: harpia.agents.v1.ListAgentTypesRequest
+	(*ListAgentTypesResponse)(nil),    // 7: harpia.agents.v1.ListAgentTypesResponse
+	(*MatchAgentRequest)(nil),         // 8: harpia.agents.v1.MatchAgentRequest
+	(*MatchAgentResponse)(nil),        // 9: harpia.agents.v1.MatchAgentResponse
+	(*AgentMatch)(nil),                // 10: harpia.agents.v1.AgentMatch
+	(*ExecuteTaskRequest)(nil),        // 11: harpia.agents.v1.ExecuteTaskRequest
+	(*ExecuteTaskResponse)(nil),       // 12: harpia.agents.v1.ExecuteTaskResponse
+	(*FeedbackRequest)(nil),           // 13: harpia.agents.v1.FeedbackRequest
+	(*ContinueExecutionRequest)(nil),  // 14: harpia.agents.v1.ContinueExecutionRequest
+	(*ContinueExecutionResponse)(nil), // 15: harpia.agents.v1.ContinueExecutionResponse
+	(*structpb.Struct)(nil),           // 16: google.protobuf.Struct
 }
 var file_harpia_agents_v1_agents_proto_depIdxs = []int32{
-	15, // 0: harpia.agents.v1.AgentType.input_schema:type_name -> google.protobuf.Struct
-	15, // 1: harpia.agents.v1.AgentType.output_schema:type_name -> google.protobuf.Struct
-	15, // 2: harpia.agents.v1.AgentType.metadata:type_name -> google.protobuf.Struct
-	0,  // 3: harpia.agents.v1.AgentInstance.status:type_name -> harpia.agents.v1.AgentInstanceStatus
-	1,  // 4: harpia.agents.v1.RegisterAgentTypeResponse.agent_type:type_name -> harpia.agents.v1.AgentType
-	1,  // 5: harpia.agents.v1.ListAgentTypesResponse.agent_types:type_name -> harpia.agents.v1.AgentType
-	9,  // 6: harpia.agents.v1.MatchAgentResponse.matches:type_name -> harpia.agents.v1.AgentMatch
-	1,  // 7: harpia.agents.v1.AgentMatch.agent_type:type_name -> harpia.agents.v1.AgentType
-	0,  // 8: harpia.agents.v1.ExecuteTaskResponse.status:type_name -> harpia.agents.v1.AgentInstanceStatus
-	12, // 9: harpia.agents.v1.ExecuteTaskResponse.feedback_request:type_name -> harpia.agents.v1.FeedbackRequest
-	0,  // 10: harpia.agents.v1.ContinueExecutionResponse.status:type_name -> harpia.agents.v1.AgentInstanceStatus
-	3,  // 11: harpia.agents.v1.AgentService.RegisterAgentType:input_type -> harpia.agents.v1.RegisterAgentTypeRequest
-	5,  // 12: harpia.agents.v1.AgentService.ListAgentTypes:input_type -> harpia.agents.v1.ListAgentTypesRequest
-	7,  // 13: harpia.agents.v1.AgentService.MatchAgent:input_type -> harpia.agents.v1.MatchAgentRequest
-	10, // 14: harpia.agents.v1.AgentService.ExecuteTask:input_type -> harpia.agents.v1.ExecuteTaskRequest
-	13, // 15: harpia.agents.v1.AgentService.ContinueExecution:input_type -> harpia.agents.v1.ContinueExecutionRequest
-	4,  // 16: harpia.agents.v1.AgentService.RegisterAgentType:output_type -> harpia.agents.v1.RegisterAgentTypeResponse
-	6,  // 17: harpia.agents.v1.AgentService.ListAgentTypes:output_type -> harpia.agents.v1.ListAgentTypesResponse
-	8,  // 18: harpia.agents.v1.AgentService.MatchAgent:output_type -> harpia.agents.v1.MatchAgentResponse
-	11, // 19: harpia.agents.v1.AgentService.ExecuteTask:output_type -> harpia.agents.v1.ExecuteTaskResponse
-	14, // 20: harpia.agents.v1.AgentService.ContinueExecution:output_type -> harpia.agents.v1.ContinueExecutionResponse
-	16, // [16:21] is the sub-list for method output_type
-	11, // [11:16] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	16, // 0: harpia.agents.v1.AgentCapability.input_schema:type_name -> google.protobuf.Struct
+	16, // 1: harpia.agents.v1.AgentCapability.output_schema:type_name -> google.protobuf.Struct
+	16, // 2: harpia.agents.v1.AgentType.input_schema:type_name -> google.protobuf.Struct
+	16, // 3: harpia.agents.v1.AgentType.output_schema:type_name -> google.protobuf.Struct
+	16, // 4: harpia.agents.v1.AgentType.metadata:type_name -> google.protobuf.Struct
+	1,  // 5: harpia.agents.v1.AgentType.capability_specs:type_name -> harpia.agents.v1.AgentCapability
+	0,  // 6: harpia.agents.v1.AgentInstance.status:type_name -> harpia.agents.v1.AgentInstanceStatus
+	2,  // 7: harpia.agents.v1.RegisterAgentTypeResponse.agent_type:type_name -> harpia.agents.v1.AgentType
+	2,  // 8: harpia.agents.v1.ListAgentTypesResponse.agent_types:type_name -> harpia.agents.v1.AgentType
+	10, // 9: harpia.agents.v1.MatchAgentResponse.matches:type_name -> harpia.agents.v1.AgentMatch
+	2,  // 10: harpia.agents.v1.AgentMatch.agent_type:type_name -> harpia.agents.v1.AgentType
+	0,  // 11: harpia.agents.v1.ExecuteTaskResponse.status:type_name -> harpia.agents.v1.AgentInstanceStatus
+	13, // 12: harpia.agents.v1.ExecuteTaskResponse.feedback_request:type_name -> harpia.agents.v1.FeedbackRequest
+	0,  // 13: harpia.agents.v1.ContinueExecutionResponse.status:type_name -> harpia.agents.v1.AgentInstanceStatus
+	4,  // 14: harpia.agents.v1.AgentService.RegisterAgentType:input_type -> harpia.agents.v1.RegisterAgentTypeRequest
+	6,  // 15: harpia.agents.v1.AgentService.ListAgentTypes:input_type -> harpia.agents.v1.ListAgentTypesRequest
+	8,  // 16: harpia.agents.v1.AgentService.MatchAgent:input_type -> harpia.agents.v1.MatchAgentRequest
+	11, // 17: harpia.agents.v1.AgentService.ExecuteTask:input_type -> harpia.agents.v1.ExecuteTaskRequest
+	14, // 18: harpia.agents.v1.AgentService.ContinueExecution:input_type -> harpia.agents.v1.ContinueExecutionRequest
+	5,  // 19: harpia.agents.v1.AgentService.RegisterAgentType:output_type -> harpia.agents.v1.RegisterAgentTypeResponse
+	7,  // 20: harpia.agents.v1.AgentService.ListAgentTypes:output_type -> harpia.agents.v1.ListAgentTypesResponse
+	9,  // 21: harpia.agents.v1.AgentService.MatchAgent:output_type -> harpia.agents.v1.MatchAgentResponse
+	12, // 22: harpia.agents.v1.AgentService.ExecuteTask:output_type -> harpia.agents.v1.ExecuteTaskResponse
+	15, // 23: harpia.agents.v1.AgentService.ContinueExecution:output_type -> harpia.agents.v1.ContinueExecutionResponse
+	19, // [19:24] is the sub-list for method output_type
+	14, // [14:19] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_harpia_agents_v1_agents_proto_init() }
@@ -1247,15 +1363,15 @@ func file_harpia_agents_v1_agents_proto_init() {
 	if File_harpia_agents_v1_agents_proto != nil {
 		return
 	}
-	file_harpia_agents_v1_agents_proto_msgTypes[4].OneofWrappers = []any{}
-	file_harpia_agents_v1_agents_proto_msgTypes[10].OneofWrappers = []any{}
+	file_harpia_agents_v1_agents_proto_msgTypes[5].OneofWrappers = []any{}
+	file_harpia_agents_v1_agents_proto_msgTypes[11].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_harpia_agents_v1_agents_proto_rawDesc), len(file_harpia_agents_v1_agents_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   14,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

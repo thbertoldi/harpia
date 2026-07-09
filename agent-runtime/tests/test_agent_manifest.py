@@ -101,3 +101,131 @@ def test_agent_manifest_rejects_undeclared_prompt_variables():
         match="system_prompt references variables missing from input_schema.properties: missing_context",
     ):
         AgentType.from_yaml_text(text, registry=REGISTRY)
+
+
+# --- Multi-capability manifests (ADR-018 Option B) ------------------------------
+
+
+def _multi_capability_manifest_text() -> str:
+    return """
+id: linkedin-content-senior
+version: 0.1.0
+display_name: LinkedIn Content Senior
+description: Multi-capability LinkedIn content agent.
+capabilities:
+  - linkedin-content-adaptation
+  - linkedin-carousel
+model_id: deepseek-v4-flash
+system_prompt: Default fallback prompt.
+allowed_tool_ids: []
+input_schema: {}
+output_schema: {}
+cost_estimate: 0.02
+metadata:
+  artifact_input_type: harpia.artifacts.v1.TextDraft
+  artifact_output_type: harpia.artifacts.v1.LinkedInPostDraft
+tier: senior
+capability_specs:
+  - id: linkedin-content-adaptation
+    artifact_input_type: harpia.artifacts.v1.TextDraft
+    artifact_output_type: harpia.artifacts.v1.LinkedInPostDraft
+    system_prompt: Adapt {{draft}} into a LinkedIn post.
+    input_schema:
+      type: object
+      properties:
+        draft:
+          type: string
+    output_schema:
+      type: object
+      properties:
+        body:
+          type: string
+  - id: linkedin-carousel
+    artifact_input_type: harpia.artifacts.v1.TextDraft
+    artifact_output_type: harpia.artifacts.v1.CarouselDraft
+    system_prompt: Turn {{draft}} into a carousel.
+    input_schema:
+      type: object
+      properties:
+        draft:
+          type: string
+    output_schema:
+      type: object
+      properties:
+        slides:
+          type: array
+"""
+
+
+def test_multi_capability_manifest_parses_and_round_trips():
+    manifest = AgentType.from_yaml_text(_multi_capability_manifest_text())
+
+    assert manifest.tier == "senior"
+    as_dict = manifest.to_dict()
+    assert as_dict["tier"] == "senior"
+
+    specs = as_dict["capability_specs"]
+    assert [spec["id"] for spec in specs] == [
+        "linkedin-content-adaptation",
+        "linkedin-carousel",
+    ]
+    assert specs[0]["artifact_input_type"] == "harpia.artifacts.v1.TextDraft"
+    assert specs[0]["artifact_output_type"] == "harpia.artifacts.v1.LinkedInPostDraft"
+    assert specs[1]["artifact_output_type"] == "harpia.artifacts.v1.CarouselDraft"
+    assert specs[0]["input_schema"] == {
+        "type": "object",
+        "properties": {"draft": {"type": "string"}},
+    }
+
+    # Round-trips losslessly through proto and YAML.
+    from_proto = AgentType.from_proto(manifest.to_proto())
+    assert from_proto.to_dict() == as_dict
+
+    dumped = manifest.to_yaml()
+    from_yaml = AgentType.from_yaml_text(dumped)
+    assert from_yaml.to_dict() == as_dict
+
+
+def test_multi_capability_manifest_rejects_spec_prompt_variable_not_in_its_schema():
+    text = _multi_capability_manifest_text().replace(
+        "Adapt {{draft}} into a LinkedIn post.",
+        "Adapt {{missing_context}} into a LinkedIn post.",
+    )
+    with pytest.raises(
+        AgentManifestValidationError,
+        match=(
+            r"capability_specs\[0\]\.system_prompt references variables missing "
+            r"from input_schema\.properties: missing_context"
+        ),
+    ):
+        AgentType.from_yaml_text(text)
+
+
+def test_multi_capability_manifest_rejects_duplicate_capability_ids():
+    text = _multi_capability_manifest_text().replace(
+        "  - id: linkedin-carousel",
+        "  - id: linkedin-content-adaptation",
+    )
+    with pytest.raises(
+        AgentManifestValidationError,
+        match=r"capability_specs\[1\]\.id is duplicate: linkedin-content-adaptation",
+    ):
+        AgentType.from_yaml_text(text)
+
+
+def test_legacy_single_capability_manifest_still_round_trips():
+    """Backward-compat guard: a legacy single-capability manifest (no
+    capability_specs) must continue to load and round-trip unchanged."""
+    manifest = AgentType.from_yaml(manifest_path(), registry=REGISTRY)
+
+    as_dict = manifest.to_dict()
+    # Legacy manifests carry no capability_specs and an empty tier default.
+    assert "capability_specs" not in as_dict
+    assert as_dict["tier"] == ""
+
+    from_proto = AgentType.from_proto(manifest.to_proto(), registry=REGISTRY)
+    assert from_proto.to_dict() == as_dict
+
+    dumped = manifest.to_yaml()
+    from_yaml = AgentType.from_yaml_text(dumped, registry=REGISTRY)
+    assert from_yaml.to_dict() == as_dict
