@@ -285,6 +285,151 @@ func TestBuildPrompt_PoliciesStep_RendersPolicyFields(t *testing.T) {
 		len(parsed.Fields[0].Options) != 3 {
 		t.Fatalf("elicitation field not populated from template/current config: %+v", parsed.Fields[0])
 	}
+	// Backward-compat: a template that does NOT declare content_output_format
+	// must not surface it in the payload even though orderedPolicyKeys now
+	// lists it first.
+	if strings.Contains(payload, "content_output_format") {
+		t.Fatalf("payload should not include content_output_format for a template that does not declare it: %s", payload)
+	}
+}
+
+// TestBuildPrompt_PoliciesStep_RendersContentOutputFormat confirms the
+// content_output_format behavior policy is prompted when a template (e.g.
+// linkedin-content-studio) declares it. It should be the first policy
+// prompted (orderedPolicyKeys puts it first) and surface all four formats.
+func TestBuildPrompt_PoliciesStep_RendersContentOutputFormat(t *testing.T) {
+	tpl := mkTemplate("draft", "publish")
+	tpl.InputParameters = []*plansv1.TemplateInputParameter{
+		{
+			Key: "output_format",
+			RuntimeMappings: []*plansv1.TemplateInputRuntimeMapping{{
+				Target:    plansv1.TemplateInputRuntimeTarget_TEMPLATE_INPUT_RUNTIME_TARGET_BEHAVIOR_POLICY,
+				PolicyKey: "content_output_format",
+			}},
+		},
+		{
+			Key: "approval_mode",
+			RuntimeMappings: []*plansv1.TemplateInputRuntimeMapping{{
+				Target:    plansv1.TemplateInputRuntimeTarget_TEMPLATE_INPUT_RUNTIME_TARGET_BEHAVIOR_POLICY,
+				PolicyKey: "publish_approval_mode",
+			}},
+		},
+		{
+			Key: "elicitation_timeout",
+			RuntimeMappings: []*plansv1.TemplateInputRuntimeMapping{{
+				Target:    plansv1.TemplateInputRuntimeTarget_TEMPLATE_INPUT_RUNTIME_TARGET_BEHAVIOR_POLICY,
+				PolicyKey: "elicitation_timeout_behavior",
+			}},
+		},
+	}
+	in := planassistant.PromptInput{
+		Template: tpl,
+		Config: &plansv1.PlanConfiguration{
+			PlanTemplateId:   "tpl-1",
+			BehaviorPolicies: &plansv1.PlanBehaviorPolicies{}, // content_output_format unset
+		},
+	}
+	state := planassistant.AssistantState{Kind: planassistant.StatePoliciesStep}
+	_, payload := planassistant.BuildPrompt(state, in)
+
+	var parsed struct {
+		PolicyKey string `json:"policy_key"`
+		Fields    []struct {
+			Key          string `json:"key"`
+			ParameterKey string `json:"parameter_key"`
+			CurrentValue string `json:"current_value"`
+			Options      []struct {
+				ID    string `json:"id"`
+				Label string `json:"label"`
+				Value string `json:"value"`
+			} `json:"options"`
+		} `json:"fields"`
+	}
+	if err := json.Unmarshal([]byte(payload), &parsed); err != nil {
+		t.Fatalf("payload not valid JSON: %v\n%s", err, payload)
+	}
+	// content_output_format is first in orderedPolicyKeys and unset, so it is
+	// the policy the assistant focuses on.
+	if parsed.PolicyKey != "content_output_format" {
+		t.Fatalf("want policy_key content_output_format, got %q", parsed.PolicyKey)
+	}
+	if len(parsed.Fields) != 1 {
+		t.Fatalf("want 1 focused policy field, got %d", len(parsed.Fields))
+	}
+	field := parsed.Fields[0]
+	if field.Key != "content_output_format" {
+		t.Fatalf("field key = %q, want content_output_format", field.Key)
+	}
+	if field.ParameterKey != "output_format" {
+		t.Fatalf("parameter_key = %q, want output_format", field.ParameterKey)
+	}
+	if field.CurrentValue != "" {
+		t.Fatalf("unset content_output_format should map to empty current_value, got %q", field.CurrentValue)
+	}
+	wantOptionValues := map[string]string{
+		"text_post":         "Text post",
+		"carousel":          "Carousel",
+		"image_backed_post": "Image-backed post",
+		"approval_only":     "Approval only (text)",
+	}
+	if len(field.Options) != len(wantOptionValues) {
+		t.Fatalf("want %d options, got %d (%+v)", len(wantOptionValues), len(field.Options), field.Options)
+	}
+	for _, opt := range field.Options {
+		wantLabel, ok := wantOptionValues[opt.Value]
+		if !ok {
+			t.Fatalf("unexpected option value %q in content_output_format field: %+v", opt.Value, field.Options)
+		}
+		if opt.ID != opt.Value {
+			t.Fatalf("option id %q should equal value %q", opt.ID, opt.Value)
+		}
+		if opt.Label != wantLabel {
+			t.Fatalf("option %q label = %q, want %q", opt.Value, opt.Label, wantLabel)
+		}
+	}
+}
+
+// TestBuildPrompt_PoliciesStep_ContentOutputFormat_ReflectsCurrentValue
+// confirms the content_output_format field carries the config's current
+// selection (so re-prompting after a partial selection shows the prior pick).
+func TestBuildPrompt_PoliciesStep_ContentOutputFormat_ReflectsCurrentValue(t *testing.T) {
+	tpl := mkTemplate("draft", "publish")
+	tpl.InputParameters = []*plansv1.TemplateInputParameter{
+		{
+			Key: "output_format",
+			RuntimeMappings: []*plansv1.TemplateInputRuntimeMapping{{
+				Target:    plansv1.TemplateInputRuntimeTarget_TEMPLATE_INPUT_RUNTIME_TARGET_BEHAVIOR_POLICY,
+				PolicyKey: "content_output_format",
+			}},
+		},
+	}
+	in := planassistant.PromptInput{
+		Template: tpl,
+		Config: &plansv1.PlanConfiguration{
+			PlanTemplateId: "tpl-1",
+			BehaviorPolicies: &plansv1.PlanBehaviorPolicies{
+				ContentOutputFormat: plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_CAROUSEL,
+			},
+		},
+	}
+	state := planassistant.AssistantState{Kind: planassistant.StatePoliciesStep, PolicyKey: "content_output_format"}
+	_, payload := planassistant.BuildPrompt(state, in)
+
+	var parsed struct {
+		Fields []struct {
+			Key          string `json:"key"`
+			CurrentValue string `json:"current_value"`
+		} `json:"fields"`
+	}
+	if err := json.Unmarshal([]byte(payload), &parsed); err != nil {
+		t.Fatalf("payload not valid JSON: %v\n%s", err, payload)
+	}
+	if len(parsed.Fields) != 1 || parsed.Fields[0].Key != "content_output_format" {
+		t.Fatalf("want single content_output_format field, got %+v", parsed.Fields)
+	}
+	if parsed.Fields[0].CurrentValue != "carousel" {
+		t.Fatalf("current_value = %q, want carousel", parsed.Fields[0].CurrentValue)
+	}
 }
 
 func TestBuildPrompt_Landing_HasThreeActions(t *testing.T) {

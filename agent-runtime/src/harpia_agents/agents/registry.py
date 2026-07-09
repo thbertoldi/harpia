@@ -5,8 +5,17 @@ from __future__ import annotations
 import os
 from collections.abc import Awaitable, Callable, Mapping
 
-from harpia.artifacts.v1.artifacts_pb2 import LinkedInPostDraft, NewsList, TextDraft
+from harpia.artifacts.v1.artifacts_pb2 import (
+    CarouselDraft,
+    LinkedInPostDraft,
+    NewsList,
+    TextDraft,
+)
 
+from harpia_agents.agents.linkedin_carousel import MANIFEST as CAROUSEL_MANIFEST
+from harpia_agents.agents.linkedin_carousel import (
+    run as run_linkedin_carousel,
+)
 from harpia_agents.agents.linkedin_voice import MANIFEST as LINKEDIN_MANIFEST
 from harpia_agents.agents.linkedin_voice import (
     run as run_linkedin_voice,
@@ -34,7 +43,7 @@ from harpia_agents.llm.providers.openai import OpenAIProvider
 from harpia_agents.llm.resolver import ResolvedProviderCredentials, TenantLLMResolver
 
 type AgentInput = NewsList | TextDraft | Mapping[str, object]
-type AgentRunResult = NewsletterAgentRunResult | LinkedInPostDraft
+type AgentRunResult = NewsletterAgentRunResult | LinkedInPostDraft | CarouselDraft
 
 AgentRunner = Callable[
     [AgentInput, LLMRegistry, str, Mapping[str, str] | None],
@@ -46,6 +55,7 @@ def _default_provider_for_manifest(manifest_id: str) -> str | None:
     providers = {
         "newsletter-writer-senior": "deepseek",
         "linkedin-voice-senior": "deepseek",
+        "linkedin-carousel-senior": "deepseek",
     }
     return providers.get(manifest_id)
 
@@ -151,14 +161,29 @@ async def _run_linkedin(
     )
 
 
+async def _run_carousel(
+    input_payload: AgentInput,
+    llm_registry: LLMRegistry,
+    model_id: str,
+    _elicitation_responses: Mapping[str, str] | None,
+) -> AgentRunResult:
+    return await run_linkedin_carousel(
+        input_payload,
+        llm_registry=llm_registry,
+        model_id=model_id,
+    )
+
+
 _RUNNERS: dict[str, AgentRunner] = {
     "newsletter-writer-senior": _run_newsletter,
     "linkedin-voice-senior": _run_linkedin,
+    "linkedin-carousel-senior": _run_carousel,
 }
 
 _MANIFEST_MODEL_IDS: dict[str, str] = {
     "newsletter-writer-senior": NEWSLETTER_MANIFEST.model_id,
     "linkedin-voice-senior": LINKEDIN_MANIFEST.model_id,
+    "linkedin-carousel-senior": CAROUSEL_MANIFEST.model_id,
 }
 
 

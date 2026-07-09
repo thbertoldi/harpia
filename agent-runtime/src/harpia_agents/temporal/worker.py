@@ -6,7 +6,12 @@ import json
 
 from connectrpc.errors import ConnectError
 from google.protobuf.json_format import MessageToDict, ParseDict
-from harpia.artifacts.v1.artifacts_pb2 import LinkedInPostDraft, NewsList, TextDraft
+from harpia.artifacts.v1.artifacts_pb2 import (
+    CarouselDraft,
+    LinkedInPostDraft,
+    NewsList,
+    TextDraft,
+)
 from temporalio import activity
 from temporalio.exceptions import ApplicationError
 
@@ -231,6 +236,15 @@ async def _run_agent_activity(input_payload: dict) -> dict:
         agent_input = TextDraft()
         ParseDict(payload, agent_input)
         elicitation_responses = _extract_elicitation_responses(input_payload)
+    elif manifest_id == "linkedin-carousel-senior":
+        payload = await _resolve_input_payload(
+            input_payload,
+            tenant_id=tenant_id,
+            artifact_type_key="harpia.artifacts.v1.TextDraft",
+        )
+        agent_input = TextDraft()
+        ParseDict(payload, agent_input)
+        elicitation_responses = _extract_elicitation_responses(input_payload)
     else:
         raise ValueError(f"unsupported manifest id: {manifest_id}")
 
@@ -258,6 +272,8 @@ async def _run_agent_activity(input_payload: dict) -> dict:
         output_type = "harpia.artifacts.v1.TextDraft"
     elif isinstance(result, LinkedInPostDraft):
         output_type = "harpia.artifacts.v1.LinkedInPostDraft"
+    elif isinstance(result, CarouselDraft):
+        output_type = "harpia.artifacts.v1.CarouselDraft"
     else:
         raise ValueError("unsupported agent result type")
 

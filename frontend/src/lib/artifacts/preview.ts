@@ -163,8 +163,9 @@ export function shouldOpenGeneratingPreview(
   return producingExecutionId !== dismissedGeneratingExecutionId;
 }
 
-const PRIMARY_TEXT_ARTIFACT_TYPES = [
+const PRIMARY_PREVIEW_ARTIFACT_TYPES = [
   "harpia.artifacts.v1.LinkedInPostDraft",
+  "harpia.artifacts.v1.CarouselDraft",
   "harpia.artifacts.v1.TextDraft",
 ];
 
@@ -172,7 +173,7 @@ export function primaryPreviewArtifact(
   artifacts: Artifact[],
   finalArtifactTypeKeys: Set<string>,
 ): Artifact | null {
-  for (const typeKey of PRIMARY_TEXT_ARTIFACT_TYPES) {
+  for (const typeKey of PRIMARY_PREVIEW_ARTIFACT_TYPES) {
     const artifact = artifacts.find(
       (candidate) => candidate.artifactTypeKey === typeKey,
     );

@@ -64,7 +64,7 @@ func DeriveState(template *plansv1.PlanTemplate, config *plansv1.PlanConfigurati
 }
 
 // orderedPolicyKeys is the stable order behavior policies are prompted in.
-var orderedPolicyKeys = []string{"publish_approval_mode", "elicitation_timeout_behavior"}
+var orderedPolicyKeys = []string{"content_output_format", "publish_approval_mode", "elicitation_timeout_behavior"}
 
 // templateDeclaresPolicy reports whether the template has an input parameter
 // mapped to the given behavior policy. Only declared policies are prompted for:
@@ -87,6 +87,8 @@ func templateDeclaresPolicy(template *plansv1.PlanTemplate, policyKey string) bo
 // unspecified zero value on the configuration.
 func policyUnset(p *plansv1.PlanBehaviorPolicies, policyKey string) bool {
 	switch policyKey {
+	case "content_output_format":
+		return p.GetContentOutputFormat() == plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_UNSPECIFIED
 	case "publish_approval_mode":
 		return p.GetPublishApprovalMode() == plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_UNSPECIFIED
 	case "elicitation_timeout_behavior":

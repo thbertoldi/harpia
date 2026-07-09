@@ -116,6 +116,17 @@ func buildOverseerStepPrompt(state AssistantState, in PromptInput) (string, stri
 func buildPoliciesStepPrompt(state AssistantState, in PromptInput) (string, string) {
 	allFields := []chat.AssistantPolicyField{
 		{
+			Key:          "content_output_format",
+			ParameterKey: policyParameterKey(in.Template, "content_output_format", "output_format"),
+			CurrentValue: contentOutputFormatValue(in.Config.GetBehaviorPolicies().GetContentOutputFormat()),
+			Options: []chat.AssistantOption{
+				{ID: "text_post", Label: "Text post", Value: "text_post"},
+				{ID: "carousel", Label: "Carousel", Value: "carousel"},
+				{ID: "image_backed_post", Label: "Image-backed post", Value: "image_backed_post"},
+				{ID: "approval_only", Label: "Approval only (text)", Value: "approval_only"},
+			},
+		},
+		{
 			Key:          "publish_approval_mode",
 			ParameterKey: policyParameterKey(in.Template, "publish_approval_mode", "approval_mode"),
 			CurrentValue: publishApprovalModeValue(in.Config.GetBehaviorPolicies().GetPublishApprovalMode()),
@@ -197,6 +208,21 @@ func publishApprovalModeValue(mode plansv1.PublishApprovalMode) string {
 		return "require_approval"
 	case plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_AUTO_PUBLISH:
 		return "auto_publish"
+	default:
+		return ""
+	}
+}
+
+func contentOutputFormatValue(format plansv1.ContentOutputFormat) string {
+	switch format {
+	case plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_TEXT_POST:
+		return "text_post"
+	case plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_CAROUSEL:
+		return "carousel"
+	case plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_IMAGE_BACKED_POST:
+		return "image_backed_post"
+	case plansv1.ContentOutputFormat_CONTENT_OUTPUT_FORMAT_APPROVAL_ONLY:
+		return "approval_only"
 	default:
 		return ""
 	}
