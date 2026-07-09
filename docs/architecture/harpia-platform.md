@@ -145,13 +145,16 @@ superseded one noted.
 | Term | Definition |
 |---|---|
 | **Executor** | Anything that satisfies a PlanStep contract. Two kinds. |
-| **AgentExecutor** | A manifest-declared LangGraph graph. Reasons; may elicit. |
+| **AgentExecutor** | A manifest-declared LangGraph graph. Reasons; may elicit. **Multi-capable** — one agent carries several capabilities, so a small team covers many steps. |
 | **IntegrationExecutor** | A deterministic Temporal activity calling an external API. No reasoning, no elicitation. |
-| **ExecutorSKU** | The sold commercial unit (pricing, compatibility metadata). |
+| **Capability** | A discrete thing an agent can do (e.g. `linkedin-content-adaptation`, `carousel-authoring`). Plan steps declare the capabilities they *require*; binding matches agents by capability coverage. |
+| **Seniority Tier** | An agent's quality/cost grade — Júnior / Pleno / Sênior — each with its own graph, tool access, and per-execution cost. The same role exists across tiers. |
+| **ExecutorSKU** | The sold commercial unit (pricing, compatibility metadata). An agent SKU = role × tier, carrying its capability set. |
 | **ExecutorEntitlement** | A tenant's grant to use a SKU. |
 | **ExecutorInstallation** | A tenant-configured instance of an entitled SKU. Carries OAuth/feed/connection config (integrations) or manifest+policy (agents). **SlotBindings point at installations, never global SKUs.** |
-| **ExecutorRequirement** | Optional PlanStep metadata used to filter compatible installations. |
-| **SlotBinding** | Per-step assignment `step_key → ExecutorInstallation`. |
+| **Agent Team** | The set of agents (role × tier) assembled to run a plan — recommended by the platform to cover every step's required capabilities, then accepted/swapped by the user. |
+| **ExecutorRequirement** | PlanStep metadata declaring the **required capabilities** (and executor kind) that drive team recommendation and compatible-installation filtering. |
+| **SlotBinding** | Per-step assignment `step_key → ExecutorInstallation`, chosen so the bound agent's capabilities satisfy the step's `ExecutorRequirement`. |
 
 ### Artifacts & Resources
 
@@ -279,13 +282,14 @@ PlanTemplate ──has──> PlanStep[] + edges (DAG)
 ```
 
 **Invariants.** A `DRAFT` configuration may be incomplete. A `RUNNABLE`/`SCHEDULED` one is
-valid only if: every step has a compatible SlotBinding; every agent-backed step has an
-OverseerBinding; required seed inputs exist; entitlements are present; required integration
-installations are connected. Step N+1 cannot start until step N's output validates against
-its `output_artifact_type`. A PlanExecution runs against a frozen **snapshot** — later
-edits never mutate in-flight runs. This **execution snapshot** is the most consistently
-reused idea in the platform (budget, MCP bindings, memory bindings, template version all
-freeze into it).
+valid only if: every step **that will run** has a compatible SlotBinding (a step whose
+capability the user did not opt into — e.g. image generation — is not part of the run and
+needs no binding); every agent-backed step has an OverseerBinding; required seed inputs
+exist; entitlements are present; required integration installations are connected. Step N+1
+cannot start until step N's output validates against its `output_artifact_type`. A
+PlanExecution runs against a frozen **snapshot** — later edits never mutate in-flight runs.
+This **execution snapshot** is the most consistently reused idea in the platform (budget,
+MCP bindings, memory bindings, template version all freeze into it).
 
 ### 7.2 Executors satisfy contracts
 
@@ -293,6 +297,15 @@ Separating the *what* (PlanStep contract) from the *who* (ExecutorInstallation) 
 same step run on a junior agent, a senior agent, or an integration without touching the DAG
 or downstream steps. Both executor kinds are Temporal activities; the difference is what
 happens inside (deterministic API call vs LangGraph reasoning that may elicit).
+
+**Capability-based teams (ADR-018).** Agents are **multi-capable** and **tiered**
+(Júnior / Pleno / Sênior); a PlanStep declares the **capabilities it requires**, not a
+specific SKU. Given a plan, the platform recommends a minimal **agent team** (role × tier)
+whose combined capabilities cover every step; the user accepts or swaps members. A
+multi-capable agent may serve several steps, keeping the team small. Adding a content
+capability usually means adding it to an existing agent (or a new role), not minting a new
+SKU per step. Capabilities the user does not opt into (e.g. image generation) are excluded
+from the run and require no binding — so an optional capability never blocks configuration.
 
 ### 7.3 Platform adaptation is its own step
 
@@ -519,9 +532,11 @@ validation fails the deploy on DAG cycles, dangling refs, or contract mismatches
 carries an explicit integer `version`; snapshots protect in-flight runs. The end-state — a
 full catalog service with CRUD/UI and Áreas RBAC — is deferred.
 
-Adding a genuinely new plan generally requires new **ExecutorSKUs** and **ArtifactTypes**;
-with only four executors on one content chain today, templates can otherwise only recombine
-the existing four. The roadmap tracks which executors/artifact types each phase adds.
+Adding a genuinely new plan generally requires new **ArtifactTypes** and possibly a new
+agent **role** (or new capabilities on an existing role); it rarely requires a new SKU per
+step, because agents are multi-capable and tiered (ADR-018) — a small team covers many
+steps, and the catalog grows by adding capabilities to agents rather than one SKU per
+capability. The roadmap tracks which roles/capabilities/artifact types each phase adds.
 
 Author templates by the **outcome**, keeping cadence/channel/format out of their identity
 ([§7.6](#76-template-granularity-identity-is-the-outcome)) — including localization keys
@@ -615,6 +630,7 @@ supersession detail is in [`docs/adr/README.md`](../adr/README.md).
 | 015 | PlanTemplate authoring | **Live** — §13; Áreas RBAC reconciled to OpenFGA (§11). |
 | 016 | Design token refresh | **Live** — §10; "tokens LOCKED" clarified to fonts-locked/color-governed. |
 | 017 | Navigation & lifecycle | **Live** — §9; amends ADR-012's 1:1 assumption. |
+| 018 | Capability-based agent teams (roles × tiers) | **Accepted** — §4 (Capability, Seniority Tier, Agent Team; SKU = role × tier), §7.2 (capability-based teams), §13 (catalog grows by capability, not SKU-per-step). Supersedes the one-SKU-per-step model built under `rich-linkedin-content`. |
 
 ---
 

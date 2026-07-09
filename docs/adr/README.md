@@ -47,6 +47,7 @@ reading order.
 | 014 | Agent memory boundary | Live, generalized — MemoryResource → **Resource** (§8). |
 | 015 | PlanTemplate authoring | Live (§13); Áreas RBAC reconciled to OpenFGA (§11). |
 | 016 | Design token refresh | Live (§10). |
+| 018 | Capability-based agent teams (roles × tiers) | **Accepted** — folded into §4/§7.2/§13. Supersedes the one-SKU-per-step model built under `rich-linkedin-content`. |
 | 017 | Navigation & lifecycle | Live (§9). |
 
 ## Known contradictions resolved by the constitution
