@@ -509,6 +509,16 @@ func runPlanWorkflow(ctx workflow.Context, input PlanWorkflowInput) (PlanWorkflo
 			}
 			continue
 		}
+		if shouldSkipStepForOptOut(step, loaded.Snapshot.Configuration) {
+			if err := workflow.ExecuteActivity(ctx, CreateSkippedStepExecutionActivityName, CreateSkippedStepInput{
+				TenantID:        input.TenantID,
+				PlanExecutionID: input.PlanExecutionID,
+				PlanStepKey:     step.Key,
+			}).Get(ctx, nil); err != nil {
+				return result, failPlan(ctx, input, err)
+			}
+			continue
+		}
 		if retryIndex >= 0 && i < retryIndex {
 			reused, ok := outputs[step.Key]
 			if !ok || strings.TrimSpace(reused.ArtifactID) == "" {
@@ -1004,6 +1014,29 @@ func shouldSkipStepForFormat(step *plansv1.PlanStep, policies *plansv1.PlanBehav
 		return false // format-agnostic step
 	}
 	return stepFormat != selected
+}
+
+// shouldSkipStepForOptOut is true when the step declares an optional capability
+// the run did not include. Such steps run no executor and need no binding
+// (ADR-018 D4) — they are excluded from the run and recorded as SKIPPED.
+func shouldSkipStepForOptOut(step *plansv1.PlanStep, config *plansv1.PlanConfiguration) bool {
+	if config == nil {
+		return false
+	}
+	optional := step.GetExecutorRequirement().GetOptionalCapabilities()
+	if len(optional) == 0 {
+		return false
+	}
+	included := make(map[string]struct{}, len(config.GetIncludedOptionalCapabilities()))
+	for _, c := range config.GetIncludedOptionalCapabilities() {
+		included[c] = struct{}{}
+	}
+	for _, c := range optional {
+		if _, ok := included[c]; !ok {
+			return true
+		}
+	}
+	return false
 }
 
 func publishApprovalMode(policies *plansv1.PlanBehaviorPolicies) plansv1.PublishApprovalMode {

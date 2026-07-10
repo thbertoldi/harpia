@@ -343,6 +343,117 @@ func TestPlanWorkflowSkipsNonSelectedBranch(t *testing.T) {
 	}
 }
 
+func TestPlanWorkflowSkipsOptedOutCapability(t *testing.T) {
+	cases := []struct {
+		name                 string
+		includedCapabilities []string
+		wantRan              []string
+		wantSkipped          []string
+		wantSkipCalls        bool
+	}{
+		{
+			name:                 "capability_not_included_step_is_skipped",
+			includedCapabilities: nil,
+			// generate-image declares optional_capabilities=["image-generation"]
+			// which the run did not include → skipped. The shared stem still runs.
+			wantRan:       []string{"fetch-news", "write-draft"},
+			wantSkipped:   []string{"generate-image"},
+			wantSkipCalls: true,
+		},
+		{
+			name:                 "capability_included_step_runs",
+			includedCapabilities: []string{"image-generation"},
+			// The run opted in → every step runs, nothing is skipped.
+			wantRan:       []string{"fetch-news", "write-draft", "generate-image"},
+			wantSkipped:   nil,
+			wantSkipCalls: false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			env := newPlanWorkflowTestEnv(t)
+
+			input := PlanWorkflowInput{
+				TenantID:        "22222222-2222-2222-2222-222222222222",
+				PlanExecutionID: "11111111-1111-1111-1111-111111111111",
+			}
+			snapshot := optOutCapabilitySnapshot(tc.includedCapabilities)
+
+			var ranSteps []string
+			var skippedSteps []string
+			env.OnActivity(LoadPlanExecutionActivityName, mock.Anything, input).Return(LoadedPlanExecution{
+				PlanExecutionID: input.PlanExecutionID,
+				Status:          "pending",
+				Snapshot:        snapshot,
+			}, nil)
+			env.OnActivity(StartPlanExecutionActivityName, mock.Anything, input).Return(nil)
+			if tc.wantSkipCalls {
+				env.OnActivity(CreateSkippedStepExecutionActivityName, mock.Anything, mock.Anything).Return(
+					func(ctx context.Context, skipInput CreateSkippedStepInput) error {
+						skippedSteps = append(skippedSteps, skipInput.PlanStepKey)
+						return nil
+					},
+				)
+			}
+			env.OnActivity(CreateStepExecutionActivityName, mock.Anything, mock.Anything).Return(
+				func(ctx context.Context, stepInput CreateStepExecutionInput) (StepExecutionRecord, error) {
+					return StepExecutionRecord{
+						ID:              "step-" + stepInput.PlanStepKey,
+						PlanStepKey:     stepInput.PlanStepKey,
+						Attempt:         1,
+						InputArtifactID: stepInput.InputArtifactID,
+					}, nil
+				},
+			)
+			env.OnActivity(RunIntegrationActivityName, mock.Anything, mock.Anything).Return(
+				func(ctx context.Context, executorInput ExecutorActivityInput) (ExecutorActivityResult, error) {
+					ranSteps = append(ranSteps, executorInput.PlanStepKey)
+					return ExecutorActivityResult{
+						Status:           ExecutorResultStatusCompleted,
+						OutputArtifactID: "out-" + executorInput.PlanStepKey,
+					}, nil
+				},
+			)
+			env.OnActivity(RunAgentActivityName, mock.Anything, mock.Anything).Return(
+				func(ctx context.Context, executorInput ExecutorActivityInput) (ExecutorActivityResult, error) {
+					ranSteps = append(ranSteps, executorInput.PlanStepKey)
+					return ExecutorActivityResult{
+						Status:           ExecutorResultStatusCompleted,
+						OutputArtifactID: "out-" + executorInput.PlanStepKey,
+					}, nil
+				},
+			)
+			env.OnActivity(CompleteStepExecutionActivityName, mock.Anything, mock.Anything).Return(nil)
+			env.OnActivity(CompletePlanExecutionActivityName, mock.Anything, input).Return(nil)
+
+			env.ExecuteWorkflow(PlanWorkflow, input)
+
+			if !env.IsWorkflowCompleted() {
+				t.Fatal("workflow did not complete")
+			}
+			if err := env.GetWorkflowError(); err != nil {
+				t.Fatalf("workflow failed: %v", err)
+			}
+
+			var result PlanWorkflowResult
+			if err := env.GetWorkflowResult(&result); err != nil {
+				t.Fatalf("get workflow result: %v", err)
+			}
+			if result.Status != "completed" {
+				t.Fatalf("result status = %q, want completed", result.Status)
+			}
+
+			if !reflect.DeepEqual(ranSteps, tc.wantRan) {
+				t.Fatalf("ran steps = %#v, want %#v", ranSteps, tc.wantRan)
+			}
+			if !reflect.DeepEqual(skippedSteps, tc.wantSkipped) {
+				t.Fatalf("skipped steps = %#v, want %#v", skippedSteps, tc.wantSkipped)
+			}
+		})
+	}
+}
+
 func TestPlanActivityOptionsUseBoundedRetries(t *testing.T) {
 	options := planActivityOptions()
 
@@ -1199,6 +1310,69 @@ func multiBranchSnapshot(outputFormat plansv1.ContentOutputFormat) PlanExecution
 			"publish-post":      {ID: "installation-publish-post", Kind: ExecutorKindIntegration},
 			"draft-carousel":    {ID: "installation-draft-carousel", Kind: ExecutorKindAgent},
 			"publish-carousel":  {ID: "installation-publish-carousel", Kind: ExecutorKindIntegration},
+		},
+	}
+}
+
+// optOutCapabilitySnapshot models a template whose final step declares an
+// optional capability ("image-generation"). When the run does not include it,
+// the engine must skip generate-image; when included, it runs.
+func optOutCapabilitySnapshot(includedCapabilities []string) PlanExecutionSnapshot {
+	return PlanExecutionSnapshot{
+		SchemaVersion: 1,
+		Configuration: &plansv1.PlanConfiguration{
+			Id:                  "config-1",
+			TenantId:            "22222222-2222-2222-2222-222222222222",
+			PlanTemplateId:      "template-1",
+			PlanTemplateVersion: 1,
+			Status:              plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
+			SeedArtifacts: []*plansv1.SeedArtifactBinding{
+				{
+					StepKey:    "fetch-news",
+					InputName:  "date_range",
+					ArtifactId: "seed-date-range",
+				},
+			},
+			BehaviorPolicies: &plansv1.PlanBehaviorPolicies{
+				ElicitationTimeoutBehavior: plansv1.ElicitationTimeoutBehavior_ELICITATION_TIMEOUT_BEHAVIOR_PAUSE_UNTIL_ANSWERED,
+				PublishApprovalMode:        plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_AUTO_PUBLISH,
+			},
+			IncludedOptionalCapabilities: includedCapabilities,
+		},
+		Template: &plansv1.PlanTemplate{
+			Id:      "template-1",
+			Key:     "image-backed-content",
+			Version: 1,
+			Steps: []*plansv1.PlanStep{
+				{
+					Key:                  "fetch-news",
+					InputArtifactTypeId:  "harpia.artifacts.v1.DateRange",
+					OutputArtifactTypeId: "harpia.artifacts.v1.NewsList",
+				},
+				{
+					Key:                  "write-draft",
+					InputArtifactTypeId:  "harpia.artifacts.v1.NewsList",
+					OutputArtifactTypeId: "harpia.artifacts.v1.TextDraft",
+				},
+				{
+					Key:                  "generate-image",
+					InputArtifactTypeId:  "harpia.artifacts.v1.TextDraft",
+					OutputArtifactTypeId: "harpia.artifacts.v1.ImageAsset",
+					ExecutorRequirement: &plansv1.ExecutorRequirement{
+						ExecutorKind:        plansv1.ExecutorKind_EXECUTOR_KIND_AGENT,
+						OptionalCapabilities: []string{"image-generation"},
+					},
+				},
+			},
+			Edges: []*plansv1.PlanStepDependency{
+				{FromStepKey: "fetch-news", ToStepKey: "write-draft"},
+				{FromStepKey: "write-draft", ToStepKey: "generate-image"},
+			},
+		},
+		ExecutorInstallations: map[string]ExecutorInstallationSnapshot{
+			"fetch-news":     {ID: "installation-fetch", Kind: ExecutorKindIntegration},
+			"write-draft":    {ID: "installation-write", Kind: ExecutorKindAgent},
+			"generate-image": {ID: "installation-image", Kind: ExecutorKindAgent},
 		},
 	}
 }

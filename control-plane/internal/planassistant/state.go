@@ -118,7 +118,15 @@ func firstUnboundStepKey(template *plansv1.PlanTemplate, config *plansv1.PlanCon
 		}
 	}
 	for _, step := range template.GetSteps() {
-		if step.GetKey() != "" && !bound[step.GetKey()] {
+		if step.GetKey() == "" {
+			continue
+		}
+		// Opt-out steps are excluded from the run (ADR-018 D4) and need no
+		// SlotBinding, so they never block configuration from reaching RUNNABLE.
+		if stepOptedOut(step, config) {
+			continue
+		}
+		if !bound[step.GetKey()] {
 			return step.GetKey()
 		}
 	}
@@ -136,28 +144,63 @@ func firstUnboundOverseerStepKey(template *plansv1.PlanTemplate, config *plansv1
 		}
 	}
 	for _, step := range template.GetSteps() {
-		if step.GetKey() != "" && isAgentBackedStep(step) && !bound[step.GetKey()] {
+		if step.GetKey() == "" || !isAgentBackedStep(step) {
+			continue
+		}
+		// An opt-out step runs no executor and so needs no overseer.
+		if stepOptedOut(step, config) {
+			continue
+		}
+		if !bound[step.GetKey()] {
 			return step.GetKey()
 		}
 	}
 	return ""
 }
 
-func requiredOverseerStepKeys(template *plansv1.PlanTemplate) []string {
+func requiredOverseerStepKeys(template *plansv1.PlanTemplate, config *plansv1.PlanConfiguration) []string {
 	if template == nil {
 		return nil
 	}
 	keys := make([]string, 0, len(template.GetSteps()))
 	for _, step := range template.GetSteps() {
-		if step.GetKey() != "" && isAgentBackedStep(step) {
-			keys = append(keys, step.GetKey())
+		if step.GetKey() == "" || !isAgentBackedStep(step) {
+			continue
 		}
+		// Opt-out steps are excluded from the run and so demand no overseer.
+		if stepOptedOut(step, config) {
+			continue
+		}
+		keys = append(keys, step.GetKey())
 	}
 	return keys
 }
 
 func isAgentBackedStep(step *plansv1.PlanStep) bool {
 	return step.GetExecutorRequirement().GetExecutorKind() == plansv1.ExecutorKind_EXECUTOR_KIND_AGENT
+}
+
+// stepOptedOut mirrors the engine's shouldSkipStepForOptOut: a step is opted out
+// of the run when it declares an optional capability the configuration did not
+// include. Such steps run no executor and need no binding or overseer.
+func stepOptedOut(step *plansv1.PlanStep, config *plansv1.PlanConfiguration) bool {
+	if config == nil {
+		return false
+	}
+	optional := step.GetExecutorRequirement().GetOptionalCapabilities()
+	if len(optional) == 0 {
+		return false
+	}
+	included := make(map[string]struct{}, len(config.GetIncludedOptionalCapabilities()))
+	for _, c := range config.GetIncludedOptionalCapabilities() {
+		included[c] = struct{}{}
+	}
+	for _, c := range optional {
+		if _, ok := included[c]; !ok {
+			return true
+		}
+	}
+	return false
 }
 
 // policiesSet reports whether every behavior policy the template declares is

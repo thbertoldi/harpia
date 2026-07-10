@@ -122,6 +122,10 @@ message ExecutorRequirement {
   ExecutorKind executor_kind = 1;
   repeated string required_capabilities = 2;
   string connection_type = 3;
+  // Capabilities that are opt-in for this step (ADR-018 D4). The step is skipped
+  // (no binding, no executor) unless every one is in the run's
+  // included_optional_capabilities.
+  repeated string optional_capabilities = 4;
 }
 
 enum ExecutorKind {

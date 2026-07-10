@@ -107,7 +107,7 @@ func buildOverseerStepPrompt(state AssistantState, in PromptInput) (string, stri
 	payload := chat.BuildAssistantOverseerStepPayload(
 		state.StepKey,
 		overseerOptions(in),
-		requiredOverseerStepKeys(in.Template),
+		requiredOverseerStepKeys(in.Template, in.Config),
 		rows,
 	)
 	return text, payload

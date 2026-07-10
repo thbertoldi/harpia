@@ -1186,6 +1186,10 @@ type ExecutorRequirement struct {
 	ExecutorKind         ExecutorKind           `protobuf:"varint,1,opt,name=executor_kind,json=executorKind,proto3,enum=harpia.plans.v1.ExecutorKind" json:"executor_kind,omitempty"`
 	RequiredCapabilities []string               `protobuf:"bytes,2,rep,name=required_capabilities,json=requiredCapabilities,proto3" json:"required_capabilities,omitempty"`
 	ConnectionType       string                 `protobuf:"bytes,3,opt,name=connection_type,json=connectionType,proto3" json:"connection_type,omitempty"`
+	// Capabilities that are opt-in for this step (ADR-018 D4). The step is skipped
+	// (no binding, no executor) unless every one is in the run's
+	// included_optional_capabilities.
+	OptionalCapabilities []string `protobuf:"bytes,4,rep,name=optional_capabilities,json=optionalCapabilities,proto3" json:"optional_capabilities,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -1239,6 +1243,13 @@ func (x *ExecutorRequirement) GetConnectionType() string {
 		return x.ConnectionType
 	}
 	return ""
+}
+
+func (x *ExecutorRequirement) GetOptionalCapabilities() []string {
+	if x != nil {
+		return x.OptionalCapabilities
+	}
+	return nil
 }
 
 type PlanConfiguration struct {
@@ -5193,11 +5204,12 @@ const file_harpia_plans_v1_plans_proto_rawDesc = "" +
 	"\x18default_executor_sku_key\x18\b \x01(\tR\x15defaultExecutorSkuKey\"X\n" +
 	"\x12PlanStepDependency\x12\"\n" +
 	"\rfrom_step_key\x18\x01 \x01(\tR\vfromStepKey\x12\x1e\n" +
-	"\vto_step_key\x18\x02 \x01(\tR\ttoStepKey\"\xb7\x01\n" +
+	"\vto_step_key\x18\x02 \x01(\tR\ttoStepKey\"\xec\x01\n" +
 	"\x13ExecutorRequirement\x12B\n" +
 	"\rexecutor_kind\x18\x01 \x01(\x0e2\x1d.harpia.plans.v1.ExecutorKindR\fexecutorKind\x123\n" +
 	"\x15required_capabilities\x18\x02 \x03(\tR\x14requiredCapabilities\x12'\n" +
-	"\x0fconnection_type\x18\x03 \x01(\tR\x0econnectionType\"\x8f\a\n" +
+	"\x0fconnection_type\x18\x03 \x01(\tR\x0econnectionType\x123\n" +
+	"\x15optional_capabilities\x18\x04 \x03(\tR\x14optionalCapabilities\"\x8f\a\n" +
 	"\x11PlanConfiguration\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12!\n" +

@@ -279,3 +279,89 @@ func TestDeriveState_Saved_WhenStatusScheduled(t *testing.T) {
 		t.Fatalf("got %+v, want SAVED (status leaves DRAFT)", got)
 	}
 }
+
+// markStepOptionalCapabilities attaches optional_capabilities to a step's
+// ExecutorRequirement (ADR-018 D4). A step is opted out of the run when its
+// optional capabilities are not all in the configuration's
+// included_optional_capabilities.
+func markStepOptionalCapabilities(tpl *plansv1.PlanTemplate, stepKey string, capabilities ...string) {
+	for _, step := range tpl.GetSteps() {
+		if step.GetKey() == stepKey {
+			if step.ExecutorRequirement == nil {
+				step.ExecutorRequirement = &plansv1.ExecutorRequirement{}
+			}
+			step.ExecutorRequirement.OptionalCapabilities = append(
+				step.ExecutorRequirement.OptionalCapabilities, capabilities...,
+			)
+			return
+		}
+	}
+}
+
+// An opt-out step whose capability is not included must not require a binding,
+// so a configuration that has bound only the always-on step reaches
+// BINDING_MATRIX (configuration can become RUNNABLE without binding the
+// excluded step).
+func TestDeriveState_BindingMatrix_WhenOptionalCapabilityStepOptedOut(t *testing.T) {
+	tpl := mkTemplate("write-draft", "generate-image")
+	markStepOptionalCapabilities(tpl, "generate-image", "image-generation")
+	cfg := &plansv1.PlanConfiguration{
+		PlanTemplateId: "tpl-1",
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+		SlotBindings:   []*plansv1.SlotBinding{{StepKey: "write-draft", ExecutorInstallationId: "inst-write"}},
+		// generate-image not included → opted out, no binding needed.
+		BehaviorPolicies: validPolicies(),
+	}
+	got := planassistant.DeriveState(tpl, cfg, nil)
+	if got.Kind != planassistant.StateBindingMatrix {
+		t.Fatalf("got %+v, want BINDING_MATRIX (opt-out step needs no binding)", got)
+	}
+}
+
+// When the optional capability IS included, the step runs and still requires a
+// binding, so the assistant must prompt for it (BINDING_STEP).
+func TestDeriveState_BindingStep_WhenOptionalCapabilityIncluded(t *testing.T) {
+	tpl := mkTemplate("write-draft", "generate-image")
+	markStepOptionalCapabilities(tpl, "generate-image", "image-generation")
+	cfg := &plansv1.PlanConfiguration{
+		PlanTemplateId: "tpl-1",
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+		SlotBindings:                 []*plansv1.SlotBinding{{StepKey: "write-draft", ExecutorInstallationId: "inst-write"}},
+		IncludedOptionalCapabilities: []string{"image-generation"},
+		BehaviorPolicies:             validPolicies(),
+	}
+	got := planassistant.DeriveState(tpl, cfg, nil)
+	if got.Kind != planassistant.StateBindingStep {
+		t.Fatalf("got %+v, want BINDING_STEP (included step still needs binding)", got)
+	}
+	if got.StepKey != "generate-image" {
+		t.Fatalf("StepKey = %q, want generate-image", got.StepKey)
+	}
+}
+
+// An opted-out agent step must not require an overseer: with all the always-on
+// agent steps overseen, the assistant reaches BINDING_MATRIX rather than
+// dead-ending on an overseer prompt for the excluded step.
+func TestDeriveState_BindingMatrix_WhenOptedOutAgentStepNeedsNoOverseer(t *testing.T) {
+	tpl := mkTemplate("write-draft", "generate-image")
+	markStepAgent(tpl, "write-draft")
+	markStepAgent(tpl, "generate-image")
+	markStepOptionalCapabilities(tpl, "generate-image", "image-generation")
+	cfg := &plansv1.PlanConfiguration{
+		PlanTemplateId: "tpl-1",
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+		SlotBindings: []*plansv1.SlotBinding{
+			{StepKey: "write-draft", ExecutorInstallationId: "inst-write"},
+			{StepKey: "generate-image", ExecutorInstallationId: "inst-image"},
+		},
+		OverseerBindings: []*plansv1.OverseerBinding{
+			{StepKey: "write-draft", OverseerUserId: "user-ana"},
+		},
+		// generate-image not included → opted out, no overseer needed.
+		BehaviorPolicies: validPolicies(),
+	}
+	got := planassistant.DeriveState(tpl, cfg, nil)
+	if got.Kind != planassistant.StateBindingMatrix {
+		t.Fatalf("got %+v, want BINDING_MATRIX (opted-out agent step needs no overseer)", got)
+	}
+}
