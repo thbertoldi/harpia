@@ -16,6 +16,12 @@ from harpia_agents.agents.linkedin_carousel import MANIFEST as CAROUSEL_MANIFEST
 from harpia_agents.agents.linkedin_carousel import (
     run as run_linkedin_carousel,
 )
+from harpia_agents.agents.linkedin_content_specialist import (
+    MANIFEST as CONTENT_SPECIALIST_MANIFEST,
+)
+from harpia_agents.agents.linkedin_content_specialist import (
+    run as run_linkedin_content_specialist,
+)
 from harpia_agents.agents.linkedin_voice import MANIFEST as LINKEDIN_MANIFEST
 from harpia_agents.agents.linkedin_voice import (
     run as run_linkedin_voice,
@@ -46,7 +52,7 @@ type AgentInput = NewsList | TextDraft | Mapping[str, object]
 type AgentRunResult = NewsletterAgentRunResult | LinkedInPostDraft | CarouselDraft
 
 AgentRunner = Callable[
-    [AgentInput, LLMRegistry, str, Mapping[str, str] | None],
+    [AgentInput, LLMRegistry, str, Mapping[str, str] | None, str],
     Awaitable[AgentRunResult],
 ]
 
@@ -56,6 +62,7 @@ def _default_provider_for_manifest(manifest_id: str) -> str | None:
         "newsletter-writer-senior": "deepseek",
         "linkedin-voice-senior": "deepseek",
         "linkedin-carousel-senior": "deepseek",
+        "linkedin-content-specialist": "deepseek",
     }
     return providers.get(manifest_id)
 
@@ -139,7 +146,9 @@ async def _run_newsletter(
     llm_registry: LLMRegistry,
     model_id: str,
     elicitation_responses: Mapping[str, str] | None,
+    _output_artifact_type_key: str = "",
 ) -> AgentRunResult:
+    del _output_artifact_type_key
     return await run_newsletter_writer(
         input_payload,
         llm_registry=llm_registry,
@@ -153,7 +162,9 @@ async def _run_linkedin(
     llm_registry: LLMRegistry,
     model_id: str,
     _elicitation_responses: Mapping[str, str] | None,
+    _output_artifact_type_key: str = "",
 ) -> AgentRunResult:
+    del _output_artifact_type_key
     return await run_linkedin_voice(
         input_payload,
         llm_registry=llm_registry,
@@ -166,7 +177,9 @@ async def _run_carousel(
     llm_registry: LLMRegistry,
     model_id: str,
     _elicitation_responses: Mapping[str, str] | None,
+    _output_artifact_type_key: str = "",
 ) -> AgentRunResult:
+    del _output_artifact_type_key
     return await run_linkedin_carousel(
         input_payload,
         llm_registry=llm_registry,
@@ -174,16 +187,33 @@ async def _run_carousel(
     )
 
 
+async def _run_linkedin_content_specialist(
+    input_payload: AgentInput,
+    llm_registry: LLMRegistry,
+    model_id: str,
+    _elicitation_responses: Mapping[str, str] | None,
+    output_artifact_type_key: str = "",
+) -> AgentRunResult:
+    return await run_linkedin_content_specialist(
+        input_payload,
+        llm_registry=llm_registry,
+        model_id=model_id,
+        output_artifact_type_key=output_artifact_type_key,
+    )
+
+
 _RUNNERS: dict[str, AgentRunner] = {
     "newsletter-writer-senior": _run_newsletter,
     "linkedin-voice-senior": _run_linkedin,
     "linkedin-carousel-senior": _run_carousel,
+    "linkedin-content-specialist": _run_linkedin_content_specialist,
 }
 
 _MANIFEST_MODEL_IDS: dict[str, str] = {
     "newsletter-writer-senior": NEWSLETTER_MANIFEST.model_id,
     "linkedin-voice-senior": LINKEDIN_MANIFEST.model_id,
     "linkedin-carousel-senior": CAROUSEL_MANIFEST.model_id,
+    "linkedin-content-specialist": CONTENT_SPECIALIST_MANIFEST.model_id,
 }
 
 
@@ -199,6 +229,7 @@ async def run_registered_agent(
     input_news_list: AgentInput | None = None,
     llm_registry: LLMRegistry | None = None,
     elicitation_responses: Mapping[str, str] | None = None,
+    output_artifact_type_key: str = "",
 ) -> AgentRunResult:
     try:
         runner = _RUNNERS[manifest_id]
@@ -248,4 +279,5 @@ async def run_registered_agent(
         registry,
         model_id,
         elicitation_responses,
+        output_artifact_type_key,
     )

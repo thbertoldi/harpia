@@ -187,6 +187,7 @@ async def _run_agent_with_heartbeat(
     tenant_id: str,
     agent_input: NewsList | TextDraft,
     elicitation_responses: dict[str, str] | None,
+    output_artifact_type_key: str = "",
 ) -> AgentRunResult:
     """Run the registered agent inside a periodic Temporal heartbeat loop.
 
@@ -203,6 +204,7 @@ async def _run_agent_with_heartbeat(
             input_payload=agent_input,
             llm_registry=_LLM_REGISTRY,
             elicitation_responses=elicitation_responses,
+            output_artifact_type_key=output_artifact_type_key,
         )
 
 
@@ -223,7 +225,7 @@ async def _run_agent_activity(input_payload: dict) -> dict:
         )
         agent_input = NewsList()
         ParseDict(payload, agent_input)
-        elicitation_responses = {
+        elicitation_responses: dict[str, str] | None = {
             **_extract_content_preferences(input_payload),
             **(_extract_elicitation_responses(input_payload) or {}),
         }
@@ -245,14 +247,25 @@ async def _run_agent_activity(input_payload: dict) -> dict:
         agent_input = TextDraft()
         ParseDict(payload, agent_input)
         elicitation_responses = _extract_elicitation_responses(input_payload)
+    elif manifest_id == "linkedin-content-specialist":
+        payload = await _resolve_input_payload(
+            input_payload,
+            tenant_id=tenant_id,
+            artifact_type_key="harpia.artifacts.v1.TextDraft",
+        )
+        agent_input = TextDraft()
+        ParseDict(payload, agent_input)
+        elicitation_responses = _extract_elicitation_responses(input_payload)
     else:
         raise ValueError(f"unsupported manifest id: {manifest_id}")
 
+    output_artifact_type_key = str(input_payload.get("output_artifact_type_key") or "")
     result = await _run_agent_with_heartbeat(
         manifest_id,
         tenant_id=tenant_id,
         agent_input=agent_input,
         elicitation_responses=elicitation_responses,
+        output_artifact_type_key=output_artifact_type_key,
     )
     if isinstance(result, ElicitationRequest):
         return {

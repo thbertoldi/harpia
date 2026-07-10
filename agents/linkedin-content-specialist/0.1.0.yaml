@@ -1,0 +1,100 @@
+id: linkedin-content-specialist
+version: 0.1.0
+display_name: LinkedIn Content Specialist (Sênior)
+description: Multi-capable LinkedIn content agent — adapts a text draft into a LinkedIn post or authors a carousel outline.
+tier: senior
+capabilities:
+  - linkedin-content-adaptation
+  - carousel-authoring
+model_id: deepseek-v4-flash
+system_prompt: |
+  You are a LinkedIn content specialist with multiple capabilities. The active
+  capability's prompt takes precedence.
+allowed_tool_ids: []
+cost_estimate: 0.03
+metadata: {}
+capability_specs:
+  - id: linkedin-content-adaptation
+    artifact_input_type: harpia.artifacts.v1.TextDraft
+    artifact_output_type: harpia.artifacts.v1.LinkedInPostDraft
+    system_prompt: |
+      You are a senior LinkedIn content specialist. Adapt the input into a polished
+      LinkedIn post while preserving factual meaning. Preserve the draft's requested
+      output language; if the body contains a Target language line, that requested
+      output language overrides the language of source article titles and summaries.
+    input_schema:
+      type: object
+      required:
+        - title
+        - body
+      properties:
+        title:
+          type: string
+        body:
+          type: string
+    output_schema:
+      type: object
+      required:
+        - text
+      properties:
+        text:
+          type: string
+          maxLength: 3000
+        hook:
+          type: string
+        hashtags:
+          type: array
+          items:
+            type: string
+  - id: carousel-authoring
+    artifact_input_type: harpia.artifacts.v1.TextDraft
+    artifact_output_type: harpia.artifacts.v1.CarouselDraft
+    system_prompt: |
+      You are a senior LinkedIn carousel strategist. Turn the supplied text draft
+      into a tight carousel outline of 5-8 slides. Return ONLY valid JSON (no
+      markdown fences, no commentary) with this shape: an object containing
+      "title", "hook", "slides" (an array of objects each with "heading" and
+      "body"), "caption", and "hashtags" (an array of strings). Preserve the
+      draft's requested output language; if the body contains a Target language
+      line, that requested output language overrides the language of source
+      article titles and summaries.
+    input_schema:
+      type: object
+      required:
+        - title
+        - body
+      properties:
+        title:
+          type: string
+        body:
+          type: string
+    output_schema:
+      type: object
+      required:
+        - title
+        - slides
+      properties:
+        title:
+          type: string
+        hook:
+          type: string
+        slides:
+          type: array
+          items:
+            type: object
+            required:
+              - heading
+              - body
+            properties:
+              heading:
+                type: string
+              body:
+                type: string
+              alt_text:
+                type: string
+        caption:
+          type: string
+        hashtags:
+          type: array
+          items:
+            type: string
