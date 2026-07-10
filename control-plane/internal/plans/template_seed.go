@@ -268,6 +268,11 @@ func validateRuntimeMapping(paramKey string, mapping *templateInputRuntimeMappin
 		default:
 			return fmt.Errorf("input parameter %q runtime mapping references unknown behavior policy %q", paramKey, mapping.PolicyKey)
 		}
+	case "TEMPLATE_INPUT_RUNTIME_TARGET_INCLUDED_CAPABILITY":
+		if strings.TrimSpace(mapping.PolicyKey) == "" {
+			return fmt.Errorf("input parameter %q runtime mapping included-capability policyKey is required", paramKey)
+		}
+		return nil
 	default:
 		return fmt.Errorf("input parameter %q runtime mapping has unknown target %q", paramKey, target)
 	}

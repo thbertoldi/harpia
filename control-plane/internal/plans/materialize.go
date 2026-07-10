@@ -26,10 +26,14 @@ type seedBuilder struct {
 }
 
 // MaterializePlanConfiguration expands declarative template runtime mappings
-// into the server-owned configuration projection used at execution time.
-func MaterializePlanConfiguration(template *plansv1.PlanTemplate, values map[string]any) ([]*plansv1.SeedArtifactBinding, []*plansv1.SlotBinding, *plansv1.PlanBehaviorPolicies, error) {
+// into the server-owned configuration projection used at execution time. The
+// returned includedOptionalCapabilities is the set of opt-in capabilities the
+// user enabled (INCLUDED_CAPABILITY target) — callers set it on the runtime
+// PlanConfiguration so the engine can skip steps whose optional capability is
+// not in the set (ADR-018 D4).
+func MaterializePlanConfiguration(template *plansv1.PlanTemplate, values map[string]any) ([]*plansv1.SeedArtifactBinding, []*plansv1.SlotBinding, *plansv1.PlanBehaviorPolicies, []string, error) {
 	if template == nil {
-		return nil, nil, nil, fmt.Errorf("plan template is required")
+		return nil, nil, nil, nil, fmt.Errorf("plan template is required")
 	}
 	if values == nil {
 		values = map[string]any{}
@@ -38,6 +42,20 @@ func MaterializePlanConfiguration(template *plansv1.PlanTemplate, values map[str
 	seedGroups := map[seedTarget]*seedBuilder{}
 	var slots []*plansv1.SlotBinding
 	policies := &plansv1.PlanBehaviorPolicies{}
+	included := []string{}
+	includedSet := map[string]struct{}{}
+
+	addIncluded := func(capability string) {
+		capability = strings.TrimSpace(capability)
+		if capability == "" {
+			return
+		}
+		if _, ok := includedSet[capability]; ok {
+			return
+		}
+		includedSet[capability] = struct{}{}
+		included = append(included, capability)
+	}
 
 	for _, parameter := range template.GetInputParameters() {
 		if parameter == nil {
@@ -66,7 +84,7 @@ func MaterializePlanConfiguration(template *plansv1.PlanTemplate, values map[str
 					seedGroups[target] = builder
 				}
 				if err := builder.set(mapping.GetJsonPath(), value); err != nil {
-					return nil, nil, nil, fmt.Errorf("materialize parameter %q: %w", parameter.GetKey(), err)
+					return nil, nil, nil, nil, fmt.Errorf("materialize parameter %q: %w", parameter.GetKey(), err)
 				}
 			case plansv1.TemplateInputRuntimeTarget_TEMPLATE_INPUT_RUNTIME_TARGET_SLOT_BINDING:
 				installationID := strings.TrimSpace(fmt.Sprint(value))
@@ -80,7 +98,13 @@ func MaterializePlanConfiguration(template *plansv1.PlanTemplate, values map[str
 				})
 			case plansv1.TemplateInputRuntimeTarget_TEMPLATE_INPUT_RUNTIME_TARGET_BEHAVIOR_POLICY:
 				if err := applyBehaviorPolicy(policies, mapping.GetPolicyKey(), value); err != nil {
-					return nil, nil, nil, fmt.Errorf("materialize parameter %q: %w", parameter.GetKey(), err)
+					return nil, nil, nil, nil, fmt.Errorf("materialize parameter %q: %w", parameter.GetKey(), err)
+				}
+			case plansv1.TemplateInputRuntimeTarget_TEMPLATE_INPUT_RUNTIME_TARGET_INCLUDED_CAPABILITY:
+				// A truthy value opts the capability (policy_key) INTO the run.
+				// Falsy values are a no-op: the capability stays opted out.
+				if isTruthyCapabilityValue(value) {
+					addIncluded(mapping.GetPolicyKey())
 				}
 			}
 		}
@@ -88,12 +112,28 @@ func MaterializePlanConfiguration(template *plansv1.PlanTemplate, values map[str
 
 	seeds, err := seedBindingsFromGroups(seedGroups)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	sort.Slice(slots, func(i, j int) bool {
 		return slots[i].GetStepKey() < slots[j].GetStepKey()
 	})
-	return seeds, slots, policies, nil
+	sort.Strings(included)
+	return seeds, slots, policies, included, nil
+}
+
+// isTruthyCapabilityValue reports whether a SELECT yes/no value opts a
+// capability in. Accepts "true"/"yes"/"on" (case-insensitive) and native bools.
+func isTruthyCapabilityValue(value any) bool {
+	switch v := value.(type) {
+	case bool:
+		return v
+	default:
+		switch strings.ToLower(strings.TrimSpace(fmt.Sprint(value))) {
+		case "true", "yes", "on":
+			return true
+		}
+		return false
+	}
 }
 
 func (b *seedBuilder) set(path string, value any) error {

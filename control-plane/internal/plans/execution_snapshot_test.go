@@ -146,3 +146,79 @@ func mustMarshalSeeds(t *testing.T, seeds []*plansv1.SeedArtifactBinding) json.R
 	}
 	return raw
 }
+
+// The runtime snapshot is the single place that populates
+// PlanConfiguration.included_optional_capabilities from the persisted parameter
+// values, so the engine can skip opt-out steps (ADR-018 D4).
+func TestBuildPlanExecutionSnapshotPopulatesIncludedOptionalCapabilities(t *testing.T) {
+	tenantID := uuid.New()
+	templateID := uuid.New()
+	skuID := uuid.New()
+	installationID := uuid.New()
+	connected := "connected"
+	config := func(parameterValues string) *PlanConfiguration {
+		return &PlanConfiguration{
+			ID:                  uuid.New(),
+			TenantID:            tenantID,
+			PlanTemplateID:      templateID,
+			PlanTemplateVersion: 1,
+			Status:              ConfigurationStatusRunnable,
+			ParameterValues:     json.RawMessage(parameterValues),
+			SlotBindings: mustMarshalBindings(t, []*plansv1.SlotBinding{
+				{StepKey: "fetch-news", ExecutorInstallationId: installationID.String()},
+			}),
+		}
+	}
+	template := &PlanTemplate{
+		ID:      templateID,
+		Key:     "linkedin-content-studio",
+		Version: 1,
+		Steps: []PlanStep{{
+			Key:                   "fetch-news",
+			InputArtifactTypeID:   "harpia.artifacts.v1.DateRange",
+			OutputArtifactTypeID:  "harpia.artifacts.v1.NewsList",
+			DefaultExecutorSKUKey: "rss-news-feed",
+		}},
+		// The opt-in SELECTs map to the INCLUDED_CAPABILITY target.
+		InputParameters: json.RawMessage(`[{"key":"include_carousel","runtimeMappings":[{"target":"TEMPLATE_INPUT_RUNTIME_TARGET_INCLUDED_CAPABILITY","policyKey":"carousel-authoring"}]},{"key":"include_images","runtimeMappings":[{"target":"TEMPLATE_INPUT_RUNTIME_TARGET_INCLUDED_CAPABILITY","policyKey":"image-generation"}]}]`),
+	}
+	lookup := &mockExecutorLookup{
+		installations: map[uuid.UUID]*executors.ExecutorInstallation{
+			installationID: {
+				ID:               installationID,
+				TenantID:         tenantID,
+				ExecutorSKUID:    skuID,
+				Kind:             executors.KindIntegration,
+				Enabled:          true,
+				ConnectionStatus: &connected,
+			},
+		},
+		skus:         map[uuid.UUID]*executors.ExecutorSKU{skuID: {ID: skuID, Key: "rss-news-feed", Kind: executors.KindIntegration}},
+		entitledSKUs: map[uuid.UUID]bool{skuID: true},
+	}
+	now := time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC)
+
+	t.Run("carousel included, image not", func(t *testing.T) {
+		snapshot, err := buildPlanExecutionSnapshot(context.Background(), tenantID, config(`{"include_carousel":"yes","include_images":"no"}`), template, lookup, now)
+		if err != nil {
+			t.Fatalf("buildPlanExecutionSnapshot() error = %v", err)
+		}
+		included := snapshot.Configuration.GetIncludedOptionalCapabilities()
+		if !containsString(included, "carousel-authoring") {
+			t.Fatalf("included = %v, want carousel-authoring", included)
+		}
+		if containsString(included, "image-generation") {
+			t.Fatalf("included = %v, want image-generation absent", included)
+		}
+	})
+
+	t.Run("nothing included by default", func(t *testing.T) {
+		snapshot, err := buildPlanExecutionSnapshot(context.Background(), tenantID, config(`{"include_carousel":"no","include_images":"no"}`), template, lookup, now)
+		if err != nil {
+			t.Fatalf("buildPlanExecutionSnapshot() error = %v", err)
+		}
+		if len(snapshot.Configuration.GetIncludedOptionalCapabilities()) != 0 {
+			t.Fatalf("included = %v, want empty", snapshot.Configuration.GetIncludedOptionalCapabilities())
+		}
+	})
+}

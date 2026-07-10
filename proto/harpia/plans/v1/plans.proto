@@ -81,6 +81,9 @@ enum TemplateInputRuntimeTarget {
   TEMPLATE_INPUT_RUNTIME_TARGET_SEED_ARTIFACT = 1;
   TEMPLATE_INPUT_RUNTIME_TARGET_SLOT_BINDING = 2;
   TEMPLATE_INPUT_RUNTIME_TARGET_BEHAVIOR_POLICY = 3;
+  // Populates PlanConfiguration.included_optional_capabilities: a truthy value
+  // for the mapped parameter opts the capability (policy_key) INTO the run.
+  TEMPLATE_INPUT_RUNTIME_TARGET_INCLUDED_CAPABILITY = 4;
 }
 
 message TemplateInputRuntimeMapping {

@@ -77,6 +77,10 @@ func buildPlanExecutionSnapshot(
 
 	configuration := configurationToProto(config)
 	resolveDateRangePresetSeeds(configuration, configuration.GetSchedule(), now)
+	// Opt-in capabilities are derived from the persisted parameter values rather
+	// than stored on the row, so the runtime snapshot is the single place that
+	// populates PlanConfiguration.included_optional_capabilities for the engine.
+	populateIncludedOptionalCapabilities(configuration, templateToProto(template))
 
 	return workflow.PlanExecutionSnapshot{
 		SchemaVersion:         executionSnapshotSchemaVersion,
@@ -116,6 +120,25 @@ func resolveDateRangePresetSeeds(config *plansv1.PlanConfiguration, schedule *pl
 			continue
 		}
 		seed.LiteralJson = string(raw)
+	}
+}
+
+// populateIncludedOptionalCapabilities derives the opt-in capability set from
+// the configuration's parameter values (e.g. include_carousel/include_images
+// SELECTs) and sets it on the runtime PlanConfiguration. The engine skips
+// steps whose optional capability is not in this set (ADR-018 D4). Parse or
+// materialize failures are non-fatal — an empty set means "opt out everything
+// optional", which is the safe default for an unconfigured run.
+func populateIncludedOptionalCapabilities(config *plansv1.PlanConfiguration, template *plansv1.PlanTemplate) {
+	if config == nil || template == nil {
+		return
+	}
+	values := map[string]any{}
+	if trimmed := strings.TrimSpace(string(config.GetParameterValuesJson())); trimmed != "" {
+		_ = json.Unmarshal([]byte(trimmed), &values)
+	}
+	if _, _, _, included, err := MaterializePlanConfiguration(template, values); err == nil {
+		config.IncludedOptionalCapabilities = included
 	}
 }
 

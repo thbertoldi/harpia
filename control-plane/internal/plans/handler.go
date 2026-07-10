@@ -1141,7 +1141,10 @@ func (h *PlanHandler) materializeConfigurationProjection(
 	}
 
 	templateProto := templateToProto(template)
-	seeds, parameterSlots, policies, err := MaterializePlanConfiguration(templateProto, values)
+	// The included_optional_capabilities projection is derived where it is read
+	// at runtime (buildPlanExecutionSnapshot), not persisted on the repository
+	// row, so it is intentionally not threaded out of this projection.
+	seeds, parameterSlots, policies, _, err := MaterializePlanConfiguration(templateProto, values)
 	if err != nil {
 		return nil, nil, nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}

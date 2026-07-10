@@ -17,7 +17,7 @@ func TestMaterializePlanConfigurationFromParameterValues(t *testing.T) {
 	template := weeklyNewsletterMaterializeTemplate()
 	sourceGroupID := uuid.New().String()
 
-	seeds, slots, policies, err := MaterializePlanConfiguration(template, map[string]any{
+	seeds, slots, policies, _, err := MaterializePlanConfiguration(template, map[string]any{
 		"theme":                        "AI operations",
 		"language":                     "pt-BR",
 		"tone":                         "analytical",
@@ -70,7 +70,7 @@ func TestMaterializePlanConfigurationFromParameterValues(t *testing.T) {
 }
 
 func TestMaterializePlanConfigurationSkipsAbsentParameters(t *testing.T) {
-	seeds, slots, policies, err := MaterializePlanConfiguration(weeklyNewsletterMaterializeTemplate(), map[string]any{
+	seeds, slots, policies, _, err := MaterializePlanConfiguration(weeklyNewsletterMaterializeTemplate(), map[string]any{
 		"theme": "AI operations",
 	})
 	if err != nil {
@@ -89,6 +89,112 @@ func TestMaterializePlanConfigurationSkipsAbsentParameters(t *testing.T) {
 	if policies.GetPublishApprovalMode() != plansv1.PublishApprovalMode_PUBLISH_APPROVAL_MODE_UNSPECIFIED {
 		t.Fatalf("publish approval mode = %v, want UNSPECIFIED", policies.GetPublishApprovalMode())
 	}
+}
+
+func TestMaterializeIncludedCapabilityOptIn(t *testing.T) {
+	template := &plansv1.PlanTemplate{
+		InputParameters: []*plansv1.TemplateInputParameter{
+			{
+				Key: "include_carousel",
+				RuntimeMappings: []*plansv1.TemplateInputRuntimeMapping{{
+					Target:    plansv1.TemplateInputRuntimeTarget_TEMPLATE_INPUT_RUNTIME_TARGET_INCLUDED_CAPABILITY,
+					PolicyKey: "carousel-authoring",
+				}},
+			},
+			{
+				Key: "include_images",
+				RuntimeMappings: []*plansv1.TemplateInputRuntimeMapping{{
+					Target:    plansv1.TemplateInputRuntimeTarget_TEMPLATE_INPUT_RUNTIME_TARGET_INCLUDED_CAPABILITY,
+					PolicyKey: "image-generation",
+				}},
+			},
+		},
+	}
+
+	t.Run("yes opts in, no stays out", func(t *testing.T) {
+		_, _, _, included, err := MaterializePlanConfiguration(template, map[string]any{
+			"include_carousel": "yes",
+			"include_images":   "no",
+		})
+		if err != nil {
+			t.Fatalf("MaterializePlanConfiguration() error = %v", err)
+		}
+		if !containsString(included, "carousel-authoring") {
+			t.Fatalf("included = %v, want carousel-authoring", included)
+		}
+		if containsString(included, "image-generation") {
+			t.Fatalf("included = %v, want image-generation absent", included)
+		}
+	})
+
+	t.Run("native bool true opts in", func(t *testing.T) {
+		_, _, _, included, err := MaterializePlanConfiguration(template, map[string]any{
+			"include_images": true,
+		})
+		if err != nil {
+			t.Fatalf("MaterializePlanConfiguration() error = %v", err)
+		}
+		if !containsString(included, "image-generation") {
+			t.Fatalf("included = %v, want image-generation", included)
+		}
+	})
+
+	t.Run("absent value opts nothing in", func(t *testing.T) {
+		_, _, _, included, err := MaterializePlanConfiguration(template, nil)
+		if err != nil {
+			t.Fatalf("MaterializePlanConfiguration() error = %v", err)
+		}
+		if len(included) != 0 {
+			t.Fatalf("included = %v, want empty", included)
+		}
+	})
+
+	t.Run("duplicate capability deduped", func(t *testing.T) {
+		// Two parameters mapping to the same capability id must dedup to one entry.
+		dupTemplate := &plansv1.PlanTemplate{
+			InputParameters: []*plansv1.TemplateInputParameter{
+				{
+					Key: "include_carousel",
+					RuntimeMappings: []*plansv1.TemplateInputRuntimeMapping{{
+						Target:    plansv1.TemplateInputRuntimeTarget_TEMPLATE_INPUT_RUNTIME_TARGET_INCLUDED_CAPABILITY,
+						PolicyKey: "carousel-authoring",
+					}},
+				},
+				{
+					Key: "extra_carousel_flag",
+					RuntimeMappings: []*plansv1.TemplateInputRuntimeMapping{{
+						Target:    plansv1.TemplateInputRuntimeTarget_TEMPLATE_INPUT_RUNTIME_TARGET_INCLUDED_CAPABILITY,
+						PolicyKey: "carousel-authoring",
+					}},
+				},
+			},
+		}
+		_, _, _, included, err := MaterializePlanConfiguration(dupTemplate, map[string]any{
+			"include_carousel":   "yes",
+			"extra_carousel_flag": "on",
+		})
+		if err != nil {
+			t.Fatalf("MaterializePlanConfiguration() error = %v", err)
+		}
+		count := 0
+		for _, c := range included {
+			if c == "carousel-authoring" {
+				count++
+			}
+		}
+		if count != 1 {
+			t.Fatalf("carousel-authoring count = %d, want 1 (included=%v)", count, included)
+		}
+	})
+}
+
+func containsString(haystack []string, needle string) bool {
+	for _, s := range haystack {
+		if s == needle {
+			return true
+		}
+	}
+	return false
 }
 
 func TestApplyBehaviorPolicyContentOutputFormat(t *testing.T) {

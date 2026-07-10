@@ -28,6 +28,7 @@ var testExecutorSKUs = map[string]struct{}{
 	"newsletter-writer-senior":  {},
 	"linkedin-voice-senior":     {},
 	"linkedin-carousel-senior":  {},
+	"linkedin-content-specialist": {},
 	"image-asset-generator":     {},
 	"linkedin-publish":          {},
 }
@@ -253,8 +254,9 @@ func TestValidatePlanTemplateBranchingDAG(t *testing.T) {
 }
 
 // TestEmbeddedPlanTemplatesLoadLinkedInContentStudio exercises the REAL embedded
-// YAML (not synthetic) for the new branching template, asserting it loads and
-// validates against the seeder exactly as EnsurePlanTemplates would (minus the DB).
+// YAML (not synthetic) for the ADR-018 re-authored template: the multi-capable
+// LinkedIn Content Specialist drives authoring, carousel + image are opt-in
+// capabilities (not a format branch), and there is a single publish.
 func TestEmbeddedPlanTemplatesLoadLinkedInContentStudio(t *testing.T) {
 	files, err := embeddedPlanTemplateFiles()
 	if err != nil {
@@ -282,7 +284,42 @@ func TestEmbeddedPlanTemplatesLoadLinkedInContentStudio(t *testing.T) {
 	if len(linkedin.Edges) != 5 {
 		t.Fatalf("edge count = %d, want 5", len(linkedin.Edges))
 	}
-	// The template branches at write-draft: two downstream steps must consume
+
+	// The two content-authoring steps are filled by the multi-capable
+	// specialist SKU (not the retired narrow voice/carousel SKUs).
+	stepByKey := make(map[string]planTemplateStepSeed, len(linkedin.Steps))
+	for _, step := range linkedin.Steps {
+		stepByKey[step.Key] = step
+	}
+	author, ok := stepByKey["author-content"]
+	if !ok {
+		t.Fatal("missing author-content step")
+	}
+	if author.DefaultExecutorSKUKey != "linkedin-content-specialist" {
+		t.Fatalf("author-content sku = %q, want linkedin-content-specialist", author.DefaultExecutorSKUKey)
+	}
+	if !requiredCapability(author, "linkedin-content-adaptation") {
+		t.Fatalf("author-content executor_requirement = %#v, want required_capabilities [linkedin-content-adaptation]", author.ExecutorRequirement)
+	}
+	carousel, ok := stepByKey["draft-carousel"]
+	if !ok {
+		t.Fatal("missing draft-carousel step")
+	}
+	if carousel.DefaultExecutorSKUKey != "linkedin-content-specialist" {
+		t.Fatalf("draft-carousel sku = %q, want linkedin-content-specialist", carousel.DefaultExecutorSKUKey)
+	}
+	if !optionalCapability(carousel, "carousel-authoring") {
+		t.Fatalf("draft-carousel executor_requirement = %#v, want optional_capabilities [carousel-authoring]", carousel.ExecutorRequirement)
+	}
+	image, ok := stepByKey["generate-image"]
+	if !ok {
+		t.Fatal("missing generate-image step")
+	}
+	if !optionalCapability(image, "image-generation") {
+		t.Fatalf("generate-image executor_requirement = %#v, want optional_capabilities [image-generation]", image.ExecutorRequirement)
+	}
+
+	// The template branches at write-draft: three downstream steps must consume
 	// the same TextDraft output type, which only validates under edge-based checking.
 	branchCount := 0
 	for _, edge := range linkedin.Edges {
@@ -290,9 +327,64 @@ func TestEmbeddedPlanTemplatesLoadLinkedInContentStudio(t *testing.T) {
 			branchCount++
 		}
 	}
-	if branchCount != 2 {
-		t.Fatalf("write-draft branch count = %d, want 2", branchCount)
+	if branchCount != 3 {
+		t.Fatalf("write-draft branch count = %d, want 3", branchCount)
 	}
+
+	// The two opt-in SELECTs map onto the INCLUDED_CAPABILITY target.
+	includeCarousel := findInputParameter(linkedin, "include_carousel")
+	if includeCarousel == nil {
+		t.Fatal("missing include_carousel input parameter")
+	}
+	if !hasIncludedCapabilityMapping(includeCarousel, "carousel-authoring") {
+		t.Fatalf("include_carousel mappings = %#v, want INCLUDED_CAPABILITY carousel-authoring", includeCarousel.RuntimeMappings)
+	}
+	includeImages := findInputParameter(linkedin, "include_images")
+	if includeImages == nil {
+		t.Fatal("missing include_images input parameter")
+	}
+	if !hasIncludedCapabilityMapping(includeImages, "image-generation") {
+		t.Fatalf("include_images mappings = %#v, want INCLUDED_CAPABILITY image-generation", includeImages.RuntimeMappings)
+	}
+}
+
+func requiredCapability(step planTemplateStepSeed, capability string) bool {
+	caps, _ := step.ExecutorRequirement["required_capabilities"].([]any)
+	for _, c := range caps {
+		if s, ok := c.(string); ok && s == capability {
+			return true
+		}
+	}
+	return false
+}
+
+func optionalCapability(step planTemplateStepSeed, capability string) bool {
+	caps, _ := step.ExecutorRequirement["optional_capabilities"].([]any)
+	for _, c := range caps {
+		if s, ok := c.(string); ok && s == capability {
+			return true
+		}
+	}
+	return false
+}
+
+func findInputParameter(template *planTemplateSeed, key string) *templateInputParameterSeed {
+	for i := range template.InputParameters {
+		if template.InputParameters[i].Key == key {
+			return &template.InputParameters[i]
+		}
+	}
+	return nil
+}
+
+func hasIncludedCapabilityMapping(param *templateInputParameterSeed, policyKey string) bool {
+	for _, mapping := range param.RuntimeMappings {
+		if mapping.Target == "TEMPLATE_INPUT_RUNTIME_TARGET_INCLUDED_CAPABILITY" &&
+			mapping.PolicyKey == policyKey {
+			return true
+		}
+	}
+	return false
 }
 
 func templateKeys(catalog []planTemplateSeed) []string {
@@ -301,6 +393,30 @@ func templateKeys(catalog []planTemplateSeed) []string {
 		keys = append(keys, t.Key)
 	}
 	return keys
+}
+
+func TestValidateRuntimeMappingIncludedCapabilityWhitelist(t *testing.T) {
+	stepKeys := map[string]int{"fetch-news": 0}
+
+	// Any non-empty capability id is accepted.
+	for _, capability := range []string{"carousel-authoring", "image-generation"} {
+		mapping := &templateInputRuntimeMappingSeed{
+			Target:    "TEMPLATE_INPUT_RUNTIME_TARGET_INCLUDED_CAPABILITY",
+			PolicyKey: capability,
+		}
+		if err := validateRuntimeMapping("include_carousel", mapping, stepKeys); err != nil {
+			t.Fatalf("capability %q: unexpected error = %v", capability, err)
+		}
+	}
+
+	// Empty capability id must be rejected (it is the opt-in key).
+	empty := &templateInputRuntimeMappingSeed{
+		Target:    "TEMPLATE_INPUT_RUNTIME_TARGET_INCLUDED_CAPABILITY",
+		PolicyKey: "",
+	}
+	if err := validateRuntimeMapping("include_carousel", empty, stepKeys); err == nil {
+		t.Fatal("empty policyKey: expected error, got nil")
+	}
 }
 
 func TestValidateRuntimeMappingBehaviorPolicyWhitelist(t *testing.T) {
