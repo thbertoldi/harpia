@@ -34,7 +34,7 @@ reading order.
 | 001 | API & communication | Live (constitution §6). |
 | 002 | Workflow & agents | Amended — graph & modes (§7.5). |
 | 003 | Data architecture | Live (§6); task/subtask hierarchy renamed (§4). |
-| 004 | Identity & access | Live (§6, §11). |
+| 004 | Identity & access | Amended — OpenFGA/ReBAC authz layer retired; RLS + Zitadel roles + thin app checks (§6, §11). Zitadel AuthN + RLS still live. |
 | 005 | Dev & delivery | Live (§6). |
 | 006 | Domain-driven design | Amended — six contexts, Plan Management (§5). |
 | 007 | Agentic patterns | Amended — refined by 011/014; gates scoped to adaptive mode (§7.5). |
@@ -45,7 +45,7 @@ reading order.
 | 012 | Plan-centric task model | Core, amended by 015/017 (§7, §9). |
 | 013 | ConnectRPC Python | Live (§6). |
 | 014 | Agent memory boundary | Live, generalized — MemoryResource → **Resource** (§8). |
-| 015 | PlanTemplate authoring | Live (§13); Áreas RBAC reconciled to OpenFGA (§11). |
+| 015 | PlanTemplate authoring | Live (§13); Áreas RBAC now membership-based, not OpenFGA (§11). |
 | 016 | Design token refresh | Live (§10). |
 | 018 | Capability-based agent teams (roles × tiers) | **Accepted** — folded into §4/§7.2/§13. Supersedes the one-SKU-per-step model built under `rich-linkedin-content`. |
 | 017 | Navigation & lifecycle | Live (§9). |
@@ -57,4 +57,4 @@ reading order.
 - **Overseer gate universal vs template-mode** (ADR-007 vs ADR-012) → **mode split** (§7.5).
 - **`subtask_*` nouns in new protos** (ADR-010/011) → rename to `step_*`
   ([cleanup backlog](../architecture/cleanup-backlog.md), C4).
-- **Áreas RBAC vs OpenFGA** (ADR-015 vs ADR-004) → **Áreas modeled in OpenFGA** (§11).
+- **Áreas RBAC vs OpenFGA** (ADR-015 vs ADR-004) → **Áreas are membership-based RBAC** (Zitadel roles + RLS + thin app checks); OpenFGA/ReBAC retired (§11).

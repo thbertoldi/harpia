@@ -180,7 +180,7 @@ superseded one noted.
 | Term | Definition |
 |---|---|
 | **Tenant / Workspace / User** | Tenancy hierarchy. Tenant = organization. |
-| **Área** | A business area (Marketing, Sales, …). **Áreas are RBAC entities**, modeled as OpenFGA relations ([§11](#11-áreas--rbac)); memberships gate Plans, Agents, Integrations, Artifacts, and Resources. |
+| **Área** | A business area (Marketing, Sales, …). **Áreas are RBAC entities** — membership-based, enforced with Zitadel roles + app-level checks (not a ReBAC graph); see [§11](#11-áreas--rbac). Memberships gate Plans, Agents, Integrations, Artifacts, and Resources; fine-grained enforcement is light at MVP. |
 | **Thread / Conversation** | The durable top-level work object the user opens, resumes, and searches. A Thread spawns **1:N** PlanConfigurations. |
 
 ### Commercial & metering
@@ -260,9 +260,12 @@ pricing policy stay separate.
   bucket with `tenant/{tenant_id}/{logical_path}`. Wrappers derive tenant from
   `identity.RequestContext` and reject pre-scoped keys; a source-scan test fails the build
   if domain code bypasses them. Rate limiting is a Connect interceptor.
-- **Identity & access — Zitadel + OpenFGA + RLS.** Three layers: *who you are*
-  (Zitadel AuthN), *what you can do* (OpenFGA ReBAC), *data enforcement* (RLS). Áreas are
-  modeled in OpenFGA ([§11](#11-áreas--rbac)).
+- **Identity & access — Zitadel + RLS + thin role checks.** *Who you are* = Zitadel AuthN;
+  *data enforcement* = Postgres RLS (tenant isolation); *what you can do* = a small set of
+  coarse roles (owner/admin/member) from Zitadel enforced by app-level checks. **OpenFGA/ReBAC
+  is retired** ([§11](#11-áreas--rbac)) — it was complexity for permissions the product does
+  not yet need. Authorization on **downstream systems of record (e.g. Odoo) is deferred to
+  those systems** via the scoped credentials on their ExecutorInstallation.
 - **Dev & delivery — mise + Tilt + Temporalite.** `mise run dev` brings the stack up on
   kind. Trunk-based, squash-merge, Conventional Commits. Registry `ghcr.io/harpia/`.
 
@@ -478,12 +481,38 @@ gradients are static. Themes via `data-theme` (default/aiuna/tenant-base/brand).
 
 ## 11. Áreas & RBAC
 
-**Áreas are first-class RBAC entities**, not cosmetic groupings. They are modeled as
-**OpenFGA relations** (resolving the ADR-015-vs-ADR-004 gap: Áreas RBAC *is* the OpenFGA
-model, not a parallel scheme). A user's Área memberships gate access to Plans, Agents,
-Integrations, Artifacts, and **Resources**. Data-level enforcement remains Postgres RLS by
-tenant; Área-level authorization is an OpenFGA check layered above it. The company's
-business areas from the PRD (Marketing, Sales, …) are Áreas.
+**Áreas are RBAC entities** — the business areas (Marketing, Sales, …) a user belongs to —
+but at MVP they are **membership-based, not a relationship graph**. The authorization model is
+deliberately minimal:
+
+- **Tenant isolation → Postgres RLS.** The real security boundary (`current_tenant_id()`); a
+  user only ever sees their tenant's data. Non-negotiable, kept.
+- **Coarse roles → Zitadel + thin app-level checks.** A small set of roles (owner/admin/member,
+  plus who may approve) gates the few sensitive actions: approve a pending action (N07),
+  configure/run plans, change autonomy rules (N08), manage integrations/credentials, manage
+  billing/credits.
+- **Áreas → light membership.** The concept stays first-class in the domain, but fine-grained
+  área-scoped enforcement is **deferred** — small tenants (owner + a few people) see their
+  tenant's work; área-gating activates when orgs are large enough to need it.
+- **Downstream authorization → the system of record.** What Aiuna may do in Odoo (or any other
+  downstream) is governed by the scoped credentials on that system's ExecutorInstallation and
+  enforced by that system's own permission model — Aiuna does not mirror it.
+
+**OpenFGA/ReBAC is retired** (reversing ADR-004's authorization layer). Zanzibar-style ReBAC
+solves nested groups, per-resource sharing, and cross-resource inheritance — none of which the
+MVP has — while taxing every feature with dual writes (Postgres + tuples) and an extra service.
+
+**Two authorization axes — spend complexity on the second, not the first:**
+
+- *User authorization* (which human can do what) — simple, handled above.
+- *Agent autonomy* (what the AI may do without a human, and whether it can be undone) —
+  `PlanBehaviorPolicies`/autonomy rules (N08) + approval (N07) + operation reversibility. This
+  is the axis users actually experience and the platform's differentiator; governance
+  investment belongs here, not in user RBAC.
+
+**Tripwire to reintroduce ReBAC (enterprise tier):** per-resource sharing ("share this artifact
+with these people"), cross-área/workspace inheritance, or an enterprise customer demanding
+fine-grained auditable authz — modeled *then* against real patterns, not guessed now.
 
 ---
 
@@ -616,7 +645,7 @@ supersession detail is in [`docs/adr/README.md`](../adr/README.md).
 | 001 | API & communication | **Live** — folded into §6 (+ADR-013 for Python). |
 | 002 | Workflow & agents | **Amended** — 3-node graph → 5-node (ADR-007); "task" flow → adaptive mode (§7.5). |
 | 003 | Data architecture | **Live** — §6. Task/subtask hierarchy renamed (§4). |
-| 004 | Identity & access | **Live** — §6, §11. |
+| 004 | Identity & access | **Amended** — Zitadel AuthN + Postgres RLS live; the **OpenFGA/ReBAC authz layer is retired**, replaced by RLS + Zitadel roles + thin app checks (§6, §11). |
 | 005 | Dev & delivery | **Live** — §6. |
 | 006 | Domain-driven design | **Amended** — "Task Management"→"Plan Management"; five contexts → six (§5). |
 | 007 | Agentic patterns | **Amended** — MCP §7 refined by ADR-011; memory refined by ADR-014; gates scoped to adaptive mode (§7.5). |
@@ -627,7 +656,7 @@ supersession detail is in [`docs/adr/README.md`](../adr/README.md).
 | 012 | Plan-centric task model | **Core, amended** — the spine (§7); 1:1 chat→config superseded by ADR-017 (§9); SQL templates → YAML (ADR-015). |
 | 013 | ConnectRPC Python | **Live** — §6. |
 | 014 | Agent memory boundary | **Live, generalized** — MemoryResource → **Resource** (§8). |
-| 015 | PlanTemplate authoring | **Live** — §13; Áreas RBAC reconciled to OpenFGA (§11). |
+| 015 | PlanTemplate authoring | **Live** — §13; Áreas RBAC now membership-based, not OpenFGA (§11). |
 | 016 | Design token refresh | **Live** — §10; "tokens LOCKED" clarified to fonts-locked/color-governed. |
 | 017 | Navigation & lifecycle | **Live** — §9; amends ADR-012's 1:1 assumption. |
 | 018 | Capability-based agent teams (roles × tiers) | **Accepted** — §4 (Capability, Seniority Tier, Agent Team; SKU = role × tier), §7.2 (capability-based teams), §13 (catalog grows by capability, not SKU-per-step). Supersedes the one-SKU-per-step model built under `rich-linkedin-content`. |
