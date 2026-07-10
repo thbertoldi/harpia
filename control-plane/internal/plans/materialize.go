@@ -272,6 +272,7 @@ func ResolveDefaultSlotBindings(
 	tenantID uuid.UUID,
 	template *plansv1.PlanTemplate,
 	existing []*plansv1.SlotBinding,
+	includedOptionalCapabilities []string,
 	executorRepo ExecutorLookup,
 ) ([]*plansv1.SlotBinding, error) {
 	if template == nil {
@@ -298,6 +299,11 @@ func ResolveDefaultSlotBindings(
 		}
 		stepKey := strings.TrimSpace(step.GetKey())
 		if stepKey == "" {
+			continue
+		}
+		// Opt-out capability steps (ADR-018 D4) run no executor and need no
+		// binding — they are skipped at runtime, so do not require a default.
+		if stepOptedOut(step, includedOptionalCapabilities) {
 			continue
 		}
 		if _, ok := bound[stepKey]; ok {
@@ -349,4 +355,29 @@ func defaultBindingForStep(ctx context.Context, executorRepo ExecutorLookup, ten
 		}, nil
 	}
 	return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("step %q requires enabled executor installation for default sku %q", stepKey, defaultSKUKey))
+}
+
+// stepOptedOut reports whether the step declares an optional capability the run
+// did not include (ADR-018 D4). Such steps run no executor and need no binding,
+// so configuration validation and default-binding resolution skip them. This
+// mirrors workflow.shouldSkipStepForOptOut and planassistant.stepOptedOut (the
+// rule is duplicated across packages pre-v1; a shared helper is a later cleanup).
+func stepOptedOut(step *plansv1.PlanStep, includedOptionalCapabilities []string) bool {
+	if step == nil {
+		return false
+	}
+	optional := step.GetExecutorRequirement().GetOptionalCapabilities()
+	if len(optional) == 0 {
+		return false
+	}
+	included := make(map[string]struct{}, len(includedOptionalCapabilities))
+	for _, c := range includedOptionalCapabilities {
+		included[c] = struct{}{}
+	}
+	for _, c := range optional {
+		if _, ok := included[c]; !ok {
+			return true
+		}
+	}
+	return false
 }

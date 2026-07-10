@@ -1143,12 +1143,14 @@ func (h *PlanHandler) materializeConfigurationProjection(
 	templateProto := templateToProto(template)
 	// The included_optional_capabilities projection is derived where it is read
 	// at runtime (buildPlanExecutionSnapshot), not persisted on the repository
-	// row, so it is intentionally not threaded out of this projection.
-	seeds, parameterSlots, policies, _, err := MaterializePlanConfiguration(templateProto, values)
+	// row. It is threaded to ResolveDefaultSlotBindings here so opt-out steps
+	// (e.g. generate-image when images are not included) are not required to
+	// have a default binding.
+	seeds, parameterSlots, policies, included, err := MaterializePlanConfiguration(templateProto, values)
 	if err != nil {
 		return nil, nil, nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
-	defaultSlots, err := ResolveDefaultSlotBindings(ctx, tenantID, templateProto, parameterSlots, h.executors)
+	defaultSlots, err := ResolveDefaultSlotBindings(ctx, tenantID, templateProto, parameterSlots, included, h.executors)
 	if err != nil {
 		return nil, nil, nil, err
 	}

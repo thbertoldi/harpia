@@ -273,6 +273,7 @@ func TestResolveDefaultSlotBindingsSkipsParameterBindingsAndBindsDefaults(t *tes
 		tenantID,
 		defaultSlotBindingTemplate(),
 		[]*plansv1.SlotBinding{{StepKey: "fetch-news", ExecutorInstallationId: sourceGroupID.String()}},
+		nil,
 		lookup,
 	)
 	if err != nil {
@@ -309,6 +310,7 @@ func TestResolveDefaultSlotBindingsReturnsPreconditionForMissingRequiredDefault(
 		tenantID,
 		defaultSlotBindingTemplate(),
 		nil,
+		nil,
 		&mockExecutorLookup{},
 	)
 	if got := connect.CodeOf(err); got != connect.CodeFailedPrecondition {
@@ -316,6 +318,38 @@ func TestResolveDefaultSlotBindingsReturnsPreconditionForMissingRequiredDefault(
 	}
 	if !strings.Contains(err.Error(), "fetch-news") {
 		t.Fatalf("error = %v, want step name", err)
+	}
+}
+
+func TestResolveDefaultSlotBindingsSkipsOptedOutCapabilityStep(t *testing.T) {
+	tenantID := uuid.New()
+	template := &plansv1.PlanTemplate{
+		Steps: []*plansv1.PlanStep{
+			{
+				Key:                   "generate-image",
+				DefaultExecutorSkuKey: "image-asset-generator",
+				ExecutorRequirement: &plansv1.ExecutorRequirement{
+					ExecutorKind:        plansv1.ExecutorKind_EXECUTOR_KIND_INTEGRATION,
+					OptionalCapabilities: []string{"image-generation"},
+				},
+			},
+		},
+	}
+	// No installation exists for image-asset-generator. Without the opt-out
+	// skip this fails with FailedPrecondition (the configuration blocker).
+	defaults, err := ResolveDefaultSlotBindings(
+		context.Background(),
+		tenantID,
+		template,
+		nil,
+		nil, // images not included -> generate-image is opted out
+		&mockExecutorLookup{},
+	)
+	if err != nil {
+		t.Fatalf("opted-out step should be skipped, got error: %v", err)
+	}
+	if len(defaults) != 0 {
+		t.Fatalf("opted-out step should need no default binding, got %#v", defaults)
 	}
 }
 
