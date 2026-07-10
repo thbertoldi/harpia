@@ -1,10 +1,65 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "instructions": ["README.md"],
+  "default_agent": "orchestrator",
+  "model": "zai-coding-plan/glm-5.2",
+  "small_model": "opencode/mimo-v2.5-free",
   "permission": {
-    "bash": { "*": "ask", "git *": "allow" }
+    "bash": {
+      "*": "ask",
+      "git status*": "allow",
+      "git diff*": "allow",
+      "git log*": "allow",
+      "git show*": "allow",
+      "git branch --show-current": "allow",
+      "git rev-parse*": "allow",
+      "git ls-files*": "allow",
+      "cd frontend && bun run lint": "allow",
+      "cd frontend && bun run check": "allow",
+      "cd frontend && bunx vitest run *": "allow",
+      "cd agent-runtime && ruff check src/": "allow",
+      "cd agent-runtime && uv run pytest": "allow",
+      "cd control-plane && go test ./...": "allow",
+      "cd proto && buf lint": "allow",
+      "mise run buf-generate": "allow",
+      "mise run helm-lint": "allow",
+      "openspec validate --all --strict --no-interactive": "allow",
+      "mise run opencode-validate": "allow"
+    },
+    "skill": {
+      "*": "deny",
+      "harpia": "allow",
+      "openspec-*": "allow",
+      "chat-ui": "allow",
+      "design-accessibility-auditor": "allow",
+      "grpc-service-development": "allow",
+      "helm-chart-scaffolding": "allow",
+      "kubernetes-deployment": "allow",
+      "monitoring-observability": "allow",
+      "postgresql-database-engineering": "allow",
+      "python-backend": "allow",
+      "shadcn-svelte": "allow",
+      "svelte-code-writer": "allow",
+      "svelte-core-bestpractices": "allow",
+      "tailwind-css-patterns": "allow",
+      "temporal-developer": "allow"
+    },
+    "github_*": "ask"
   },
-  "plugin": ["@sveltejs/opencode"],
+  "agent": {
+    "build": {
+      "disable": true
+    },
+    "plan": {
+      "disable": true
+    },
+    "explore": {
+      "disable": true
+    },
+    "general": {
+      "disable": true
+    }
+  },
+  "plugin": ["@sveltejs/opencode@0.1.9"],
   "mcp": {
     "github": {
       "type": "remote",

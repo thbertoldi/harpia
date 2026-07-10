@@ -1,20 +1,21 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  Read repository-root AGENTS.md before authoring any artifact; it is authoritative
+  for how Harpia work is planned, delivered, and verified. Before modeling Harpia
+  architecture or domain taxonomy, read docs/architecture/harpia-platform.md; the
+  Platform Constitution is authoritative over dated ADR history where they disagree.
+  Read docs/architecture/mvp-roadmap.md and docs/architecture/cleanup-backlog.md only
+  when relevant to the change. Reference these sources instead of copying mutable
+  project guidance into artifacts.
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+rules:
+  proposal:
+    - "Follow AGENTS.md's idea → ADR → OpenSpec routing and preserve forward links among the idea log, governing ADRs, and this change when applicable."
+  specs:
+    - "Use the Platform Constitution's exact ubiquitous language and treat it as authoritative over dated ADRs."
+  design:
+    - "Reference canonical project documents for constraints instead of copying their mutable content into a competing source of truth."
+  tasks:
+    - "Make every task executor-cold and assume the executor has no conversation context."
+    - "For each task, state the intended behavior, exact file paths, dependencies and order, Given/When/Then acceptance criteria, exact focused verification commands, and every applicable AGENTS.md whole-surface gate."

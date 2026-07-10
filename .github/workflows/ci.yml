@@ -95,6 +95,23 @@ jobs:
         working-directory: ${{ matrix.working-directory }}
         run: ${{ matrix.run }}
 
+  tooling:
+    name: Tooling
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install pinned tooling
+        run: bun install --global @fission-ai/openspec@1.5.0 opencode-ai@1.17.18
+      - name: Validate OpenSpec
+        run: openspec validate --all --strict --no-interactive
+      - name: Test OpenCode validator
+        run: bun test scripts/ci/validate_opencode.test.ts
+      - name: Validate OpenCode roster
+        run: bun run scripts/ci/validate_opencode.ts
+
   buf-breaking:
     name: Buf Breaking Changes
     if: github.event_name == 'pull_request'
@@ -129,7 +146,7 @@ jobs:
   build-containers:
     name: Build and Publish Containers
     if: github.event_name == 'push' && github.ref == 'refs/heads/trunk'
-    needs: [lint, test, buf-breaking, helm-lint]
+    needs: [lint, test, tooling, buf-breaking, helm-lint]
     runs-on: ubuntu-latest
     permissions:
       contents: read

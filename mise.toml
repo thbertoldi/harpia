@@ -3,6 +3,8 @@ go = "1.25"
 python = "3.12"
 node = "24"
 bun = "latest"
+opencode = "1.17.18"
+"npm:@fission-ai/openspec" = "1.5.0"
 uv = "latest"
 buf = "latest"
 tilt = "latest"
@@ -154,3 +156,7 @@ run = "cd database && atlas migrate apply --dir migrations --url \"$DATABASE_URL
 [tasks.dispatch]
 description = "Run the coding-agent dispatcher"
 run = "go run ./cmd/dispatch \"$@\""
+
+[tasks.opencode-validate]
+description = "Validate the project OpenCode roster and OpenSpec tooling policy"
+run = "bun run scripts/ci/validate_opencode.ts \"$@\""
