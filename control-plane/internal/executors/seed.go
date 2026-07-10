@@ -97,6 +97,22 @@ var DefaultCatalogSeeds = []CatalogSeed{
 		},
 	},
 	{
+		Key:         SKULinkedinContentSpecialist,
+		DisplayName: "LinkedIn Content Specialist (Sênior)",
+		Description: "Multi-capable LinkedIn content agent — adapts a text draft into a LinkedIn post or authors a carousel outline.",
+		Kind:        KindAgent,
+		PriceCents:  200,
+		Currency:    "USD",
+		Compatibility: CompatibilityMetadata{
+			InputArtifactTypeKeys:  []string{"harpia.artifacts.v1.TextDraft"},
+			OutputArtifactTypeKeys: []string{"harpia.artifacts.v1.LinkedInPostDraft", "harpia.artifacts.v1.CarouselDraft"},
+			ManifestID:             "linkedin-content-specialist",
+			ManifestVersion:        "0.1.0",
+			Capabilities:           []string{"linkedin-content-adaptation", "carousel-authoring"},
+			Tier:                   "senior",
+		},
+	},
+	{
 		Key:         SKUImageAssetGenerator,
 		DisplayName: "Image Asset Generator",
 		Description: "Generates a branded image asset from a content brief via a configured provider.",
