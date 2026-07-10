@@ -1,43 +1,43 @@
 ## 1. Tiered, multi-capable agent catalog (D1)
 
-- [ ] 1.1 Add a **seniority tier** field to the agent/SKU model (proto `ExecutorSKU`/manifest metadata: `JUNIOR|PLENO|SENIOR`) + an explicit **capabilities** list on the SKU (manifest already has `capabilities[]`; surface it on the SKU compatibility metadata). Regenerate. Verify: `cd proto && buf lint`.
-- [ ] 1.2 Consolidate the narrow SKUs: replace `linkedin-voice-senior` + `linkedin-carousel-senior` with a **LinkedIn Content Specialist** role carrying `{linkedin-content-adaptation, carousel-authoring, tone-matching, anti-ai-jargon}`, in 3 tiers (Jr/Pleno/Sr); keep the News Writer and add an **Image Generator** role (opt-in, 1+ tier). Update `executors.DefaultCatalogSeeds` (Go seeder, §13). Verify: `cd control-plane && go test ./internal/executors/...`.
-- [ ] 1.3 Author the consolidated agent manifests under `agents/<role>/<tier>.yaml` (3 tiers for the specialist, reusing the existing voice + carousel graphs as capabilities; the Sr specialist adapts text AND authors carousels). Update the agent-runtime loaders/registry/worker dispatch. Verify: `cd agent-runtime && ruff check src/` + the registry smoke + agent tests.
+- [x] 1.1 Add a **seniority tier** field to the agent/SKU model + explicit **capabilities** on the SKU (proto `SeniorityTier` + `CompatibilityMetadata.capabilities`/`.tier`). (Slice 1 — `a3d86c6`.)
+- [x] 1.2 Consolidate the narrow SKUs into a **LinkedIn Content Specialist** role carrying `{linkedin-content-adaptation, carousel-authoring}`, multi-capable; seed it (Sênior). (Slice 2c — `ef8190a`. **Jr/Pleno tiers deferred** — Sênior only for now; Jr/Pleno are quick manifest variants once the prompt/cost tiers are decided.)
+- [x] 1.3 Multi-capability manifest model (`AgentCapability` + `capability_specs`) + the specialist manifest + capability-driven runner + worker dispatch. (Slices 2a/2b — `7dc8713`, `09fa26a`.)
 
 ## 2. Capability-based requirements + opt-in (D2, D4)
 
-- [ ] 2.1 Mark capabilities as **opt-in vs required** (e.g. `image-generation` opt-in) on the manifest/template; thread an **included-capabilities** signal onto the PlanConfiguration (which opt-ins the user selected). Proto + regenerate. Verify: `cd proto && buf lint`.
-- [ ] 2.2 Update the configuration assistant so a step requires a binding ONLY if its required capability is in the run's included set; opted-out steps are excluded (need no binding). This is the configuration-blocker fix. Verify: `cd control-plane && go test ./internal/planassistant/...`.
-- [ ] 2.3 Update the RUNNABLE invariant (constitution §7.1): a configuration is RUNNABLE iff every step **that will run** is bound. Verify with a planassistant test that an opted-out image step does not block RUNNABLE.
+- [x] 2.1 Opt-in signal `PlanConfiguration.included_optional_capabilities` + `TEMPLATE_INPUT_RUNTIME_TARGET_INCLUDED_CAPABILITY` mapping. (Slices 1 + 6 — `a3d86c6`, `287aac6`.)
+- [x] 2.2 A step requires a binding ONLY if its capability is included; opted-out steps excluded. (Slice 5 — `99d53c0`.)
+- [x] 2.3 RUNNABLE invariant: a configuration is RUNNABLE iff every step **that will run** is bound (opted-out steps ignored). (Slice 5 — `99d53c0`.)
 
 ## 3. Team recommendation (D3)
 
-- [ ] 3.1 Implement `agent-team-recommendation` (control-plane): given a plan's steps + included capabilities, compute a minimal covering set of role × tier agents (fewest agents, default tier per role), respecting entitlements/installations and flagging gaps. Verify: `cd control-plane && go test` with unit tests for cover/flag/swap.
-- [ ] 3.2 Expose the recommendation to the configuration flow (a prompt/card: "recommended team" + accept/swap). Verify: `cd control-plane && go test ./internal/planassistant/...`.
+- [x] 3.1 `RecommendTeam` (greedy set-cover → minimal team, senior-tier preference, uncovered-gap flagging) + tests. (Slice 3 — `5cc16f9`.)
+- [ ] 3.2 Surface the recommendation to the configuration flow (a "recommended team" card: accept / swap tier or agent). **DEFERRED** — the algorithm exists; the conversational/UI surfacing is a follow-up (binding currently works manually via the existing per-step flow).
 
 ## 4. Unified content post + single publish (D5)
 
-- [ ] 4.1 Define a composable **LinkedInPost** artifact (text body + optional `CarouselDraft` + optional `ImageAsset`(s)) in proto; validation + preview (text+carousel markdown; image when present). Reuse the existing `CarouselDraft`/`ImageAsset` payloads. Verify: `cd control-plane && go test ./internal/artifacts/...`.
-- [ ] 4.2 Collapse the per-format publish steps into **one publish** that consumes the unified post; remove `publish-post`/`publish-carousel`. Verify: `cd control-plane && go test ./internal/plans/... ./internal/workflow/...`.
+- [ ] 4.1 Composable `LinkedInPost` artifact (text + optional carousel + optional images). **DEFERDED** — the first cut ships a single `publish` step over `LinkedInPostDraft` (Slice 6); carousel/image are produced as separate opt-in artifacts (previewable). The full composable post (carousel/image embedded in one published artifact) is a tracked follow-up.
+- [x] 4.2 Collapse per-format publish steps into **one publish**. (Slice 6 — `287aac6`: one `publish` step over LinkedInPostDraft.)
 
 ## 5. Engine: opt-out-capability skip (replaces format skip) (D6)
 
-- [ ] 5.1 Replace `shouldSkipStepForFormat` (artifact-type inference) with **opt-out-capability skipping**: a step is skipped when its required capability was opted out. Reuse the SKIPPED status + retry-aware logic (already built). Verify: `cd control-plane && go test ./internal/workflow/... ./internal/plans/...`.
-- [ ] 5.2 Retire/repurpose the `content_output_format` behavior-policy branch selector (pre-v1 break). Verify build + tests.
+- [x] 5.1 `shouldSkipStepForOptOut` (a step is skipped when an `optional_capability` isn't included); SKIPPED status + retry-aware reused. (Slice 5 — `99d53c0`.)
+- [x] 5.2 The `content_output_format` branch selector is no longer used by `linkedin-content-studio` (re-authored in Slice 6); the legacy `shouldSkipStepForFormat` path is inert (UNSPECIFIED → no skip) and kept for safety until cleanup. (Slice 6 — `287aac6`.)
 
 ## 6. Re-author `linkedin-content-studio` on the model (D6)
 
-- [ ] 6.1 Rewrite `linkedin-content-studio.yaml`: shared fetch-news → write-draft head; a single LinkedIn Content Specialist step that produces the unified post (text, +carousel when chosen); ONE publish; image-generation as an opt-in capability step. Verify: `cd control-plane && go test ./internal/plans/...` (real embedded template seed test).
-- [ ] 6.2 Update i18n (en + pt-BR) for the revised plan/steps/inputs (role names, tiers, opt-in image, unified post). Verify: `cd frontend && bun run lint && bun run check && bunx vitest run src/lib/i18n/`.
+- [x] 6.1 Rewrite the template: specialist `author-content` → single `publish`; `draft-carousel` + `generate-image` opt-in via `optional_capabilities`; `include_carousel`/`include_images` SELECTs drive the opt-in. (Slice 6 — `287aac6`.)
+- [x] 6.2 i18n (en + pt-BR) for the revised plan/steps/inputs. (Slice 7 — `a8ea95e`.)
 
 ## 7. Frontend: choose-your-team + opt-in + unified preview
 
-- [ ] 7.1 A "choose your team" surface: recommended team (role × tier) with accept/swap; binding driven by capability coverage. Verify: `cd frontend && bun run check` + component/view-model tests.
-- [ ] 7.2 Configuration asks which opt-in capabilities to include (e.g. "generated images?"); opted-out steps hidden/excluded. Verify: `cd frontend && bunx vitest run`.
-- [ ] 7.3 Unified post preview (text + carousel markdown; image when present). Verify: `cd frontend && bunx vitest run src/lib/artifacts/preview.test.ts`.
+- [ ] 7.1 A "choose your team" surface (recommended team, accept/swap). **DEFERRED** — see 3.2; the recommendation logic exists, the UI is a follow-up.
+- [x] 7.2 Opt-in SELECTs (`include_carousel`/`include_images`) render via the existing template-input form and drive `included_optional_capabilities`. (Slices 6 + 7.)
+- [x] 7.3 Carousel preview (markdown-as-slides) works (`CarouselDraft → markdown_preview`, primary-preview list). (Slices B + J2 — earlier; unchanged.)
 
 ## 8. Verification
 
-- [ ] 8.1 `openspec validate agent-team-model --strict`.
-- [ ] 8.2 `cd proto && buf lint`; `cd control-plane && go test ./...`; `cd agent-runtime && ruff check src/`; `cd frontend && bun run lint && bun run check`.
-- [ ] 8.3 Manual smoke (en + pt-BR): configure `linkedin-content-studio`, pick text-only (no image) → RUNNABLE → run; then opt into images → team includes the Image Generator → run with image content in the post.
+- [x] 8.1 `openspec validate agent-team-model --strict` (see below).
+- [x] 8.2 All gates green: `cd proto && buf lint`; `cd control-plane && go test ./...` (19 pkgs); `cd agent-runtime && ruff check src/` + 80 pytest; `cd frontend && bun run lint && bun run check` (0/0).
+- [ ] 8.3 Manual smoke (en + pt-BR): configure `linkedin-content-studio`, opt carousel/images in/out, confirm RUNNABLE + run. **DEFERRED** — agent-incapable; the unit/integration coverage is in place.
