@@ -115,7 +115,7 @@ the cheap rename now.
 
 ### ADR stamping — ✅ done (this consolidation pass)
 All 17 ADRs stamped with a "superseded-by-constitution" banner; `docs/adr/README.md` created
-with the supersession map (constitution §15).
+with the supersession map (constitution §16).
 
 ---
 

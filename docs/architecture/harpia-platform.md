@@ -68,6 +68,12 @@ The **first commercial front** (Aiuna "Growth Front": Marketing + Sales) is *con
 top of this platform*, not a rewrite of it. See [§12](#12-mvp-scope) and the
 [roadmap](mvp-roadmap.md).
 
+Aiuna is the **AI-operations layer over a system of record**: it *operates* business data that
+lives downstream (Odoo first, other systems later) rather than owning a CRM/ERP of its own —
+see [§15](#15-downstream-systems-of-record--the-integration-model). The company runs **two
+verticals** on this: the **product** (the operations layer) and a **consulting** practice that
+structures greenfield businesses with the platform **+ Odoo** as their base system of record.
+
 ---
 
 ## 3. Principles
@@ -113,6 +119,10 @@ and the accepted ADRs, reconciled.
     Those are **configuration axes** ([§7.6](#76-template-granularity-identity-is-the-outcome)).
     The extra flexibility does not become user burden because the conversational assistant
     infers and pre-fills defaults ([§9](#9-navigation--lifecycle)).
+15. **Downstream operations are governed and reversible.** Plans act on systems of record
+    (Odoo first) as high-level, *governed* operations — never CRUD passthrough — and every
+    downstream mutation is compensable where possible, with irreversible actions gated by
+    approval ([§15](#15-downstream-systems-of-record--the-integration-model)).
 
 ---
 
@@ -635,7 +645,80 @@ this section is the canonical model in the meantime.
 
 ---
 
-## 15. Superseded-ADR map
+## 15. Downstream systems of record & the integration model
+
+Aiuna is the **AI-operations layer**; the business data it acts on lives in **systems of record**
+— Odoo first, other ERP/CRM systems later. This section governs how Aiuna operates on them. It is
+the concrete expression of §2 ("not a vertical CRM/ERP"): Aiuna does not *build* CRM, catalog, or
+pipeline — it *operates* one downstream.
+
+### 15.1 Two altitudes, one front door
+
+Aiuna and the system of record are **two altitudes over the same data**, not two ways to do the
+same thing:
+
+- **Aiuna** = conversational operations, planning, human-AI collaboration, and governance
+  (audit/approval/autonomy). The **front door** — the first surface the user sees.
+- **System of record (Odoo)** = detailed record management and standard forms (low-level CRUD).
+
+Single sign-on (Zitadel, §6) makes Aiuna the entry point; the user can navigate to the downstream
+app's own UI for form-level detail. Rule of thumb: **high-level operations in Aiuna, low-level
+record-keeping downstream.**
+
+### 15.2 Plans operate downstream — govern, don't proxy
+
+The customer does not do CRUD *through* Aiuna. The customer **executes a plan**, and a plan step
+composes one or more downstream operations to accomplish a **high-level outcome** (e.g. "onboard
+this client" = create partner + opportunity + follow-up task + draft intro). Two mechanisms,
+chosen per step ([§7.2](#72-executors-satisfy-contracts)):
+
+- **AgentExecutor + MCP** — a multi-capable agent reasons and calls several downstream tools
+  (Odoo exposes an MCP server), capability-gated and audited (ADR-011). For reasoned, multi-tool
+  operations.
+- **IntegrationExecutor** — a deterministic activity calling the downstream API directly. For
+  single deterministic operations. Do not route deterministic work through an agent.
+
+Every downstream operation flows through the plan/executor model, so it inherits the platform's
+governance: the action log (N12), approval gates (N07), and agent-autonomy policies (N08). Aiuna
+**governs** downstream operations; it is never a thin CRUD passthrough — that discipline is what
+keeps it a product, not a chat skin over Odoo.
+
+### 15.3 Ownership and data flow
+
+The **system of record owns its data.** Aiuna does not mirror the downstream CRM/catalog/pipeline
+into its own store (that would create two sources of truth and a sync burden). Instead:
+
+- Aiuna **references** downstream data live (via MCP/API) when a plan needs it.
+- Select downstream answers are **promoted into Artifacts** for preview in the thread, and into
+  **Resources** ([§8](#8-the-resource-layer-the-shared-layer)) only when durable, versioned,
+  brand-scoped knowledge is warranted.
+- Downstream authorization is the system of record's job ([§11](#11-áreas--rbac)): scoped
+  ExecutorInstallation credentials + the downstream system's own permission model.
+
+### 15.4 Reversible operations (compensation)
+
+Because plans **write** to a business's real systems, every downstream mutation SHALL be modeled
+as a **compensable operation** wherever possible: capture the pre-state, perform the mutation, and
+retain a **compensating action** (undo) — with an explicit **irreversibility flag** for
+operations that cannot be undone (a sent email, a published post). This uses Temporal's
+saga/compensation pattern: the `PlanWorkflow` tracks completed downstream writes and can run
+compensations in reverse on failure or user cancellation. **Irreversible operations default to
+requiring approval** (N07/N08). "Governed, *reversible* AI operations on your real systems" is a
+core product promise, not an afterthought.
+
+### 15.5 Generic by construction; the two verticals
+
+Odoo is the **first** downstream integration, wired as one generic `IntegrationExecutor` /
+ExecutorInstallation (endpoint + scoped credentials) — never hardcoded into the core. As the
+company grows, Aiuna integrates other downstream systems the same way, and must deliver value even
+for customers who already have their own systems. The company's **two verticals** ([§2](#2-product-vision--positioning))
+— product (the operations layer) and consulting (platform + Odoo for greenfield SMBs) — reinforce
+each other, but the product must be able to stand alone; consulting is distribution, a live lab,
+and cash flow, not the product's identity.
+
+---
+
+## 16. Superseded-ADR map
 
 The ADRs are retained as dated history. This is the reading key; the full per-ADR
 supersession detail is in [`docs/adr/README.md`](../adr/README.md).
@@ -663,7 +746,7 @@ supersession detail is in [`docs/adr/README.md`](../adr/README.md).
 
 ---
 
-## 16. How to change this document
+## 17. How to change this document
 
 1. Capture the idea in [`docs/notes/product-ideas.md`](../notes/product-ideas.md).
 2. If it is an architectural *decision*, write an ADR in [`docs/adr/`](../adr/).

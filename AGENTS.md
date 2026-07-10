@@ -35,12 +35,18 @@ Key terms (see ADR-012 for full definitions):
   `DRAFT → RUNNABLE → SCHEDULED → DISABLED → ARCHIVED`.
 - **Artifact / ArtifactType** — typed payloads flowing between steps.
 - **PlanExecution / StepExecution** — one run of a configuration walking the DAG.
-- The **chat interface is a PlanConfiguration assistant** (ADR-012 §10), not a generic task creator.
+- A **conversation is a PlanConfiguration assistant** that may spawn several plans (1:N;
+  constitution §9), not a generic task creator.
 
 Corollaries that constrain design:
-- Plans generate typed **Artifacts**; UI surfaces are **browsers over the Artifact stream** — no out-of-band CRUD.
-- Business **Áreas are RBAC entities**: memberships gate Plans/Agents/Integrations/Artifacts.
-- Feed URLs, OAuth, etc. belong to an **ExecutorInstallation config**, not to templates or artifacts.
+- Business state lives as typed **Artifacts** and **Resources**; UI surfaces are
+  **browsers/editors over that model**, not bespoke CRUD stores (constitution §2, §8).
+- Business **Áreas are RBAC entities** (membership-based; constitution §11): memberships gate
+  Plans/Agents/Integrations/Artifacts/Resources.
+- Aiuna is the **AI-operations layer over a downstream system of record** (Odoo first);
+  plans operate downstream as governed, reversible operations (constitution §15).
+- Feed URLs, OAuth, downstream endpoints/credentials, etc. belong to an **ExecutorInstallation
+  config**, not to templates or artifacts.
 
 ## How we work — idea → decision → build
 
@@ -48,10 +54,13 @@ Ideas arrive at different altitudes; route each to the right home so nothing is 
 
 1. **Idea log** — capture every idea in **[docs/notes/product-ideas.md](docs/notes/product-ideas.md)**,
    themed and tagged with taxonomy terms. This is the inbox + roadmap index.
-2. **ADR** (`docs/adr/`) — when an idea is an architecture *decision*.
+2. **Fold into the [Platform Constitution](docs/architecture/harpia-platform.md)** — when an
+   idea is an architecture *decision*, record it directly in the constitution (the single
+   source of truth). **We no longer create new ADRs** — they reintroduce the fuzzy-context
+   problem the constitution removed; ADR-001…018 are frozen history under their banners.
 3. **OpenSpec change** (`openspec/`) — when an idea is ready to build. Use the
    `openspec` CLI (v1.5+) or the `opsx-*` commands. Flow: propose → design → specs → tasks → apply → archive.
-4. Each log entry links forward to its ADR / OpenSpec change so the trail is traceable.
+4. Each log entry links forward to its constitution section / OpenSpec change so the trail is traceable.
 
 ## Delivery constraints (non-negotiable)
 
