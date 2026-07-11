@@ -318,8 +318,16 @@
         translate("thread.propose.adjust", $locale),
       );
     }
-    wentThroughForm = true;
-    stage = "form";
+    if (candidates.length > 1) {
+      // With multiple candidates, "Adjust" means "let me pick a different plan."
+      // Reset the selection so the UI re-renders all candidates as buttons.
+      selected = null;
+      wentThroughForm = false;
+    } else {
+      // With a single candidate, "Adjust" means "edit this plan's parameters."
+      wentThroughForm = true;
+      stage = "form";
+    }
   }
 
   async function onFormSubmit() {
