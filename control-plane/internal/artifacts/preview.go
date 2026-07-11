@@ -35,6 +35,8 @@ func BuildPreview(typeKey string, payload []byte) (*artifactsv1.PreviewArtifactR
 		return buildJSONPreview(payload, &artifactsv1.PublishConfirmation{})
 	case TypeKeyCarouselDraft:
 		return buildCarouselDraftPreview(payload)
+	case TypeKeyImageAsset:
+		return buildImageAssetPreview(payload)
 	default:
 		// Forward-compatible fallback: artifact types not enumerated above can
 		// still preview if their payload carries html or image content. This
@@ -174,6 +176,70 @@ func buildCarouselDraftPreview(payload []byte) (*artifactsv1.PreviewArtifactResp
 			MarkdownPreview: b.String(),
 		},
 	}, nil
+}
+
+// buildImageAssetPreview renders an ImageAsset payload. The payload carries the
+// proto metadata (prompt, mimeType, width, height, altText) plus an optional
+// image_url (a presigned object-store URL, populated when the PayloadStore
+// supports presigning) and/or image_base64 (inline rendering bytes for the
+// non-presigning fallback). A presigned URL is preferred when present; otherwise
+// the inline bytes are decoded and returned.
+func buildImageAssetPreview(payload []byte) (*artifactsv1.PreviewArtifactResponse, error) {
+	var shape struct {
+		Prompt      string `json:"prompt"`
+		MimeType    string `json:"mimeType"`
+		AltText     string `json:"altText"`
+		Caption     string `json:"caption"`
+		ImageURL    string `json:"image_url"`
+		ImageBase64 string `json:"image_base64"`
+	}
+	if err := json.Unmarshal(payload, &shape); err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrInvalidPayload, err)
+	}
+
+	altText := strings.TrimSpace(shape.AltText)
+	if altText == "" {
+		altText = strings.TrimSpace(shape.Caption)
+	}
+
+	url := strings.TrimSpace(shape.ImageURL)
+	b64 := strings.TrimSpace(shape.ImageBase64)
+	if url == "" && b64 == "" {
+		// No renderable bytes: surface the metadata so the preview is still useful.
+		summary := strings.TrimSpace(shape.Prompt)
+		if summary == "" {
+			summary = strings.TrimSpace(shape.MimeType)
+		}
+		return &artifactsv1.PreviewArtifactResponse{
+			Preview: &artifactsv1.PreviewArtifactResponse_MarkdownPreview{
+				MarkdownPreview: fmt.Sprintf("_[image asset: %s]_", fallbackLabel(summary)),
+			},
+		}, nil
+	}
+
+	resp := &artifactsv1.PreviewArtifactResponse{
+		Preview: &artifactsv1.PreviewArtifactResponse_ImagePreview{
+			ImagePreview: &artifactsv1.ImagePreview{
+				Url:     url,
+				AltText: altText,
+			},
+		},
+	}
+	if b64 != "" {
+		data, err := base64.StdEncoding.DecodeString(b64)
+		if err != nil {
+			return nil, fmt.Errorf("%w: invalid image_base64: %v", ErrInvalidPayload, err)
+		}
+		resp.GetImagePreview().InlineData = data
+	}
+	return resp, nil
+}
+
+func fallbackLabel(s string) string {
+	if s == "" {
+		return "no metadata"
+	}
+	return s
 }
 
 func buildNewsListPreview(payload []byte) (*artifactsv1.PreviewArtifactResponse, error) {

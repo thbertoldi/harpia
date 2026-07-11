@@ -123,6 +123,7 @@ var DefaultCatalogSeeds = []CatalogSeed{
 			InputArtifactTypeKeys:  []string{"harpia.artifacts.v1.TextDraft"},
 			OutputArtifactTypeKeys: []string{"harpia.artifacts.v1.ImageAsset"},
 			ConnectionType:         "image_provider",
+			Capabilities:           []string{"image-generation"},
 		},
 	},
 }

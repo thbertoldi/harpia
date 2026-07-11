@@ -88,12 +88,19 @@ func ValidatePayload(typeKey string, payload []byte) error {
 			return nil
 		})
 	case TypeKeyImageAsset:
-		return validateProtoJSON(payload, &artifactsv1.ImageAsset{}, func(msg *artifactsv1.ImageAsset) error {
-			if strings.TrimSpace(msg.MimeType) == "" {
-				return fmt.Errorf("%w: mime_type is required", ErrInvalidPayload)
-			}
-			return nil
-		})
+		// ImageAsset payloads may carry preview rendering hints
+		// (image_base64 / image_url) that are not modeled on the proto but
+		// are consumed by the preview layer. Discard unknown fields here so
+		// the hint passes validation while the proto contract (mime_type)
+		// is still enforced.
+		msg := &artifactsv1.ImageAsset{}
+		if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(payload, msg); err != nil {
+			return fmt.Errorf("%w: %v", ErrInvalidPayload, err)
+		}
+		if strings.TrimSpace(msg.MimeType) == "" {
+			return fmt.Errorf("%w: mime_type is required", ErrInvalidPayload)
+		}
+		return nil
 	default:
 		return fmt.Errorf("%w: unsupported artifact type %q", ErrInvalidPayload, typeKey)
 	}

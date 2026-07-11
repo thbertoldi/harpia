@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"github.com/harpia/control-plane/internal/artifacts"
+	"github.com/harpia/control-plane/internal/executors/integrations/image"
 	"github.com/harpia/control-plane/internal/executors/integrations/linkedin"
 	"github.com/harpia/control-plane/internal/executors/integrations/rss"
 	"github.com/harpia/control-plane/internal/executors/runtime"
@@ -32,15 +33,19 @@ func NewRuntime(deps Dependencies) *Runtime {
 		deps.LinkedInPublisher = linkedin.NewNoopPublisher()
 	}
 
+	imageResolver := image.DefaultProviderResolver
+
 	configValidators := runtime.NewConfigValidatorRegistry(
 		rss.NewConfigValidator(),
 		linkedin.NewConfigValidator(),
+		image.NewConfigValidator(),
 	)
 
 	return &Runtime{
 		Integrations: runtime.NewIntegrationRegistry(
 			rss.NewHandler(artifactStore, deps.FeedFetcher),
 			linkedin.NewHandler(artifactStore, deps.LinkedInPublisher),
+			image.NewHandler(artifactStore, imageResolver),
 		),
 		ArtifactStore:    artifactStore,
 		ConfigValidators: configValidators,
@@ -52,5 +57,6 @@ func DefaultConfigValidators() *runtime.ConfigValidatorRegistry {
 	return runtime.NewConfigValidatorRegistry(
 		rss.NewConfigValidator(),
 		linkedin.NewConfigValidator(),
+		image.NewConfigValidator(),
 	)
 }

@@ -8,6 +8,7 @@ const (
 	ErrCodeFeedFetch              = "FeedFetchError"
 	ErrCodeLinkedInPublish        = "LinkedInPublishError"
 	ErrCodeOAuthReconnectRequired = "OAuthReconnectRequired"
+	ErrCodeImageGeneration        = "ImageGenerationError"
 )
 
 // RetryableError marks a transient integration failure that Temporal should retry.
