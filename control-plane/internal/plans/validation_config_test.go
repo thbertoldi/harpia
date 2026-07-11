@@ -65,6 +65,6 @@ func TestValidateSlotBindingsRunnableRejectsInvalidRSSConfig(t *testing.T) {
 		},
 	}
 
-	err := validator.ValidateSlotBindings(context.Background(), tenantID, testTemplate(), plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE, bindings)
+	err := validator.ValidateSlotBindings(context.Background(), tenantID, testTemplate(), plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE, bindings, nil)
 	assertBindingError(t, err, connect.CodeFailedPrecondition, "absolute URL")
 }

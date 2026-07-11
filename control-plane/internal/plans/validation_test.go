@@ -100,7 +100,7 @@ func overseerTestTemplate() *PlanTemplate {
 
 func TestValidateSlotBindingsDraftAllowsMissingBindings(t *testing.T) {
 	validator := NewBindingValidator(&mockExecutorLookup{})
-	err := validator.ValidateSlotBindings(context.Background(), uuid.New(), testTemplate(), plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT, nil)
+	err := validator.ValidateSlotBindings(context.Background(), uuid.New(), testTemplate(), plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT, nil, nil)
 	if err != nil {
 		t.Fatalf("expected draft with no bindings to succeed: %v", err)
 	}
@@ -110,7 +110,7 @@ func TestValidateSlotBindingsDraftRejectsInvalidStepKey(t *testing.T) {
 	validator := NewBindingValidator(&mockExecutorLookup{})
 	err := validator.ValidateSlotBindings(context.Background(), uuid.New(), testTemplate(), plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT, []*plansv1.SlotBinding{
 		{StepKey: "missing-step"},
-	})
+	}, nil)
 	assertBindingError(t, err, connect.CodeInvalidArgument, "step_key does not exist")
 }
 
@@ -144,7 +144,7 @@ func TestValidateSlotBindingsDraftRejectsUnentitledInstallation(t *testing.T) {
 			ExecutorSkuId:          skuID.String(),
 			ExecutorInstallationId: installationID.String(),
 		},
-	})
+	}, nil)
 	assertBindingError(t, err, connect.CodeFailedPrecondition, "not entitled")
 }
 
@@ -179,7 +179,7 @@ func TestValidateSlotBindingsRunnableRequiresAllSteps(t *testing.T) {
 			ExecutorInstallationId: installationID.String(),
 			ExecutorKind:           plansv1.ExecutorKind_EXECUTOR_KIND_INTEGRATION,
 		},
-	})
+	}, nil)
 	assertBindingError(t, err, connect.CodeFailedPrecondition, "slot binding is required")
 }
 
@@ -235,7 +235,7 @@ func TestValidateSlotBindingsRunnableRejectsDisconnectedIntegration(t *testing.T
 			ExecutorKind:           plansv1.ExecutorKind_EXECUTOR_KIND_AGENT,
 		},
 	}
-	err := validator.ValidateSlotBindings(context.Background(), tenantID, testTemplate(), plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE, bindings)
+	err := validator.ValidateSlotBindings(context.Background(), tenantID, testTemplate(), plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE, bindings, nil)
 	assertBindingError(t, err, connect.CodeFailedPrecondition, "not connected")
 }
 
@@ -292,10 +292,85 @@ func TestValidateSlotBindingsRunnableAcceptsReadyBindings(t *testing.T) {
 		},
 	}
 
-	err := validator.ValidateSlotBindings(context.Background(), tenantID, testTemplate(), plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE, bindings)
+	err := validator.ValidateSlotBindings(context.Background(), tenantID, testTemplate(), plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE, bindings, nil)
 	if err != nil {
 		t.Fatalf("expected runnable bindings to pass: %v", err)
 	}
+}
+
+// optionalStepTestTemplate is a two-step template whose second step declares an
+// opt-in capability (ADR-018 D4). When the run does not include
+// "image-generation", generate-image is skipped and needs no binding.
+func optionalStepTestTemplate() *PlanTemplate {
+	return &PlanTemplate{
+		Steps: []PlanStep{
+			{Key: "fetch-news"},
+			{
+				Key:                 "generate-image",
+				ExecutorRequirement: json.RawMessage(`{"optional_capabilities":["image-generation"]}`),
+			},
+		},
+	}
+}
+
+// optionalStepValidator builds a validator with a ready integration binding for
+// fetch-news, leaving generate-image unbound so tests can assert whether it is
+// required depending on the opt-in set.
+func optionalStepValidator(t *testing.T, tenantID uuid.UUID) (*BindingValidator, *plansv1.SlotBinding) {
+	t.Helper()
+	skuID := uuid.New()
+	installationID := uuid.New()
+	connected := "connected"
+	validator := NewBindingValidator(&mockExecutorLookup{
+		installations: map[uuid.UUID]*executors.ExecutorInstallation{
+			installationID: {
+				ID:               installationID,
+				TenantID:         tenantID,
+				ExecutorSKUID:    skuID,
+				Kind:             executors.KindIntegration,
+				Enabled:          true,
+				ConnectionStatus: &connected,
+				ConfigJSON:       json.RawMessage(`{"feeds":["https://example.com/rss"]}`),
+			},
+		},
+		skus: map[uuid.UUID]*executors.ExecutorSKU{
+			skuID: {ID: skuID, Key: "rss-news-feed", Kind: executors.KindIntegration},
+		},
+		entitledSKUs: map[uuid.UUID]bool{skuID: true},
+	})
+	fetchBinding := &plansv1.SlotBinding{
+		StepKey:                "fetch-news",
+		ExecutorSkuId:          skuID.String(),
+		ExecutorInstallationId: installationID.String(),
+		ExecutorKind:           plansv1.ExecutorKind_EXECUTOR_KIND_INTEGRATION,
+	}
+	return validator, fetchBinding
+}
+
+func TestValidateSlotBindingsRunnableSkipsOptedOutStep(t *testing.T) {
+	tenantID := uuid.New()
+	validator, fetchBinding := optionalStepValidator(t, tenantID)
+	err := validator.ValidateSlotBindings(
+		context.Background(), tenantID, optionalStepTestTemplate(),
+		plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
+		[]*plansv1.SlotBinding{fetchBinding},
+		nil, // image-generation opted out: no binding, no error
+	)
+	if err != nil {
+		t.Fatalf("expected runnable validation to skip opted-out optional step: %v", err)
+	}
+}
+
+func TestValidateSlotBindingsRunnableRequiresOptedInStep(t *testing.T) {
+	tenantID := uuid.New()
+	validator, fetchBinding := optionalStepValidator(t, tenantID)
+	err := validator.ValidateSlotBindings(
+		context.Background(), tenantID, optionalStepTestTemplate(),
+		plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
+		[]*plansv1.SlotBinding{fetchBinding},
+		[]string{"image-generation"}, // opted in: binding still required
+	)
+	assertBindingError(t, err, connect.CodeFailedPrecondition, "slot binding is required")
 }
 
 func TestValidateConfigurationForExecutionUsesRunnableRules(t *testing.T) {
@@ -348,11 +423,69 @@ func TestValidateConfigurationForExecutionAcceptsSeededRootStep(t *testing.T) {
 	}
 }
 
+// optionalRootStepTemplate has a required root step (fetch-news, seeded and
+// bound) plus an optional root step (generate-image) that declares an opt-in
+// capability. generate-image has no upstream edges and a non-empty
+// InputArtifactTypeID, so without the opt-out skip validateRootSeedReadiness
+// would demand a seed artifact for it. The InputParameters SELECT wires the
+// capability to the INCLUDED_CAPABILITY target so materialization can derive
+// the opt-in set from the configuration's parameter values.
+func optionalRootStepTemplate() *PlanTemplate {
+	return &PlanTemplate{
+		Steps: []PlanStep{
+			{
+				Key:                  "fetch-news",
+				InputArtifactTypeID:  "harpia.artifacts.v1.DateRange",
+				OutputArtifactTypeID: "harpia.artifacts.v1.NewsList",
+			},
+			{
+				Key:                  "generate-image",
+				InputArtifactTypeID:  "harpia.artifacts.v1.ImageSpec",
+				OutputArtifactTypeID: "harpia.artifacts.v1.Image",
+				ExecutorRequirement:  json.RawMessage(`{"optional_capabilities":["image-generation"]}`),
+			},
+		},
+		// No edges: both steps are root steps.
+		InputParameters: json.RawMessage(`[{"key":"include_images","runtimeMappings":[{"target":"TEMPLATE_INPUT_RUNTIME_TARGET_INCLUDED_CAPABILITY","policyKey":"image-generation"}]}]`),
+	}
+}
+
+func TestValidateConfigurationForExecutionSkipsOptedOutRootStep(t *testing.T) {
+	tenantID := uuid.New()
+	validator, bindings := readySeedValidationValidator(t, tenantID)
+	// Only the fetch-news binding is needed: generate-image is opted out.
+	var fetchBinding *plansv1.SlotBinding
+	for _, b := range bindings {
+		if b.GetStepKey() == "fetch-news" {
+			fetchBinding = b
+		}
+	}
+	if fetchBinding == nil {
+		t.Fatal("missing fetch-news binding from readySeedValidationValidator")
+	}
+	// include_images="no" → image-generation opted out (ADR-018 D4). The
+	// generate-image root step must not require a seed artifact or a binding.
+	config := &PlanConfiguration{
+		TenantID:        tenantID,
+		ParameterValues: json.RawMessage(`{"include_images":"no"}`),
+		SlotBindings:    mustMarshalBindings(t, []*plansv1.SlotBinding{fetchBinding}),
+		SeedArtifacts: mustMarshalSeeds(t, []*plansv1.SeedArtifactBinding{
+			{StepKey: "fetch-news", InputName: "date_range", LiteralJson: `{"startDate":"2026-07-01","endDate":"2026-07-11"}`},
+		}),
+	}
+
+	err := validator.ValidateConfigurationForExecution(context.Background(), tenantID, optionalRootStepTemplate(), config)
+	if err != nil {
+		t.Fatalf("expected validation to skip opted-out optional root step, got: %v", err)
+	}
+}
+
 func TestValidateOverseerBindingsDraftAllowsMissingOverseers(t *testing.T) {
 	validator := NewBindingValidator(&mockExecutorLookup{})
 	err := validator.ValidateOverseerBindings(
 		overseerTestTemplate(),
 		plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+		nil,
 		nil,
 	)
 	if err != nil {
@@ -366,6 +499,7 @@ func TestValidateOverseerBindingsRunnableRejectsMissingAgentOverseer(t *testing.
 		overseerTestTemplate(),
 		plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
 		nil,
+		nil,
 	)
 	assertBindingError(t, err, connect.CodeFailedPrecondition, "overseer binding is required")
 }
@@ -376,6 +510,7 @@ func TestValidateOverseerBindingsScheduledRejectsMissingAgentOverseer(t *testing
 		overseerTestTemplate(),
 		plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_SCHEDULED,
 		[]*plansv1.OverseerBinding{{StepKey: "fetch-news", OverseerUserId: "user-ana"}},
+		nil,
 	)
 	assertBindingError(t, err, connect.CodeFailedPrecondition, "adapt-for-linkedin")
 }
@@ -386,6 +521,7 @@ func TestValidateOverseerBindingsRunnableAcceptsAgentOverseerAndSkipsIntegration
 		overseerTestTemplate(),
 		plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
 		[]*plansv1.OverseerBinding{{StepKey: "adapt-for-linkedin", OverseerUserId: "user-ana"}},
+		nil,
 	)
 	if err != nil {
 		t.Fatalf("expected runnable overseer bindings to pass: %v", err)

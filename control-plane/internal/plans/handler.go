@@ -37,6 +37,13 @@ func (a *AssistantConfigurationStore) GetConfiguration(ctx context.Context, tena
 	if err != nil {
 		return nil, err
 	}
+	// The opt-in capability set is a derived runtime projection (ADR-018 D4).
+	// Populate it from the template + parameter values so the assistant state
+	// machine can tell opted-in optional steps from opted-out ones. A missing
+	// template falls back to an empty set (everything optional opted out).
+	if template, err := a.Repo.GetTemplateByID(ctx, cfg.PlanTemplateID); err == nil {
+		return configurationToProto(cfg, template), nil
+	}
 	return configurationToProto(cfg), nil
 }
 
@@ -306,15 +313,15 @@ func (h *PlanHandler) CreatePlanConfiguration(ctx context.Context, req *connect.
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("plan template not found: %w", err))
 	}
 
-	seedArtifacts, slotBindings, behaviorPolicies, err := h.materializeConfigurationProjection(ctx, tenantID, template, req.Msg.ParameterValuesJson)
+	seedArtifacts, slotBindings, behaviorPolicies, included, err := h.materializeConfigurationProjection(ctx, tenantID, template, req.Msg.ParameterValuesJson)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := h.validator.ValidateSlotBindings(ctx, tenantID, template, req.Msg.Status, slotBindings); err != nil {
+	if err := h.validator.ValidateSlotBindings(ctx, tenantID, template, req.Msg.Status, slotBindings, included); err != nil {
 		return nil, connectErrorFromBinding(err)
 	}
-	if err := h.validator.ValidateOverseerBindings(template, req.Msg.Status, req.Msg.OverseerBindings); err != nil {
+	if err := h.validator.ValidateOverseerBindings(template, req.Msg.Status, req.Msg.OverseerBindings, included); err != nil {
 		return nil, connectErrorFromBinding(err)
 	}
 
@@ -324,7 +331,7 @@ func (h *PlanHandler) CreatePlanConfiguration(ctx context.Context, req *connect.
 	// With every agent step overseer-bound, DeriveState skips OVERSEER_STEP and
 	// the conversational flow advances BINDING_STEP → POLICIES_STEP →
 	// BINDING_MATRIX without the pointless "who oversees this?" prompt.
-	overseerBindings := autoBindOverseers(ctx, template, req.Msg.OverseerBindings)
+	overseerBindings := autoBindOverseers(ctx, template, req.Msg.OverseerBindings, included)
 
 	config, err := h.buildConfigurationFromRequest(tenantID, template, req.Msg.WorkspaceId, req.Msg.Status, req.Msg.Kind,
 		seedArtifacts, slotBindings, overseerBindings,
@@ -362,7 +369,7 @@ func (h *PlanHandler) CreatePlanConfiguration(ctx context.Context, req *connect.
 	}
 
 	return connect.NewResponse(&plansv1.CreatePlanConfigurationResponse{
-		PlanConfiguration: configurationToProto(created),
+		PlanConfiguration: configurationToProto(created, template),
 	}), nil
 }
 
@@ -382,6 +389,14 @@ func (h *PlanHandler) GetPlanConfiguration(ctx context.Context, req *connect.Req
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
 
+	// Populate the derived opt-in capability projection (ADR-018 D4) when the
+	// template is available, mirroring AssistantConfigurationStore.GetConfiguration.
+	// A missing template falls back to an empty set (everything optional opted out).
+	if template, err := h.repo.GetTemplateByID(ctx, config.PlanTemplateID); err == nil {
+		return connect.NewResponse(&plansv1.GetPlanConfigurationResponse{
+			PlanConfiguration: configurationToProto(config, template),
+		}), nil
+	}
 	return connect.NewResponse(&plansv1.GetPlanConfigurationResponse{
 		PlanConfiguration: configurationToProto(config),
 	}), nil
@@ -527,7 +542,7 @@ func (h *PlanHandler) UpdatePlanConfiguration(ctx context.Context, req *connect.
 	}
 
 	return connect.NewResponse(&plansv1.UpdatePlanConfigurationResponse{
-		PlanConfiguration: configurationToProto(updated),
+		PlanConfiguration: configurationToProto(updated, template),
 	}), nil
 }
 
@@ -672,7 +687,7 @@ func (h *PlanHandler) SubmitConfigurationSelection(ctx context.Context, req *con
 		}
 	}
 	return connect.NewResponse(&plansv1.SubmitConfigurationSelectionResponse{
-		PlanConfiguration: configurationToProto(updated),
+		PlanConfiguration: configurationToProto(updated, template),
 		Messages:          appended,
 		AlreadyApplied:    alreadyApplied,
 	}), nil
@@ -1006,7 +1021,7 @@ func (h *PlanHandler) ListStepExecutions(ctx context.Context, req *connect.Reque
 // unchanged and the OVERSEER_STEP prompt remains as the fallback path (and for
 // future multi-user scenarios). Agent-step detection reuses
 // planStepExecutorKind so it stays consistent with the binding validator.
-func autoBindOverseers(ctx context.Context, template *PlanTemplate, callerBindings []*plansv1.OverseerBinding) []*plansv1.OverseerBinding {
+func autoBindOverseers(ctx context.Context, template *PlanTemplate, callerBindings []*plansv1.OverseerBinding, includedOptionalCapabilities []string) []*plansv1.OverseerBinding {
 	if template == nil {
 		return callerBindings
 	}
@@ -1036,6 +1051,11 @@ func autoBindOverseers(ctx context.Context, template *PlanTemplate, callerBindin
 			continue
 		}
 		if planStepExecutorKind(step) != plansv1.ExecutorKind_EXECUTOR_KIND_AGENT {
+			continue
+		}
+		// Opt-out capability steps run no executor and need no overseer
+		// (ADR-018 D4), so skip them when auto-filling agent overseers.
+		if stepOptedOut(stepToProto(&step), includedOptionalCapabilities) {
 			continue
 		}
 		out = append(out, &plansv1.OverseerBinding{
@@ -1130,14 +1150,14 @@ func (h *PlanHandler) materializeConfigurationProjection(
 	tenantID uuid.UUID,
 	template *PlanTemplate,
 	parameterValuesJSON string,
-) ([]*plansv1.SeedArtifactBinding, []*plansv1.SlotBinding, *plansv1.PlanBehaviorPolicies, error) {
+) ([]*plansv1.SeedArtifactBinding, []*plansv1.SlotBinding, *plansv1.PlanBehaviorPolicies, []string, error) {
 	normalized, err := normalizeParameterValuesJSON(parameterValuesJSON)
 	if err != nil {
-		return nil, nil, nil, connect.NewError(connect.CodeInvalidArgument, err)
+		return nil, nil, nil, nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 	var values map[string]any
 	if err := json.Unmarshal(normalized, &values); err != nil {
-		return nil, nil, nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("parameter values must be a JSON object: %w", err))
+		return nil, nil, nil, nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("parameter values must be a JSON object: %w", err))
 	}
 
 	templateProto := templateToProto(template)
@@ -1145,19 +1165,20 @@ func (h *PlanHandler) materializeConfigurationProjection(
 	// at runtime (buildPlanExecutionSnapshot), not persisted on the repository
 	// row. It is threaded to ResolveDefaultSlotBindings here so opt-out steps
 	// (e.g. generate-image when images are not included) are not required to
-	// have a default binding.
+	// have a default binding, and to the binding/overseer validators so they
+	// do not require a binding for opted-out steps (ADR-018 D4).
 	seeds, parameterSlots, policies, included, err := MaterializePlanConfiguration(templateProto, values)
 	if err != nil {
-		return nil, nil, nil, connect.NewError(connect.CodeInvalidArgument, err)
+		return nil, nil, nil, nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 	defaultSlots, err := ResolveDefaultSlotBindings(ctx, tenantID, templateProto, parameterSlots, included, h.executors)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	slotBindings := append([]*plansv1.SlotBinding{}, parameterSlots...)
 	slotBindings = append(slotBindings, defaultSlots...)
 	sortSlotBindings(slotBindings)
-	return seeds, slotBindings, policies, nil
+	return seeds, slotBindings, policies, included, nil
 }
 
 func sortSlotBindings(bindings []*plansv1.SlotBinding) {
@@ -1245,7 +1266,7 @@ func stepToProto(s *PlanStep) *plansv1.PlanStep {
 	return step
 }
 
-func configurationToProto(c *PlanConfiguration) *plansv1.PlanConfiguration {
+func configurationToProto(c *PlanConfiguration, templateOpt ...*PlanTemplate) *plansv1.PlanConfiguration {
 	config := &plansv1.PlanConfiguration{
 		Id:                  c.ID.String(),
 		TenantId:            c.TenantID.String(),
@@ -1300,7 +1321,24 @@ func configurationToProto(c *PlanConfiguration) *plansv1.PlanConfiguration {
 		}
 	}
 
+	// The opt-in capability set is a derived runtime projection (ADR-018 D4):
+	// it is not persisted on the row but read by the configuration assistant
+	// and binding validators to tell opted-in optional steps from opted-out
+	// ones. Populate it when the caller has the template in hand; callers
+	// without a template get an empty set (the safe "opt out everything
+	// optional" default).
+	applyIncludedOptionalCapabilities(config, templateOpt)
+
 	return config
+}
+
+// applyIncludedOptionalCapabilities populates the opt-in capability projection
+// on a proto configuration when the caller supplied the owning template.
+func applyIncludedOptionalCapabilities(config *plansv1.PlanConfiguration, templateOpt []*PlanTemplate) {
+	if len(templateOpt) == 0 || templateOpt[0] == nil {
+		return
+	}
+	populateIncludedOptionalCapabilities(config, templateToProto(templateOpt[0]))
 }
 
 func executionToProto(e *PlanExecution) *plansv1.PlanExecution {

@@ -79,6 +79,7 @@ func (v *BindingValidator) ValidateSlotBindings(
 	template *PlanTemplate,
 	status plansv1.PlanConfigurationStatus,
 	slotBindings []*plansv1.SlotBinding,
+	includedOptionalCapabilities []string,
 ) error {
 	if v == nil || v.executorLookup == nil {
 		return errors.New("plans: binding validator is required")
@@ -122,6 +123,11 @@ func (v *BindingValidator) ValidateSlotBindings(
 			if stepKey == "" {
 				continue
 			}
+			// Opt-out capability steps run no executor and need no binding
+			// (ADR-018 D4), so skip them when requiring runnable readiness.
+			if stepOptedOut(stepToProto(&step), includedOptionalCapabilities) {
+				continue
+			}
 			binding, ok := bindingsByStep[stepKey]
 			if !ok {
 				return bindingError(stepKey, "", "", connect.CodeFailedPrecondition, "slot binding is required for runnable or scheduled configuration")
@@ -145,6 +151,7 @@ func (v *BindingValidator) ValidateOverseerBindings(
 	template *PlanTemplate,
 	status plansv1.PlanConfigurationStatus,
 	overseerBindings []*plansv1.OverseerBinding,
+	includedOptionalCapabilities []string,
 ) error {
 	if template == nil {
 		return connect.NewError(connect.CodeInvalidArgument, errors.New("plan template is required"))
@@ -191,6 +198,11 @@ func (v *BindingValidator) ValidateOverseerBindings(
 		if stepKey == "" || planStepExecutorKind(step) != plansv1.ExecutorKind_EXECUTOR_KIND_AGENT {
 			continue
 		}
+		// Opt-out capability steps run no executor and need no overseer
+		// (ADR-018 D4), so skip them when requiring runnable readiness.
+		if stepOptedOut(stepToProto(&step), includedOptionalCapabilities) {
+			continue
+		}
 		if _, ok := bindingsByStep[stepKey]; !ok {
 			return bindingError(stepKey, "", "", connect.CodeFailedPrecondition, "overseer binding is required for runnable or scheduled configuration")
 		}
@@ -220,14 +232,43 @@ func (v *BindingValidator) ValidateConfigurationForExecution(
 			return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid stored seed artifacts: %w", err))
 		}
 	}
-	if err := validateRootSeedReadiness(template, seedArtifacts); err != nil {
+	// Derive the opt-in capability set BEFORE the root-seed readiness check so
+	// an opted-out root step (no upstream edges, has an input artifact type)
+	// is not required to carry a seed artifact it will never consume. This
+	// mirrors the opt-out skip already applied in ValidateSlotBindings and
+	// ValidateOverseerBindings (ADR-018 D4).
+	included := includedOptionalCapabilitiesForConfig(template, config)
+	if err := validateRootSeedReadiness(template, seedArtifacts, included); err != nil {
 		return err
 	}
 
-	return v.ValidateSlotBindings(ctx, tenantID, template, plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE, slotBindings)
+	return v.ValidateSlotBindings(ctx, tenantID, template, plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE, slotBindings, included)
 }
 
-func validateRootSeedReadiness(template *PlanTemplate, seedArtifacts []*plansv1.SeedArtifactBinding) error {
+// includedOptionalCapabilitiesForConfig derives the opt-in capability set from
+// a stored configuration's parameter values + template (ADR-018 D4). The set
+// drives which optional steps need a binding/overseer: a capability not in the
+// set means the step is opted out and skipped. Parse or materialize failures
+// yield an empty set — the safe "opt out everything optional" default for an
+// unconfigured run.
+func includedOptionalCapabilitiesForConfig(template *PlanTemplate, config *PlanConfiguration) []string {
+	if template == nil || config == nil {
+		return nil
+	}
+	values := map[string]any{}
+	if trimmed := strings.TrimSpace(string(config.ParameterValues)); trimmed != "" {
+		if err := json.Unmarshal([]byte(trimmed), &values); err != nil {
+			return nil
+		}
+	}
+	_, _, _, included, err := MaterializePlanConfiguration(templateToProto(template), values)
+	if err != nil {
+		return nil
+	}
+	return included
+}
+
+func validateRootSeedReadiness(template *PlanTemplate, seedArtifacts []*plansv1.SeedArtifactBinding, includedOptionalCapabilities []string) error {
 	if template == nil {
 		return connect.NewError(connect.CodeInvalidArgument, errors.New("plan template is required"))
 	}
@@ -253,6 +294,11 @@ func validateRootSeedReadiness(template *PlanTemplate, seedArtifacts []*plansv1.
 		stepKey := strings.TrimSpace(step.Key)
 		inputType := strings.TrimSpace(step.InputArtifactTypeID)
 		if stepKey == "" || inputType == "" || hasUpstream[stepKey] {
+			continue
+		}
+		// Opt-out capability steps run no executor and consume no seed artifact
+		// (ADR-018 D4), so skip them when requiring root-seed readiness.
+		if stepOptedOut(stepToProto(&step), includedOptionalCapabilities) {
 			continue
 		}
 		if !hasSeedForRootInput(seedsByStep[stepKey], inputType) {

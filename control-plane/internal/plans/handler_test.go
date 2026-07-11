@@ -206,7 +206,7 @@ func TestPlanHandlerMaterializesConfigurationFromParameterValuesOnly(t *testing.
 		"approval_mode":"require_approval"
 	}`
 
-	seeds, slots, policies, err := h.materializeConfigurationProjection(context.Background(), tenantID, template, parameterValues)
+	seeds, slots, policies, _, err := h.materializeConfigurationProjection(context.Background(), tenantID, template, parameterValues)
 	if err != nil {
 		t.Fatalf("materializeConfigurationProjection() error = %v", err)
 	}
@@ -339,7 +339,7 @@ func TestAutoBindOverseers_AssignsCurrentUserToAgentSteps(t *testing.T) {
 		{StepKey: "write-draft", OverseerUserId: "user-ana"},
 	}
 
-	got := autoBindOverseers(ctx, template, callerBindings)
+	got := autoBindOverseers(ctx, template, callerBindings, nil)
 
 	if got := findOverseer(got, "fetch-news"); got != nil {
 		t.Fatalf("integration step fetch-news must not get an overseer binding, got %#v", got)
@@ -373,7 +373,7 @@ func TestAutoBindOverseers_NoUserReturnsCallerBindings(t *testing.T) {
 	}
 
 	// Plain context with no request context attached.
-	got := autoBindOverseers(context.Background(), template, callerBindings)
+	got := autoBindOverseers(context.Background(), template, callerBindings, nil)
 	if len(got) != 1 || got[0] != callerBindings[0] {
 		t.Fatalf("bindings = %#v, want caller bindings unchanged when no user is present", got)
 	}
@@ -383,7 +383,7 @@ func TestAutoBindOverseers_NoUserReturnsCallerBindings(t *testing.T) {
 		UserID:   "   ",
 		TenantID: uuid.New(),
 	})
-	got = autoBindOverseers(emptyCtx, template, callerBindings)
+	got = autoBindOverseers(emptyCtx, template, callerBindings, nil)
 	if len(got) != 1 {
 		t.Fatalf("bindings = %#v, want caller bindings unchanged for blank user id", got)
 	}
@@ -415,7 +415,7 @@ func TestAutoBindOverseers_SkipsOverseerStepInDeriveState(t *testing.T) {
 	// With auto-binding: every agent step is overseer-bound → DeriveState must
 	// NOT return OVERSEER_STEP (it advances to POLICIES_STEP since policies are
 	// unset).
-	autoOverseers := autoBindOverseers(ctx, template, nil)
+	autoOverseers := autoBindOverseers(ctx, template, nil, nil)
 	autoCfg, err := h.buildConfigurationFromRequest(
 		tenantID, template, "",
 		plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
@@ -435,7 +435,7 @@ func TestAutoBindOverseers_SkipsOverseerStepInDeriveState(t *testing.T) {
 
 	// Contrast: with no caller bindings and no user in context, the overseer
 	// step is unbound → DeriveState returns OVERSEER_STEP (the fallback path).
-	plainOverseers := autoBindOverseers(context.Background(), template, nil)
+	plainOverseers := autoBindOverseers(context.Background(), template, nil, nil)
 	plainCfg, err := h.buildConfigurationFromRequest(
 		tenantID, template, "",
 		plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,

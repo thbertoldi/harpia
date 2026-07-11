@@ -54,8 +54,19 @@ func buildPlanExecutionSnapshot(
 		bindingsByStep[stepKey] = binding
 	}
 
+	templateProto := templateToProto(template)
+	configuration := configurationToProto(config, template)
+	resolveDateRangePresetSeeds(configuration, configuration.GetSchedule(), now)
+	// Opt-in capabilities are derived from the persisted parameter values rather
+	// than stored on the row; configurationToProto populated them above. Opt-out
+	// steps (ADR-018 D4) run no executor and need no installation snapshot.
+	included := configuration.GetIncludedOptionalCapabilities()
+
 	installationSnapshots := make(map[string]workflow.ExecutorInstallationSnapshot, len(template.Steps))
 	for _, step := range template.Steps {
+		if stepOptedOut(stepToProto(&step), included) {
+			continue
+		}
 		binding := bindingsByStep[step.Key]
 		if binding == nil {
 			return workflow.PlanExecutionSnapshot{}, fmt.Errorf("missing slot binding for step %q", step.Key)
@@ -75,17 +86,10 @@ func buildPlanExecutionSnapshot(
 		installationSnapshots[step.Key] = executorInstallationToSnapshot(installation, sku)
 	}
 
-	configuration := configurationToProto(config)
-	resolveDateRangePresetSeeds(configuration, configuration.GetSchedule(), now)
-	// Opt-in capabilities are derived from the persisted parameter values rather
-	// than stored on the row, so the runtime snapshot is the single place that
-	// populates PlanConfiguration.included_optional_capabilities for the engine.
-	populateIncludedOptionalCapabilities(configuration, templateToProto(template))
-
 	return workflow.PlanExecutionSnapshot{
 		SchemaVersion:         executionSnapshotSchemaVersion,
 		Configuration:         configuration,
-		Template:              templateToProto(template),
+		Template:              templateProto,
 		ExecutorInstallations: installationSnapshots,
 		SnapshotAt:            now.UTC().Format(time.RFC3339),
 	}, nil

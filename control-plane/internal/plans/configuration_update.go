@@ -61,15 +61,15 @@ func (h *PlanHandler) applyConfigurationUpdate(
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	seedArtifacts, slotBindings, behaviorPolicies, err := h.materializeConfigurationProjection(ctx, tenantID, template, string(parameterValues))
+	seedArtifacts, slotBindings, behaviorPolicies, included, err := h.materializeConfigurationProjection(ctx, tenantID, template, string(parameterValues))
 	if err != nil {
 		return nil, err
 	}
 
-	if err := h.validator.ValidateSlotBindings(ctx, tenantID, template, nextStatus, slotBindings); err != nil {
+	if err := h.validator.ValidateSlotBindings(ctx, tenantID, template, nextStatus, slotBindings, included); err != nil {
 		return nil, connectErrorFromBinding(err)
 	}
-	if err := h.validator.ValidateOverseerBindings(template, nextStatus, nextOverseerBindings); err != nil {
+	if err := h.validator.ValidateOverseerBindings(template, nextStatus, nextOverseerBindings, included); err != nil {
 		return nil, connectErrorFromBinding(err)
 	}
 

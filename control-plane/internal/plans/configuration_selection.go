@@ -140,7 +140,7 @@ func (h *PlanHandler) applyConfigurationSelection(
 	selection *plansv1.ConfigurationSelection,
 	label string,
 ) (*PlanConfiguration, *chat.AppendInput, error) {
-	protoCurrent := configurationToProto(current)
+	protoCurrent := configurationToProto(current, template)
 	status := stringToConfigurationStatus(current.Status)
 	kind := stringToConfigurationKind(current.Kind)
 	schedule := protoCurrent.GetSchedule()
@@ -220,7 +220,7 @@ func (h *PlanHandler) appendNextAssistantPromptTx(ctx context.Context, q databas
 		return nil, nil
 	}
 	tpl := templateToProto(template)
-	cfg := configurationToProto(config)
+	cfg := configurationToProto(config, template)
 	state := planassistant.DeriveState(tpl, cfg, nil)
 	in := planassistant.PromptInput{Template: tpl, Config: cfg}
 	if rc, ok := identity.RequestContextFrom(ctx); ok {
