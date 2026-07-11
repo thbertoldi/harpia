@@ -4,6 +4,11 @@
 # Tilt builds backend app images, injects them into k8s manifests,
 # applies to the kind cluster, and live-reloads on code changes.
 
+# Odoo is a separately deployable downstream system. It is intentionally not
+# part of the default `mise run dev` graph; enable it with `tilt up -- --odoo`.
+config.define_bool('odoo', default=False)
+config.parse()
+
 local('./scripts/ensure-dev-kind-secrets.sh')
 
 # Fix the kind node's flaky DNS before any pod pulls an image or makes an
@@ -57,8 +62,6 @@ k8s_yaml([
     'deploy/dev/kind/zitadel.yaml',
     'deploy/dev/kind/zitadel-branding-configmap.yaml',
     'deploy/dev/kind/zitadel-init.yaml',
-    'deploy/dev/kind/openfga.yaml',
-    'deploy/dev/kind/openfga-bootstrap.yaml',
 ])
 
 # Temporal dev server (in-memory single binary). The API builds its workflow
@@ -73,7 +76,7 @@ k8s_resource('garage-bootstrap', resource_deps=['garage'], labels=['infra'])
 # Temporal workers (built images, reused from harpia-api / harpia-agent).
 k8s_yaml('deploy/dev/kind/workers.yaml')
 
-# ---- Host-side dev helpers (Zitadel OIDC, OpenFGA, Vite) ----
+# ---- Host-side dev helpers (Zitadel OIDC, Vite) ----
 local_resource(
     'postgres-credentials-sync',
     cmd='./scripts/sync-dev-postgres-credentials.sh',
@@ -88,8 +91,6 @@ local_resource(
 
 k8s_resource('zitadel', resource_deps=['postgres-credentials-sync'])
 k8s_resource('zitadel-register-client', resource_deps=['zitadel'])
-k8s_resource('openfga', resource_deps=['postgres-credentials-sync'])
-k8s_resource('openfga-bootstrap', resource_deps=['openfga'])
 
 local_resource(
     'db-migrate',
@@ -127,6 +128,36 @@ k8s_resource(
     labels=['backend'],
 )
 
+# ---- Optional Odoo downstream stack ----
+if config.get('odoo', False):
+    # This creates only Odoo-namespace, local-only Secrets and requires an
+    # operator-provided Odoo-scoped Zitadel management credential.
+    local('./scripts/ensure-dev-kind-secrets.sh --odoo')
+    docker_build(
+        'harpia-odoo',
+        context='.',
+        dockerfile='./deploy/odoo/Containerfile',
+    )
+    k8s_yaml([
+        'deploy/dev/kind/odoo-namespace.yaml',
+        'deploy/dev/kind/odoo-postgres.yaml',
+        'deploy/dev/kind/odoo-oidc-client.yaml',
+        'deploy/dev/kind/odoo.yaml',
+        'deploy/dev/kind/odoo-ingress.yaml',
+    ])
+    k8s_resource('odoo-postgres', labels=['odoo'])
+    k8s_resource(
+        'odoo-oidc-bootstrap',
+        resource_deps=['zitadel', 'odoo-postgres'],
+        labels=['odoo'],
+    )
+    k8s_resource(
+        'odoo',
+        resource_deps=['odoo-postgres', 'odoo-oidc-bootstrap'],
+        port_forwards=['18069:8069'],
+        labels=['odoo'],
+    )
+
 local_resource(
     'zitadel-port-forward',
     serve_cmd='./scripts/port-forward-zitadel.sh',
@@ -136,28 +167,11 @@ local_resource(
 )
 
 local_resource(
-    'openfga-port-forward',
-    serve_cmd='./scripts/port-forward-openfga.sh',
-    resource_deps=['openfga'],
-    deps=['./scripts/port-forward-openfga.sh'],
-    labels=['infra'],
-)
-
-local_resource(
     'oidc-sync',
     cmd='./scripts/sync-oidc-config.sh',
     resource_deps=['zitadel-register-client'],
     trigger_mode=TRIGGER_MODE_AUTO,
     deps=['./scripts/sync-oidc-config.sh'],
-    labels=['infra'],
-)
-
-local_resource(
-    'fga-sync',
-    cmd='./scripts/sync-fga-config.sh',
-    resource_deps=['openfga', 'oidc-sync'],
-    trigger_mode=TRIGGER_MODE_AUTO,
-    deps=['./scripts/sync-fga-config.sh'],
     labels=['infra'],
 )
 
@@ -187,7 +201,7 @@ local_resource(
 )
 
 # Vite loads .env.local at startup only (no HMR for env vars). Restart after
-# the OIDC/FGA sync resources write frontend/.env.local.
+# the OIDC sync resources write frontend/.env.local.
 local_resource(
     'vite',
     # PUBLIC_DEV_LOGIN_ENABLED gates the dev-login persona buttons (auth.ts).
@@ -196,9 +210,7 @@ local_resource(
     resource_deps=[
         'frontend-install',
         'oidc-sync',
-        'fga-sync',
         'zitadel-port-forward',
-        'openfga-port-forward',
     ],
     deps=['frontend/.env.local'],
     trigger_mode=TRIGGER_MODE_AUTO,

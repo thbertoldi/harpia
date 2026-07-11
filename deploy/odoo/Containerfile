@@ -1,0 +1,32 @@
+# syntax=docker/dockerfile:1
+# Odoo Community 19 image with audited, image-owned authentication addons.
+FROM odoo:19.0
+
+USER root
+
+# OCA/server-auth 19.0, audited 2026-07-11. This is a full immutable commit
+# SHA, not a floating branch or tag.
+ARG OCA_SERVER_AUTH_REPOSITORY=https://github.com/OCA/server-auth.git
+ARG OCA_SERVER_AUTH_COMMIT=2a908b49821c743b85d4d9beac9baa42c379c2d6
+LABEL org.opencontainers.image.source="https://github.com/OCA/server-auth" \
+      org.harpia.odoo.oca-server-auth-commit="2a908b49821c743b85d4d9beac9baa42c379c2d6"
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/* \
+    && git clone --depth 1 --branch 19.0 "$OCA_SERVER_AUTH_REPOSITORY" /tmp/oca-server-auth \
+    && cd /tmp/oca-server-auth \
+    && test "$(git rev-parse HEAD)" = "$OCA_SERVER_AUTH_COMMIT" \
+    && mkdir -p /opt/odoo/oca-addons \
+    && cp -a auth_oidc /opt/odoo/oca-addons/auth_oidc \
+    && rm -rf /tmp/oca-server-auth
+
+# auth_oidc declares python-jose. responses and cryptography are required by
+# the pinned addon's supported authorization-code test seam.
+RUN pip install --break-system-packages --no-cache-dir python-jose responses cryptography
+
+COPY deploy/odoo/addons/ /opt/odoo/harpia-addons/
+RUN chown -R odoo:odoo /opt/odoo/oca-addons /opt/odoo/harpia-addons \
+    && chmod -R a-w /opt/odoo/oca-addons /opt/odoo/harpia-addons
+
+USER odoo

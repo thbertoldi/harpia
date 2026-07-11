@@ -1,0 +1,16 @@
+image:
+  repository: ghcr.io/harpia/odoo
+  tag: "19.0"
+
+# Production operators MUST replace all empty strings below. The ingress and
+# bootstrap templates fail rather than rendering an HTTP or unconfigured SSO
+# endpoint.
+ingress:
+  host: odoo.example.invalid
+  tlsSecret: odoo-tls
+
+oidc:
+  issuer: https://zitadel.example.invalid
+  managementApiUrl: https://zitadel.example.invalid
+  redirectUri: https://odoo.example.invalid/auth_oauth/signin
+  postLogoutRedirectUri: https://odoo.example.invalid

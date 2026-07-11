@@ -1,0 +1,6 @@
+apiVersion: v2
+name: odoo
+description: Isolated Odoo 19 Community Edition with hardened Zitadel OIDC
+type: application
+version: 0.1.0
+appVersion: "19.0"

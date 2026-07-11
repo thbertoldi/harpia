@@ -10,13 +10,49 @@
 mise run dev   # Tilt: infra, Zitadel port-forward, OIDC sync, host Vite
 ```
 
-Tilt applies `deploy/dev/kind/`, runs database migrations, bootstraps Zitadel
-and OpenFGA, port-forwards the API to localhost:19080, Zitadel to
-localhost:8085, and OpenFGA to localhost:18086 by default, waits for the
-OIDC/FGA ConfigMaps, syncs local `.env.local` files, installs frontend
+Tilt applies `deploy/dev/kind/`, runs database migrations, bootstraps Zitadel,
+port-forwards the API to localhost:19080 and Zitadel to
+localhost:8085 by default, waits for the
+OIDC ConfigMap, syncs local `.env.local` files, installs frontend
 dependencies when needed, and starts the Vite dev server on
 http://localhost:5173. Tilt creates missing dev-only Kubernetes Secrets before
 applying manifests.
+
+## Optional Odoo downstream stack
+
+Odoo is **not** part of the default development graph. `mise run dev` does not
+build an Odoo image, create Odoo credentials, or apply Odoo resources. To
+enable the isolated Odoo 19 stack, first place a **separate Odoo-scoped
+Zitadel Management API token** in the ignored local overrides file:
+
+```bash
+HARPIA_DEV_ODOO_ZITADEL_MANAGEMENT_TOKEN=<odoo-scoped-management-token>
+```
+
+Then start Tilt with the explicit opt-in flag:
+
+```bash
+tilt up -- --odoo
+```
+
+This creates Odoo-only PostgreSQL, Odoo admin-password, bootstrap-credential,
+and self-signed development TLS Secrets in namespace `odoo`, builds
+`harpia-odoo`, and applies `odoo-*.yaml` in dependency order. Odoo is available
+through Traefik at `https://odoo.localhost` (the local TLS certificate is
+self-signed) and directly for smoke testing at http://localhost:18069. Traefik
+with its Ingress controller must be installed in kind for the HTTPS route.
+
+Inspect the Odoo-only client bootstrap without touching Harpia's client:
+
+```bash
+kubectl -n odoo logs job/odoo-oidc-bootstrap -f
+kubectl -n odoo get pods,svc,pvc
+```
+
+No one can sign in until an Odoo administrator separately pre-provisions a
+matching Odoo user and its Zitadel subject linkage. This dev path does not
+implement JIT user creation or the future Zitadel → Harpia → Odoo provisioning
+workflow.
 
 The dev kind environment intentionally does not create a `harpia-frontend` pod.
 Frontend development runs on the host through Vite so HMR and synced
@@ -37,13 +73,10 @@ kubectl apply -f deploy/dev/kind/postgres.yaml
 ./scripts/apply-dev-db-migrations.sh
 kubectl apply -f deploy/dev/kind/
 kubectl wait --for=condition=Ready pod -l app=zitadel --timeout=120s
-kubectl wait --for=condition=Available deployment/openfga --timeout=120s
 kubectl apply -f deploy/dev/kind/zitadel-branding-configmap.yaml
 kubectl apply -f deploy/dev/kind/zitadel-init.yaml
 kubectl logs job/zitadel-register-client -f
 ./scripts/sync-oidc-config.sh
-kubectl logs job/openfga-bootstrap -f
-./scripts/sync-fga-config.sh
 ```
 
 ## Access
@@ -54,14 +87,11 @@ kubectl logs job/openfga-bootstrap -f
 | API           | http://localhost:19080                |
 | Zitadel       | http://localhost:8085                 |
 | Zitadel Console | http://localhost:8085/ui/console    |
-| OpenFGA       | http://localhost:18086                |
-| OpenFGA Playground | http://localhost:18086/playground |
 
 Port-forward commands (only needed outside Tilt):
 
 ```bash
 ./scripts/port-forward-zitadel.sh &
-./scripts/port-forward-openfga.sh &
 ```
 
 The port-forward scripts verify the host port before invoking `kubectl`. If a
@@ -70,12 +100,7 @@ owns the port, they print the listener details and exit before starting another
 `kubectl port-forward`.
 
 Zitadel stays on `8085` because the dev OIDC issuer is configured as
-`http://localhost:8085`. If OpenFGA's default `18086` is occupied, choose
-another host port:
-
-```bash
-HARPIA_DEV_OPENFGA_PORT=28086 ./scripts/port-forward-openfga.sh
-```
+`http://localhost:8085`.
 
 ## Dev Secrets
 
@@ -83,7 +108,7 @@ The kind manifests expect two Kubernetes Secrets in the active namespace:
 
 | Secret | Keys | Consumers |
 | ------ | ---- | --------- |
-| `postgres-credentials` | `username`, `password` | Postgres, Zitadel, API, OpenFGA |
+| `postgres-credentials` | `username`, `password` | Postgres, Zitadel, API |
 | `zitadel-masterkey` | `masterkey` | Zitadel |
 
 Run `./scripts/ensure-dev-kind-secrets.sh` before applying `deploy/dev/kind/`.
@@ -93,7 +118,7 @@ Secrets unchanged on later runs.
 Tilt also runs `./scripts/sync-dev-postgres-credentials.sh` after Postgres is
 ready and before DB consumers start. That script reconciles the Postgres role
 password to `Secret/postgres-credentials` and verifies that service-path
-connections to `harpia` and `openfga` authenticate successfully.
+connections to `harpia` authenticate successfully.
 
 To choose local values, create ignored file `deploy/dev/kind/secrets.local.env`:
 
@@ -126,8 +151,8 @@ Postgres password rotation without data loss:
    `password`.
 3. Run `./scripts/sync-dev-postgres-credentials.sh` to update the role password
    inside the existing Postgres PVC.
-4. Restart consumers: `kubectl rollout restart deploy/zitadel deploy/harpia-api deploy/openfga`.
-5. Run `./scripts/apply-dev-db-migrations.sh` and verify API/OpenFGA/Zitadel
+4. Restart consumers: `kubectl rollout restart deploy/zitadel deploy/harpia-api`.
+5. Run `./scripts/apply-dev-db-migrations.sh` and verify API/Zitadel
    readiness.
 
 Updating only the Secret does not change the existing Postgres role password;
@@ -237,35 +262,6 @@ kubectl create configmap harpia-oidc-config \
   --from-literal=issuer="http://localhost:8085" \
   --dry-run=client -o yaml | kubectl apply -f -
 ./scripts/sync-oidc-config.sh
-```
-
-## OpenFGA
-
-The `openfga-bootstrap.yaml` Job creates or reuses the `Harpia` OpenFGA store,
-writes the dev authorization model from `deploy/dev/kind/openfga-model.fga`, and
-publishes `storeId` and `authorizationModelId` to `ConfigMap/harpia-fga-config`.
-The Job is idempotent after a successful run: if the ConfigMap points at an
-existing store/model pair, the Job reuses it instead of writing another immutable
-authorization model.
-
-Check its logs:
-
-```bash
-kubectl logs job/openfga-bootstrap
-```
-
-Tilt syncs the generated IDs to `frontend/.env.local` and
-`control-plane/.env.local`. Outside Tilt, run:
-
-```bash
-./scripts/sync-fga-config.sh
-```
-
-Verify the model with the OpenFGA CLI:
-
-```bash
-STORE_ID=$(kubectl get configmap harpia-fga-config -o jsonpath='{.data.storeId}')
-fga model list --api-url http://localhost:18086 --store-id "$STORE_ID"
 ```
 
 ## Object storage (Garage)

@@ -1,0 +1,22 @@
+{{- $namespace := include "odoo.namespace" . }}
+{{- $webName := include "odoo.serviceName" (dict "name" "web" "root" .) }}
+{{- $postgresName := include "odoo.serviceName" (dict "name" "postgres" "root" .) }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "odoo.fullname" . }}-connectivity-test
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "odoo.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  restartPolicy: Never
+  containers:
+    - name: services-resolve
+      image: busybox:1.37
+      command: ["/bin/sh", "-ec"]
+      args:
+        - |
+          nslookup {{ $webName }}.{{ $namespace }}.svc.cluster.local
+          nslookup {{ $postgresName }}.{{ $namespace }}.svc.cluster.local

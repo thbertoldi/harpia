@@ -1,0 +1,22 @@
+image:
+  repository: harpia-odoo
+  tag: dev
+  pullPolicy: IfNotPresent
+
+odoo:
+  filestore:
+    storage: 1Gi
+
+postgres:
+  storage: 1Gi
+
+ingress:
+  host: odoo.localhost
+  tlsSecret: odoo-dev-tls
+
+oidc:
+  issuer: http://localhost:8085
+  internalIssuer: http://zitadel.default.svc.cluster.local:8080
+  managementApiUrl: http://zitadel.default.svc.cluster.local:8080
+  redirectUri: https://odoo.localhost/auth_oauth/signin
+  postLogoutRedirectUri: https://odoo.localhost

@@ -1,0 +1,65 @@
+namespace:
+  name: odoo
+  create: true
+
+image:
+  repository: ghcr.io/harpia/odoo
+  tag: "19.0"
+  pullPolicy: IfNotPresent
+
+odoo:
+  database: odoo
+  replicas: 1
+  adminPasswordSecret:
+    name: odoo-admin-password
+    key: admin-password
+  filestore:
+    storage: 10Gi
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+postgres:
+  image: postgres:16-alpine
+  database: odoo
+  credentialsSecret:
+    name: odoo-postgres-credentials
+    usernameKey: username
+    passwordKey: password
+  storage: 10Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+ingress:
+  # Deliberately non-routable defaults make the TLS contract explicit; real
+  # deployments must set an operator-controlled host and pre-created Secret.
+  enabled: true
+  className: traefik
+  host: odoo.example.invalid
+  tlsSecret: odoo-tls
+
+oidc:
+  # The public Zitadel issuer used in OIDC claims and browser redirects.
+  issuer: https://zitadel.example.invalid
+  # A cluster-reachable Management API base URL. It is used only by the Job.
+  managementApiUrl: https://zitadel.example.invalid
+  # Optional cluster-reachable issuer for token/JWKS traffic. Leave equal to
+  # issuer in production; kind uses its ClusterIP while browsers use localhost.
+  internalIssuer: ""
+  managementSecret:
+    name: odoo-zitadel-management
+    key: token
+  projectName: Odoo
+  applicationName: Harpia Odoo
+  redirectUri: https://odoo.example.invalid/auth_oauth/signin
+  postLogoutRedirectUri: https://odoo.example.invalid
+  bootstrapImage: alpine/k8s:1.31.0

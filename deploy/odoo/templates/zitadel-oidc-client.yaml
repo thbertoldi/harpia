@@ -1,0 +1,137 @@
+{{- $namespace := include "odoo.namespace" . }}
+{{- $name := include "odoo.fullname" . }}
+{{- $metadataName := include "odoo.serviceName" (dict "name" "oidc-config" "root" .) }}
+{{- if not .Values.oidc.issuer }}
+{{- fail "oidc.issuer is required for the Odoo-only Zitadel client" }}
+{{- end }}
+{{- if not .Values.oidc.managementApiUrl }}
+{{- fail "oidc.managementApiUrl is required for the Odoo-only Zitadel client bootstrap" }}
+{{- end }}
+{{- if not .Values.oidc.redirectUri }}
+{{- fail "oidc.redirectUri is required for the Odoo-only Zitadel client" }}
+{{- end }}
+{{- if not .Values.oidc.postLogoutRedirectUri }}
+{{- fail "oidc.postLogoutRedirectUri is required for the Odoo-only Zitadel client" }}
+{{- end }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}-oidc-bootstrap
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "odoo.labels" . | nindent 4 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $name }}-oidc-bootstrap
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "odoo.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "update", "patch"]
+    resourceNames: [{{ $metadataName | quote }}]
+  # Kubernetes cannot constrain a create request by resourceName. This is
+  # isolated to the Odoo namespace; subsequent access is name-scoped above.
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $name }}-oidc-bootstrap
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "odoo.labels" . | nindent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ $name }}-oidc-bootstrap
+    namespace: {{ $namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $name }}-oidc-bootstrap
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}-oidc-bootstrap-script
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "odoo.labels" . | nindent 4 }}
+data:
+  bootstrap-zitadel-client.sh: |-
+{{ .Files.Get "scripts/bootstrap-zitadel-client.sh" | indent 4 }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $name }}-oidc-bootstrap
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "odoo.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 6
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app: {{ $name }}-oidc-bootstrap
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: {{ $name }}-oidc-bootstrap
+      containers:
+        - name: bootstrap
+          image: {{ .Values.oidc.bootstrapImage | quote }}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+          command: ["/bin/sh", "/bootstrap/bootstrap-zitadel-client.sh"]
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: ZITADEL_ISSUER
+              value: {{ .Values.oidc.issuer | quote }}
+            - name: ZITADEL_MANAGEMENT_API_URL
+              value: {{ .Values.oidc.managementApiUrl | quote }}
+            - name: ZITADEL_INTERNAL_ISSUER
+              value: {{ .Values.oidc.internalIssuer | default .Values.oidc.issuer | quote }}
+            - name: ZITADEL_MANAGEMENT_TOKEN_FILE
+              value: /run/secrets/zitadel/{{ .Values.oidc.managementSecret.key }}
+            - name: ZITADEL_PROJECT_NAME
+              value: {{ .Values.oidc.projectName | quote }}
+            - name: ZITADEL_APPLICATION_NAME
+              value: {{ .Values.oidc.applicationName | quote }}
+            - name: ODOO_REDIRECT_URI
+              value: {{ .Values.oidc.redirectUri | quote }}
+            - name: ODOO_LOGOUT_URI
+              value: {{ .Values.oidc.postLogoutRedirectUri | quote }}
+            - name: OIDC_METADATA_CONFIGMAP
+              value: {{ $metadataName | quote }}
+          volumeMounts:
+            - name: script
+              mountPath: /bootstrap
+              readOnly: true
+            - name: management-credential
+              mountPath: /run/secrets/zitadel
+              readOnly: true
+      volumes:
+        - name: script
+          configMap:
+            name: {{ $name }}-oidc-bootstrap-script
+            defaultMode: 0555
+        - name: management-credential
+          secret:
+            secretName: {{ .Values.oidc.managementSecret.name }}

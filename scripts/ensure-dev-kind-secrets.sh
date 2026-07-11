@@ -6,6 +6,11 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEFAULT_OVERRIDES_FILE="$REPO_ROOT/deploy/dev/kind/secrets.local.env"
 OVERRIDES_FILE="${HARPIA_DEV_KIND_SECRETS_FILE:-$DEFAULT_OVERRIDES_FILE}"
+ENABLE_ODOO=false
+
+if [[ "${1:-}" == "--odoo" ]]; then
+  ENABLE_ODOO=true
+fi
 
 random_hex() {
   local bytes="$1"
@@ -54,6 +59,11 @@ LLM_KEK_ACTIVE="${HARPIA_DEV_LLM_KEK_ACTIVE:-v1}"
 # Empty is allowed: the classifier degrades to an empty proposal without it.
 # To rotate: `kubectl delete secret harpia-llm-platform-keys` then re-run dev.
 DEEPSEEK_API_KEY_VALUE="${HARPIA_DEV_DEEPSEEK_API_KEY:-}"
+ODOO_NAMESPACE="${HARPIA_DEV_ODOO_NAMESPACE:-odoo}"
+ODOO_POSTGRES_USERNAME="${HARPIA_DEV_ODOO_POSTGRES_USERNAME:-odoo}"
+ODOO_POSTGRES_PASSWORD="${HARPIA_DEV_ODOO_POSTGRES_PASSWORD:-$(random_hex 24)}"
+ODOO_ADMIN_PASSWORD="${HARPIA_DEV_ODOO_ADMIN_PASSWORD:-$(random_hex 24)}"
+ODOO_ZITADEL_MANAGEMENT_TOKEN="${HARPIA_DEV_ODOO_ZITADEL_MANAGEMENT_TOKEN:-}"
 
 if ! command -v kubectl >/dev/null 2>&1; then
   echo "ERROR: kubectl is required to create dev kind Secrets." >&2
@@ -130,3 +140,66 @@ ensure_secret garage-credentials accessKey secretKey
 ensure_secret harpia-llm-kek v1_b64 active
 # No required-key enforcement: an empty deepseek key is valid (classifier degrades).
 ensure_secret harpia-llm-platform-keys
+
+ensure_odoo_secret() {
+  local name="$1"
+  shift
+
+  if kubectl -n "$ODOO_NAMESPACE" get secret "$name" >/dev/null 2>&1; then
+    echo "Secret/${name} already exists in namespace ${ODOO_NAMESPACE}; keeping existing values."
+    return
+  fi
+
+  case "$name" in
+    odoo-postgres-credentials)
+      kubectl -n "$ODOO_NAMESPACE" create secret generic "$name" \
+        --from-literal=username="$ODOO_POSTGRES_USERNAME" \
+        --from-literal=password="$ODOO_POSTGRES_PASSWORD" >/dev/null
+      ;;
+    odoo-admin-password)
+      kubectl -n "$ODOO_NAMESPACE" create secret generic "$name" \
+        --from-literal=admin-password="$ODOO_ADMIN_PASSWORD" >/dev/null
+      ;;
+    odoo-zitadel-management)
+      [[ -n "$ODOO_ZITADEL_MANAGEMENT_TOKEN" ]] || {
+        echo "ERROR: HARPIA_DEV_ODOO_ZITADEL_MANAGEMENT_TOKEN is required for --odoo." >&2
+        echo "Provide a separate Odoo-scoped Zitadel Management API credential in ${OVERRIDES_FILE}." >&2
+        exit 1
+      }
+      kubectl -n "$ODOO_NAMESPACE" create secret generic "$name" \
+        --from-literal=token="$ODOO_ZITADEL_MANAGEMENT_TOKEN" >/dev/null
+      ;;
+  esac
+
+  echo "Created Secret/${name} in namespace ${ODOO_NAMESPACE}."
+}
+
+ensure_odoo_tls_secret() {
+  local cert key
+  if kubectl -n "$ODOO_NAMESPACE" get secret odoo-dev-tls >/dev/null 2>&1; then
+    echo "Secret/odoo-dev-tls already exists in namespace ${ODOO_NAMESPACE}; keeping existing values."
+    return
+  fi
+  command -v openssl >/dev/null 2>&1 || {
+    echo "ERROR: openssl is required to generate the local Odoo TLS Secret." >&2
+    exit 1
+  }
+  cert="$(mktemp)"
+  key="$(mktemp)"
+  trap 'rm -f "$cert" "$key"' RETURN
+  openssl req -x509 -newkey rsa:2048 -nodes -days 30 \
+    -subj '/CN=odoo.localhost' -addext 'subjectAltName=DNS:odoo.localhost' \
+    -keyout "$key" -out "$cert" >/dev/null 2>&1
+  kubectl -n "$ODOO_NAMESPACE" create secret tls odoo-dev-tls --cert="$cert" --key="$key" >/dev/null
+  rm -f "$cert" "$key"
+  trap - RETURN
+  echo "Created local-only Secret/odoo-dev-tls in namespace ${ODOO_NAMESPACE}."
+}
+
+if [[ "$ENABLE_ODOO" == true ]]; then
+  kubectl get namespace "$ODOO_NAMESPACE" >/dev/null 2>&1 || kubectl create namespace "$ODOO_NAMESPACE" >/dev/null
+  ensure_odoo_secret odoo-postgres-credentials
+  ensure_odoo_secret odoo-admin-password
+  ensure_odoo_secret odoo-zitadel-management
+  ensure_odoo_tls_secret
+fi

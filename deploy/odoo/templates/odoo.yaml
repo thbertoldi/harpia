@@ -1,0 +1,237 @@
+{{- $namespace := include "odoo.namespace" . }}
+{{- $webName := include "odoo.serviceName" (dict "name" "web" "root" .) }}
+{{- $postgresName := include "odoo.serviceName" (dict "name" "postgres" "root" .) }}
+{{- $metadataName := include "odoo.serviceName" (dict "name" "oidc-config" "root" .) }}
+{{- $credentials := .Values.postgres.credentialsSecret }}
+{{- $adminPassword := .Values.odoo.adminPasswordSecret }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $webName }}-filestore
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "odoo.labels" . | nindent 4 }}
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: {{ .Values.odoo.filestore.storage }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $webName }}-config
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "odoo.labels" . | nindent 4 }}
+data:
+  odoo.conf.template: |
+    [options]
+    addons_path = /opt/odoo/harpia-addons,/opt/odoo/oca-addons,/mnt/extra-addons
+    server_wide_modules = web,auth_oidc,harpia_auth_zitadel
+    db_host = {{ $postgresName }}
+    db_port = 5432
+    db_name = {{ .Values.odoo.database }}
+    data_dir = /var/lib/odoo
+    proxy_mode = True
+    list_db = False
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $webName }}
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "odoo.labels" . | nindent 4 }}
+    app: {{ $webName }}
+spec:
+  replicas: {{ .Values.odoo.replicas }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ $webName }}
+  template:
+    metadata:
+      labels:
+        app: {{ $webName }}
+    spec:
+      securityContext:
+        fsGroup: 101
+      initContainers:
+        - name: initialize-database-and-oidc
+          image: {{ printf "%s:%s" .Values.image.repository .Values.image.tag | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              cp /etc/odoo-template/odoo.conf.template /run/odoo/odoo.conf
+              printf '\ndb_user = %s\ndb_password = %s\nadmin_passwd = %s\n' \
+                "$(cat /run/secrets/postgres/{{ $credentials.usernameKey }})" \
+                "$(cat /run/secrets/postgres/{{ $credentials.passwordKey }})" \
+                "$(cat /run/secrets/admin/{{ $adminPassword.key }})" >> /run/odoo/odoo.conf
+              until odoo -c /run/odoo/odoo.conf -d {{ .Values.odoo.database | quote }} --stop-after-init --no-http; do
+                sleep 2
+              done
+              odoo -c /run/odoo/odoo.conf -d {{ .Values.odoo.database | quote }} \
+                -i auth_oidc,harpia_auth_zitadel --stop-after-init --no-http
+              printf 'env["res.users"].sudo()._configure_harpia_zitadel_provider()\n' \
+                | odoo shell -c /run/odoo/odoo.conf -d {{ .Values.odoo.database | quote }}
+          env:
+            - name: ODOO_OIDC_CLIENT_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $metadataName }}
+                  key: clientId
+            - name: ODOO_OIDC_AUTHORIZATION_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $metadataName }}
+                  key: authorizationEndpoint
+            - name: ODOO_OIDC_TOKEN_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $metadataName }}
+                  key: tokenEndpoint
+            - name: ODOO_OIDC_JWKS_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $metadataName }}
+                  key: jwksUri
+            - name: ODOO_OIDC_CLIENT_SECRET
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $metadataName }}
+                  key: clientSecret
+                  optional: true
+          volumeMounts:
+            - name: config
+              mountPath: /etc/odoo-template
+              readOnly: true
+            - name: runtime-config
+              mountPath: /run/odoo
+            - name: postgres-credentials
+              mountPath: /run/secrets/postgres
+              readOnly: true
+            - name: admin-password
+              mountPath: /run/secrets/admin
+              readOnly: true
+          resources:
+            {{- toYaml .Values.odoo.resources | nindent 12 }}
+        - name: wait-for-oidc-metadata
+          image: {{ .Values.oidc.bootstrapImage | quote }}
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              test -s /etc/odoo-oidc/clientId
+              test -s /etc/odoo-oidc/issuer
+          volumeMounts:
+            - name: oidc-metadata
+              mountPath: /etc/odoo-oidc
+              readOnly: true
+      containers:
+        - name: odoo
+          image: {{ printf "%s:%s" .Values.image.repository .Values.image.tag | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              cp /etc/odoo-template/odoo.conf.template /run/odoo/odoo.conf
+              printf '\ndb_user = %s\ndb_password = %s\nadmin_passwd = %s\n' \
+                "$(cat /run/secrets/postgres/{{ $credentials.usernameKey }})" \
+                "$(cat /run/secrets/postgres/{{ $credentials.passwordKey }})" \
+                "$(cat /run/secrets/admin/{{ $adminPassword.key }})" >> /run/odoo/odoo.conf
+              exec odoo -c /run/odoo/odoo.conf
+          ports:
+            - name: http
+              containerPort: 8069
+          env:
+            - name: ODOO_OIDC_CLIENT_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $metadataName }}
+                  key: clientId
+            - name: ODOO_OIDC_ISSUER
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $metadataName }}
+                  key: issuer
+            - name: ODOO_OIDC_AUTHORIZATION_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $metadataName }}
+                  key: authorizationEndpoint
+            - name: ODOO_OIDC_TOKEN_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $metadataName }}
+                  key: tokenEndpoint
+            - name: ODOO_OIDC_JWKS_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $metadataName }}
+                  key: jwksUri
+          volumeMounts:
+            - name: config
+              mountPath: /etc/odoo-template
+              readOnly: true
+            - name: runtime-config
+              mountPath: /run/odoo
+            - name: postgres-credentials
+              mountPath: /run/secrets/postgres
+              readOnly: true
+            - name: admin-password
+              mountPath: /run/secrets/admin
+              readOnly: true
+            - name: filestore
+              mountPath: /var/lib/odoo
+          readinessProbe:
+            httpGet:
+              path: /web/login
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /web/login
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.odoo.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ $webName }}-config
+        - name: runtime-config
+          emptyDir: {}
+        - name: postgres-credentials
+          secret:
+            secretName: {{ $credentials.name }}
+        - name: admin-password
+          secret:
+            secretName: {{ $adminPassword.name }}
+        - name: filestore
+          persistentVolumeClaim:
+            claimName: {{ $webName }}-filestore
+        - name: oidc-metadata
+          configMap:
+            name: {{ $metadataName }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $webName }}
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "odoo.labels" . | nindent 4 }}
+    app: {{ $webName }}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ $webName }}
+  ports:
+    - name: http
+      port: 8069
+      targetPort: http

@@ -1,0 +1,23 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+#   * harpia_auth_zitadel
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 19.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+#. module: harpia_auth_zitadel
+msgid "Sign in with Zitadel"
+msgstr ""
+
+#. module: harpia_auth_zitadel
+msgid "Your Zitadel email address must be verified."
+msgstr ""
+
+#. module: harpia_auth_zitadel
+msgid "Your Zitadel identity is missing a subject."
+msgstr ""
+
+#. module: harpia_auth_zitadel
+msgid "Your Zitadel identity has not been provisioned for this Odoo database."
+msgstr ""

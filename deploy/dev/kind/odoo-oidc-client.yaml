@@ -1,0 +1,98 @@
+# Odoo-only Zitadel registration. The management token is a separate local
+# Secret in namespace odoo; this Job never reads Harpia's ConfigMap or tokens.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: odoo-oidc-bootstrap
+  namespace: odoo
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: odoo-oidc-bootstrap
+  namespace: odoo
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "update", "patch"]
+    resourceNames: ["odoo-oidc-config"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: odoo-oidc-bootstrap
+  namespace: odoo
+subjects:
+  - kind: ServiceAccount
+    name: odoo-oidc-bootstrap
+    namespace: odoo
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: odoo-oidc-bootstrap
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: odoo-oidc-bootstrap
+  namespace: odoo
+spec:
+  backoffLimit: 6
+  template:
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: odoo-oidc-bootstrap
+      containers:
+        - name: bootstrap
+          image: alpine/k8s:1.31.0
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              PUBLIC_ISSUER=http://localhost:8085
+              INTERNAL_ISSUER=http://zitadel.default.svc.cluster.local:8080
+              API=http://zitadel.default.svc.cluster.local:8080
+              PAT=$(cat /run/secrets/zitadel/token)
+              REDIRECT=https://odoo.localhost/auth_oauth/signin
+              LOGOUT=https://odoo.localhost
+              for i in $(seq 1 120); do curl -sf "$INTERNAL_ISSUER/.well-known/openid-configuration" >/dev/null && break; sleep 2; done
+              api() {
+                method=$1; path=$2; body=${3:-}
+                if [ -n "$body" ]; then
+                  curl -sfS -X "$method" "$API$path" -H "Authorization: Bearer $PAT" -H 'Content-Type: application/json' -d "$body"
+                else
+                  curl -sfS -X "$method" "$API$path" -H "Authorization: Bearer $PAT"
+                fi
+              }
+              json_value() { sed -n "s/.*\"$1\":\"\([^\"]*\)\".*/\1/p" | head -1; }
+              PROJECT=$(api POST /management/v1/projects/_search '{"queries":[{"nameQuery":{"name":"Odoo","method":"TEXT_QUERY_METHOD_EQUALS"}}]}')
+              PROJECT_ID=$(printf %s "$PROJECT" | json_value id)
+              [ -n "$PROJECT_ID" ] || PROJECT_ID=$(api POST /management/v1/projects '{"name":"Odoo"}' | json_value id)
+              APPS=$(api POST "/management/v1/projects/$PROJECT_ID/apps/_search" '{"queries":[{"nameQuery":{"name":"Harpia Odoo","method":"TEXT_QUERY_METHOD_EQUALS"}}]}')
+              APP_ID=$(printf %s "$APPS" | json_value id)
+              CONFIG='{"redirectUris":["'"$REDIRECT"'"],"responseTypes":["OIDC_RESPONSE_TYPE_CODE"],"grantTypes":["OIDC_GRANT_TYPE_AUTHORIZATION_CODE"],"appType":"OIDC_APP_TYPE_NATIVE","authMethodType":"OIDC_AUTH_METHOD_TYPE_NONE","postLogoutRedirectUris":["'"$LOGOUT"'"],"version":"OIDC_VERSION_1_0","devMode":true,"accessTokenType":"OIDC_TOKEN_TYPE_BEARER","idTokenUserinfoAssertion":true}'
+              if [ -z "$APP_ID" ]; then
+                APP=$(api POST "/management/v1/projects/$PROJECT_ID/apps/oidc" '{"name":"Harpia Odoo",'"${CONFIG#\{}")
+                CLIENT_ID=$(printf %s "$APP" | json_value clientId)
+              else
+                api PUT "/management/v1/projects/$PROJECT_ID/apps/$APP_ID/oidc_config" "$CONFIG" >/dev/null
+                CLIENT_ID=$(api GET "/management/v1/projects/$PROJECT_ID/apps/$APP_ID" | json_value clientId)
+              fi
+              [ -n "$CLIENT_ID" ]
+              kubectl -n odoo create configmap odoo-oidc-config \
+                --from-literal=clientId="$CLIENT_ID" \
+                --from-literal=issuer="$PUBLIC_ISSUER" \
+                --from-literal=authorizationEndpoint="$PUBLIC_ISSUER/oauth/v2/authorize" \
+                --from-literal=tokenEndpoint="$INTERNAL_ISSUER/oauth/v2/token" \
+                --from-literal=jwksUri="$INTERNAL_ISSUER/oauth/v2/keys" \
+                --dry-run=client -o yaml | kubectl -n odoo apply -f -
+          volumeMounts:
+            - name: management-credential
+              mountPath: /run/secrets/zitadel
+              readOnly: true
+      volumes:
+        - name: management-credential
+          secret:
+            secretName: odoo-zitadel-management

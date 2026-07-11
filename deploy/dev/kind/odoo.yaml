@@ -1,0 +1,130 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: odoo-filestore
+  namespace: odoo
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: odoo-config
+  namespace: odoo
+data:
+  odoo.conf.template: |
+    [options]
+    addons_path = /opt/odoo/harpia-addons,/opt/odoo/oca-addons,/mnt/extra-addons
+    server_wide_modules = web,auth_oidc,harpia_auth_zitadel
+    db_host = odoo-postgres
+    db_port = 5432
+    db_name = odoo
+    data_dir = /var/lib/odoo
+    proxy_mode = True
+    list_db = False
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: odoo
+  namespace: odoo
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: odoo
+  template:
+    metadata:
+      labels:
+        app: odoo
+    spec:
+      securityContext:
+        fsGroup: 101
+      initContainers:
+        - name: initialize-database-and-oidc
+          image: harpia-odoo
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              cp /etc/odoo-template/odoo.conf.template /run/odoo/odoo.conf
+              printf '\ndb_user = %s\ndb_password = %s\nadmin_passwd = %s\n' \
+                "$(cat /run/secrets/postgres/username)" "$(cat /run/secrets/postgres/password)" \
+                "$(cat /run/secrets/admin/admin-password)" >> /run/odoo/odoo.conf
+              until odoo -c /run/odoo/odoo.conf -d odoo --stop-after-init --no-http; do sleep 2; done
+              odoo -c /run/odoo/odoo.conf -d odoo -i auth_oidc,harpia_auth_zitadel --stop-after-init --no-http
+              printf 'env["res.users"].sudo()._configure_harpia_zitadel_provider()\n' | odoo shell -c /run/odoo/odoo.conf -d odoo
+          envFrom:
+            - configMapRef:
+                name: odoo-oidc-config
+          volumeMounts:
+            - {name: config, mountPath: /etc/odoo-template, readOnly: true}
+            - {name: runtime-config, mountPath: /run/odoo}
+            - {name: postgres-credentials, mountPath: /run/secrets/postgres, readOnly: true}
+            - {name: admin-password, mountPath: /run/secrets/admin, readOnly: true}
+        - name: wait-for-oidc-metadata
+          image: alpine/k8s:1.31.0
+          command: ["/bin/sh", "-ec", "test -s /etc/odoo-oidc/clientId && test -s /etc/odoo-oidc/issuer"]
+          volumeMounts:
+            - {name: oidc-metadata, mountPath: /etc/odoo-oidc, readOnly: true}
+      containers:
+        - name: odoo
+          image: harpia-odoo
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              cp /etc/odoo-template/odoo.conf.template /run/odoo/odoo.conf
+              printf '\ndb_user = %s\ndb_password = %s\nadmin_passwd = %s\n' \
+                "$(cat /run/secrets/postgres/username)" "$(cat /run/secrets/postgres/password)" \
+                "$(cat /run/secrets/admin/admin-password)" >> /run/odoo/odoo.conf
+              exec odoo -c /run/odoo/odoo.conf
+          ports:
+            - {name: http, containerPort: 8069}
+          envFrom:
+            - configMapRef:
+                name: odoo-oidc-config
+          volumeMounts:
+            - {name: config, mountPath: /etc/odoo-template, readOnly: true}
+            - {name: runtime-config, mountPath: /run/odoo}
+            - {name: postgres-credentials, mountPath: /run/secrets/postgres, readOnly: true}
+            - {name: admin-password, mountPath: /run/secrets/admin, readOnly: true}
+            - {name: filestore, mountPath: /var/lib/odoo}
+          readinessProbe:
+            httpGet: {path: /web/login, port: http}
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: {path: /web/login, port: http}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap: {name: odoo-config}
+        - name: runtime-config
+          emptyDir: {}
+        - name: postgres-credentials
+          secret: {secretName: odoo-postgres-credentials}
+        - name: admin-password
+          secret: {secretName: odoo-admin-password}
+        - name: filestore
+          persistentVolumeClaim: {claimName: odoo-filestore}
+        - name: oidc-metadata
+          configMap: {name: odoo-oidc-config}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: odoo
+  namespace: odoo
+spec:
+  type: ClusterIP
+  selector:
+    app: odoo
+  ports:
+    - name: http
+      port: 8069
+      targetPort: http
