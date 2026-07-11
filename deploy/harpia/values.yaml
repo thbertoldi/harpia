@@ -12,7 +12,9 @@ image:
 # Postgres
 postgres:
   enabled: true
-  image: docker.io/library/postgres:16-alpine
+  # pgvector image ships the vector extension needed for embeddings
+  # (matches deploy/dev/kind/postgres.yaml + compose.yaml).
+  image: docker.io/pgvector/pgvector:pg16
   database: harpia
   # Existing Secret that contains the database login material.
   credentialsSecret:
@@ -112,13 +114,6 @@ zitadel:
       verifyemail|pt|text|Use o código ou o botão abaixo para concluir a verificação e proteger sua conta Harpia.
       verifyemail|pt|button|Confirmar acesso
 
-# OpenFGA
-openfga:
-  enabled: true
-  image: docker.io/openfga/openfga:v1.8.0
-  logLevel: info
-  playgroundEnabled: true
-
 # API
 api:
   enabled: true
@@ -137,6 +132,24 @@ agent:
   role: server
   auth:
     allowDevAuth: false
+
+# Temporal workers — poll Temporal and execute plans/activities.
+# The API/agent *server* roles only start workflows; these run them.
+workers:
+  enabled: true
+  planWorker:
+    enabled: true
+    logLevel: info
+    auth:
+      allowDevAuth: false
+  agentWorker:
+    enabled: true
+    # Dedicated agent queue — the Go worker owns the plan workflow +
+    # integration/lifecycle activities on harpia-task-queue; this worker owns
+    # RunAgentActivity. Shared queue would misroute cross-language activities.
+    taskQueue: harpia-agent-task-queue
+    auth:
+      allowDevAuth: false
 
 # Frontend
 frontend:

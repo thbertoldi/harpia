@@ -1,0 +1,134 @@
+{{/*
+Temporal workers.
+
+Plan execution needs two workers polling Temporal (the API/server role only
+*starts* workflows; it does not execute them):
+  - plan-worker   (Go)     runs the plan workflow + integration activities
+                           (RSS fetch, LinkedIn publish, ...).
+                           Reuses the control-plane image with HARPIA_ROLE=worker.
+  - agent-worker  (Python) runs RunAgentActivity (newsletter writer / LinkedIn
+                           voice), loading + persisting artifacts via the
+                           control-plane ArtifactService.
+                           Reuses the agent-runtime image with HARPIA_ROLE=worker.
+
+Workers poll queues rather than serve traffic, so they expose no Service and no
+HTTP readiness probe (mirrors deploy/dev/kind/workers.yaml).
+*/}}
+{{- $apiSvcName := include "harpia.serviceName" (dict "name" "api" "root" .) }}
+{{- $postgresHost := include "harpia.serviceName" (dict "name" "postgres" "root" .) }}
+{{- $valkeyHost := include "harpia.serviceName" (dict "name" "valkey" "root" .) }}
+{{- $garageHost := include "harpia.serviceName" (dict "name" "garage" "root" .) }}
+{{- $zitadelHost := include "harpia.serviceName" (dict "name" "zitadel" "root" .) }}
+{{- $postgresCredentialsSecret := .Values.postgres.credentialsSecret }}
+{{- if .Values.workers.enabled }}
+{{- if .Values.workers.planWorker.enabled }}
+{{- $svcName := include "harpia.serviceName" (dict "name" "plan-worker" "root" .) }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $svcName }}
+  labels:
+    {{- include "harpia.labels" . | nindent 4 }}
+    app: {{ $svcName }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ $svcName }}
+  template:
+    metadata:
+      labels:
+        app: {{ $svcName }}
+    spec:
+      containers:
+        - name: worker
+          image: {{ include "harpia.image" (dict "imageRepo" (printf "%s/control-plane" .Values.image.repository) "root" .) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: HARPIA_ROLE
+              value: "worker"
+            - name: POSTGRES_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $postgresCredentialsSecret.name | quote }}
+                  key: {{ $postgresCredentialsSecret.usernameKey | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $postgresCredentialsSecret.name | quote }}
+                  key: {{ $postgresCredentialsSecret.passwordKey | quote }}
+            - name: DATABASE_URL
+              value: {{ printf "postgres://$(POSTGRES_USERNAME):$(POSTGRES_PASSWORD)@%s:5432/%s?sslmode=disable" $postgresHost .Values.postgres.database | quote }}
+            - name: VALKEY_URL
+              value: {{ printf "valkey://%s:6379" $valkeyHost | quote }}
+            - name: TEMPORAL_HOST
+              value: "temporal:7233"
+            - name: GARAGE_URL
+              value: {{ printf "http://%s:3900" $garageHost | quote }}
+            - name: ZITADEL_URL
+              value: {{ printf "http://%s:8080" $zitadelHost | quote }}
+            - name: ZITADEL_HOST
+              value: {{ printf "%s:%s" .Values.zitadel.externalDomain .Values.zitadel.externalPort | quote }}
+            - name: HARPIA_ALLOW_DEV_AUTH
+              value: {{ .Values.workers.planWorker.auth.allowDevAuth | quote }}
+            - name: HARPIA_AUTO_PROVISION_DEFAULT_TENANT
+              value: {{ .Values.api.auth.autoProvisionDefaultTenant | quote }}
+            - name: HARPIA_AUTH_CACHE_TTL
+              value: {{ .Values.api.auth.cacheTTL | quote }}
+            - name: HARPIA_AUTH_CACHE_MAX_ENTRIES
+              value: {{ .Values.api.auth.cacheMaxEntries | quote }}
+            - name: LOG_LEVEL
+              value: {{ .Values.workers.planWorker.logLevel | quote }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- end }}
+{{- if .Values.workers.agentWorker.enabled }}
+{{- $svcName := include "harpia.serviceName" (dict "name" "agent-worker" "root" .) }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $svcName }}
+  labels:
+    {{- include "harpia.labels" . | nindent 4 }}
+    app: {{ $svcName }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ $svcName }}
+  template:
+    metadata:
+      labels:
+        app: {{ $svcName }}
+    spec:
+      containers:
+        - name: worker
+          image: {{ include "harpia.image" (dict "imageRepo" (printf "%s/agent-runtime" .Values.image.repository) "root" .) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: HARPIA_ROLE
+              value: "worker"
+            - name: TEMPORAL_HOST
+              value: "temporal:7233"
+            # Dedicated agent queue — the Go worker owns the plan workflow +
+            # integration/lifecycle activities on harpia-task-queue; this worker
+            # owns RunAgentActivity. Shared queue would misroute cross-language
+            # activities (NotFoundError).
+            - name: TEMPORAL_TASK_QUEUE
+              value: {{ .Values.workers.agentWorker.taskQueue | quote }}
+            # The agent activity loads/persists artifacts and resolves tenant
+            # LLM credentials + budget against the control-plane internal API.
+            - name: HARPIA_CONTROL_PLANE_URL
+              value: {{ printf "http://%s:%s" $apiSvcName (.Values.api.port | toString) | quote }}
+            - name: HARPIA_ALLOW_DEV_AUTH
+              value: {{ .Values.workers.agentWorker.auth.allowDevAuth | quote }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- end }}
+{{- end }}
