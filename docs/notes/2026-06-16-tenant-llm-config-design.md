@@ -12,7 +12,7 @@ Scope: control-plane design with a thin agent-runtime resolver consumer (no impl
 - Support KEK rotation without re-encrypting tenant API keys or rewriting all rows.
 - Enforce provider resolution fallback chain: tenant key -> platform key -> terminal error.
 - Prevent raw API keys from being emitted in logs, traces, panic strings, or user-visible error messages.
-- Enforce admin-only mutation APIs with OpenFGA checks (`tenant.admin`) plus tenant scoping.
+- Enforce admin-only mutation APIs with app-level role checks (`admin`) plus tenant scoping.
 - Preserve forward compatibility for new providers and managed modes without schema rewrites.
 - Keep runtime contract explicit so control-plane resolves per-tenant provider settings safely.
 
@@ -31,7 +31,7 @@ Scope: control-plane design with a thin agent-runtime resolver consumer (no impl
 
 | Actor | Asset at risk | Mitigation |
 |---|---|---|
-| Tenant admin (legitimate, scoped actor) | Raw provider key for their own tenant | OpenFGA authorizes mutation/read-metadata operations only within tenant scope; APIs never return raw keys, only `has_key` and metadata. |
+| Tenant admin (legitimate, scoped actor) | Raw provider key for their own tenant | Handler enforces admin role check; mutation/read-metadata operations are scoped to tenant; APIs never return raw keys, only `has_key` and metadata. |
 | Platform operator | Raw provider keys across tenants | Access mediated by control-plane service and k8s secret permissions; no plaintext keys in DB; logging redaction/lint guard reduces accidental exposure. |
 | Malicious tenant member (non-admin) | Raw provider key for their tenant | Mutating RPCs require `tenant.admin`; RPC middleware enforces tenant context; DB RLS blocks cross-tenant row access. |
 | Attacker with read-only DB access | Encrypted tenant keys and wrapped DEKs | Envelope encryption: DB only stores ciphertext + wrapped DEK + KEK version; attacker cannot decrypt without KEK material. |
@@ -184,13 +184,9 @@ Planned safeguards:
 
 Authorization model:
 
-- Mutating RPCs (`Set`, `Delete`, `Rotate`) require `tenant.admin` permission.
+- Mutating RPCs (`Set`, `Delete`, `Rotate`) require `tenant.admin` permission
+  (app-level role check via `users.role`, not OpenFGA — see constitution §11).
 - Read metadata RPC (`Get`) follows tenant membership policy but never reveals secret value.
-
-OpenFGA tuple shape (conceptual):
-
-- `tenant:<tenant_id>#admin@user:<user_id>`
-- Or role-derived tuple via leader/engineer role mapping per ADR-004 and PR #177 authorization model.
 
 Defense in depth:
 

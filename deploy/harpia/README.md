@@ -5,18 +5,17 @@ eight services referenced by the dev kind manifests:
 
 | Service   | Template              | Notes                                      |
 | --------- | --------------------- | ------------------------------------------ |
-| postgres  | `templates/postgres.yaml` | PVC + init script for zitadel/openfga DBs |
+| postgres  | `templates/postgres.yaml` | PVC + init script for harpia/zitadel DBs  |
 | valkey    | `templates/valkey.yaml`   | Cache / rate limiting                      |
 | garage    | `templates/garage.yaml`   | S3-compatible object store                 |
 | zitadel   | `templates/zitadel.yaml`  | OIDC identity; machinekey PVC for PAT      |
-| openfga   | `templates/openfga.yaml`  | Authorization; migrate initContainer       |
 | api       | `templates/api.yaml`      | Control plane API                          |
 | agent     | `templates/agent.yaml`    | Agent runtime                              |
 | frontend  | `templates/frontend.yaml` | SvelteKit UI (disabled in `values-dev`)    |
 
-Post-install bootstrap Jobs (`zitadel-init`, `openfga-bootstrap`) remain in
+Post-install bootstrap Jobs (`zitadel-init`) remain in
 `deploy/dev/kind/` for Tilt/local dev. Helm installs the long-running services;
-run those Jobs separately when you need OIDC client or OpenFGA model bootstrap.
+run those Jobs separately when you need OIDC client bootstrap.
 
 ## Prerequisites
 
@@ -24,7 +23,7 @@ Create Secrets before install (not managed by this chart):
 
 | Secret                 | Keys                         | Consumers                    |
 | ---------------------- | ---------------------------- | ---------------------------- |
-| `postgres-credentials` | `username`, `password`       | postgres, zitadel, api, openfga |
+| `postgres-credentials` | `username`, `password`       | postgres, zitadel, api       |
 | `zitadel-masterkey`    | `masterkey`                  | zitadel                      |
 
 For local dev, `./scripts/ensure-dev-kind-secrets.sh` creates them.

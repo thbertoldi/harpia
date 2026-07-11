@@ -3,8 +3,8 @@
 #
 # PostgreSQL only consumes POSTGRES_PASSWORD during first database
 # initialization. If the Kubernetes Secret changes while the PVC is preserved,
-# service-to-service clients such as OpenFGA fail password authentication until
-# the role password is updated inside Postgres.
+# service-to-service clients fail password authentication until the role
+# password is updated inside Postgres.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -68,14 +68,10 @@ WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'db_user')\gexec
 SELECT format('ALTER ROLE %I WITH LOGIN PASSWORD %L', :'db_user', :'db_password')\gexec
 SELECT 'CREATE DATABASE zitadel'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'zitadel')\gexec
-SELECT 'CREATE DATABASE openfga'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'openfga')\gexec
 GRANT ALL PRIVILEGES ON DATABASE zitadel TO :"db_user";
-GRANT ALL PRIVILEGES ON DATABASE openfga TO :"db_user";
 SQL
 
 PGPASSWORD="\$DB_PASSWORD" psql -h postgres -U "\$DB_USER" -d harpia -tAc 'select 1' >/dev/null
-PGPASSWORD="\$DB_PASSWORD" psql -h postgres -U "\$DB_USER" -d openfga -tAc 'select 1' >/dev/null
 REMOTE
 
 echo "PostgreSQL credentials are aligned with Secret/postgres-credentials."

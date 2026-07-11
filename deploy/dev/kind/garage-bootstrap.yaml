@@ -9,8 +9,7 @@
 #      key the API + workers consume) and grant it read/write on the bucket
 #
 # Garage's CLI talks to its node over RPC, so rather than wire rpc-host/secret
-# we `kubectl exec` the garage binary inside the running garage pod (same
-# pattern as openfga-bootstrap using kubectl).
+# we `kubectl exec` the garage binary inside the running garage pod.
 ---
 apiVersion: v1
 kind: ServiceAccount

@@ -133,10 +133,6 @@ run = "cd control-plane && HARPIA_ROLE=worker go run ./cmd/api/"
 description = "Run agent Temporal worker directly (outside k3s)"
 run = "cd agent-runtime && HARPIA_ROLE=worker uv run python -m harpia_agents.main"
 
-[tasks.dev-openfga-migrate]
-description = "Run OpenFGA database migrations"
-run = "podman compose -f deploy/dev/compose.yaml run --rm openfga migrate --datastore-engine postgres --datastore-uri \"postgres://${HARPIA_DEV_POSTGRES_USERNAME:-harpia}:${HARPIA_DEV_POSTGRES_PASSWORD:-dev-postgres-password}@postgres:5432/openfga?sslmode=disable\""
-
 [tasks.dev-temporal]
 description = "Start Temporal dev server (single binary)"
 run = "temporal server start-dev --namespace default --ip 0.0.0.0"

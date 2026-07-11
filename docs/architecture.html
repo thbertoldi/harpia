@@ -219,7 +219,7 @@
   <rect x="580" y="294" width="195" height="16" rx="2" fill="#121318"/>
   <text x="677" y="306" text-anchor="middle" class="small" fill="#9DA1AB">TenantRepository</text>
   <text x="677" y="326" text-anchor="middle" class="small" fill="#6B7080">Zitadel integration (delegated)</text>
-  <text x="677" y="340" text-anchor="middle" class="small" fill="#6B7080">OpenFGA ReBAC checks</text>
+  <text x="677" y="340" text-anchor="middle" class="small" fill="#6B7080">Postgres RLS (tenant isolation)</text>
 
   <!-- Feedback -->
   <rect x="800" y="235" width="205" height="110" rx="4" fill="var(--obsidian-light)" stroke="#2A2D3A" stroke-width="1"/>
@@ -326,12 +326,12 @@
   <text x="250" y="774" text-anchor="middle" class="small" fill="#6B7080">replaces Authentik (ADR-004)</text>
 
   <rect x="430" y="680" width="300" height="110" rx="5" fill="var(--obsidian-light)" stroke="#2A2D3A" stroke-width="1"/>
-  <text x="580" y="700" text-anchor="middle" class="label" fill="var(--talon-gold)" font-size="11" font-weight="600">OpenFGA v1.8</text>
-  <text x="580" y="716" text-anchor="middle" class="small" fill="#9DA1AB">Apache 2.0 · Authorization (ReBAC)</text>
-  <text x="580" y="729" text-anchor="middle" class="small" fill="#9DA1AB">Zanzibar model: user → tenant → workspace → task</text>
-  <text x="580" y="742" text-anchor="middle" class="small" fill="#9DA1AB">Relationship graph traversal</text>
-  <text x="580" y="758" text-anchor="middle" class="small" fill="#6B7080">:8081 (dev) · postgres backend</text>
-  <text x="580" y="774" text-anchor="middle" class="small" fill="#6B7080">deploy/dev/openfga/auth-model.fga</text>
+  <text x="580" y="700" text-anchor="middle" class="label" fill="var(--talon-gold)" font-size="11" font-weight="600">Postgres RLS</text>
+  <text x="580" y="716" text-anchor="middle" class="small" fill="#9DA1AB">Authorization — tenant isolation</text>
+  <text x="580" y="729" text-anchor="middle" class="small" fill="#9DA1AB">WithTenant sets harpia.tenant_id</text>
+  <text x="580" y="742" text-anchor="middle" class="small" fill="#9DA1AB">Coarse roles via app-level checks</text>
+  <text x="580" y="758" text-anchor="middle" class="small" fill="#6B7080">Migrations 000003 / 000010</text>
+  <text x="580" y="774" text-anchor="middle" class="small" fill="#6B7080">ReBAC deferred to enterprise tier</text>
 
   <!-- Obs panel -->
   <rect x="760" y="680" width="255" height="110" rx="5" fill="var(--obsidian-light)" stroke="#2A2D3A" stroke-width="1"/>

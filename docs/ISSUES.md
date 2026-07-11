@@ -22,8 +22,6 @@ gh issue create --title "infra: set up GitHub Actions CI pipeline" --body "Creat
 
 gh issue create --title "infra: add Zitadel to dev compose" --body "Configure Zitadel as OIDC provider in the development environment. Update compose.yaml and Tiltfile." --label "infra,feature"
 
-gh issue create --title "infra: add OpenFGA to dev compose" --body "Configure OpenFGA for local development. Define the initial authorization model (see ADR-004)." --label "infra,feature"
-
 gh issue create --title "infra: add Valkey cache client to control-plane" --body "Wire up Valkey Go client. Implement agent capability cache, rate limiting, and active workflow state cache." --label "infra,feature"
 ```
 

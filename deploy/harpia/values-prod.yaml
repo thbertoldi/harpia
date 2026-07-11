@@ -22,9 +22,6 @@ agent:
 frontend:
   enabled: true
 
-openfga:
-  playgroundEnabled: false
-
 zitadel:
   externalSecure: "true"
   tlsEnabled: "true"

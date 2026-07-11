@@ -80,10 +80,7 @@ data:
       -v db_user="$POSTGRES_USER" <<'SQL'
     SELECT 'CREATE DATABASE zitadel'
     WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'zitadel')\gexec
-    SELECT 'CREATE DATABASE openfga'
-    WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'openfga')\gexec
     GRANT ALL PRIVILEGES ON DATABASE zitadel TO :"db_user";
-    GRANT ALL PRIVILEGES ON DATABASE openfga TO :"db_user";
     SQL
 ---
 apiVersion: v1

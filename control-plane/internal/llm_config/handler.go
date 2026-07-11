@@ -245,9 +245,6 @@ func toResolveConnectError(err error) error {
 }
 
 // requireTenantAdmin enforces tenant membership AND admin role.
-//
-// When OpenFGA tuples replace plain role strings, swap the role-string check
-// for an FGA `check_relation` call against the `tenant.admin` relation.
 func requireTenantAdmin(ctx context.Context, requestedTenantID string) (uuid.UUID, error) {
 	tenantID, err := identity.RequireTenant(ctx, requestedTenantID)
 	if err != nil {

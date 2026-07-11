@@ -13,7 +13,7 @@ Database     PostgreSQL 16 + RLS + pgvector
 Cache        Valkey
 Object Store Garage (S3-compatible)
 AuthN        Zitadel
-AuthZ        OpenFGA
+AuthZ        Postgres RLS + role checks
 Observability OTEL -> Tempo + Prometheus + Grafana
 Infra        kind cluster (dev), k8s/Helm (prod)
 ```

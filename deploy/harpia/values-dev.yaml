@@ -18,9 +18,6 @@ agent:
 frontend:
   enabled: false
 
-openfga:
-  playgroundEnabled: true
-
 zitadel:
   externalDomain: localhost
   externalPort: "8085"

@@ -522,8 +522,8 @@
 
               <rect x="852" y="282" width="238" height="116" rx="18" fill="#F5F2EB" stroke="#121318"></rect>
               <text x="876" y="318" class="svg-label">Identity/AuthZ</text>
-              <text x="876" y="342" class="svg-small">Zitadel + OpenFGA</text>
-              <text x="876" y="366" class="svg-mono">request context + RBAC/ReBAC</text>
+              <text x="876" y="342" class="svg-small">Zitadel + Postgres RLS</text>
+              <text x="876" y="366" class="svg-mono">request context + RBAC (RLS)</text>
 
               <path d="M442 204 V282" stroke="#6B7080" stroke-dasharray="7 5" stroke-width="2" marker-end="url(#arrow)"></path>
               <path d="M704 204 C704 244 434 242 434 282" stroke="#6B7080" stroke-dasharray="7 5" stroke-width="2" marker-end="url(#arrow)"></path>
@@ -562,7 +562,7 @@
               <tr><td><strong>Plan / Task Management</strong></td><td>PlanTemplate, PlanConfiguration, execução DAG, retries, schedule, approvals e elicitations.</td><td><code>control-plane/internal/plans</code>, <code>internal/workflow</code></td><td><code>harpia.plans.v1.PlanService</code></td><td>Core domain; parceria com Agent Orchestration.</td></tr>
               <tr><td><strong>Agent Orchestration</strong></td><td>Manifest-backed agents, matching, execução agentic, LLM providers, budget policy.</td><td><code>agent-runtime/src/harpia_agents</code>, <code>control-plane/internal/agents</code>, <code>internal/budget</code></td><td><code>harpia.agents.v1</code>, <code>harpia.budget.v1</code></td><td>Domain Model em Python; registry/adapter no Go.</td></tr>
               <tr><td><strong>Human Interaction</strong></td><td>Feedback legado, aprovações, elicitations, inbox e decisões humanas auditáveis.</td><td><code>control-plane/internal/feedback</code>, <code>internal/plans/*approval*</code>, <code>*elicitation*</code>, frontend inbox.</td><td><code>harpia.feedback.v1</code>, PlanService gates</td><td>Event-sourced flavor; ACL planejada para Slack.</td></tr>
-              <tr><td><strong>Identity & Tenants</strong></td><td>Usuário atual, tenant memberships, request context, dev auth, RLS scope.</td><td><code>control-plane/internal/identity</code>, <code>internal/tenants</code></td><td><code>harpia.identity.v1</code></td><td>Conformist a Zitadel; OpenFGA para AuthZ.</td></tr>
+              <tr><td><strong>Identity & Tenants</strong></td><td>Usuário atual, tenant memberships, request context, dev auth, RLS scope.</td><td><code>control-plane/internal/identity</code>, <code>internal/tenants</code></td><td><code>harpia.identity.v1</code></td><td>Conformist a Zitadel; AuthZ via RLS + role checks.</td></tr>
               <tr><td><strong>Workflow Engine</strong></td><td>Durabilidade, retry, timeout, schedule e signals.</td><td><code>control-plane/internal/workflow</code>, <code>agent-runtime/.../temporal</code></td><td>Temporal SDK</td><td>Open Host Service.</td></tr>
               <tr><td><strong>Artifact Stream</strong></td><td>Metadados, versões, payloads, preview e navegação de outputs tipados.</td><td><code>control-plane/internal/artifacts</code>, <code>frontend/src/lib/artifacts</code></td><td><code>harpia.artifacts.v1</code></td><td>Supporting capability transversal.</td></tr>
               <tr><td><strong>Executor Registry</strong></td><td>SKU vendido, entitlement concedido, installation configurada e slot binding executável.</td><td><code>control-plane/internal/executors</code></td><td><code>harpia.executors.v1</code></td><td>Catalog + repository + runtime registry.</td></tr>

@@ -21,10 +21,6 @@ type Config struct {
 	GarageRegion    string
 	ZitadelURL      string
 	ZitadelHost     string
-	OpenFGAURL      string
-
-	OpenFGAStoreID              string
-	OpenFGAAuthorizationModelID string
 
 	AllowDevAuth               bool
 	InternalAuthToken          string
@@ -49,10 +45,6 @@ func Load() *Config {
 		GarageRegion:    envStr("GARAGE_REGION", "garage"),
 		ZitadelURL:      envStr("ZITADEL_URL", "http://localhost:9980"),
 		ZitadelHost:     envStr("ZITADEL_HOST", ""),
-		OpenFGAURL:      envStr("OPENFGA_API_URL", "http://localhost:18086"),
-
-		OpenFGAStoreID:              envStr("OPENFGA_STORE_ID", ""),
-		OpenFGAAuthorizationModelID: envStr("OPENFGA_AUTHORIZATION_MODEL_ID", ""),
 
 		AllowDevAuth:               allowDevAuth,
 		InternalAuthToken:          envStr("HARPIA_INTERNAL_AUTH_TOKEN", ""),
