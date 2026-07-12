@@ -3,6 +3,7 @@ syntax = "proto3";
 package harpia.plans.v1;
 
 import "harpia/chat/v1/chat.proto";
+import "harpia/artifacts/v1/artifacts.proto";
 
 // PlanService manages plan templates, tenant configurations, and executions.
 // Template plans use the plan-centric model defined in ADR-012.
@@ -43,6 +44,12 @@ service PlanService {
   rpc GetElicitation(GetElicitationRequest) returns (GetElicitationResponse);
   rpc RespondToElicitation(RespondToElicitationRequest) returns (RespondToElicitationResponse);
   rpc WatchElicitations(WatchElicitationsRequest) returns (stream WatchElicitationsResponse);
+
+  // Candidate review/revision is distinct from elicitation and approval.
+  rpc ListReviewRequests(ListReviewRequestsRequest) returns (ListReviewRequestsResponse);
+  rpc GetReviewRequest(GetReviewRequestRequest) returns (GetReviewRequestResponse);
+  rpc RespondToReviewRequest(RespondToReviewRequestRequest) returns (RespondToReviewRequestResponse);
+  rpc WatchReviewRequests(WatchReviewRequestsRequest) returns (stream WatchReviewRequestsResponse);
 
   // Publish approval gate (E5.2, FR-13, UX-DR6).
   // Overseers approve or reject LinkedInPostDraft artifacts before publish steps run.
@@ -114,6 +121,24 @@ message PlanStep {
   string output_artifact_type_id = 6;
   ExecutorRequirement executor_requirement = 7;
   string default_executor_sku_key = 8;
+  HumanInteractionPolicy human_interaction_policy = 9;
+}
+
+message HumanInteractionPolicy {
+  ElicitationMode elicitation_mode = 1;
+  ReviewMode review_mode = 2;
+}
+
+enum ElicitationMode {
+  ELICITATION_MODE_UNSPECIFIED = 0;
+  ELICITATION_MODE_NEVER = 1;
+  ELICITATION_MODE_WHEN_REQUIRED = 2;
+}
+
+enum ReviewMode {
+  REVIEW_MODE_UNSPECIFIED = 0;
+  REVIEW_MODE_NONE = 1;
+  REVIEW_MODE_REQUIRED = 2;
 }
 
 message PlanStepDependency {
@@ -263,6 +288,8 @@ message StepExecution {
   string approval_request_id = 10;
   string created_at = 11;
   string updated_at = 12;
+  harpia.artifacts.v1.ArtifactRef input_artifact_ref = 13;
+  harpia.artifacts.v1.ArtifactRef output_artifact_ref = 14;
 }
 
 enum StepExecutionStatus {
@@ -578,12 +605,101 @@ message WatchElicitationsResponse {
 }
 
 // ============================================================
+// Candidate review and revision
+// ============================================================
+
+// ReviewRequest is the human checkpoint over a generated candidate. It is
+// distinct from ElicitationRequest (missing context) and ApprovalRequest
+// (authorization for an irreversible transition).
+message ReviewRequest {
+  string id = 1;
+  string tenant_id = 2;
+  string step_execution_id = 3;
+  string plan_execution_id = 4;
+  string plan_step_key = 5;
+  harpia.artifacts.v1.ArtifactRef subject_artifact_ref = 6;
+  ReviewRequestStatus status = 7;
+  string revision_feedback = 8;
+  string requested_at = 9;
+  string decided_at = 10;
+  string overseer_user_id = 11;
+  string decided_by_user_id = 12;
+  string plan_configuration_id = 13;
+  string thread_id = 14;
+  ReviewDecision decision = 15;
+}
+
+enum ReviewRequestStatus {
+  REVIEW_REQUEST_STATUS_UNSPECIFIED = 0;
+  REVIEW_REQUEST_STATUS_PENDING = 1;
+  REVIEW_REQUEST_STATUS_ACCEPTED = 2;
+  REVIEW_REQUEST_STATUS_REVISION_REQUESTED = 3;
+  REVIEW_REQUEST_STATUS_CANCELLED = 4;
+}
+
+message ReviewDecision {
+  ReviewDecisionKind kind = 1;
+  string feedback = 2;
+  string decided_by_user_id = 3;
+  string decided_at = 4;
+}
+
+enum ReviewDecisionKind {
+  REVIEW_DECISION_KIND_UNSPECIFIED = 0;
+  REVIEW_DECISION_KIND_ACCEPT = 1;
+  REVIEW_DECISION_KIND_REVISE = 2;
+}
+
+message ListReviewRequestsRequest {
+  string tenant_id = 1;
+  optional string step_execution_id = 2;
+  optional string plan_execution_id = 3;
+  optional ReviewRequestStatus status = 4;
+  int32 page_size = 5;
+  string page_token = 6;
+}
+
+message ListReviewRequestsResponse {
+  repeated ReviewRequest review_requests = 1;
+  string next_page_token = 2;
+}
+
+message GetReviewRequestRequest {
+  string tenant_id = 1;
+  string review_request_id = 2;
+}
+
+message GetReviewRequestResponse {
+  ReviewRequest review_request = 1;
+}
+
+message RespondToReviewRequestRequest {
+  string tenant_id = 1;
+  string review_request_id = 2;
+  ReviewDecision decision = 3;
+}
+
+message RespondToReviewRequestResponse {
+  ReviewRequest review_request = 1;
+}
+
+message WatchReviewRequestsRequest {
+  string tenant_id = 1;
+  optional string step_execution_id = 2;
+  optional string plan_execution_id = 3;
+}
+
+message WatchReviewRequestsResponse {
+  repeated ReviewRequest review_requests = 1;
+}
+
+// ============================================================
 // Publish approval gate (E5.2)
 // ============================================================
 
 // ApprovalRequest is a human gate for a risky transition such as publishing a
-// LinkedInPostDraft externally. Distinct from ElicitationRequest even though
-// both pause StepExecution and resume via Temporal signals.
+// a pinned LinkedInPost externally. Distinct from ElicitationRequest and
+// ReviewRequest even though all pause StepExecution via Temporal signals.
 message ApprovalRequest {
   string id = 1;
   string tenant_id = 2;
@@ -599,6 +715,10 @@ message ApprovalRequest {
   string plan_configuration_id = 11;
   // Owning chat thread for returning to the in-context approval card.
   string thread_id = 12;
+  // Exact subject approved for the irreversible transition. The ref includes
+  // the immutable ArtifactVersion and content hash; input_artifact_id is
+  // retained only for the current pre-v1 handler path.
+  harpia.artifacts.v1.ArtifactRef subject_artifact_ref = 13;
 }
 
 enum ApprovalRequestStatus {

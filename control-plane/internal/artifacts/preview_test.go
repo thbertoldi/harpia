@@ -37,6 +37,30 @@ func TestBuildPreviewLinkedInPostDraft(t *testing.T) {
 	}
 }
 
+func TestBuildPreviewLinkedInPost(t *testing.T) {
+	payload := []byte(`{
+        "text":{"hook":"Big news","text":"We launched","hashtags":["#launch"]},
+        "carousel":{"title":"Launch deck","slides":[{"heading":"One","body":"First slide"}]},
+        "images":[{
+          "artifactId":"image-artifact",
+          "artifactVersionId":"image-version",
+          "artifactTypeKey":"harpia.artifacts.v1.ImageAsset",
+          "contentHash":"image-hash"
+        }]
+    }`)
+	resp, err := BuildPreview(TypeKeyLinkedInPost, payload)
+	if err != nil {
+		t.Fatalf("BuildPreview: %v", err)
+	}
+	preview := resp.GetLinkedinPostPreview()
+	if preview == nil || preview.GetText().GetText() != "We launched" {
+		t.Fatalf("LinkedIn post preview = %#v", preview)
+	}
+	if preview.GetCarousel().GetTitle() != "Launch deck" || len(preview.GetImages()) != 1 {
+		t.Fatalf("composite preview lost carousel/images: %#v", preview)
+	}
+}
+
 func TestBuildPreviewCarouselDraft(t *testing.T) {
 	payload := []byte(`{
 		"title":"Q3 Highlights",

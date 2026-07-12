@@ -307,6 +307,102 @@ func (h *Handler) ListArtifactVersions(ctx context.Context, req *connect.Request
 	return connect.NewResponse(resp), nil
 }
 
+func (h *Handler) GetArtifactVersion(ctx context.Context, req *connect.Request[artifactsv1.GetArtifactVersionRequest]) (*connect.Response[artifactsv1.GetArtifactVersionResponse], error) {
+	tenantID, err := identity.RequireTenant(ctx, req.Msg.TenantId)
+	if err != nil {
+		return nil, err
+	}
+	artifactID, err := uuid.Parse(req.Msg.ArtifactId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	versionID, err := uuid.Parse(req.Msg.ArtifactVersionId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	version, err := h.repo.GetArtifactVersion(ctx, tenantID, artifactID, versionID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, err)
+		}
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	return connect.NewResponse(&artifactsv1.GetArtifactVersionResponse{ArtifactVersion: artifactVersionToProto(version)}), nil
+}
+
+func (h *Handler) CreateArtifactVersionWithPayload(ctx context.Context, req *connect.Request[artifactsv1.CreateArtifactVersionWithPayloadRequest]) (*connect.Response[artifactsv1.CreateArtifactVersionWithPayloadResponse], error) {
+	tenantID, err := identity.RequireTenant(ctx, req.Msg.TenantId)
+	if err != nil {
+		return nil, err
+	}
+	artifactID, err := uuid.Parse(req.Msg.ArtifactId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	artifact, err := h.repo.GetArtifact(ctx, tenantID, artifactID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, err)
+		}
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	if strings.TrimSpace(req.Msg.ExpectedContentHash) == "" || req.Msg.ExpectedContentHash != artifact.ContentHash {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, ErrContentHashConflict)
+	}
+	artifactType, err := h.repo.GetTypeByID(ctx, artifact.ArtifactTypeID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	if err := ValidatePayload(artifactType.Key, req.Msg.PayloadJson); err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	versions, _, err := h.repo.ListArtifactVersions(ctx, tenantID, artifactID, 1, 0)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	nextVersionNumber := int32(1)
+	if len(versions) > 0 {
+		nextVersionNumber = versions[0].VersionNumber + 1
+	}
+	storageURI, err := h.store.Put(ctx, ArtifactVersionObjectPath(artifactID, nextVersionNumber), req.Msg.PayloadJson)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	createdByKind := artifactsv1.ArtifactVersionCreatedByKind_ARTIFACT_VERSION_CREATED_BY_KIND_SYSTEM
+	if userID := userIDFromContext(ctx); userID.Valid {
+		createdByKind = artifactsv1.ArtifactVersionCreatedByKind_ARTIFACT_VERSION_CREATED_BY_KIND_USER
+	}
+	version := &ArtifactVersion{
+		ID:                    uuid.New(),
+		ArtifactID:            artifactID,
+		TenantID:              tenantID,
+		VersionNumber:         nextVersionNumber,
+		StorageURI:            storageURI,
+		ContentHash:           ContentHash(req.Msg.PayloadJson),
+		SourceVersionID:       artifact.CurrentVersionID,
+		SourcePlanExecutionID: artifact.PlanExecutionID,
+		SourceStepExecutionID: artifact.StepExecutionID,
+		CreatedByUserID:       userIDFromContext(ctx),
+		CreatedByKind:         createdByKind,
+		EditSummary:           strings.TrimSpace(req.Msg.EditSummary),
+	}
+	createdVersion, updatedArtifact, err := h.repo.CreateArtifactVersion(ctx, artifact, version)
+	if err != nil {
+		if errors.Is(err, ErrContentHashConflict) {
+			return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+		}
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, err)
+		}
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	return connect.NewResponse(&artifactsv1.CreateArtifactVersionWithPayloadResponse{
+		Artifact:        artifactToProto(updatedArtifact),
+		ArtifactVersion: artifactVersionToProto(createdVersion),
+	}), nil
+}
+
 func (h *Handler) SaveTextArtifactVersion(ctx context.Context, req *connect.Request[artifactsv1.SaveTextArtifactVersionRequest]) (*connect.Response[artifactsv1.SaveTextArtifactVersionResponse], error) {
 	tenantID, err := identity.RequireTenant(ctx, req.Msg.TenantId)
 	if err != nil {

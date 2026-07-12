@@ -27,6 +27,8 @@ func BuildPreview(typeKey string, payload []byte) (*artifactsv1.PreviewArtifactR
 		return buildTextDraftPreview(payload)
 	case TypeKeyLinkedInPostDraft:
 		return buildLinkedInPostDraftPreview(payload)
+	case TypeKeyLinkedInPost:
+		return buildLinkedInPostPreview(payload)
 	case TypeKeyNewsList:
 		return buildNewsListPreview(payload)
 	case TypeKeyDateRange:
@@ -124,6 +126,25 @@ func buildLinkedInPostDraftPreview(payload []byte) (*artifactsv1.PreviewArtifact
 	return &artifactsv1.PreviewArtifactResponse{
 		Preview: &artifactsv1.PreviewArtifactResponse_MarkdownPreview{
 			MarkdownPreview: preview,
+		},
+	}, nil
+}
+
+func buildLinkedInPostPreview(payload []byte) (*artifactsv1.PreviewArtifactResponse, error) {
+	if err := ValidatePayload(TypeKeyLinkedInPost, payload); err != nil {
+		return nil, err
+	}
+	post := &artifactsv1.LinkedInPost{}
+	if err := protojson.Unmarshal(payload, post); err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrInvalidPayload, err)
+	}
+	return &artifactsv1.PreviewArtifactResponse{
+		Preview: &artifactsv1.PreviewArtifactResponse_LinkedinPostPreview{
+			LinkedinPostPreview: &artifactsv1.LinkedInPostPreview{
+				Text:     post.Text,
+				Carousel: post.Carousel,
+				Images:   post.Images,
+			},
 		},
 	}, nil
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
+	artifactsv1 "github.com/harpia/control-plane/gen/harpia/artifacts/v1"
 	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
 )
 
@@ -20,6 +21,10 @@ type ApprovalRequest struct {
 	StepExecutionID     string
 	PlanStepKey         string
 	InputArtifactID     string
+	SubjectArtifactID   string
+	SubjectVersionID    string
+	SubjectTypeKey      string
+	SubjectContentHash  string
 	Status              string
 	DecisionReason      string
 	RequestedAt         time.Time
@@ -85,6 +90,14 @@ func approvalRequestToProto(approval *ApprovalRequest) *plansv1.ApprovalRequest 
 	if approval.ThreadID != "" {
 		out.ThreadId = approval.ThreadID
 	}
+	if approval.SubjectArtifactID != "" {
+		out.SubjectArtifactRef = &artifactsv1.ArtifactRef{
+			ArtifactId:        approval.SubjectArtifactID,
+			ArtifactVersionId: approval.SubjectVersionID,
+			ArtifactTypeKey:   approval.SubjectTypeKey,
+			ContentHash:       approval.SubjectContentHash,
+		}
+	}
 	return out
 }
 
@@ -109,6 +122,10 @@ func planApprovalRequestToDomain(row *PlanApprovalRequest) *ApprovalRequest {
 		StepExecutionID:     row.StepExecutionID.String(),
 		PlanStepKey:         row.PlanStepKey,
 		InputArtifactID:     row.InputArtifactID,
+		SubjectArtifactID:   nullableUUIDString(row.SubjectArtifactID),
+		SubjectVersionID:    nullableUUIDString(row.SubjectVersionID),
+		SubjectTypeKey:      row.SubjectTypeKey,
+		SubjectContentHash:  row.SubjectContentHash,
 		Status:              row.Status,
 		DecisionReason:      row.DecisionReason,
 		RequestedAt:         row.RequestedAt,
@@ -124,4 +141,11 @@ func validateApprovalDecision(approved bool, reason string) error {
 		return fmt.Errorf("reason is required when rejecting an approval request")
 	}
 	return nil
+}
+
+func nullableUUIDString(value uuid.NullUUID) string {
+	if !value.Valid {
+		return ""
+	}
+	return value.UUID.String()
 }

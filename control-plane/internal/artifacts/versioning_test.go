@@ -199,6 +199,51 @@ func TestPreviewArtifactUsesRequestedVersion(t *testing.T) {
 	}
 }
 
+func TestCreateArtifactVersionWithPayloadCreatesNamedVersion(t *testing.T) {
+	tenantID := uuid.New()
+	userID := uuid.New()
+	typeID := uuid.New()
+	artifactID := uuid.New()
+	versionID := uuid.New()
+	currentURI := formatStorageURI("harpia", "tenant/test/post-current.json")
+	currentPayload := []byte(`{"text":{"text":"Original"}}`)
+	currentHash := ContentHash(currentPayload)
+	repo := &mockRepository{
+		types: map[uuid.UUID]*ArtifactType{
+			typeID: {ID: typeID, Key: TypeKeyLinkedInPost},
+		},
+		artifacts: map[uuid.UUID]*Artifact{
+			artifactID: {
+				ID: artifactID, TenantID: tenantID, ArtifactTypeID: typeID,
+				ArtifactTypeKey: TypeKeyLinkedInPost, StorageURI: currentURI,
+				ContentHash: currentHash, CurrentVersionID: uuid.NullUUID{UUID: versionID, Valid: true},
+			},
+		},
+		versions: map[uuid.UUID][]*ArtifactVersion{
+			artifactID: {{ID: versionID, ArtifactID: artifactID, TenantID: tenantID, VersionNumber: 1, StorageURI: currentURI, ContentHash: currentHash}},
+		},
+	}
+	store := &mockPayloadStore{objects: map[string][]byte{currentURI: currentPayload}}
+	handler := &Handler{repo: repo, store: store}
+	payload := []byte(`{"text":{"text":"Revised"}}`)
+	resp, err := handler.CreateArtifactVersionWithPayload(
+		tenantUserContext(tenantID, userID),
+		connect.NewRequest(&artifactsv1.CreateArtifactVersionWithPayloadRequest{
+			TenantId: tenantID.String(), ArtifactId: artifactID.String(), ExpectedContentHash: currentHash,
+			PayloadJson: payload, EditSummary: "Review revision",
+		}),
+	)
+	if err != nil {
+		t.Fatalf("CreateArtifactVersionWithPayload: %v", err)
+	}
+	if resp.Msg.GetArtifactVersion().GetVersionNumber() != 2 {
+		t.Fatalf("version number = %d, want 2", resp.Msg.GetArtifactVersion().GetVersionNumber())
+	}
+	if resp.Msg.GetArtifact().GetContentHash() != ContentHash(payload) {
+		t.Fatalf("artifact hash = %q, want payload hash", resp.Msg.GetArtifact().GetContentHash())
+	}
+}
+
 func TestListArtifactsFiltersByPlanExecution(t *testing.T) {
 	tenantID := uuid.New()
 	typeID := uuid.New()

@@ -12,6 +12,8 @@ service ArtifactService {
   rpc GetArtifact(GetArtifactRequest) returns (GetArtifactResponse);
   rpc ListArtifacts(ListArtifactsRequest) returns (stream ListArtifactsResponse);
   rpc ListArtifactVersions(ListArtifactVersionsRequest) returns (ListArtifactVersionsResponse);
+  rpc GetArtifactVersion(GetArtifactVersionRequest) returns (GetArtifactVersionResponse);
+  rpc CreateArtifactVersionWithPayload(CreateArtifactVersionWithPayloadRequest) returns (CreateArtifactVersionWithPayloadResponse);
   rpc SaveTextArtifactVersion(SaveTextArtifactVersionRequest) returns (SaveTextArtifactVersionResponse);
   rpc GetArtifactPayload(GetArtifactPayloadRequest) returns (GetArtifactPayloadResponse);
   rpc PreviewArtifact(PreviewArtifactRequest) returns (PreviewArtifactResponse);
@@ -244,6 +246,31 @@ message ListArtifactVersionsResponse {
   string next_page_token = 2;
 }
 
+message GetArtifactVersionRequest {
+  string tenant_id = 1;
+  string artifact_id = 2;
+  string artifact_version_id = 3;
+}
+
+message GetArtifactVersionResponse {
+  ArtifactVersion artifact_version = 1;
+}
+
+// Creates a new immutable version under an existing Artifact identity. The
+// expected hash prevents a caller from overwriting a newer current version.
+message CreateArtifactVersionWithPayloadRequest {
+  string tenant_id = 1;
+  string artifact_id = 2;
+  string expected_content_hash = 3;
+  bytes payload_json = 4;
+  string edit_summary = 5;
+}
+
+message CreateArtifactVersionWithPayloadResponse {
+  Artifact artifact = 1;
+  ArtifactVersion artifact_version = 2;
+}
+
 message SaveTextArtifactVersionRequest {
   string tenant_id = 1;
   string artifact_id = 2;
@@ -282,6 +309,15 @@ message ImagePreview {
   string alt_text = 3;
 }
 
+// LinkedInPostPreview is a server-selected structured preview of the one
+// composable publish subject. It intentionally carries no layout/rendering
+// directives; the deferred Flint substrate owns that concern.
+message LinkedInPostPreview {
+  LinkedInPostDraft text = 1;
+  optional CarouselDraft carousel = 2;
+  repeated ArtifactRef images = 3;
+}
+
 message PreviewArtifactRequest {
   string tenant_id = 1;
   string artifact_id = 2;
@@ -296,5 +332,6 @@ message PreviewArtifactResponse {
     string html_preview = 4;
     string markdown_preview = 5;
     ImagePreview image_preview = 6;
+    LinkedInPostPreview linkedin_post_preview = 7;
   }
 }

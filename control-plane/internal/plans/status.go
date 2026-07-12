@@ -27,6 +27,11 @@ const (
 	ApprovalRequestStatusApproved = "approved"
 	ApprovalRequestStatusRejected = "rejected"
 
+	ReviewRequestStatusPending           = "pending"
+	ReviewRequestStatusAccepted          = "accepted"
+	ReviewRequestStatusRevisionRequested = "revision_requested"
+	ReviewRequestStatusCancelled         = "cancelled"
+
 	ElicitationStatusPending   = "pending"
 	ElicitationStatusAnswered  = "answered"
 	ElicitationStatusTimedOut  = "timed_out"

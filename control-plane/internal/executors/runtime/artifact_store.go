@@ -16,7 +16,18 @@ import (
 // (for example harpia.artifacts.v1.NewsList), not database UUIDs.
 type ExecutorArtifactStore interface {
 	LoadPayloadForType(ctx context.Context, tenantID uuid.UUID, refs []InputArtifactRef, typeKey string) ([]byte, error)
+	LoadPinnedPayload(ctx context.Context, tenantID uuid.UUID, ref VersionedArtifactRef) ([]byte, error)
 	CreateValidatedPayload(ctx context.Context, req CreateArtifactRequest) (string, error)
+}
+
+// VersionedArtifactRef is the executor-facing form of an immutable artifact
+// reference. The adapter verifies tenant, type, version, and hash before it
+// returns bytes to an integration executor.
+type VersionedArtifactRef struct {
+	ArtifactID        string
+	ArtifactVersionID string
+	ArtifactTypeKey   string
+	ContentHash       string
 }
 
 type CreateArtifactRequest struct {
@@ -33,6 +44,7 @@ type ArtifactRepository interface {
 	GetTypeByKey(ctx context.Context, key string) (*artifacts.ArtifactType, error)
 	CreateArtifact(ctx context.Context, artifact *artifacts.Artifact) (*artifacts.Artifact, error)
 	GetArtifact(ctx context.Context, tenantID, artifactID uuid.UUID) (*artifacts.Artifact, error)
+	GetArtifactVersion(ctx context.Context, tenantID, artifactID, versionID uuid.UUID) (*artifacts.ArtifactVersion, error)
 }
 
 type ExecutorArtifactStoreAdapter struct {
@@ -67,7 +79,12 @@ func (g *ExecutorArtifactStoreAdapter) LoadPayloadForType(
 			return payload, nil
 		}
 		if artifactID := strings.TrimSpace(ref.ArtifactID); artifactID != "" {
-			return g.loadArtifactPayload(ctx, tenantID, artifactID)
+			return g.LoadPinnedPayload(ctx, tenantID, VersionedArtifactRef{
+				ArtifactID:        artifactID,
+				ArtifactVersionID: ref.ArtifactVersionID,
+				ArtifactTypeKey:   firstNonEmpty(actualType, typeKey),
+				ContentHash:       ref.ContentHash,
+			})
 		}
 	}
 	return nil, fmt.Errorf("missing input artifact for %q", typeKey)
@@ -120,7 +137,8 @@ func nullableUUID(raw string) uuid.NullUUID {
 	return uuid.NullUUID{UUID: parsed, Valid: true}
 }
 
-func (g *ExecutorArtifactStoreAdapter) loadArtifactPayload(ctx context.Context, tenantID uuid.UUID, artifactIDRaw string) ([]byte, error) {
+func (g *ExecutorArtifactStoreAdapter) LoadPinnedPayload(ctx context.Context, tenantID uuid.UUID, ref VersionedArtifactRef) ([]byte, error) {
+	artifactIDRaw := strings.TrimSpace(ref.ArtifactID)
 	artifactID, err := uuid.Parse(artifactIDRaw)
 	if err != nil {
 		return nil, fmt.Errorf("parse artifact id: %w", err)
@@ -129,11 +147,45 @@ func (g *ExecutorArtifactStoreAdapter) loadArtifactPayload(ctx context.Context, 
 	if err != nil {
 		return nil, fmt.Errorf("load artifact %q: %w", artifactIDRaw, err)
 	}
-	payload, err := g.store.Get(ctx, artifact.StorageURI)
+	artifactType, err := g.repo.GetTypeByID(ctx, artifact.ArtifactTypeID)
+	if err != nil {
+		return nil, fmt.Errorf("load artifact type for %q: %w", artifactIDRaw, err)
+	}
+	if wantType := strings.TrimSpace(ref.ArtifactTypeKey); wantType != "" && artifactType.Key != wantType {
+		return nil, fmt.Errorf("artifact %q type = %q, want %q", artifactIDRaw, artifactType.Key, wantType)
+	}
+
+	storageURI := artifact.StorageURI
+	contentHash := artifact.ContentHash
+	if versionRaw := strings.TrimSpace(ref.ArtifactVersionID); versionRaw != "" {
+		versionID, parseErr := uuid.Parse(versionRaw)
+		if parseErr != nil {
+			return nil, fmt.Errorf("parse artifact version id: %w", parseErr)
+		}
+		version, loadErr := g.repo.GetArtifactVersion(ctx, tenantID, artifactID, versionID)
+		if loadErr != nil {
+			return nil, fmt.Errorf("load artifact version %q: %w", versionRaw, loadErr)
+		}
+		storageURI = version.StorageURI
+		contentHash = version.ContentHash
+	}
+	if expectedHash := strings.TrimSpace(ref.ContentHash); expectedHash != "" && expectedHash != contentHash {
+		return nil, fmt.Errorf("artifact %q content hash does not match pinned reference", artifactIDRaw)
+	}
+	payload, err := g.store.Get(ctx, storageURI)
 	if err != nil {
 		return nil, fmt.Errorf("load artifact payload %q: %w", artifactIDRaw, err)
 	}
 	return payload, nil
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
 }
 
 func (g *ExecutorArtifactStoreAdapter) resolveArtifactType(ctx context.Context, artifactTypeKey string) (*artifacts.ArtifactType, error) {

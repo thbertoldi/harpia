@@ -75,6 +75,18 @@ class PlanService(Protocol):
     def watch_elicitations(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.WatchElicitationsRequest, ctx: RequestContext) -> AsyncIterator[harpia_dot_plans_dot_v1_dot_plans__pb2.WatchElicitationsResponse]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def list_review_requests(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.ListReviewRequestsRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.ListReviewRequestsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def get_review_request(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.GetReviewRequestRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.GetReviewRequestResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def respond_to_review_request(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToReviewRequestRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToReviewRequestResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    def watch_review_requests(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.WatchReviewRequestsRequest, ctx: RequestContext) -> AsyncIterator[harpia_dot_plans_dot_v1_dot_plans__pb2.WatchReviewRequestsResponse]:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def list_approval_requests(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.ListApprovalRequestsRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.ListApprovalRequestsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -282,6 +294,46 @@ class PlanServiceASGIApplication(ConnectASGIApplication[PlanService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.watch_elicitations,
+                ),
+                "/harpia.plans.v1.PlanService/ListReviewRequests": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListReviewRequests",
+                        service_name="harpia.plans.v1.PlanService",
+                        input=harpia_dot_plans_dot_v1_dot_plans__pb2.ListReviewRequestsRequest,
+                        output=harpia_dot_plans_dot_v1_dot_plans__pb2.ListReviewRequestsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_review_requests,
+                ),
+                "/harpia.plans.v1.PlanService/GetReviewRequest": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetReviewRequest",
+                        service_name="harpia.plans.v1.PlanService",
+                        input=harpia_dot_plans_dot_v1_dot_plans__pb2.GetReviewRequestRequest,
+                        output=harpia_dot_plans_dot_v1_dot_plans__pb2.GetReviewRequestResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_review_request,
+                ),
+                "/harpia.plans.v1.PlanService/RespondToReviewRequest": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RespondToReviewRequest",
+                        service_name="harpia.plans.v1.PlanService",
+                        input=harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToReviewRequestRequest,
+                        output=harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToReviewRequestResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.respond_to_review_request,
+                ),
+                "/harpia.plans.v1.PlanService/WatchReviewRequests": Endpoint.server_stream(
+                    method=MethodInfo(
+                        name="WatchReviewRequests",
+                        service_name="harpia.plans.v1.PlanService",
+                        input=harpia_dot_plans_dot_v1_dot_plans__pb2.WatchReviewRequestsRequest,
+                        output=harpia_dot_plans_dot_v1_dot_plans__pb2.WatchReviewRequestsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.watch_review_requests,
                 ),
                 "/harpia.plans.v1.PlanService/ListApprovalRequests": Endpoint.unary(
                     method=MethodInfo(
@@ -717,6 +769,86 @@ class PlanServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def list_review_requests(
+        self,
+        request: harpia_dot_plans_dot_v1_dot_plans__pb2.ListReviewRequestsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_plans_dot_v1_dot_plans__pb2.ListReviewRequestsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListReviewRequests",
+                service_name="harpia.plans.v1.PlanService",
+                input=harpia_dot_plans_dot_v1_dot_plans__pb2.ListReviewRequestsRequest,
+                output=harpia_dot_plans_dot_v1_dot_plans__pb2.ListReviewRequestsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_review_request(
+        self,
+        request: harpia_dot_plans_dot_v1_dot_plans__pb2.GetReviewRequestRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_plans_dot_v1_dot_plans__pb2.GetReviewRequestResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetReviewRequest",
+                service_name="harpia.plans.v1.PlanService",
+                input=harpia_dot_plans_dot_v1_dot_plans__pb2.GetReviewRequestRequest,
+                output=harpia_dot_plans_dot_v1_dot_plans__pb2.GetReviewRequestResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def respond_to_review_request(
+        self,
+        request: harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToReviewRequestRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToReviewRequestResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RespondToReviewRequest",
+                service_name="harpia.plans.v1.PlanService",
+                input=harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToReviewRequestRequest,
+                output=harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToReviewRequestResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def watch_review_requests(
+        self,
+        request: harpia_dot_plans_dot_v1_dot_plans__pb2.WatchReviewRequestsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> AsyncIterator[harpia_dot_plans_dot_v1_dot_plans__pb2.WatchReviewRequestsResponse]:
+        return self.execute_server_stream(
+            request=request,
+            method=MethodInfo(
+                name="WatchReviewRequests",
+                service_name="harpia.plans.v1.PlanService",
+                input=harpia_dot_plans_dot_v1_dot_plans__pb2.WatchReviewRequestsRequest,
+                output=harpia_dot_plans_dot_v1_dot_plans__pb2.WatchReviewRequestsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def list_approval_requests(
         self,
         request: harpia_dot_plans_dot_v1_dot_plans__pb2.ListApprovalRequestsRequest,
@@ -839,6 +971,14 @@ class PlanServiceSync(Protocol):
     def respond_to_elicitation(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToElicitationRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToElicitationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def watch_elicitations(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.WatchElicitationsRequest, ctx: RequestContext) -> Iterator[harpia_dot_plans_dot_v1_dot_plans__pb2.WatchElicitationsResponse]:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def list_review_requests(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.ListReviewRequestsRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.ListReviewRequestsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def get_review_request(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.GetReviewRequestRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.GetReviewRequestResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def respond_to_review_request(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToReviewRequestRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToReviewRequestResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def watch_review_requests(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.WatchReviewRequestsRequest, ctx: RequestContext) -> Iterator[harpia_dot_plans_dot_v1_dot_plans__pb2.WatchReviewRequestsResponse]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_approval_requests(self, request: harpia_dot_plans_dot_v1_dot_plans__pb2.ListApprovalRequestsRequest, ctx: RequestContext) -> harpia_dot_plans_dot_v1_dot_plans__pb2.ListApprovalRequestsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -1043,6 +1183,46 @@ class PlanServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.watch_elicitations,
+                ),
+                "/harpia.plans.v1.PlanService/ListReviewRequests": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListReviewRequests",
+                        service_name="harpia.plans.v1.PlanService",
+                        input=harpia_dot_plans_dot_v1_dot_plans__pb2.ListReviewRequestsRequest,
+                        output=harpia_dot_plans_dot_v1_dot_plans__pb2.ListReviewRequestsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_review_requests,
+                ),
+                "/harpia.plans.v1.PlanService/GetReviewRequest": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetReviewRequest",
+                        service_name="harpia.plans.v1.PlanService",
+                        input=harpia_dot_plans_dot_v1_dot_plans__pb2.GetReviewRequestRequest,
+                        output=harpia_dot_plans_dot_v1_dot_plans__pb2.GetReviewRequestResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_review_request,
+                ),
+                "/harpia.plans.v1.PlanService/RespondToReviewRequest": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RespondToReviewRequest",
+                        service_name="harpia.plans.v1.PlanService",
+                        input=harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToReviewRequestRequest,
+                        output=harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToReviewRequestResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.respond_to_review_request,
+                ),
+                "/harpia.plans.v1.PlanService/WatchReviewRequests": EndpointSync.server_stream(
+                    method=MethodInfo(
+                        name="WatchReviewRequests",
+                        service_name="harpia.plans.v1.PlanService",
+                        input=harpia_dot_plans_dot_v1_dot_plans__pb2.WatchReviewRequestsRequest,
+                        output=harpia_dot_plans_dot_v1_dot_plans__pb2.WatchReviewRequestsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.watch_review_requests,
                 ),
                 "/harpia.plans.v1.PlanService/ListApprovalRequests": EndpointSync.unary(
                     method=MethodInfo(
@@ -1472,6 +1652,86 @@ class PlanServiceClientSync(ConnectClientSync):
                 service_name="harpia.plans.v1.PlanService",
                 input=harpia_dot_plans_dot_v1_dot_plans__pb2.WatchElicitationsRequest,
                 output=harpia_dot_plans_dot_v1_dot_plans__pb2.WatchElicitationsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def list_review_requests(
+        self,
+        request: harpia_dot_plans_dot_v1_dot_plans__pb2.ListReviewRequestsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_plans_dot_v1_dot_plans__pb2.ListReviewRequestsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListReviewRequests",
+                service_name="harpia.plans.v1.PlanService",
+                input=harpia_dot_plans_dot_v1_dot_plans__pb2.ListReviewRequestsRequest,
+                output=harpia_dot_plans_dot_v1_dot_plans__pb2.ListReviewRequestsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def get_review_request(
+        self,
+        request: harpia_dot_plans_dot_v1_dot_plans__pb2.GetReviewRequestRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_plans_dot_v1_dot_plans__pb2.GetReviewRequestResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetReviewRequest",
+                service_name="harpia.plans.v1.PlanService",
+                input=harpia_dot_plans_dot_v1_dot_plans__pb2.GetReviewRequestRequest,
+                output=harpia_dot_plans_dot_v1_dot_plans__pb2.GetReviewRequestResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def respond_to_review_request(
+        self,
+        request: harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToReviewRequestRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToReviewRequestResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RespondToReviewRequest",
+                service_name="harpia.plans.v1.PlanService",
+                input=harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToReviewRequestRequest,
+                output=harpia_dot_plans_dot_v1_dot_plans__pb2.RespondToReviewRequestResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def watch_review_requests(
+        self,
+        request: harpia_dot_plans_dot_v1_dot_plans__pb2.WatchReviewRequestsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> Iterator[harpia_dot_plans_dot_v1_dot_plans__pb2.WatchReviewRequestsResponse]:
+        return self.execute_server_stream(
+            request=request,
+            method=MethodInfo(
+                name="WatchReviewRequests",
+                service_name="harpia.plans.v1.PlanService",
+                input=harpia_dot_plans_dot_v1_dot_plans__pb2.WatchReviewRequestsRequest,
+                output=harpia_dot_plans_dot_v1_dot_plans__pb2.WatchReviewRequestsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

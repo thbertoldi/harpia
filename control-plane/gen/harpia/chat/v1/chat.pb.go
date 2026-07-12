@@ -7,6 +7,7 @@
 package chatv1
 
 import (
+	v1 "github.com/harpia/control-plane/gen/harpia/artifacts/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -162,6 +163,8 @@ const (
 	ThreadMessageKind_THREAD_MESSAGE_KIND_ERROR_RAISED          ThreadMessageKind = 24
 	ThreadMessageKind_THREAD_MESSAGE_KIND_ERROR_RECOVERED       ThreadMessageKind = 25
 	ThreadMessageKind_THREAD_MESSAGE_KIND_STEP_FAILED           ThreadMessageKind = 26 // payload_json: { "step_key": "...", "step_execution_id": "...", "error": "..." }
+	ThreadMessageKind_THREAD_MESSAGE_KIND_REVIEW_RAISED         ThreadMessageKind = 27 // payload_json: ReviewRaisedPayload
+	ThreadMessageKind_THREAD_MESSAGE_KIND_REVIEW_DECIDED        ThreadMessageKind = 28 // payload_json: ReviewDecidedPayload
 )
 
 // Enum value maps for ThreadMessageKind.
@@ -194,6 +197,8 @@ var (
 		24: "THREAD_MESSAGE_KIND_ERROR_RAISED",
 		25: "THREAD_MESSAGE_KIND_ERROR_RECOVERED",
 		26: "THREAD_MESSAGE_KIND_STEP_FAILED",
+		27: "THREAD_MESSAGE_KIND_REVIEW_RAISED",
+		28: "THREAD_MESSAGE_KIND_REVIEW_DECIDED",
 	}
 	ThreadMessageKind_value = map[string]int32{
 		"THREAD_MESSAGE_KIND_UNSPECIFIED":           0,
@@ -223,6 +228,8 @@ var (
 		"THREAD_MESSAGE_KIND_ERROR_RAISED":          24,
 		"THREAD_MESSAGE_KIND_ERROR_RECOVERED":       25,
 		"THREAD_MESSAGE_KIND_STEP_FAILED":           26,
+		"THREAD_MESSAGE_KIND_REVIEW_RAISED":         27,
+		"THREAD_MESSAGE_KIND_REVIEW_DECIDED":        28,
 	}
 )
 
@@ -1370,11 +1377,145 @@ func (x *ProposePlanResponse) GetMessage() *ThreadMessage {
 	return nil
 }
 
+// ReviewRaisedPayload is the typed JSON contract for REVIEW_RAISED thread
+// messages. It keeps the candidate's ArtifactVersion identity in the owning
+// Conversation without importing the plans package (which imports chat).
+type ReviewRaisedPayload struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	ReviewRequestId    string                 `protobuf:"bytes,1,opt,name=review_request_id,json=reviewRequestId,proto3" json:"review_request_id,omitempty"`
+	StepExecutionId    string                 `protobuf:"bytes,2,opt,name=step_execution_id,json=stepExecutionId,proto3" json:"step_execution_id,omitempty"`
+	PlanStepKey        string                 `protobuf:"bytes,3,opt,name=plan_step_key,json=planStepKey,proto3" json:"plan_step_key,omitempty"`
+	SubjectArtifactRef *v1.ArtifactRef        `protobuf:"bytes,4,opt,name=subject_artifact_ref,json=subjectArtifactRef,proto3" json:"subject_artifact_ref,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *ReviewRaisedPayload) Reset() {
+	*x = ReviewRaisedPayload{}
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReviewRaisedPayload) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReviewRaisedPayload) ProtoMessage() {}
+
+func (x *ReviewRaisedPayload) ProtoReflect() protoreflect.Message {
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReviewRaisedPayload.ProtoReflect.Descriptor instead.
+func (*ReviewRaisedPayload) Descriptor() ([]byte, []int) {
+	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *ReviewRaisedPayload) GetReviewRequestId() string {
+	if x != nil {
+		return x.ReviewRequestId
+	}
+	return ""
+}
+
+func (x *ReviewRaisedPayload) GetStepExecutionId() string {
+	if x != nil {
+		return x.StepExecutionId
+	}
+	return ""
+}
+
+func (x *ReviewRaisedPayload) GetPlanStepKey() string {
+	if x != nil {
+		return x.PlanStepKey
+	}
+	return ""
+}
+
+func (x *ReviewRaisedPayload) GetSubjectArtifactRef() *v1.ArtifactRef {
+	if x != nil {
+		return x.SubjectArtifactRef
+	}
+	return nil
+}
+
+// ReviewDecidedPayload is the typed JSON contract for REVIEW_DECIDED thread
+// messages. accepted=false means the decision requested a revision and carries
+// the overseer's feedback.
+type ReviewDecidedPayload struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	ReviewRequestId string                 `protobuf:"bytes,1,opt,name=review_request_id,json=reviewRequestId,proto3" json:"review_request_id,omitempty"`
+	Accepted        bool                   `protobuf:"varint,2,opt,name=accepted,proto3" json:"accepted,omitempty"`
+	Feedback        string                 `protobuf:"bytes,3,opt,name=feedback,proto3" json:"feedback,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *ReviewDecidedPayload) Reset() {
+	*x = ReviewDecidedPayload{}
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReviewDecidedPayload) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReviewDecidedPayload) ProtoMessage() {}
+
+func (x *ReviewDecidedPayload) ProtoReflect() protoreflect.Message {
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReviewDecidedPayload.ProtoReflect.Descriptor instead.
+func (*ReviewDecidedPayload) Descriptor() ([]byte, []int) {
+	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *ReviewDecidedPayload) GetReviewRequestId() string {
+	if x != nil {
+		return x.ReviewRequestId
+	}
+	return ""
+}
+
+func (x *ReviewDecidedPayload) GetAccepted() bool {
+	if x != nil {
+		return x.Accepted
+	}
+	return false
+}
+
+func (x *ReviewDecidedPayload) GetFeedback() string {
+	if x != nil {
+		return x.Feedback
+	}
+	return ""
+}
+
 var File_harpia_chat_v1_chat_proto protoreflect.FileDescriptor
 
 const file_harpia_chat_v1_chat_proto_rawDesc = "" +
 	"\n" +
-	"\x19harpia/chat/v1/chat.proto\x12\x0eharpia.chat.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa2\x03\n" +
+	"\x19harpia/chat/v1/chat.proto\x12\x0eharpia.chat.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a#harpia/artifacts/v1/artifacts.proto\"\xa2\x03\n" +
 	"\x06Thread\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x14\n" +
@@ -1458,7 +1599,16 @@ const file_harpia_chat_v1_chat_proto_rawDesc = "" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1b\n" +
 	"\tthread_id\x18\x02 \x01(\tR\bthreadId\"N\n" +
 	"\x13ProposePlanResponse\x127\n" +
-	"\amessage\x18\x01 \x01(\v2\x1d.harpia.chat.v1.ThreadMessageR\amessage*\xbc\x01\n" +
+	"\amessage\x18\x01 \x01(\v2\x1d.harpia.chat.v1.ThreadMessageR\amessage\"\xe5\x01\n" +
+	"\x13ReviewRaisedPayload\x12*\n" +
+	"\x11review_request_id\x18\x01 \x01(\tR\x0freviewRequestId\x12*\n" +
+	"\x11step_execution_id\x18\x02 \x01(\tR\x0fstepExecutionId\x12\"\n" +
+	"\rplan_step_key\x18\x03 \x01(\tR\vplanStepKey\x12R\n" +
+	"\x14subject_artifact_ref\x18\x04 \x01(\v2 .harpia.artifacts.v1.ArtifactRefR\x12subjectArtifactRef\"z\n" +
+	"\x14ReviewDecidedPayload\x12*\n" +
+	"\x11review_request_id\x18\x01 \x01(\tR\x0freviewRequestId\x12\x1a\n" +
+	"\baccepted\x18\x02 \x01(\bR\baccepted\x12\x1a\n" +
+	"\bfeedback\x18\x03 \x01(\tR\bfeedback*\xbc\x01\n" +
 	"\fThreadStatus\x12\x1d\n" +
 	"\x19THREAD_STATUS_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12THREAD_STATUS_OPEN\x10\x01\x12\x19\n" +
@@ -1470,7 +1620,7 @@ const file_harpia_chat_v1_chat_proto_rawDesc = "" +
 	"\x1fTHREAD_MESSAGE_ROLE_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cTHREAD_MESSAGE_ROLE_OVERSEER\x10\x01\x12\x1d\n" +
 	"\x19THREAD_MESSAGE_ROLE_AGENT\x10\x02\x12\x1e\n" +
-	"\x1aTHREAD_MESSAGE_ROLE_SYSTEM\x10\x03*\xcc\b\n" +
+	"\x1aTHREAD_MESSAGE_ROLE_SYSTEM\x10\x03*\x9b\t\n" +
 	"\x11ThreadMessageKind\x12#\n" +
 	"\x1fTHREAD_MESSAGE_KIND_UNSPECIFIED\x10\x00\x12!\n" +
 	"\x1dTHREAD_MESSAGE_KIND_USER_TEXT\x10\x01\x12&\n" +
@@ -1499,7 +1649,9 @@ const file_harpia_chat_v1_chat_proto_rawDesc = "" +
 	"$THREAD_MESSAGE_KIND_ARTIFACT_UPDATED\x10\x17\x12$\n" +
 	" THREAD_MESSAGE_KIND_ERROR_RAISED\x10\x18\x12'\n" +
 	"#THREAD_MESSAGE_KIND_ERROR_RECOVERED\x10\x19\x12#\n" +
-	"\x1fTHREAD_MESSAGE_KIND_STEP_FAILED\x10\x1a2\x9b\x06\n" +
+	"\x1fTHREAD_MESSAGE_KIND_STEP_FAILED\x10\x1a\x12%\n" +
+	"!THREAD_MESSAGE_KIND_REVIEW_RAISED\x10\x1b\x12&\n" +
+	"\"THREAD_MESSAGE_KIND_REVIEW_DECIDED\x10\x1c2\x9b\x06\n" +
 	"\rThreadService\x12Y\n" +
 	"\fCreateThread\x12#.harpia.chat.v1.CreateThreadRequest\x1a$.harpia.chat.v1.CreateThreadResponse\x12P\n" +
 	"\tGetThread\x12 .harpia.chat.v1.GetThreadRequest\x1a!.harpia.chat.v1.GetThreadResponse\x12X\n" +
@@ -1524,7 +1676,7 @@ func file_harpia_chat_v1_chat_proto_rawDescGZIP() []byte {
 }
 
 var file_harpia_chat_v1_chat_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_harpia_chat_v1_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_harpia_chat_v1_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_harpia_chat_v1_chat_proto_goTypes = []any{
 	(ThreadStatus)(0),                   // 0: harpia.chat.v1.ThreadStatus
 	(ThreadMessageRole)(0),              // 1: harpia.chat.v1.ThreadMessageRole
@@ -1547,16 +1699,19 @@ var file_harpia_chat_v1_chat_proto_goTypes = []any{
 	(*AppendThreadMessageResponse)(nil), // 18: harpia.chat.v1.AppendThreadMessageResponse
 	(*ProposePlanRequest)(nil),          // 19: harpia.chat.v1.ProposePlanRequest
 	(*ProposePlanResponse)(nil),         // 20: harpia.chat.v1.ProposePlanResponse
-	(*timestamppb.Timestamp)(nil),       // 21: google.protobuf.Timestamp
+	(*ReviewRaisedPayload)(nil),         // 21: harpia.chat.v1.ReviewRaisedPayload
+	(*ReviewDecidedPayload)(nil),        // 22: harpia.chat.v1.ReviewDecidedPayload
+	(*timestamppb.Timestamp)(nil),       // 23: google.protobuf.Timestamp
+	(*v1.ArtifactRef)(nil),              // 24: harpia.artifacts.v1.ArtifactRef
 }
 var file_harpia_chat_v1_chat_proto_depIdxs = []int32{
 	0,  // 0: harpia.chat.v1.Thread.status:type_name -> harpia.chat.v1.ThreadStatus
-	21, // 1: harpia.chat.v1.Thread.archived_at:type_name -> google.protobuf.Timestamp
-	21, // 2: harpia.chat.v1.Thread.created_at:type_name -> google.protobuf.Timestamp
-	21, // 3: harpia.chat.v1.Thread.updated_at:type_name -> google.protobuf.Timestamp
+	23, // 1: harpia.chat.v1.Thread.archived_at:type_name -> google.protobuf.Timestamp
+	23, // 2: harpia.chat.v1.Thread.created_at:type_name -> google.protobuf.Timestamp
+	23, // 3: harpia.chat.v1.Thread.updated_at:type_name -> google.protobuf.Timestamp
 	1,  // 4: harpia.chat.v1.ThreadMessage.role:type_name -> harpia.chat.v1.ThreadMessageRole
 	2,  // 5: harpia.chat.v1.ThreadMessage.kind:type_name -> harpia.chat.v1.ThreadMessageKind
-	21, // 6: harpia.chat.v1.ThreadMessage.created_at:type_name -> google.protobuf.Timestamp
+	23, // 6: harpia.chat.v1.ThreadMessage.created_at:type_name -> google.protobuf.Timestamp
 	3,  // 7: harpia.chat.v1.CreateThreadResponse.thread:type_name -> harpia.chat.v1.Thread
 	4,  // 8: harpia.chat.v1.CreateThreadResponse.initial_message:type_name -> harpia.chat.v1.ThreadMessage
 	3,  // 9: harpia.chat.v1.GetThreadResponse.thread:type_name -> harpia.chat.v1.Thread
@@ -1569,27 +1724,28 @@ var file_harpia_chat_v1_chat_proto_depIdxs = []int32{
 	2,  // 16: harpia.chat.v1.AppendThreadMessageRequest.kind:type_name -> harpia.chat.v1.ThreadMessageKind
 	4,  // 17: harpia.chat.v1.AppendThreadMessageResponse.message:type_name -> harpia.chat.v1.ThreadMessage
 	4,  // 18: harpia.chat.v1.ProposePlanResponse.message:type_name -> harpia.chat.v1.ThreadMessage
-	5,  // 19: harpia.chat.v1.ThreadService.CreateThread:input_type -> harpia.chat.v1.CreateThreadRequest
-	7,  // 20: harpia.chat.v1.ThreadService.GetThread:input_type -> harpia.chat.v1.GetThreadRequest
-	9,  // 21: harpia.chat.v1.ThreadService.ListThreads:input_type -> harpia.chat.v1.ListThreadsRequest
-	11, // 22: harpia.chat.v1.ThreadService.ArchiveThread:input_type -> harpia.chat.v1.ArchiveThreadRequest
-	13, // 23: harpia.chat.v1.ThreadService.ListThreadMessages:input_type -> harpia.chat.v1.ListThreadMessagesRequest
-	15, // 24: harpia.chat.v1.ThreadService.WatchThreadMessages:input_type -> harpia.chat.v1.WatchThreadMessagesRequest
-	17, // 25: harpia.chat.v1.ThreadService.AppendThreadMessage:input_type -> harpia.chat.v1.AppendThreadMessageRequest
-	19, // 26: harpia.chat.v1.ThreadService.ProposePlan:input_type -> harpia.chat.v1.ProposePlanRequest
-	6,  // 27: harpia.chat.v1.ThreadService.CreateThread:output_type -> harpia.chat.v1.CreateThreadResponse
-	8,  // 28: harpia.chat.v1.ThreadService.GetThread:output_type -> harpia.chat.v1.GetThreadResponse
-	10, // 29: harpia.chat.v1.ThreadService.ListThreads:output_type -> harpia.chat.v1.ListThreadsResponse
-	12, // 30: harpia.chat.v1.ThreadService.ArchiveThread:output_type -> harpia.chat.v1.ArchiveThreadResponse
-	14, // 31: harpia.chat.v1.ThreadService.ListThreadMessages:output_type -> harpia.chat.v1.ListThreadMessagesResponse
-	16, // 32: harpia.chat.v1.ThreadService.WatchThreadMessages:output_type -> harpia.chat.v1.WatchThreadMessagesResponse
-	18, // 33: harpia.chat.v1.ThreadService.AppendThreadMessage:output_type -> harpia.chat.v1.AppendThreadMessageResponse
-	20, // 34: harpia.chat.v1.ThreadService.ProposePlan:output_type -> harpia.chat.v1.ProposePlanResponse
-	27, // [27:35] is the sub-list for method output_type
-	19, // [19:27] is the sub-list for method input_type
-	19, // [19:19] is the sub-list for extension type_name
-	19, // [19:19] is the sub-list for extension extendee
-	0,  // [0:19] is the sub-list for field type_name
+	24, // 19: harpia.chat.v1.ReviewRaisedPayload.subject_artifact_ref:type_name -> harpia.artifacts.v1.ArtifactRef
+	5,  // 20: harpia.chat.v1.ThreadService.CreateThread:input_type -> harpia.chat.v1.CreateThreadRequest
+	7,  // 21: harpia.chat.v1.ThreadService.GetThread:input_type -> harpia.chat.v1.GetThreadRequest
+	9,  // 22: harpia.chat.v1.ThreadService.ListThreads:input_type -> harpia.chat.v1.ListThreadsRequest
+	11, // 23: harpia.chat.v1.ThreadService.ArchiveThread:input_type -> harpia.chat.v1.ArchiveThreadRequest
+	13, // 24: harpia.chat.v1.ThreadService.ListThreadMessages:input_type -> harpia.chat.v1.ListThreadMessagesRequest
+	15, // 25: harpia.chat.v1.ThreadService.WatchThreadMessages:input_type -> harpia.chat.v1.WatchThreadMessagesRequest
+	17, // 26: harpia.chat.v1.ThreadService.AppendThreadMessage:input_type -> harpia.chat.v1.AppendThreadMessageRequest
+	19, // 27: harpia.chat.v1.ThreadService.ProposePlan:input_type -> harpia.chat.v1.ProposePlanRequest
+	6,  // 28: harpia.chat.v1.ThreadService.CreateThread:output_type -> harpia.chat.v1.CreateThreadResponse
+	8,  // 29: harpia.chat.v1.ThreadService.GetThread:output_type -> harpia.chat.v1.GetThreadResponse
+	10, // 30: harpia.chat.v1.ThreadService.ListThreads:output_type -> harpia.chat.v1.ListThreadsResponse
+	12, // 31: harpia.chat.v1.ThreadService.ArchiveThread:output_type -> harpia.chat.v1.ArchiveThreadResponse
+	14, // 32: harpia.chat.v1.ThreadService.ListThreadMessages:output_type -> harpia.chat.v1.ListThreadMessagesResponse
+	16, // 33: harpia.chat.v1.ThreadService.WatchThreadMessages:output_type -> harpia.chat.v1.WatchThreadMessagesResponse
+	18, // 34: harpia.chat.v1.ThreadService.AppendThreadMessage:output_type -> harpia.chat.v1.AppendThreadMessageResponse
+	20, // 35: harpia.chat.v1.ThreadService.ProposePlan:output_type -> harpia.chat.v1.ProposePlanResponse
+	28, // [28:36] is the sub-list for method output_type
+	20, // [20:28] is the sub-list for method input_type
+	20, // [20:20] is the sub-list for extension type_name
+	20, // [20:20] is the sub-list for extension extendee
+	0,  // [0:20] is the sub-list for field type_name
 }
 
 func init() { file_harpia_chat_v1_chat_proto_init() }
@@ -1604,7 +1760,7 @@ func file_harpia_chat_v1_chat_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_harpia_chat_v1_chat_proto_rawDesc), len(file_harpia_chat_v1_chat_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   18,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

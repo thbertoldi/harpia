@@ -89,6 +89,18 @@ const (
 	// PlanServiceWatchElicitationsProcedure is the fully-qualified name of the PlanService's
 	// WatchElicitations RPC.
 	PlanServiceWatchElicitationsProcedure = "/harpia.plans.v1.PlanService/WatchElicitations"
+	// PlanServiceListReviewRequestsProcedure is the fully-qualified name of the PlanService's
+	// ListReviewRequests RPC.
+	PlanServiceListReviewRequestsProcedure = "/harpia.plans.v1.PlanService/ListReviewRequests"
+	// PlanServiceGetReviewRequestProcedure is the fully-qualified name of the PlanService's
+	// GetReviewRequest RPC.
+	PlanServiceGetReviewRequestProcedure = "/harpia.plans.v1.PlanService/GetReviewRequest"
+	// PlanServiceRespondToReviewRequestProcedure is the fully-qualified name of the PlanService's
+	// RespondToReviewRequest RPC.
+	PlanServiceRespondToReviewRequestProcedure = "/harpia.plans.v1.PlanService/RespondToReviewRequest"
+	// PlanServiceWatchReviewRequestsProcedure is the fully-qualified name of the PlanService's
+	// WatchReviewRequests RPC.
+	PlanServiceWatchReviewRequestsProcedure = "/harpia.plans.v1.PlanService/WatchReviewRequests"
 	// PlanServiceListApprovalRequestsProcedure is the fully-qualified name of the PlanService's
 	// ListApprovalRequests RPC.
 	PlanServiceListApprovalRequestsProcedure = "/harpia.plans.v1.PlanService/ListApprovalRequests"
@@ -137,6 +149,11 @@ type PlanServiceClient interface {
 	GetElicitation(context.Context, *connect.Request[v1.GetElicitationRequest]) (*connect.Response[v1.GetElicitationResponse], error)
 	RespondToElicitation(context.Context, *connect.Request[v1.RespondToElicitationRequest]) (*connect.Response[v1.RespondToElicitationResponse], error)
 	WatchElicitations(context.Context, *connect.Request[v1.WatchElicitationsRequest]) (*connect.ServerStreamForClient[v1.WatchElicitationsResponse], error)
+	// Candidate review/revision is distinct from elicitation and approval.
+	ListReviewRequests(context.Context, *connect.Request[v1.ListReviewRequestsRequest]) (*connect.Response[v1.ListReviewRequestsResponse], error)
+	GetReviewRequest(context.Context, *connect.Request[v1.GetReviewRequestRequest]) (*connect.Response[v1.GetReviewRequestResponse], error)
+	RespondToReviewRequest(context.Context, *connect.Request[v1.RespondToReviewRequestRequest]) (*connect.Response[v1.RespondToReviewRequestResponse], error)
+	WatchReviewRequests(context.Context, *connect.Request[v1.WatchReviewRequestsRequest]) (*connect.ServerStreamForClient[v1.WatchReviewRequestsResponse], error)
 	// Publish approval gate (E5.2, FR-13, UX-DR6).
 	// Overseers approve or reject LinkedInPostDraft artifacts before publish steps run.
 	ListApprovalRequests(context.Context, *connect.Request[v1.ListApprovalRequestsRequest]) (*connect.Response[v1.ListApprovalRequestsResponse], error)
@@ -270,6 +287,30 @@ func NewPlanServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(planServiceMethods.ByName("WatchElicitations")),
 			connect.WithClientOptions(opts...),
 		),
+		listReviewRequests: connect.NewClient[v1.ListReviewRequestsRequest, v1.ListReviewRequestsResponse](
+			httpClient,
+			baseURL+PlanServiceListReviewRequestsProcedure,
+			connect.WithSchema(planServiceMethods.ByName("ListReviewRequests")),
+			connect.WithClientOptions(opts...),
+		),
+		getReviewRequest: connect.NewClient[v1.GetReviewRequestRequest, v1.GetReviewRequestResponse](
+			httpClient,
+			baseURL+PlanServiceGetReviewRequestProcedure,
+			connect.WithSchema(planServiceMethods.ByName("GetReviewRequest")),
+			connect.WithClientOptions(opts...),
+		),
+		respondToReviewRequest: connect.NewClient[v1.RespondToReviewRequestRequest, v1.RespondToReviewRequestResponse](
+			httpClient,
+			baseURL+PlanServiceRespondToReviewRequestProcedure,
+			connect.WithSchema(planServiceMethods.ByName("RespondToReviewRequest")),
+			connect.WithClientOptions(opts...),
+		),
+		watchReviewRequests: connect.NewClient[v1.WatchReviewRequestsRequest, v1.WatchReviewRequestsResponse](
+			httpClient,
+			baseURL+PlanServiceWatchReviewRequestsProcedure,
+			connect.WithSchema(planServiceMethods.ByName("WatchReviewRequests")),
+			connect.WithClientOptions(opts...),
+		),
 		listApprovalRequests: connect.NewClient[v1.ListApprovalRequestsRequest, v1.ListApprovalRequestsResponse](
 			httpClient,
 			baseURL+PlanServiceListApprovalRequestsProcedure,
@@ -318,6 +359,10 @@ type planServiceClient struct {
 	getElicitation               *connect.Client[v1.GetElicitationRequest, v1.GetElicitationResponse]
 	respondToElicitation         *connect.Client[v1.RespondToElicitationRequest, v1.RespondToElicitationResponse]
 	watchElicitations            *connect.Client[v1.WatchElicitationsRequest, v1.WatchElicitationsResponse]
+	listReviewRequests           *connect.Client[v1.ListReviewRequestsRequest, v1.ListReviewRequestsResponse]
+	getReviewRequest             *connect.Client[v1.GetReviewRequestRequest, v1.GetReviewRequestResponse]
+	respondToReviewRequest       *connect.Client[v1.RespondToReviewRequestRequest, v1.RespondToReviewRequestResponse]
+	watchReviewRequests          *connect.Client[v1.WatchReviewRequestsRequest, v1.WatchReviewRequestsResponse]
 	listApprovalRequests         *connect.Client[v1.ListApprovalRequestsRequest, v1.ListApprovalRequestsResponse]
 	getApprovalRequest           *connect.Client[v1.GetApprovalRequestRequest, v1.GetApprovalRequestResponse]
 	respondToApprovalRequest     *connect.Client[v1.RespondToApprovalRequestRequest, v1.RespondToApprovalRequestResponse]
@@ -419,6 +464,26 @@ func (c *planServiceClient) WatchElicitations(ctx context.Context, req *connect.
 	return c.watchElicitations.CallServerStream(ctx, req)
 }
 
+// ListReviewRequests calls harpia.plans.v1.PlanService.ListReviewRequests.
+func (c *planServiceClient) ListReviewRequests(ctx context.Context, req *connect.Request[v1.ListReviewRequestsRequest]) (*connect.Response[v1.ListReviewRequestsResponse], error) {
+	return c.listReviewRequests.CallUnary(ctx, req)
+}
+
+// GetReviewRequest calls harpia.plans.v1.PlanService.GetReviewRequest.
+func (c *planServiceClient) GetReviewRequest(ctx context.Context, req *connect.Request[v1.GetReviewRequestRequest]) (*connect.Response[v1.GetReviewRequestResponse], error) {
+	return c.getReviewRequest.CallUnary(ctx, req)
+}
+
+// RespondToReviewRequest calls harpia.plans.v1.PlanService.RespondToReviewRequest.
+func (c *planServiceClient) RespondToReviewRequest(ctx context.Context, req *connect.Request[v1.RespondToReviewRequestRequest]) (*connect.Response[v1.RespondToReviewRequestResponse], error) {
+	return c.respondToReviewRequest.CallUnary(ctx, req)
+}
+
+// WatchReviewRequests calls harpia.plans.v1.PlanService.WatchReviewRequests.
+func (c *planServiceClient) WatchReviewRequests(ctx context.Context, req *connect.Request[v1.WatchReviewRequestsRequest]) (*connect.ServerStreamForClient[v1.WatchReviewRequestsResponse], error) {
+	return c.watchReviewRequests.CallServerStream(ctx, req)
+}
+
 // ListApprovalRequests calls harpia.plans.v1.PlanService.ListApprovalRequests.
 func (c *planServiceClient) ListApprovalRequests(ctx context.Context, req *connect.Request[v1.ListApprovalRequestsRequest]) (*connect.Response[v1.ListApprovalRequestsResponse], error) {
 	return c.listApprovalRequests.CallUnary(ctx, req)
@@ -473,6 +538,11 @@ type PlanServiceHandler interface {
 	GetElicitation(context.Context, *connect.Request[v1.GetElicitationRequest]) (*connect.Response[v1.GetElicitationResponse], error)
 	RespondToElicitation(context.Context, *connect.Request[v1.RespondToElicitationRequest]) (*connect.Response[v1.RespondToElicitationResponse], error)
 	WatchElicitations(context.Context, *connect.Request[v1.WatchElicitationsRequest], *connect.ServerStream[v1.WatchElicitationsResponse]) error
+	// Candidate review/revision is distinct from elicitation and approval.
+	ListReviewRequests(context.Context, *connect.Request[v1.ListReviewRequestsRequest]) (*connect.Response[v1.ListReviewRequestsResponse], error)
+	GetReviewRequest(context.Context, *connect.Request[v1.GetReviewRequestRequest]) (*connect.Response[v1.GetReviewRequestResponse], error)
+	RespondToReviewRequest(context.Context, *connect.Request[v1.RespondToReviewRequestRequest]) (*connect.Response[v1.RespondToReviewRequestResponse], error)
+	WatchReviewRequests(context.Context, *connect.Request[v1.WatchReviewRequestsRequest], *connect.ServerStream[v1.WatchReviewRequestsResponse]) error
 	// Publish approval gate (E5.2, FR-13, UX-DR6).
 	// Overseers approve or reject LinkedInPostDraft artifacts before publish steps run.
 	ListApprovalRequests(context.Context, *connect.Request[v1.ListApprovalRequestsRequest]) (*connect.Response[v1.ListApprovalRequestsResponse], error)
@@ -602,6 +672,30 @@ func NewPlanServiceHandler(svc PlanServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(planServiceMethods.ByName("WatchElicitations")),
 		connect.WithHandlerOptions(opts...),
 	)
+	planServiceListReviewRequestsHandler := connect.NewUnaryHandler(
+		PlanServiceListReviewRequestsProcedure,
+		svc.ListReviewRequests,
+		connect.WithSchema(planServiceMethods.ByName("ListReviewRequests")),
+		connect.WithHandlerOptions(opts...),
+	)
+	planServiceGetReviewRequestHandler := connect.NewUnaryHandler(
+		PlanServiceGetReviewRequestProcedure,
+		svc.GetReviewRequest,
+		connect.WithSchema(planServiceMethods.ByName("GetReviewRequest")),
+		connect.WithHandlerOptions(opts...),
+	)
+	planServiceRespondToReviewRequestHandler := connect.NewUnaryHandler(
+		PlanServiceRespondToReviewRequestProcedure,
+		svc.RespondToReviewRequest,
+		connect.WithSchema(planServiceMethods.ByName("RespondToReviewRequest")),
+		connect.WithHandlerOptions(opts...),
+	)
+	planServiceWatchReviewRequestsHandler := connect.NewServerStreamHandler(
+		PlanServiceWatchReviewRequestsProcedure,
+		svc.WatchReviewRequests,
+		connect.WithSchema(planServiceMethods.ByName("WatchReviewRequests")),
+		connect.WithHandlerOptions(opts...),
+	)
 	planServiceListApprovalRequestsHandler := connect.NewUnaryHandler(
 		PlanServiceListApprovalRequestsProcedure,
 		svc.ListApprovalRequests,
@@ -666,6 +760,14 @@ func NewPlanServiceHandler(svc PlanServiceHandler, opts ...connect.HandlerOption
 			planServiceRespondToElicitationHandler.ServeHTTP(w, r)
 		case PlanServiceWatchElicitationsProcedure:
 			planServiceWatchElicitationsHandler.ServeHTTP(w, r)
+		case PlanServiceListReviewRequestsProcedure:
+			planServiceListReviewRequestsHandler.ServeHTTP(w, r)
+		case PlanServiceGetReviewRequestProcedure:
+			planServiceGetReviewRequestHandler.ServeHTTP(w, r)
+		case PlanServiceRespondToReviewRequestProcedure:
+			planServiceRespondToReviewRequestHandler.ServeHTTP(w, r)
+		case PlanServiceWatchReviewRequestsProcedure:
+			planServiceWatchReviewRequestsHandler.ServeHTTP(w, r)
 		case PlanServiceListApprovalRequestsProcedure:
 			planServiceListApprovalRequestsHandler.ServeHTTP(w, r)
 		case PlanServiceGetApprovalRequestProcedure:
@@ -757,6 +859,22 @@ func (UnimplementedPlanServiceHandler) RespondToElicitation(context.Context, *co
 
 func (UnimplementedPlanServiceHandler) WatchElicitations(context.Context, *connect.Request[v1.WatchElicitationsRequest], *connect.ServerStream[v1.WatchElicitationsResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("harpia.plans.v1.PlanService.WatchElicitations is not implemented"))
+}
+
+func (UnimplementedPlanServiceHandler) ListReviewRequests(context.Context, *connect.Request[v1.ListReviewRequestsRequest]) (*connect.Response[v1.ListReviewRequestsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("harpia.plans.v1.PlanService.ListReviewRequests is not implemented"))
+}
+
+func (UnimplementedPlanServiceHandler) GetReviewRequest(context.Context, *connect.Request[v1.GetReviewRequestRequest]) (*connect.Response[v1.GetReviewRequestResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("harpia.plans.v1.PlanService.GetReviewRequest is not implemented"))
+}
+
+func (UnimplementedPlanServiceHandler) RespondToReviewRequest(context.Context, *connect.Request[v1.RespondToReviewRequestRequest]) (*connect.Response[v1.RespondToReviewRequestResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("harpia.plans.v1.PlanService.RespondToReviewRequest is not implemented"))
+}
+
+func (UnimplementedPlanServiceHandler) WatchReviewRequests(context.Context, *connect.Request[v1.WatchReviewRequestsRequest], *connect.ServerStream[v1.WatchReviewRequestsResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("harpia.plans.v1.PlanService.WatchReviewRequests is not implemented"))
 }
 
 func (UnimplementedPlanServiceHandler) ListApprovalRequests(context.Context, *connect.Request[v1.ListApprovalRequestsRequest]) (*connect.Response[v1.ListApprovalRequestsResponse], error) {

@@ -85,7 +85,13 @@ type StepExecution struct {
 	PlanStepKey                  string
 	Status                       string
 	InputArtifactID              string
+	InputArtifactVersionID       uuid.NullUUID
+	InputArtifactTypeKey         string
+	InputContentHash             string
 	OutputArtifactID             string
+	OutputArtifactVersionID      uuid.NullUUID
+	OutputArtifactTypeKey        string
+	OutputContentHash            string
 	ExecutorInstallationSnapshot json.RawMessage
 	Attempt                      int32
 	ElicitationThreadID          string
@@ -103,6 +109,10 @@ type PlanApprovalRequest struct {
 	StepExecutionID     uuid.UUID
 	PlanStepKey         string
 	InputArtifactID     string
+	SubjectArtifactID   uuid.NullUUID
+	SubjectVersionID    uuid.NullUUID
+	SubjectTypeKey      string
+	SubjectContentHash  string
 	Status              string
 	DecisionReason      string
 	RequestedAt         time.Time
@@ -648,7 +658,11 @@ func (r *Repository) CreateStepExecution(ctx context.Context, step *StepExecutio
 			`WITH existing AS (
 				SELECT id, tenant_id, plan_execution_id, plan_step_key, status,
 				       COALESCE(input_artifact_id, '') AS input_artifact_id,
+				       input_artifact_version_id, COALESCE(input_artifact_type_key, '') AS input_artifact_type_key,
+				       COALESCE(input_content_hash, '') AS input_content_hash,
 				       COALESCE(output_artifact_id, '') AS output_artifact_id,
+				       output_artifact_version_id, COALESCE(output_artifact_type_key, '') AS output_artifact_type_key,
+				       COALESCE(output_content_hash, '') AS output_content_hash,
 				       executor_installation_snapshot, attempt,
 				       COALESCE(elicitation_thread_id, '') AS elicitation_thread_id,
 				       COALESCE(approval_request_id, '') AS approval_request_id,
@@ -663,9 +677,10 @@ func (r *Repository) CreateStepExecution(ctx context.Context, step *StepExecutio
 			), inserted AS (
 				INSERT INTO step_executions (
 					tenant_id, plan_execution_id, plan_step_key, status, input_artifact_id,
+					input_artifact_version_id, input_artifact_type_key, input_content_hash,
 					executor_installation_snapshot, attempt
 				)
-				SELECT $1, $2, $3, $4, NULLIF($5, ''), $6,
+				SELECT $1, $2, $3, $4, NULLIF($5, ''), $6, NULLIF($7, ''), NULLIF($8, ''), $9,
 				       COALESCE((
 					       SELECT MAX(prior.attempt) + 1
 					       FROM step_executions prior
@@ -675,7 +690,10 @@ func (r *Repository) CreateStepExecution(ctx context.Context, step *StepExecutio
 				       ), 1)
 				WHERE NOT EXISTS (SELECT 1 FROM existing)
 				RETURNING id, tenant_id, plan_execution_id, plan_step_key, status,
-				          COALESCE(input_artifact_id, ''), COALESCE(output_artifact_id, ''),
+				          COALESCE(input_artifact_id, ''), input_artifact_version_id,
+				          COALESCE(input_artifact_type_key, ''), COALESCE(input_content_hash, ''),
+				          COALESCE(output_artifact_id, ''), output_artifact_version_id,
+				          COALESCE(output_artifact_type_key, ''), COALESCE(output_content_hash, ''),
 				          executor_installation_snapshot, attempt,
 				          COALESCE(elicitation_thread_id, ''), COALESCE(approval_request_id, ''),
 				          created_at, updated_at
@@ -685,7 +703,8 @@ func (r *Repository) CreateStepExecution(ctx context.Context, step *StepExecutio
 			SELECT * FROM existing
 			LIMIT 1`,
 			step.TenantID, step.PlanExecutionID, step.PlanStepKey, step.Status,
-			step.InputArtifactID, step.ExecutorInstallationSnapshot,
+			step.InputArtifactID, nullableUUIDValue(step.InputArtifactVersionID), step.InputArtifactTypeKey,
+			step.InputContentHash, step.ExecutorInstallationSnapshot,
 		)
 		return scanStepExecution(row, &created)
 	})
@@ -738,14 +757,16 @@ func (r *Repository) CreatePlanApprovalRequest(ctx context.Context, request *Pla
 		_, err := q.Exec(ctx,
 			`INSERT INTO plan_approval_requests (
 				id, tenant_id, plan_execution_id, step_execution_id, plan_step_key,
-				input_artifact_id, status
+				input_artifact_id, subject_artifact_id, subject_artifact_version_id,
+				subject_artifact_type_key, subject_content_hash, status
 			)
-			VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''), $7)
+			VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''), $7, $8, NULLIF($9, ''), NULLIF($10, ''), $11)
 			ON CONFLICT (id) DO UPDATE
 			SET updated_at = plan_approval_requests.updated_at`,
 			request.ID, request.TenantID, request.PlanExecutionID,
 			request.StepExecutionID, request.PlanStepKey, request.InputArtifactID,
-			ApprovalRequestStatusPending,
+			nullableUUIDValue(request.SubjectArtifactID), nullableUUIDValue(request.SubjectVersionID),
+			request.SubjectTypeKey, request.SubjectContentHash, ApprovalRequestStatusPending,
 		)
 		if err != nil {
 			return fmt.Errorf("create plan approval request: %w", err)
@@ -795,11 +816,15 @@ func (r *Repository) ResolvePlanApprovalRequest(
 }
 
 const planApprovalRequestColumns = `id, tenant_id, plan_execution_id, step_execution_id, plan_step_key,
-	COALESCE(input_artifact_id, ''), status, COALESCE(decision_reason, ''),
+	COALESCE(input_artifact_id, ''), subject_artifact_id, subject_artifact_version_id,
+	COALESCE(subject_artifact_type_key, ''), COALESCE(subject_content_hash, ''),
+	status, COALESCE(decision_reason, ''),
 	requested_at, decided_at, created_at, updated_at`
 
 const planApprovalRequestJoinedColumns = `par.id, par.tenant_id, par.plan_execution_id, par.step_execution_id, par.plan_step_key,
-	COALESCE(par.input_artifact_id, ''), par.status, COALESCE(par.decision_reason, ''),
+	COALESCE(par.input_artifact_id, ''), par.subject_artifact_id, par.subject_artifact_version_id,
+	COALESCE(par.subject_artifact_type_key, ''), COALESCE(par.subject_content_hash, ''),
+	par.status, COALESCE(par.decision_reason, ''),
 	par.requested_at, par.decided_at, par.created_at, par.updated_at, pe.plan_configuration_id, pc.origin_thread_id`
 
 const planApprovalRequestFromJoin = ` FROM plan_approval_requests par
@@ -809,7 +834,8 @@ const planApprovalRequestFromJoin = ` FROM plan_approval_requests par
 func scanPlanApprovalRequest(row pgx.Row, dest *PlanApprovalRequest) error {
 	return row.Scan(
 		&dest.ID, &dest.TenantID, &dest.PlanExecutionID, &dest.StepExecutionID,
-		&dest.PlanStepKey, &dest.InputArtifactID, &dest.Status, &dest.DecisionReason,
+		&dest.PlanStepKey, &dest.InputArtifactID, &dest.SubjectArtifactID, &dest.SubjectVersionID,
+		&dest.SubjectTypeKey, &dest.SubjectContentHash, &dest.Status, &dest.DecisionReason,
 		&dest.RequestedAt, &dest.DecidedAt, &dest.CreatedAt, &dest.UpdatedAt,
 	)
 }
@@ -817,7 +843,8 @@ func scanPlanApprovalRequest(row pgx.Row, dest *PlanApprovalRequest) error {
 func scanPlanApprovalRequestJoined(row pgx.Row, dest *PlanApprovalRequest) error {
 	return row.Scan(
 		&dest.ID, &dest.TenantID, &dest.PlanExecutionID, &dest.StepExecutionID,
-		&dest.PlanStepKey, &dest.InputArtifactID, &dest.Status, &dest.DecisionReason,
+		&dest.PlanStepKey, &dest.InputArtifactID, &dest.SubjectArtifactID, &dest.SubjectVersionID,
+		&dest.SubjectTypeKey, &dest.SubjectContentHash, &dest.Status, &dest.DecisionReason,
 		&dest.RequestedAt, &dest.DecidedAt, &dest.CreatedAt, &dest.UpdatedAt,
 		&dest.PlanConfigurationID, &dest.ThreadID,
 	)
@@ -927,7 +954,10 @@ func (r *Repository) GetStepExecution(ctx context.Context, tenantID, stepExecuti
 	err := database.WithTenant(ctx, r.pool, tenantID, func(q database.Querier) error {
 		row := q.QueryRow(ctx,
 			`SELECT id, tenant_id, plan_execution_id, plan_step_key, status,
-			        COALESCE(input_artifact_id, ''), COALESCE(output_artifact_id, ''),
+			        COALESCE(input_artifact_id, ''), input_artifact_version_id,
+			        COALESCE(input_artifact_type_key, ''), COALESCE(input_content_hash, ''),
+			        COALESCE(output_artifact_id, ''), output_artifact_version_id,
+			        COALESCE(output_artifact_type_key, ''), COALESCE(output_content_hash, ''),
 			        executor_installation_snapshot, attempt,
 			        COALESCE(elicitation_thread_id, ''), COALESCE(approval_request_id, ''),
 			        created_at, updated_at
@@ -959,7 +989,10 @@ func (r *Repository) ListStepExecutions(ctx context.Context, tenantID, execution
 func (r *Repository) listStepExecutions(ctx context.Context, q database.Querier, tenantID, executionID uuid.UUID, limit, offset int) ([]StepExecution, error) {
 	rows, err := q.Query(ctx,
 		`SELECT id, tenant_id, plan_execution_id, plan_step_key, status,
-		        COALESCE(input_artifact_id, ''), COALESCE(output_artifact_id, ''),
+		        COALESCE(input_artifact_id, ''), input_artifact_version_id,
+		        COALESCE(input_artifact_type_key, ''), COALESCE(input_content_hash, ''),
+		        COALESCE(output_artifact_id, ''), output_artifact_version_id,
+		        COALESCE(output_artifact_type_key, ''), COALESCE(output_content_hash, ''),
 		        executor_installation_snapshot, attempt,
 		        COALESCE(elicitation_thread_id, ''), COALESCE(approval_request_id, ''),
 		        created_at, updated_at
@@ -1006,8 +1039,17 @@ func scanExecution(row pgx.Row, execution *PlanExecution) error {
 func scanStepExecution(row pgx.Row, step *StepExecution) error {
 	return row.Scan(
 		&step.ID, &step.TenantID, &step.PlanExecutionID, &step.PlanStepKey, &step.Status,
-		&step.InputArtifactID, &step.OutputArtifactID, &step.ExecutorInstallationSnapshot,
+		&step.InputArtifactID, &step.InputArtifactVersionID, &step.InputArtifactTypeKey, &step.InputContentHash,
+		&step.OutputArtifactID, &step.OutputArtifactVersionID, &step.OutputArtifactTypeKey, &step.OutputContentHash,
+		&step.ExecutorInstallationSnapshot,
 		&step.Attempt, &step.ElicitationThreadID, &step.ApprovalRequestID,
 		&step.CreatedAt, &step.UpdatedAt,
 	)
+}
+
+func nullableUUIDValue(value uuid.NullUUID) any {
+	if !value.Valid {
+		return nil
+	}
+	return value.UUID
 }

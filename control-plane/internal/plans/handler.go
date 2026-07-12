@@ -15,8 +15,10 @@ import (
 	"github.com/google/uuid"
 	"go.temporal.io/sdk/client"
 
+	artifactsv1 "github.com/harpia/control-plane/gen/harpia/artifacts/v1"
 	chatv1 "github.com/harpia/control-plane/gen/harpia/chat/v1"
 	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
+	"github.com/harpia/control-plane/gen/harpia/plans/v1/plansv1connect"
 	"github.com/harpia/control-plane/internal/audit"
 	"github.com/harpia/control-plane/internal/chat"
 	"github.com/harpia/control-plane/internal/database"
@@ -168,6 +170,8 @@ func (a *AssistantCatalog) CandidatesForStep(ctx context.Context, tenantID uuid.
 }
 
 type PlanHandler struct {
+	plansv1connect.UnimplementedPlanServiceHandler
+
 	chat             chat.Store
 	assistant        *planassistant.Controller
 	repo             *Repository
@@ -1397,7 +1401,7 @@ func executionToProto(e *PlanExecution) *plansv1.PlanExecution {
 }
 
 func stepExecutionToProto(s *StepExecution) *plansv1.StepExecution {
-	return &plansv1.StepExecution{
+	step := &plansv1.StepExecution{
 		Id:                           s.ID.String(),
 		PlanExecutionId:              s.PlanExecutionID.String(),
 		PlanStepKey:                  s.PlanStepKey,
@@ -1410,6 +1414,26 @@ func stepExecutionToProto(s *StepExecution) *plansv1.StepExecution {
 		ApprovalRequestId:            s.ApprovalRequestID,
 		CreatedAt:                    s.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:                    s.UpdatedAt.Format(time.RFC3339),
+	}
+	if ref := artifactRefToProto(s.InputArtifactID, s.InputArtifactVersionID, s.InputArtifactTypeKey, s.InputContentHash); ref != nil {
+		step.InputArtifactRef = ref
+	}
+	if ref := artifactRefToProto(s.OutputArtifactID, s.OutputArtifactVersionID, s.OutputArtifactTypeKey, s.OutputContentHash); ref != nil {
+		step.OutputArtifactRef = ref
+	}
+	return step
+}
+
+func artifactRefToProto(artifactID string, versionID uuid.NullUUID, typeKey, contentHash string) *artifactsv1.ArtifactRef {
+	if strings.TrimSpace(artifactID) == "" || !versionID.Valid ||
+		strings.TrimSpace(typeKey) == "" || strings.TrimSpace(contentHash) == "" {
+		return nil
+	}
+	return &artifactsv1.ArtifactRef{
+		ArtifactId:        artifactID,
+		ArtifactVersionId: versionID.UUID.String(),
+		ArtifactTypeKey:   typeKey,
+		ContentHash:       contentHash,
 	}
 }
 

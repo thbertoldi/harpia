@@ -165,6 +165,7 @@ func (s Suite) assertRetryableErrorMapping(t *testing.T) {
 type MemoryArtifactRepo struct {
 	Types     map[string]*artifacts.ArtifactType
 	Artifacts map[uuid.UUID]*artifacts.Artifact
+	Versions  map[uuid.UUID]*artifacts.ArtifactVersion
 }
 
 func (m *MemoryArtifactRepo) GetTypeByID(_ context.Context, typeID uuid.UUID) (*artifacts.ArtifactType, error) {
@@ -205,6 +206,13 @@ func (m *MemoryArtifactRepo) GetArtifact(_ context.Context, tenantID, artifactID
 		return nil, context.Canceled
 	}
 	return artifact, nil
+}
+
+func (m *MemoryArtifactRepo) GetArtifactVersion(_ context.Context, tenantID, artifactID, versionID uuid.UUID) (*artifacts.ArtifactVersion, error) {
+	if v, ok := m.Versions[versionID]; ok && v.TenantID == tenantID && v.ArtifactID == artifactID {
+		return v, nil
+	}
+	return nil, context.Canceled
 }
 
 // MemoryPayloadStore is a minimal in-memory PayloadStore for contract tests.

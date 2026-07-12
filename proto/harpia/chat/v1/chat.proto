@@ -3,6 +3,7 @@ syntax = "proto3";
 package harpia.chat.v1;
 
 import "google/protobuf/timestamp.proto";
+import "harpia/artifacts/v1/artifacts.proto";
 
 option go_package = "github.com/harpia/control-plane/gen/harpia/chat/v1;chatv1";
 
@@ -178,4 +179,25 @@ enum ThreadMessageKind {
   THREAD_MESSAGE_KIND_ERROR_RAISED = 24;
   THREAD_MESSAGE_KIND_ERROR_RECOVERED = 25;
   THREAD_MESSAGE_KIND_STEP_FAILED = 26;            // payload_json: { "step_key": "...", "step_execution_id": "...", "error": "..." }
+  THREAD_MESSAGE_KIND_REVIEW_RAISED = 27;          // payload_json: ReviewRaisedPayload
+  THREAD_MESSAGE_KIND_REVIEW_DECIDED = 28;         // payload_json: ReviewDecidedPayload
+}
+
+// ReviewRaisedPayload is the typed JSON contract for REVIEW_RAISED thread
+// messages. It keeps the candidate's ArtifactVersion identity in the owning
+// Conversation without importing the plans package (which imports chat).
+message ReviewRaisedPayload {
+  string review_request_id = 1;
+  string step_execution_id = 2;
+  string plan_step_key = 3;
+  harpia.artifacts.v1.ArtifactRef subject_artifact_ref = 4;
+}
+
+// ReviewDecidedPayload is the typed JSON contract for REVIEW_DECIDED thread
+// messages. accepted=false means the decision requested a revision and carries
+// the overseer's feedback.
+message ReviewDecidedPayload {
+  string review_request_id = 1;
+  bool accepted = 2;
+  string feedback = 3;
 }

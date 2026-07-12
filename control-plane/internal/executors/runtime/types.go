@@ -15,6 +15,8 @@ const (
 type InputArtifactRef struct {
 	ArtifactTypeKey string
 	ArtifactID      string
+	ArtifactVersionID string
+	ContentHash     string
 	LiteralJSON     string
 }
 
