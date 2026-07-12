@@ -18,19 +18,20 @@ var testArtifactTypes = map[string]struct{}{
 	"harpia.artifacts.v1.NewsList":            {},
 	"harpia.artifacts.v1.TextDraft":           {},
 	"harpia.artifacts.v1.LinkedInPostDraft":   {},
+	"harpia.artifacts.v1.LinkedInPost":        {},
 	"harpia.artifacts.v1.CarouselDraft":       {},
 	"harpia.artifacts.v1.ImageAsset":          {},
 	"harpia.artifacts.v1.PublishConfirmation": {},
 }
 
 var testExecutorSKUs = map[string]struct{}{
-	"rss-news-feed":             {},
-	"newsletter-writer-senior":  {},
-	"linkedin-voice-senior":     {},
-	"linkedin-carousel-senior":  {},
+	"rss-news-feed":               {},
+	"newsletter-writer-senior":    {},
+	"linkedin-voice-senior":       {},
+	"linkedin-carousel-senior":    {},
 	"linkedin-content-specialist": {},
-	"image-asset-generator":     {},
-	"linkedin-publish":          {},
+	"image-asset-generator":       {},
+	"linkedin-publish":            {},
 }
 
 func TestLoadPlanTemplateCatalogLoadsValidYAML(t *testing.T) {
@@ -148,6 +149,28 @@ func TestValidatePlanTemplateRejectsFailures(t *testing.T) {
 			},
 			wantError: "artifact mismatch",
 		},
+		{
+			name: "optional middle step changes artifact type",
+			mutate: func(seed *planTemplateSeed) {
+				seed.Steps = append(seed.Steps, planTemplateStepSeed{
+					Key:                  "optional-transform",
+					Title:                "Optional transform",
+					InputArtifactTypeID:  "harpia.artifacts.v1.NewsList",
+					OutputArtifactTypeID: "harpia.artifacts.v1.TextDraft",
+					ExecutorRequirement: map[string]any{
+						"executor_kind":         1,
+						"optional_capabilities": []any{"optional-transform"},
+					},
+					DefaultExecutorSKUKey: "newsletter-writer-senior",
+				})
+				seed.Edges = []planTemplateEdgeSeed{
+					{FromStepKey: "fetch-news", ToStepKey: "optional-transform"},
+					{FromStepKey: "optional-transform", ToStepKey: "write-draft"},
+				}
+				seed.Steps[1].InputArtifactTypeID = "harpia.artifacts.v1.TextDraft"
+			},
+			wantError: "must preserve its artifact type",
+		},
 	}
 
 	for _, tt := range tests {
@@ -175,30 +198,30 @@ func branchingTemplateSeed(key string) planTemplateSeed {
 		Version:     1,
 		Steps: []planTemplateStepSeed{
 			{
-				Key:                  "root",
-				Title:                "Root",
-				Description:          "Produces a NewsList.",
-				InputArtifactTypeID:  "harpia.artifacts.v1.DateRange",
-				OutputArtifactTypeID: "harpia.artifacts.v1.NewsList",
-				ExecutorRequirement:  map[string]any{"executor_kind": 2, "connection_type": "rss_feed"},
+				Key:                   "root",
+				Title:                 "Root",
+				Description:           "Produces a NewsList.",
+				InputArtifactTypeID:   "harpia.artifacts.v1.DateRange",
+				OutputArtifactTypeID:  "harpia.artifacts.v1.NewsList",
+				ExecutorRequirement:   map[string]any{"executor_kind": 2, "connection_type": "rss_feed"},
 				DefaultExecutorSKUKey: "rss-news-feed",
 			},
 			{
-				Key:                  "branch-text",
-				Title:                "Branch Text",
-				Description:          "Consumes the NewsList into a TextDraft.",
-				InputArtifactTypeID:  "harpia.artifacts.v1.NewsList",
-				OutputArtifactTypeID: "harpia.artifacts.v1.TextDraft",
-				ExecutorRequirement:  map[string]any{"executor_kind": 1},
+				Key:                   "branch-text",
+				Title:                 "Branch Text",
+				Description:           "Consumes the NewsList into a TextDraft.",
+				InputArtifactTypeID:   "harpia.artifacts.v1.NewsList",
+				OutputArtifactTypeID:  "harpia.artifacts.v1.TextDraft",
+				ExecutorRequirement:   map[string]any{"executor_kind": 1},
 				DefaultExecutorSKUKey: "newsletter-writer-senior",
 			},
 			{
-				Key:                  "branch-post",
-				Title:                "Branch Post",
-				Description:          "Consumes the same NewsList into a LinkedInPostDraft.",
-				InputArtifactTypeID:  "harpia.artifacts.v1.NewsList",
-				OutputArtifactTypeID: "harpia.artifacts.v1.LinkedInPostDraft",
-				ExecutorRequirement:  map[string]any{"executor_kind": 1},
+				Key:                   "branch-post",
+				Title:                 "Branch Post",
+				Description:           "Consumes the same NewsList into a LinkedInPostDraft.",
+				InputArtifactTypeID:   "harpia.artifacts.v1.NewsList",
+				OutputArtifactTypeID:  "harpia.artifacts.v1.LinkedInPostDraft",
+				ExecutorRequirement:   map[string]any{"executor_kind": 1},
 				DefaultExecutorSKUKey: "linkedin-voice-senior",
 			},
 		},
@@ -253,10 +276,9 @@ func TestValidatePlanTemplateBranchingDAG(t *testing.T) {
 	})
 }
 
-// TestEmbeddedPlanTemplatesLoadLinkedInContentStudio exercises the REAL embedded
-// YAML (not synthetic) for the ADR-018 re-authored template: the multi-capable
-// LinkedIn Content Specialist drives authoring, carousel + image are opt-in
-// capabilities (not a format branch), and there is a single publish.
+// TestEmbeddedPlanTemplatesLoadLinkedInContentStudio exercises the real
+// version-3 catalog entry. Its single path preserves one LinkedInPost identity
+// through the optional enrichments before the approval-governed publish step.
 func TestEmbeddedPlanTemplatesLoadLinkedInContentStudio(t *testing.T) {
 	files, err := embeddedPlanTemplateFiles()
 	if err != nil {
@@ -284,6 +306,9 @@ func TestEmbeddedPlanTemplatesLoadLinkedInContentStudio(t *testing.T) {
 	if len(linkedin.Edges) != 5 {
 		t.Fatalf("edge count = %d, want 5", len(linkedin.Edges))
 	}
+	if linkedin.Version != 3 {
+		t.Fatalf("version = %d, want 3", linkedin.Version)
+	}
 
 	// The two content-authoring steps are filled by the multi-capable
 	// specialist SKU (not the retired narrow voice/carousel SKUs).
@@ -301,6 +326,10 @@ func TestEmbeddedPlanTemplatesLoadLinkedInContentStudio(t *testing.T) {
 	if !requiredCapability(author, "linkedin-content-adaptation") {
 		t.Fatalf("author-content executor_requirement = %#v, want required_capabilities [linkedin-content-adaptation]", author.ExecutorRequirement)
 	}
+	assertRequiredContentInteractionPolicy(t, author)
+	if author.OutputArtifactTypeID != "harpia.artifacts.v1.LinkedInPost" {
+		t.Fatalf("author-content output = %q, want LinkedInPost", author.OutputArtifactTypeID)
+	}
 	carousel, ok := stepByKey["draft-carousel"]
 	if !ok {
 		t.Fatal("missing draft-carousel step")
@@ -311,6 +340,10 @@ func TestEmbeddedPlanTemplatesLoadLinkedInContentStudio(t *testing.T) {
 	if !optionalCapability(carousel, "carousel-authoring") {
 		t.Fatalf("draft-carousel executor_requirement = %#v, want optional_capabilities [carousel-authoring]", carousel.ExecutorRequirement)
 	}
+	assertRequiredContentInteractionPolicy(t, carousel)
+	if carousel.InputArtifactTypeID != "harpia.artifacts.v1.LinkedInPost" || carousel.OutputArtifactTypeID != "harpia.artifacts.v1.LinkedInPost" {
+		t.Fatalf("draft-carousel contract = %q -> %q, want LinkedInPost -> LinkedInPost", carousel.InputArtifactTypeID, carousel.OutputArtifactTypeID)
+	}
 	image, ok := stepByKey["generate-image"]
 	if !ok {
 		t.Fatal("missing generate-image step")
@@ -318,17 +351,33 @@ func TestEmbeddedPlanTemplatesLoadLinkedInContentStudio(t *testing.T) {
 	if !optionalCapability(image, "image-generation") {
 		t.Fatalf("generate-image executor_requirement = %#v, want optional_capabilities [image-generation]", image.ExecutorRequirement)
 	}
-
-	// The template branches at write-draft: three downstream steps must consume
-	// the same TextDraft output type, which only validates under edge-based checking.
-	branchCount := 0
-	for _, edge := range linkedin.Edges {
-		if edge.FromStepKey == "write-draft" {
-			branchCount++
-		}
+	assertRequiredContentInteractionPolicy(t, image)
+	if image.InputArtifactTypeID != "harpia.artifacts.v1.LinkedInPost" || image.OutputArtifactTypeID != "harpia.artifacts.v1.LinkedInPost" {
+		t.Fatalf("generate-image contract = %q -> %q, want LinkedInPost -> LinkedInPost", image.InputArtifactTypeID, image.OutputArtifactTypeID)
 	}
-	if branchCount != 3 {
-		t.Fatalf("write-draft branch count = %d, want 3", branchCount)
+
+	publish, ok := stepByKey["publish"]
+	if !ok {
+		t.Fatal("missing publish step")
+	}
+	if publish.InputArtifactTypeID != "harpia.artifacts.v1.LinkedInPost" || publish.OutputArtifactTypeID != "harpia.artifacts.v1.PublishConfirmation" {
+		t.Fatalf("publish contract = %q -> %q, want LinkedInPost -> PublishConfirmation", publish.InputArtifactTypeID, publish.OutputArtifactTypeID)
+	}
+	if publish.ExecutorRequirement["executor_kind"] != 2 {
+		t.Fatalf("publish executor_requirement = %#v, want integration executor", publish.ExecutorRequirement)
+	}
+
+	wantPath := []planTemplateEdgeSeed{
+		{FromStepKey: "fetch-news", ToStepKey: "write-draft"},
+		{FromStepKey: "write-draft", ToStepKey: "author-content"},
+		{FromStepKey: "author-content", ToStepKey: "draft-carousel"},
+		{FromStepKey: "draft-carousel", ToStepKey: "generate-image"},
+		{FromStepKey: "generate-image", ToStepKey: "publish"},
+	}
+	for i, want := range wantPath {
+		if linkedin.Edges[i] != want {
+			t.Fatalf("edge[%d] = %#v, want %#v", i, linkedin.Edges[i], want)
+		}
 	}
 
 	// The two opt-in SELECTs map onto the INCLUDED_CAPABILITY target.
@@ -345,6 +394,16 @@ func TestEmbeddedPlanTemplatesLoadLinkedInContentStudio(t *testing.T) {
 	}
 	if !hasIncludedCapabilityMapping(includeImages, "image-generation") {
 		t.Fatalf("include_images mappings = %#v, want INCLUDED_CAPABILITY image-generation", includeImages.RuntimeMappings)
+	}
+}
+
+func assertRequiredContentInteractionPolicy(t *testing.T, step planTemplateStepSeed) {
+	t.Helper()
+	if step.HumanInteractionPolicy["elicitation_mode"] != "ELICITATION_MODE_WHEN_REQUIRED" {
+		t.Fatalf("%s elicitation policy = %#v, want WHEN_REQUIRED", step.Key, step.HumanInteractionPolicy)
+	}
+	if step.HumanInteractionPolicy["review_mode"] != "REVIEW_MODE_REQUIRED" {
+		t.Fatalf("%s review policy = %#v, want REQUIRED", step.Key, step.HumanInteractionPolicy)
 	}
 }
 

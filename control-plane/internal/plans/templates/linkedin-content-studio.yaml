@@ -1,8 +1,8 @@
 key: linkedin-content-studio
 name: LinkedIn Content Studio
-description: Turn selected news into a published LinkedIn post; optionally add a carousel and a generated image as opt-in capabilities.
+description: Turn selected news into one reviewed LinkedIn post, optionally enriched with a carousel and generated images before publishing.
 vertical: creator-economy
-version: 2
+version: 3
 steps:
   - key: fetch-news
     title: Fetch News
@@ -25,26 +25,20 @@ steps:
     title: Author LinkedIn Content
     description: Transform the draft into a LinkedIn-ready post via the multi-capable LinkedIn Content Specialist.
     input_artifact_type: harpia.artifacts.v1.TextDraft
-    output_artifact_type: harpia.artifacts.v1.LinkedInPostDraft
+    output_artifact_type: harpia.artifacts.v1.LinkedInPost
     executor_requirement:
       executor_kind: 1
       required_capabilities:
         - linkedin-content-adaptation
     default_executor_sku_key: linkedin-content-specialist
-  - key: publish
-    title: Publish
-    description: Publish the approved LinkedIn post.
-    input_artifact_type: harpia.artifacts.v1.LinkedInPostDraft
-    output_artifact_type: harpia.artifacts.v1.PublishConfirmation
-    executor_requirement:
-      executor_kind: 2
-      connection_type: oauth_linkedin
-    default_executor_sku_key: linkedin-publish
+    human_interaction_policy:
+      elicitation_mode: ELICITATION_MODE_WHEN_REQUIRED
+      review_mode: REVIEW_MODE_REQUIRED
   - key: draft-carousel
     title: Draft Carousel
-    description: Transform the draft into a LinkedIn carousel outline. Opt-in via the include_carousel capability.
-    input_artifact_type: harpia.artifacts.v1.TextDraft
-    output_artifact_type: harpia.artifacts.v1.CarouselDraft
+    description: Add a reviewed carousel to the LinkedIn post. Opt-in via the include_carousel capability.
+    input_artifact_type: harpia.artifacts.v1.LinkedInPost
+    output_artifact_type: harpia.artifacts.v1.LinkedInPost
     executor_requirement:
       executor_kind: 1
       required_capabilities:
@@ -52,28 +46,43 @@ steps:
       optional_capabilities:
         - carousel-authoring
     default_executor_sku_key: linkedin-content-specialist
+    human_interaction_policy:
+      elicitation_mode: ELICITATION_MODE_WHEN_REQUIRED
+      review_mode: REVIEW_MODE_REQUIRED
   - key: generate-image
     title: Generate Image
-    description: Generate a branded image asset for the post. Opt-in via the include_images capability.
-    input_artifact_type: harpia.artifacts.v1.TextDraft
-    output_artifact_type: harpia.artifacts.v1.ImageAsset
+    description: Add generated images to the reviewed LinkedIn post. Opt-in via the include_images capability.
+    input_artifact_type: harpia.artifacts.v1.LinkedInPost
+    output_artifact_type: harpia.artifacts.v1.LinkedInPost
     executor_requirement:
       executor_kind: 2
       connection_type: image_provider
       optional_capabilities:
         - image-generation
     default_executor_sku_key: image-asset-generator
+    human_interaction_policy:
+      elicitation_mode: ELICITATION_MODE_WHEN_REQUIRED
+      review_mode: REVIEW_MODE_REQUIRED
+  - key: publish
+    title: Publish
+    description: Publish the approved final LinkedIn post.
+    input_artifact_type: harpia.artifacts.v1.LinkedInPost
+    output_artifact_type: harpia.artifacts.v1.PublishConfirmation
+    executor_requirement:
+      executor_kind: 2
+      connection_type: oauth_linkedin
+    default_executor_sku_key: linkedin-publish
 edges:
   - from_step_key: fetch-news
     to_step_key: write-draft
   - from_step_key: write-draft
     to_step_key: author-content
   - from_step_key: author-content
-    to_step_key: publish
-  - from_step_key: write-draft
     to_step_key: draft-carousel
-  - from_step_key: write-draft
+  - from_step_key: draft-carousel
     to_step_key: generate-image
+  - from_step_key: generate-image
+    to_step_key: publish
 input_parameters:
   - key: theme
     label: Theme

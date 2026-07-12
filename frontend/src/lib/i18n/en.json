@@ -1064,11 +1064,11 @@
   "plans.inputs.elicitation_timeout_behavior.option.fail_step": "Fail step",
   "plans.inputs.elicitation_timeout_behavior.option.fail_plan": "Fail plan",
   "plans.inputs.include_carousel.label": "Include carousel",
-  "plans.inputs.include_carousel.description": "Also author a LinkedIn carousel outline from the draft.",
+  "plans.inputs.include_carousel.description": "Add a reviewable carousel enrichment to the LinkedIn post.",
   "plans.inputs.include_carousel.option.yes": "Yes",
   "plans.inputs.include_carousel.option.no": "No",
   "plans.inputs.include_images.label": "Include generated images",
-  "plans.inputs.include_images.description": "Generate branded image assets for the post.",
+  "plans.inputs.include_images.description": "Add generated image enrichments to the reviewed LinkedIn post.",
   "plans.inputs.include_images.option.yes": "Yes",
   "plans.inputs.include_images.option.no": "No",
   "assistant.policiesStep.progress": "{selected}/{total} runtime policies selected",
@@ -1081,5 +1081,8 @@
   "assistant.policiesStep.option.elicitation_timeout_behavior.fail_plan": "Fail the plan",
   "assistant.policiesStep.selected": "{value}",
   "assistant.policiesStep.noOptions": "No policy options are available.",
-  "assistant.policiesStep.complete": "Runtime policies selected."
+  "assistant.policiesStep.complete": "Runtime policies selected.",
+  "plans.checkpoint.elicitation.whenRequired": "The specialist asks for missing context before drafting.",
+  "plans.checkpoint.review.required": "Each generated content candidate requires review before the next step.",
+  "plans.checkpoint.approval.publish": "Publishing requires approval of the final LinkedIn post."
 }

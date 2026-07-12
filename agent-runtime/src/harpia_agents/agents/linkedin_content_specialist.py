@@ -3,8 +3,8 @@
 A single manifest declares two capabilities, each its own
 (input -> output) contract with its own prompt and schemas:
 
-- ``linkedin-content-adaptation`` (TextDraft -> LinkedInPostDraft)
-- ``carousel-authoring``           (TextDraft -> CarouselDraft)
+- ``linkedin-content-adaptation`` (TextDraft -> LinkedInPost)
+- ``carousel-authoring``           (LinkedInPost -> LinkedInPost)
 
 The runner is **capability-driven**: it selects the active capability by the
 step's expected output type and reuses the parsing/validation helpers from the
@@ -17,7 +17,7 @@ import json
 from collections.abc import Mapping
 
 from harpia.artifacts.v1.artifacts_pb2 import (
-    CarouselDraft,
+    LinkedInPost,
     LinkedInPostDraft,
     TextDraft,
 )
@@ -42,43 +42,66 @@ MANIFEST_PATH = resolve_manifest_path(MANIFEST_ID)
 _KNOWN_MODEL_IDS = tuple(model.model_id for model in LLMRegistry.default().list_models())
 MANIFEST = AgentType.from_yaml(MANIFEST_PATH, model_ids=_KNOWN_MODEL_IDS)
 
-type AgentRunResult = LinkedInPostDraft | CarouselDraft
+type AgentRunResult = LinkedInPost
 
 
-def _specs_by_output() -> dict[str, dict[str, object]]:
-    """Capability specs keyed by their declared ``artifact_output_type``."""
+def _specs_by_input() -> dict[str, dict[str, object]]:
+    """Capability specs keyed by their declared input artifact type."""
     return {
-        spec["artifact_output_type"]: spec
+        spec["artifact_input_type"]: spec
         for spec in MANIFEST.to_dict()["capability_specs"]
     }
 
 
 async def run(
-    input_text_draft: TextDraft | Mapping[str, object],
+    input_payload: TextDraft | LinkedInPost | Mapping[str, object],
     *,
     llm_registry: LLMRegistry,
     model_id: str = MANIFEST.model_id,
-    output_artifact_type_key: str = "",
+    output_artifact_type_key: str = "harpia.artifacts.v1.LinkedInPost",
 ) -> AgentRunResult:
-    """Run the capability matching ``output_artifact_type_key``.
+    """Create or enrich a LinkedInPost according to its input contract.
 
-    The step's expected output type selects which capability (and therefore
-    which system prompt + parsing path) is active for this run.
+    Both capabilities yield LinkedInPost, so the input type selects their
+    prompt and parsing path. ``output_artifact_type_key`` still guards the
+    PlanStep contract at the adapter boundary.
     """
-    spec = _specs_by_output().get(output_artifact_type_key)
-    if spec is None:
+    if output_artifact_type_key != "harpia.artifacts.v1.LinkedInPost":
         raise ValueError(
             f"{MANIFEST_ID} has no capability producing {output_artifact_type_key!r}"
         )
 
-    text_draft = parse_text_draft_payload(input_text_draft)
+    if isinstance(input_payload, LinkedInPost):
+        post = LinkedInPost()
+        post.CopyFrom(input_payload)
+        if not post.text.text.strip():
+            raise ValueError("input_schema violation: LinkedInPost.text.text must be non-empty")
+        spec = _specs_by_input()["harpia.artifacts.v1.LinkedInPost"]
+        result = await llm_registry.complete(
+            model_id=model_id,
+            messages=[
+                ChatMessage(role="system", content=str(spec["system_prompt"])),
+                ChatMessage(role="user", content=f"post text:\n{post.text.text}"),
+            ],
+        )
+        cleaned = _strip_code_fences(result.content)
+        try:
+            parsed = json.loads(cleaned)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"carousel LLM output was not valid JSON: {exc}") from exc
+        if not isinstance(parsed, dict):
+            raise ValueError("carousel LLM output must decode to a JSON object")
+        carousel = _build_carousel_from_mapping(parsed)
+        _validate_carousel_draft_schema(carousel)
+        post.carousel.CopyFrom(carousel)
+        return post
+
+    text_draft = parse_text_draft_payload(input_payload)
     title = text_draft.title.strip()
     body = text_draft.body.strip()
     if not title or not body:
-        raise ValueError(
-            "input_schema violation: `title` and `body` must be non-empty strings"
-        )
-
+        raise ValueError("input_schema violation: `title` and `body` must be non-empty strings")
+    spec = _specs_by_input()["harpia.artifacts.v1.TextDraft"]
     result = await llm_registry.complete(
         model_id=model_id,
         messages=[
@@ -87,28 +110,10 @@ async def run(
         ],
     )
 
-    output_type = spec["artifact_output_type"]
-    if output_type == "harpia.artifacts.v1.LinkedInPostDraft":
-        post_draft = LinkedInPostDraft(
-            hook=_build_hook(title),
-            text=result.content.strip()[:_MAX_TEXT_LENGTH],
-            hashtags=_default_hashtags(title),
-        )
-        _validate_linkedin_post_draft_schema(post_draft)
-        return post_draft
-
-    if output_type == "harpia.artifacts.v1.CarouselDraft":
-        cleaned = _strip_code_fences(result.content)
-        try:
-            parsed = json.loads(cleaned)
-        except json.JSONDecodeError as exc:
-            raise ValueError(
-                f"carousel LLM output was not valid JSON: {exc}"
-            ) from exc
-        if not isinstance(parsed, dict):
-            raise ValueError("carousel LLM output must decode to a JSON object")
-        carousel_draft = _build_carousel_from_mapping(parsed)
-        _validate_carousel_draft_schema(carousel_draft)
-        return carousel_draft
-
-    raise ValueError(f"unsupported capability output type: {output_type!r}")
+    post_draft = LinkedInPostDraft(
+        hook=_build_hook(title),
+        text=result.content.strip()[:_MAX_TEXT_LENGTH],
+        hashtags=_default_hashtags(title),
+    )
+    _validate_linkedin_post_draft_schema(post_draft)
+    return LinkedInPost(text=post_draft)

@@ -1,7 +1,7 @@
 import json
 
 import pytest
-from harpia.artifacts.v1.artifacts_pb2 import CarouselDraft, LinkedInPostDraft, TextDraft
+from harpia.artifacts.v1.artifacts_pb2 import LinkedInPost, TextDraft
 
 from harpia_agents.agents.linkedin_content_specialist import (
     MANIFEST,
@@ -33,8 +33,8 @@ def _capturing_registry(captured: list[ChatMessage], response: str) -> LLMRegist
     )
 
 
-def _specs_by_output() -> dict[str, dict[str, object]]:
-    return {spec["artifact_output_type"]: spec for spec in MANIFEST.to_dict()["capability_specs"]}
+def _specs_by_input() -> dict[str, dict[str, object]]:
+    return {spec["artifact_input_type"]: spec for spec in MANIFEST.to_dict()["capability_specs"]}
 
 
 def _text_draft() -> TextDraft:
@@ -68,35 +68,39 @@ def _carousel_payload() -> dict[str, object]:
 
 
 @pytest.mark.asyncio
-async def test_adapt_capability_returns_linkedin_post_draft() -> None:
+async def test_author_capability_creates_linkedin_post() -> None:
     result = await run(
         _text_draft(),
         llm_registry=_registry("LinkedIn-ready: Weekly AI Governance Brief\n\nShort body"),
-        output_artifact_type_key="harpia.artifacts.v1.LinkedInPostDraft",
+        output_artifact_type_key="harpia.artifacts.v1.LinkedInPost",
     )
 
-    assert isinstance(result, LinkedInPostDraft)
-    assert result.text
-    assert "Weekly AI Governance Brief" in result.text
-    assert result.hook == "Weekly AI Governance Brief"
-    assert result.hashtags
-    assert len(result.text) <= 3000
+    assert isinstance(result, LinkedInPost)
+    assert result.text.text
+    assert "Weekly AI Governance Brief" in result.text.text
+    assert result.text.hook == "Weekly AI Governance Brief"
+    assert result.text.hashtags
+    assert len(result.text.text) <= 3000
 
 
 @pytest.mark.asyncio
-async def test_carousel_capability_returns_carousel_draft() -> None:
+async def test_carousel_capability_enriches_same_linkedin_post() -> None:
+    post = LinkedInPost()
+    post.text.text = "The governance update operators need this week."
+    post.text.hook = "Governance update"
     result = await run(
-        _text_draft(),
+        post,
         llm_registry=_registry(json.dumps(_carousel_payload())),
-        output_artifact_type_key="harpia.artifacts.v1.CarouselDraft",
+        output_artifact_type_key="harpia.artifacts.v1.LinkedInPost",
     )
 
-    assert isinstance(result, CarouselDraft)
-    assert result.title == "AI Governance in 6 Slides"
-    assert result.hook == "Regulators just rewrote the rules."
-    assert len(result.slides) == 2
-    assert result.slides[0].heading == "The shift"
-    assert "aigovernance" in result.hashtags
+    assert isinstance(result, LinkedInPost)
+    assert result.text.text == post.text.text
+    assert result.carousel.title == "AI Governance in 6 Slides"
+    assert result.carousel.hook == "Regulators just rewrote the rules."
+    assert len(result.carousel.slides) == 2
+    assert result.carousel.slides[0].heading == "The shift"
+    assert "aigovernance" in result.carousel.hashtags
 
 
 @pytest.mark.asyncio
@@ -119,11 +123,11 @@ async def test_adapt_capability_uses_adapt_spec_system_prompt() -> None:
             captured,
             "LinkedIn-ready: Weekly AI Governance Brief\n\nShort body",
         ),
-        output_artifact_type_key="harpia.artifacts.v1.LinkedInPostDraft",
+        output_artifact_type_key="harpia.artifacts.v1.LinkedInPost",
     )
 
     system_message = next(message for message in captured if message.role == "system")
-    expected = str(_specs_by_output()["harpia.artifacts.v1.LinkedInPostDraft"]["system_prompt"])
+    expected = str(_specs_by_input()["harpia.artifacts.v1.TextDraft"]["system_prompt"])
     assert system_message.content == expected
     assert "polished" in system_message.content
     assert "carousel" not in system_message.content.lower()
@@ -134,13 +138,13 @@ async def test_carousel_capability_uses_carousel_spec_system_prompt() -> None:
     captured: list[ChatMessage] = []
 
     await run(
-        _text_draft(),
+        LinkedInPost(text={"text": "Post to enrich"}),
         llm_registry=_capturing_registry(captured, json.dumps(_carousel_payload())),
-        output_artifact_type_key="harpia.artifacts.v1.CarouselDraft",
+        output_artifact_type_key="harpia.artifacts.v1.LinkedInPost",
     )
 
     system_message = next(message for message in captured if message.role == "system")
-    expected = str(_specs_by_output()["harpia.artifacts.v1.CarouselDraft"]["system_prompt"])
+    expected = str(_specs_by_input()["harpia.artifacts.v1.LinkedInPost"]["system_prompt"])
     assert system_message.content == expected
     assert "carousel outline" in system_message.content.lower()
 
@@ -151,7 +155,7 @@ async def test_empty_title_or_body_raises_value_error() -> None:
         await run(
             TextDraft(title="", body="has body"),
             llm_registry=_registry("anything"),
-            output_artifact_type_key="harpia.artifacts.v1.LinkedInPostDraft",
+            output_artifact_type_key="harpia.artifacts.v1.LinkedInPost",
         )
 
 
@@ -159,7 +163,7 @@ async def test_empty_title_or_body_raises_value_error() -> None:
 async def test_carousel_capability_raises_on_invalid_json() -> None:
     with pytest.raises(ValueError, match="not valid JSON"):
         await run(
-            _text_draft(),
+            LinkedInPost(text={"text": "Post to enrich"}),
             llm_registry=_registry("::: not json {{{"),
-            output_artifact_type_key="harpia.artifacts.v1.CarouselDraft",
+            output_artifact_type_key="harpia.artifacts.v1.LinkedInPost",
         )

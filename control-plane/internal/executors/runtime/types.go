@@ -13,11 +13,11 @@ const (
 )
 
 type InputArtifactRef struct {
-	ArtifactTypeKey string
-	ArtifactID      string
+	ArtifactTypeKey   string
+	ArtifactID        string
 	ArtifactVersionID string
-	ContentHash     string
-	LiteralJSON     string
+	ContentHash       string
+	LiteralJSON       string
 }
 
 type InstallationSnapshot struct {
@@ -38,9 +38,12 @@ type IntegrationExecutionRequest struct {
 }
 
 type IntegrationExecutionResult struct {
-	Status           string
-	OutputArtifactID string
-	Error            string
+	Status                  string
+	OutputArtifactID        string
+	OutputArtifactVersionID string
+	OutputArtifactTypeKey   string
+	OutputContentHash       string
+	Error                   string
 }
 
 // IntegrationRunner routes execution to a registered handler by SKU key.

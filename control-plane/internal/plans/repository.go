@@ -30,15 +30,16 @@ type PlanTemplate struct {
 }
 
 type PlanStep struct {
-	ID                    uuid.UUID
-	Key                   string
-	Title                 string
-	Description           string
-	InputArtifactTypeID   string
-	OutputArtifactTypeID  string
-	ExecutorRequirement   json.RawMessage
-	DefaultExecutorSKUKey string
-	Position              int32
+	ID                     uuid.UUID
+	Key                    string
+	Title                  string
+	Description            string
+	InputArtifactTypeID    string
+	OutputArtifactTypeID   string
+	ExecutorRequirement    json.RawMessage
+	HumanInteractionPolicy json.RawMessage
+	DefaultExecutorSKUKey  string
+	Position               int32
 }
 
 type PlanStepDependency struct {
@@ -218,7 +219,7 @@ func (r *Repository) ListTemplates(ctx context.Context, vertical string, limit, 
 func (r *Repository) loadTemplateGraph(ctx context.Context, template *PlanTemplate) error {
 	stepRows, err := r.pool.Query(ctx,
 		`SELECT id, key, title, description, input_artifact_type_id, output_artifact_type_id,
-		        executor_requirement, COALESCE(default_executor_sku_key, ''), position
+		        executor_requirement, human_interaction_policy, COALESCE(default_executor_sku_key, ''), position
 		 FROM plan_template_steps
 		 WHERE plan_template_id = $1
 		 ORDER BY position ASC, key ASC`,
@@ -235,7 +236,7 @@ func (r *Repository) loadTemplateGraph(ctx context.Context, template *PlanTempla
 		if err := stepRows.Scan(
 			&step.ID, &step.Key, &step.Title, &step.Description,
 			&step.InputArtifactTypeID, &step.OutputArtifactTypeID,
-			&step.ExecutorRequirement, &step.DefaultExecutorSKUKey, &step.Position,
+			&step.ExecutorRequirement, &step.HumanInteractionPolicy, &step.DefaultExecutorSKUKey, &step.Position,
 		); err != nil {
 			return fmt.Errorf("scan plan template step: %w", err)
 		}

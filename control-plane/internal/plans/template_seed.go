@@ -30,13 +30,14 @@ type planTemplateSeed struct {
 }
 
 type planTemplateStepSeed struct {
-	Key                   string         `yaml:"key"`
-	Title                 string         `yaml:"title"`
-	Description           string         `yaml:"description"`
-	InputArtifactTypeID   string         `yaml:"input_artifact_type"`
-	OutputArtifactTypeID  string         `yaml:"output_artifact_type"`
-	ExecutorRequirement   map[string]any `yaml:"executor_requirement"`
-	DefaultExecutorSKUKey string         `yaml:"default_executor_sku_key"`
+	Key                    string         `yaml:"key"`
+	Title                  string         `yaml:"title"`
+	Description            string         `yaml:"description"`
+	InputArtifactTypeID    string         `yaml:"input_artifact_type"`
+	OutputArtifactTypeID   string         `yaml:"output_artifact_type"`
+	ExecutorRequirement    map[string]any `yaml:"executor_requirement"`
+	HumanInteractionPolicy map[string]any `yaml:"human_interaction_policy"`
+	DefaultExecutorSKUKey  string         `yaml:"default_executor_sku_key"`
 }
 
 type planTemplateEdgeSeed struct {
@@ -140,6 +141,9 @@ func validatePlanTemplateSeed(template *planTemplateSeed, artifactTypeKeys, exec
 				return fmt.Errorf("step %q: unknown executor sku %q", step.Key, step.DefaultExecutorSKUKey)
 			}
 		}
+		if err := validateHumanInteractionPolicy(step.HumanInteractionPolicy); err != nil {
+			return fmt.Errorf("step %q: %w", step.Key, err)
+		}
 	}
 
 	if err := validateTemplateDAG(template, stepKeys); err != nil {
@@ -175,6 +179,17 @@ func validateTemplateDAG(template *planTemplateSeed, stepKeys map[string]int) er
 				from, to, fromStep.OutputArtifactTypeID, toStep.InputArtifactTypeID)
 		}
 		adjacent[from] = append(adjacent[from], to)
+	}
+	for key, step := range stepByKey {
+		if !hasOptionalCapabilities(step.ExecutorRequirement) {
+			continue
+		}
+		if len(adjacent[key]) == 0 {
+			return fmt.Errorf("optional terminal step %q is not supported", key)
+		}
+		if step.InputArtifactTypeID != step.OutputArtifactTypeID {
+			return fmt.Errorf("optional middle step %q must preserve its artifact type: %q != %q", key, step.InputArtifactTypeID, step.OutputArtifactTypeID)
+		}
 	}
 
 	const (
@@ -221,6 +236,36 @@ func validateTemplateDAG(template *planTemplateSeed, stepKeys map[string]int) er
 	for _, step := range template.Steps {
 		if _, ok := reachable[step.Key]; !ok {
 			return fmt.Errorf("step %q is unreachable from %q", step.Key, template.Steps[0].Key)
+		}
+	}
+	return nil
+}
+
+func hasOptionalCapabilities(requirement map[string]any) bool {
+	capabilities, ok := requirement["optional_capabilities"].([]any)
+	return ok && len(capabilities) > 0
+}
+
+func validateHumanInteractionPolicy(policy map[string]any) error {
+	if len(policy) == 0 {
+		return nil
+	}
+	for key, value := range policy {
+		mode, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("human_interaction_policy.%s must be a string", key)
+		}
+		switch key {
+		case "elicitation_mode":
+			if mode != "ELICITATION_MODE_NEVER" && mode != "ELICITATION_MODE_WHEN_REQUIRED" {
+				return fmt.Errorf("human_interaction_policy.elicitation_mode is invalid: %q", mode)
+			}
+		case "review_mode":
+			if mode != "REVIEW_MODE_NONE" && mode != "REVIEW_MODE_REQUIRED" {
+				return fmt.Errorf("human_interaction_policy.review_mode is invalid: %q", mode)
+			}
+		default:
+			return fmt.Errorf("human_interaction_policy has unknown field %q", key)
 		}
 	}
 	return nil
@@ -426,14 +471,22 @@ func upsertPlanTemplateSeed(ctx context.Context, q database.Querier, template *p
 			}
 			requirement = raw
 		}
+		interactionPolicy := json.RawMessage("{}")
+		if len(step.HumanInteractionPolicy) > 0 {
+			raw, err := json.Marshal(step.HumanInteractionPolicy)
+			if err != nil {
+				return fmt.Errorf("marshal human interaction policy for step %q: %w", step.Key, err)
+			}
+			interactionPolicy = raw
+		}
 		if _, err := q.Exec(ctx, `
 			INSERT INTO plan_template_steps (
 				plan_template_id, key, title, description,
 				input_artifact_type_id, output_artifact_type_id,
-				executor_requirement, default_executor_sku_key, position
+				executor_requirement, human_interaction_policy, default_executor_sku_key, position
 			)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, NULLIF($8, ''), $9)
-		`, templateID, step.Key, step.Title, step.Description, step.InputArtifactTypeID, step.OutputArtifactTypeID, requirement, step.DefaultExecutorSKUKey, i+1); err != nil {
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULLIF($9, ''), $10)
+		`, templateID, step.Key, step.Title, step.Description, step.InputArtifactTypeID, step.OutputArtifactTypeID, requirement, interactionPolicy, step.DefaultExecutorSKUKey, i+1); err != nil {
 			return fmt.Errorf("insert step %q for template %q: %w", step.Key, template.Key, err)
 		}
 	}

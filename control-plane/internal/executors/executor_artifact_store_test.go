@@ -62,6 +62,10 @@ func (m *memoryArtifactRepo) GetArtifactVersion(_ context.Context, _, _, _ uuid.
 	return nil, context.Canceled
 }
 
+func (m *memoryArtifactRepo) CreateArtifactVersion(_ context.Context, _ *artifacts.Artifact, _ *artifacts.ArtifactVersion) (*artifacts.ArtifactVersion, *artifacts.Artifact, error) {
+	return nil, nil, context.Canceled
+}
+
 type memoryPayloadStore struct {
 	objects map[string][]byte
 }

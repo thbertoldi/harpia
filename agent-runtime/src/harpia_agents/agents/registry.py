@@ -7,6 +7,7 @@ from collections.abc import Awaitable, Callable, Mapping
 
 from harpia.artifacts.v1.artifacts_pb2 import (
     CarouselDraft,
+    LinkedInPost,
     LinkedInPostDraft,
     NewsList,
     TextDraft,
@@ -48,8 +49,8 @@ from harpia_agents.llm.providers.ollama import OllamaProvider
 from harpia_agents.llm.providers.openai import OpenAIProvider
 from harpia_agents.llm.resolver import ResolvedProviderCredentials, TenantLLMResolver
 
-type AgentInput = NewsList | TextDraft | Mapping[str, object]
-type AgentRunResult = NewsletterAgentRunResult | LinkedInPostDraft | CarouselDraft
+type AgentInput = NewsList | TextDraft | LinkedInPost | Mapping[str, object]
+type AgentRunResult = NewsletterAgentRunResult | LinkedInPostDraft | LinkedInPost | CarouselDraft
 
 AgentRunner = Callable[
     [AgentInput, LLMRegistry, str, Mapping[str, str] | None, str],
@@ -176,14 +177,15 @@ async def _run_carousel(
     input_payload: AgentInput,
     llm_registry: LLMRegistry,
     model_id: str,
-    _elicitation_responses: Mapping[str, str] | None,
+    elicitation_responses: Mapping[str, str] | None,
     _output_artifact_type_key: str = "",
 ) -> AgentRunResult:
-    del _output_artifact_type_key
     return await run_linkedin_carousel(
         input_payload,
         llm_registry=llm_registry,
         model_id=model_id,
+        elicitation_responses=elicitation_responses,
+        review_feedback=(elicitation_responses or {}).get("review_feedback", ""),
     )
 
 

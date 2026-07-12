@@ -3,12 +3,13 @@ package image_test
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"strings"
 	"testing"
 
 	"github.com/google/uuid"
+	"google.golang.org/protobuf/encoding/protojson"
 
+	artifactsv1 "github.com/harpia/control-plane/gen/harpia/artifacts/v1"
 	"github.com/harpia/control-plane/internal/artifacts"
 	"github.com/harpia/control-plane/internal/executors"
 	"github.com/harpia/control-plane/internal/executors/contracttest"
@@ -22,12 +23,16 @@ func noopResolver(_ image.InstallationConfig) (image.ImageProvider, error) {
 	return image.NewNoopProvider(), nil
 }
 
-// newImageArtifactStore seeds an in-memory artifact store for the image contract
-// tests, registering the TextDraft (input) and ImageAsset (output) types.
-func newImageArtifactStore() runtime.ExecutorArtifactStore {
+// newImageArtifactStore seeds an in-memory artifact store for the composable
+// LinkedInPost → LinkedInPost image enrichment contract.
+func newImageArtifactStore() *runtime.ExecutorArtifactStoreAdapter {
 	return runtime.NewExecutorArtifactStore(
 		&contracttest.MemoryArtifactRepo{
 			Types: map[string]*artifacts.ArtifactType{
+				artifacts.TypeKeyLinkedInPost: {
+					ID:  uuid.MustParse("66666666-6666-6666-6666-666666666666"),
+					Key: artifacts.TypeKeyLinkedInPost,
+				},
 				artifacts.TypeKeyImageAsset: {
 					ID:  uuid.MustParse("77777777-7777-7777-7777-777777777777"),
 					Key: artifacts.TypeKeyImageAsset,
@@ -130,25 +135,58 @@ func TestImageHandlerFailsTerminallyWhenOpenAIServerKeyIsMissing(t *testing.T) {
 	}
 }
 
-func TestImageIntegrationContract(t *testing.T) {
+func TestImageHandlerEnrichesPinnedLinkedInPost(t *testing.T) {
 	store := newImageArtifactStore()
 	handler := image.NewHandler(store, noopResolver)
-
-	contracttest.Run(t, contracttest.Suite{
-		Name:                    executors.SKUImageAssetGenerator,
-		Handler:                 handler,
-		Store:                   store,
-		SKUKey:                  executors.SKUImageAssetGenerator,
-		InputArtifactTypeKey:    artifacts.TypeKeyTextDraft,
-		OutputArtifactTypeKey:   artifacts.TypeKeyImageAsset,
-		ValidInstallationConfig: json.RawMessage(`{"provider":"noop"}`),
-		ValidInputLiteralJSON:   validTextDraftLiteral,
-		RetryableTrigger: func(ctx context.Context, req runtime.IntegrationExecutionRequest) error {
-			deadHandler := image.NewHandler(store, failingResolver(image.NewProviderError("openai", errors.New("upstream rate limited"))))
-			_, err := deadHandler.Execute(ctx, req)
-			return err
-		},
+	tenantID := uuid.MustParse("22222222-2222-2222-2222-222222222222")
+	postPayload, err := protojson.Marshal(&artifactsv1.LinkedInPost{
+		Text:     &artifactsv1.LinkedInPostDraft{Text: "A practical update for operators.", Hook: "Practical update", Hashtags: []string{"harpia"}},
+		Carousel: &artifactsv1.CarouselDraft{Title: "Existing carousel", Slides: []*artifactsv1.CarouselSlide{{Heading: "One", Body: "Preserved"}}},
 	})
+	if err != nil {
+		t.Fatalf("marshal post: %v", err)
+	}
+	postRef, err := store.CreateValidatedPayloadRef(context.Background(), runtime.CreateArtifactRequest{
+		TenantID: tenantID, OutputArtifactTypeKey: artifacts.TypeKeyLinkedInPost, StepExecutionID: "author-step", Payload: postPayload,
+	})
+	if err != nil {
+		t.Fatalf("create authored post: %v", err)
+	}
+
+	result, err := handler.Execute(context.Background(), runtime.IntegrationExecutionRequest{
+		TenantID: tenantID, StepExecutionID: "image-step", OutputArtifactTypeKey: artifacts.TypeKeyLinkedInPost,
+		InputArtifacts: []runtime.InputArtifactRef{{
+			ArtifactTypeKey: postRef.ArtifactTypeKey, ArtifactID: postRef.ArtifactID,
+			ArtifactVersionID: postRef.ArtifactVersionID, ContentHash: postRef.ContentHash,
+		}},
+		Installation: runtime.InstallationSnapshot{ExecutorSKUKey: executors.SKUImageAssetGenerator, ConfigJSON: json.RawMessage(`{"provider":"noop"}`)},
+	})
+	if err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if result.Status != runtime.IntegrationStatusCompleted {
+		t.Fatalf("Status = %q, want completed (%s)", result.Status, result.Error)
+	}
+	if result.OutputArtifactID != postRef.ArtifactID || result.OutputArtifactVersionID == postRef.ArtifactVersionID {
+		t.Fatalf("output ref = %s/%s, want same artifact with a new version", result.OutputArtifactID, result.OutputArtifactVersionID)
+	}
+	enrichedPayload, err := store.LoadPinnedPayload(context.Background(), tenantID, runtime.VersionedArtifactRef{
+		ArtifactID: result.OutputArtifactID, ArtifactVersionID: result.OutputArtifactVersionID,
+		ArtifactTypeKey: result.OutputArtifactTypeKey, ContentHash: result.OutputContentHash,
+	})
+	if err != nil {
+		t.Fatalf("load enriched post: %v", err)
+	}
+	enriched := &artifactsv1.LinkedInPost{}
+	if err := protojson.Unmarshal(enrichedPayload, enriched); err != nil {
+		t.Fatalf("unmarshal enriched post: %v", err)
+	}
+	if enriched.GetText().GetText() != "A practical update for operators." || enriched.GetCarousel().GetTitle() != "Existing carousel" {
+		t.Fatalf("enrichment did not preserve accepted post content: %#v", enriched)
+	}
+	if len(enriched.GetImages()) != 1 || enriched.GetImages()[0].GetArtifactTypeKey() != artifacts.TypeKeyImageAsset {
+		t.Fatalf("images = %#v, want one ImageAsset ref", enriched.GetImages())
+	}
 }
 
 // failingResolver is a ProviderResolver that returns a provider whose Generate

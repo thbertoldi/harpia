@@ -46,6 +46,18 @@ var DefaultArtifactTypeSeeds = []ArtifactTypeSeed{
 		Description: "LinkedIn-specific post draft.",
 	},
 	{
+		Key:         TypeKeyLinkedInPost,
+		SchemaRef:   "harpia.artifacts.v1/LinkedInPost",
+		Version:     1,
+		Description: "Composable versioned LinkedIn post with optional carousel and images.",
+	},
+	{
+		Key:         TypeKeyLinkedInCarouselDocument,
+		SchemaRef:   "harpia.artifacts.v1/LinkedInCarouselDocument",
+		Version:     1,
+		Description: "Immutable PDF derivative for a LinkedIn carousel.",
+	},
+	{
 		Key:         TypeKeyPublishConfirmation,
 		SchemaRef:   "harpia.artifacts.v1/PublishConfirmation",
 		Version:     1,

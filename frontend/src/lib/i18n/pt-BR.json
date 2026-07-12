@@ -1064,11 +1064,11 @@
   "plans.inputs.elicitation_timeout_behavior.option.fail_step": "Falhar etapa",
   "plans.inputs.elicitation_timeout_behavior.option.fail_plan": "Falhar plano",
   "plans.inputs.include_carousel.label": "Incluir carrossel",
-  "plans.inputs.include_carousel.description": "Também autora um esboço de carrossel para o LinkedIn a partir do rascunho.",
+  "plans.inputs.include_carousel.description": "Adiciona um enriquecimento de carrossel revisável ao post do LinkedIn.",
   "plans.inputs.include_carousel.option.yes": "Sim",
   "plans.inputs.include_carousel.option.no": "Não",
   "plans.inputs.include_images.label": "Incluir imagens geradas",
-  "plans.inputs.include_images.description": "Gera recursos de imagem com marca para o post.",
+  "plans.inputs.include_images.description": "Adiciona enriquecimentos de imagem gerada ao post revisado do LinkedIn.",
   "plans.inputs.include_images.option.yes": "Sim",
   "plans.inputs.include_images.option.no": "Não",
   "assistant.policiesStep.progress": "{selected}/{total} políticas de execução selecionadas",
@@ -1081,5 +1081,8 @@
   "assistant.policiesStep.option.elicitation_timeout_behavior.fail_plan": "Falhar o plano",
   "assistant.policiesStep.selected": "{value}",
   "assistant.policiesStep.noOptions": "Nenhuma opção de política disponível.",
-  "assistant.policiesStep.complete": "Políticas de execução selecionadas."
+  "assistant.policiesStep.complete": "Políticas de execução selecionadas.",
+  "plans.checkpoint.elicitation.whenRequired": "O especialista pede o contexto ausente antes de redigir.",
+  "plans.checkpoint.review.required": "Cada candidato de conteúdo gerado exige revisão antes da próxima etapa.",
+  "plans.checkpoint.approval.publish": "A publicação exige aprovação do post final no LinkedIn."
 }

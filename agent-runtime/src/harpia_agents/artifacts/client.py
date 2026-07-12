@@ -8,8 +8,10 @@ import os
 from connectrpc.errors import ConnectError
 from harpia.artifacts.v1.artifacts_connect import ArtifactServiceClient
 from harpia.artifacts.v1.artifacts_pb2 import (
+    CreateArtifactVersionWithPayloadRequest,
     CreateArtifactWithPayloadRequest,
     GetArtifactPayloadRequest,
+    GetArtifactRequest,
 )
 
 
@@ -55,9 +57,18 @@ class ArtifactPayloadClient:
             "X-Tenant-ID": tenant_id,
         }
 
-    async def get_payload(self, *, tenant_id: str, artifact_id: str) -> dict[str, object]:
+    async def get_payload(
+        self,
+        *,
+        tenant_id: str,
+        artifact_id: str,
+        artifact_version_id: str = "",
+    ) -> dict[str, object]:
+        request = GetArtifactPayloadRequest(tenant_id=tenant_id, artifact_id=artifact_id)
+        if artifact_version_id:
+            request.artifact_version_id = artifact_version_id
         response = await self._client.get_artifact_payload(
-            GetArtifactPayloadRequest(tenant_id=tenant_id, artifact_id=artifact_id),
+            request,
             headers=self._headers(tenant_id),
             timeout_ms=self._timeout_ms,
         )
@@ -65,6 +76,16 @@ class ArtifactPayloadClient:
         if not isinstance(decoded, dict):
             raise ValueError("artifact payload must decode to object")
         return decoded
+
+    async def get_current_content_hash(self, *, tenant_id: str, artifact_id: str) -> str:
+        response = await self._client.get_artifact(
+            GetArtifactRequest(tenant_id=tenant_id, artifact_id=artifact_id),
+            headers=self._headers(tenant_id),
+            timeout_ms=self._timeout_ms,
+        )
+        if not response.HasField("artifact") or not response.artifact.content_hash:
+            raise ConnectError("get artifact response missing content hash")
+        return response.artifact.content_hash
 
     async def create_payload(
         self,
@@ -89,3 +110,31 @@ class ArtifactPayloadClient:
         if not response.HasField("artifact"):
             raise ConnectError("create artifact response missing artifact")
         return response.artifact.id
+
+    async def create_version_payload(
+        self,
+        *,
+        tenant_id: str,
+        artifact_id: str,
+        expected_content_hash: str,
+        payload: dict[str, object],
+        edit_summary: str,
+    ) -> tuple[str, str, str]:
+        response = await self._client.create_artifact_version_with_payload(
+            CreateArtifactVersionWithPayloadRequest(
+                tenant_id=tenant_id,
+                artifact_id=artifact_id,
+                expected_content_hash=expected_content_hash,
+                payload_json=json.dumps(payload).encode("utf-8"),
+                edit_summary=edit_summary,
+            ),
+            headers=self._headers(tenant_id),
+            timeout_ms=self._timeout_ms,
+        )
+        if not response.HasField("artifact") or not response.HasField("artifact_version"):
+            raise ConnectError("create artifact version response missing artifact or version")
+        return (
+            response.artifact.id,
+            response.artifact_version.id,
+            response.artifact_version.content_hash,
+        )

@@ -107,6 +107,7 @@ type PlanExecutionSnapshot struct {
 	SchemaVersion         int                                     `json:"schema_version"`
 	Configuration         *plansv1.PlanConfiguration              `json:"configuration"`
 	Template              *plansv1.PlanTemplate                   `json:"template"`
+	ActiveStepKeys        []string                                `json:"active_step_keys"`
 	ExecutorInstallations map[string]ExecutorInstallationSnapshot `json:"executor_installations"`
 	SnapshotAt            string                                  `json:"snapshot_at,omitempty"`
 }

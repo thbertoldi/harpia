@@ -3,6 +3,7 @@ package plans
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -221,4 +222,60 @@ func TestBuildPlanExecutionSnapshotPopulatesIncludedOptionalCapabilities(t *test
 			t.Fatalf("included = %v, want empty", snapshot.Configuration.GetIncludedOptionalCapabilities())
 		}
 	})
+}
+
+func TestBuildPlanExecutionSnapshotFreezesActiveStepKeys(t *testing.T) {
+	tenantID := uuid.New()
+	templateID := uuid.New()
+	skuID := uuid.New()
+	installationID := uuid.New()
+	connected := "connected"
+	template := &PlanTemplate{
+		ID:      templateID,
+		Key:     "linkedin-content-studio",
+		Version: 3,
+		Steps: []PlanStep{
+			{Key: "author-content", InputArtifactTypeID: "harpia.artifacts.v1.TextDraft", OutputArtifactTypeID: "harpia.artifacts.v1.LinkedInPost"},
+			{Key: "generate-image", InputArtifactTypeID: "harpia.artifacts.v1.LinkedInPost", OutputArtifactTypeID: "harpia.artifacts.v1.LinkedInPost", ExecutorRequirement: json.RawMessage(`{"optional_capabilities":["image-generation"]}`)},
+			{Key: "publish", InputArtifactTypeID: "harpia.artifacts.v1.LinkedInPost", OutputArtifactTypeID: "harpia.artifacts.v1.PublishConfirmation"},
+		},
+		InputParameters: json.RawMessage(`[{
+			"key":"include_images",
+			"runtimeMappings":[{"target":"TEMPLATE_INPUT_RUNTIME_TARGET_INCLUDED_CAPABILITY","policyKey":"image-generation"}]
+		}]`),
+	}
+	config := &PlanConfiguration{
+		ID:                  uuid.New(),
+		TenantID:            tenantID,
+		PlanTemplateID:      templateID,
+		PlanTemplateVersion: 3,
+		Status:              ConfigurationStatusRunnable,
+		ParameterValues:     json.RawMessage(`{"include_images":"no"}`),
+		SlotBindings: mustMarshalBindings(t, []*plansv1.SlotBinding{
+			{StepKey: "author-content", ExecutorInstallationId: installationID.String()},
+			{StepKey: "publish", ExecutorInstallationId: installationID.String()},
+		}),
+	}
+	lookup := &mockExecutorLookup{
+		installations: map[uuid.UUID]*executors.ExecutorInstallation{installationID: {
+			ID: installationID, TenantID: tenantID, ExecutorSKUID: skuID, Kind: executors.KindAgent, Enabled: true, ConnectionStatus: &connected,
+		}},
+		skus:         map[uuid.UUID]*executors.ExecutorSKU{skuID: {ID: skuID, Key: "linkedin-content-specialist", Kind: executors.KindAgent}},
+		entitledSKUs: map[uuid.UUID]bool{skuID: true},
+	}
+
+	snapshot, err := buildPlanExecutionSnapshot(context.Background(), tenantID, config, template, lookup, time.Now().UTC())
+	if err != nil {
+		t.Fatalf("buildPlanExecutionSnapshot() error = %v", err)
+	}
+	if got, want := strings.Join(snapshot.ActiveStepKeys, ","), "author-content,publish"; got != want {
+		t.Fatalf("active step keys = %q, want %q", got, want)
+	}
+
+	// A later edit is a configuration concern for a future execution. The stored
+	// snapshot remains the complete, immutable active graph for this run.
+	config.ParameterValues = json.RawMessage(`{"include_images":"yes"}`)
+	if got, want := strings.Join(snapshot.ActiveStepKeys, ","), "author-content,publish"; got != want {
+		t.Fatalf("frozen active step keys = %q, want %q", got, want)
+	}
 }

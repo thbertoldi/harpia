@@ -196,8 +196,41 @@ func (m *MemoryArtifactRepo) CreateArtifact(_ context.Context, artifact *artifac
 	if created.CreatedAt.IsZero() {
 		created.CreatedAt = time.Now().UTC()
 	}
+	if m.Versions == nil {
+		m.Versions = make(map[uuid.UUID]*artifacts.ArtifactVersion)
+	}
+	versionID := uuid.New()
+	created.CurrentVersionID = uuid.NullUUID{UUID: versionID, Valid: true}
 	m.Artifacts[created.ID] = &created
+	m.Versions[versionID] = &artifacts.ArtifactVersion{
+		ID: versionID, ArtifactID: created.ID, TenantID: created.TenantID,
+		VersionNumber: 1, StorageURI: created.StorageURI, ContentHash: created.ContentHash,
+	}
 	return &created, nil
+}
+
+func (m *MemoryArtifactRepo) CreateArtifactVersion(_ context.Context, artifact *artifacts.Artifact, version *artifacts.ArtifactVersion) (*artifacts.ArtifactVersion, *artifacts.Artifact, error) {
+	current, ok := m.Artifacts[artifact.ID]
+	if !ok || current.TenantID != artifact.TenantID || current.ContentHash != artifact.ContentHash {
+		return nil, nil, context.Canceled
+	}
+	if m.Versions == nil {
+		m.Versions = make(map[uuid.UUID]*artifacts.ArtifactVersion)
+	}
+	created := *version
+	if created.ID == uuid.Nil {
+		created.ID = uuid.New()
+	}
+	created.ArtifactID = current.ID
+	created.TenantID = current.TenantID
+	created.VersionNumber = int32(len(m.Versions) + 1)
+	m.Versions[created.ID] = &created
+	updated := *current
+	updated.StorageURI = created.StorageURI
+	updated.ContentHash = created.ContentHash
+	updated.CurrentVersionID = uuid.NullUUID{UUID: created.ID, Valid: true}
+	m.Artifacts[updated.ID] = &updated
+	return &created, &updated, nil
 }
 
 func (m *MemoryArtifactRepo) GetArtifact(_ context.Context, tenantID, artifactID uuid.UUID) (*artifacts.Artifact, error) {

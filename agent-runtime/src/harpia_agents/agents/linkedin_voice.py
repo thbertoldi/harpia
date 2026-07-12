@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from google.protobuf.json_format import MessageToDict, ParseDict
-from harpia.artifacts.v1.artifacts_pb2 import LinkedInPostDraft, TextDraft
+from harpia.artifacts.v1.artifacts_pb2 import LinkedInPost, LinkedInPostDraft, TextDraft
 from langgraph.graph import END, StateGraph
 from pydantic import BaseModel, ConfigDict
 
@@ -20,7 +20,7 @@ _OUTPUT_SCHEMA = MANIFEST.to_dict()["output_schema"]
 _OUTPUT_REQUIRED_FIELDS = tuple(_OUTPUT_SCHEMA.get("required", []))
 _MAX_TEXT_LENGTH = int(_OUTPUT_SCHEMA.get("properties", {}).get("text", {}).get("maxLength", 3000))
 
-type AgentRunResult = LinkedInPostDraft
+type AgentRunResult = LinkedInPost
 
 
 class LinkedInVoiceState(BaseModel):
@@ -129,7 +129,7 @@ async def run(
     llm_registry: LLMRegistry,
     model_id: str = MANIFEST.model_id,
 ) -> AgentRunResult:
-    """Run LinkedIn voice adaptation and return a LinkedIn post draft."""
+    """Run LinkedIn voice adaptation and return a composable LinkedIn post."""
     text_draft = parse_text_draft_payload(input_text_draft)
     graph = _build_graph(llm_registry=llm_registry, model_id=model_id)
     state = LinkedInVoiceState(text_draft=text_draft)
@@ -137,7 +137,7 @@ async def run(
 
     if result_state.post_draft is None:
         raise RuntimeError("linkedin voice agent did not produce a result")
-    return result_state.post_draft
+    return LinkedInPost(text=result_state.post_draft)
 
 
 def text_draft_to_mapping(text_draft: TextDraft) -> dict[str, object]:

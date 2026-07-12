@@ -10,6 +10,8 @@ func TestDefaultArtifactTypeSeeds(t *testing.T) {
 		TypeKeyNewsList,
 		TypeKeyTextDraft,
 		TypeKeyLinkedInPostDraft,
+		TypeKeyLinkedInPost,
+		TypeKeyLinkedInCarouselDocument,
 		TypeKeyPublishConfirmation,
 		TypeKeyCarouselDraft,
 		TypeKeyImageAsset,

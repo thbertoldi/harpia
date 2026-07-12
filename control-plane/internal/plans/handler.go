@@ -1284,6 +1284,12 @@ func stepToProto(s *PlanStep) *plansv1.PlanStep {
 			step.ExecutorRequirement = &requirement
 		}
 	}
+	if len(s.HumanInteractionPolicy) > 0 && string(s.HumanInteractionPolicy) != "{}" {
+		var policy plansv1.HumanInteractionPolicy
+		if err := json.Unmarshal(s.HumanInteractionPolicy, &policy); err == nil {
+			step.HumanInteractionPolicy = &policy
+		}
+	}
 	return step
 }
 

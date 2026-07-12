@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 
+	artifactsv1 "github.com/harpia/control-plane/gen/harpia/artifacts/v1"
 	"github.com/harpia/control-plane/internal/artifacts"
 )
 
@@ -18,6 +19,8 @@ type ExecutorArtifactStore interface {
 	LoadPayloadForType(ctx context.Context, tenantID uuid.UUID, refs []InputArtifactRef, typeKey string) ([]byte, error)
 	LoadPinnedPayload(ctx context.Context, tenantID uuid.UUID, ref VersionedArtifactRef) ([]byte, error)
 	CreateValidatedPayload(ctx context.Context, req CreateArtifactRequest) (string, error)
+	CreateValidatedPayloadRef(ctx context.Context, req CreateArtifactRequest) (VersionedArtifactRef, error)
+	CreateValidatedVersionPayload(ctx context.Context, req CreateArtifactVersionRequest) (VersionedArtifactRef, error)
 }
 
 // VersionedArtifactRef is the executor-facing form of an immutable artifact
@@ -38,11 +41,27 @@ type CreateArtifactRequest struct {
 	Payload               []byte
 }
 
+// CreateArtifactVersionRequest appends a candidate version to an existing
+// typed Artifact. The expected content hash prevents a stale enrichment from
+// silently replacing a newer post version.
+type CreateArtifactVersionRequest struct {
+	TenantID                uuid.UUID
+	ArtifactID              string
+	ExpectedContentHash     string
+	SourceArtifactVersionID string
+	OutputArtifactTypeKey   string
+	PlanExecutionID         string
+	StepExecutionID         string
+	EditSummary             string
+	Payload                 []byte
+}
+
 // ArtifactRepository persists artifact metadata for executor runtime access.
 type ArtifactRepository interface {
 	GetTypeByID(ctx context.Context, typeID uuid.UUID) (*artifacts.ArtifactType, error)
 	GetTypeByKey(ctx context.Context, key string) (*artifacts.ArtifactType, error)
 	CreateArtifact(ctx context.Context, artifact *artifacts.Artifact) (*artifacts.Artifact, error)
+	CreateArtifactVersion(ctx context.Context, artifact *artifacts.Artifact, version *artifacts.ArtifactVersion) (*artifacts.ArtifactVersion, *artifacts.Artifact, error)
 	GetArtifact(ctx context.Context, tenantID, artifactID uuid.UUID) (*artifacts.Artifact, error)
 	GetArtifactVersion(ctx context.Context, tenantID, artifactID, versionID uuid.UUID) (*artifacts.ArtifactVersion, error)
 }
@@ -91,26 +110,34 @@ func (g *ExecutorArtifactStoreAdapter) LoadPayloadForType(
 }
 
 func (g *ExecutorArtifactStoreAdapter) CreateValidatedPayload(ctx context.Context, req CreateArtifactRequest) (string, error) {
+	ref, err := g.CreateValidatedPayloadRef(ctx, req)
+	if err != nil {
+		return "", err
+	}
+	return ref.ArtifactID, nil
+}
+
+func (g *ExecutorArtifactStoreAdapter) CreateValidatedPayloadRef(ctx context.Context, req CreateArtifactRequest) (VersionedArtifactRef, error) {
 	if g == nil || g.repo == nil || g.store == nil {
-		return "", fmt.Errorf("executor artifact store is not configured")
+		return VersionedArtifactRef{}, fmt.Errorf("executor artifact store is not configured")
 	}
 	if len(req.Payload) == 0 {
-		return "", fmt.Errorf("payload is required")
+		return VersionedArtifactRef{}, fmt.Errorf("payload is required")
 	}
 
 	artifactType, err := g.resolveArtifactType(ctx, req.OutputArtifactTypeKey)
 	if err != nil {
-		return "", err
+		return VersionedArtifactRef{}, err
 	}
 	if err := artifacts.ValidatePayload(artifactType.Key, req.Payload); err != nil {
-		return "", err
+		return VersionedArtifactRef{}, err
 	}
 
 	artifactID := uuid.New()
 	objectPath := artifacts.ArtifactObjectPath(artifactID, req.StepExecutionID)
 	storageURI, err := g.store.Put(ctx, objectPath, req.Payload)
 	if err != nil {
-		return "", fmt.Errorf("store artifact payload: %w", err)
+		return VersionedArtifactRef{}, fmt.Errorf("store artifact payload: %w", err)
 	}
 
 	created, err := g.repo.CreateArtifact(ctx, &artifacts.Artifact{
@@ -124,9 +151,70 @@ func (g *ExecutorArtifactStoreAdapter) CreateValidatedPayload(ctx context.Contex
 		StepExecutionID: nullableUUID(req.StepExecutionID),
 	})
 	if err != nil {
-		return "", fmt.Errorf("create artifact: %w", err)
+		return VersionedArtifactRef{}, fmt.Errorf("create artifact: %w", err)
 	}
-	return created.ID.String(), nil
+	ref := VersionedArtifactRef{
+		ArtifactID:      created.ID.String(),
+		ArtifactTypeKey: created.ArtifactTypeKey,
+		ContentHash:     created.ContentHash,
+	}
+	if created.CurrentVersionID.Valid {
+		ref.ArtifactVersionID = created.CurrentVersionID.UUID.String()
+	}
+	return ref, nil
+}
+
+func (g *ExecutorArtifactStoreAdapter) CreateValidatedVersionPayload(ctx context.Context, req CreateArtifactVersionRequest) (VersionedArtifactRef, error) {
+	if g == nil || g.repo == nil || g.store == nil {
+		return VersionedArtifactRef{}, fmt.Errorf("executor artifact store is not configured")
+	}
+	if len(req.Payload) == 0 {
+		return VersionedArtifactRef{}, fmt.Errorf("payload is required")
+	}
+	artifactID, err := uuid.Parse(strings.TrimSpace(req.ArtifactID))
+	if err != nil {
+		return VersionedArtifactRef{}, fmt.Errorf("parse artifact id: %w", err)
+	}
+	artifact, err := g.repo.GetArtifact(ctx, req.TenantID, artifactID)
+	if err != nil {
+		return VersionedArtifactRef{}, fmt.Errorf("load artifact %q: %w", req.ArtifactID, err)
+	}
+	if expected := strings.TrimSpace(req.ExpectedContentHash); expected == "" || expected != artifact.ContentHash {
+		return VersionedArtifactRef{}, fmt.Errorf("artifact %q content hash does not match expected current version", req.ArtifactID)
+	}
+	artifactType, err := g.repo.GetTypeByID(ctx, artifact.ArtifactTypeID)
+	if err != nil {
+		return VersionedArtifactRef{}, fmt.Errorf("load artifact type for %q: %w", req.ArtifactID, err)
+	}
+	if requestedType := strings.TrimSpace(req.OutputArtifactTypeKey); requestedType != "" && requestedType != artifactType.Key {
+		return VersionedArtifactRef{}, fmt.Errorf("artifact %q type = %q, want %q", req.ArtifactID, artifactType.Key, requestedType)
+	}
+	if err := artifacts.ValidatePayload(artifactType.Key, req.Payload); err != nil {
+		return VersionedArtifactRef{}, err
+	}
+	storageURI, err := g.store.Put(ctx, artifacts.ArtifactObjectPath(artifact.ID, req.StepExecutionID+"-"+uuid.NewString()), req.Payload)
+	if err != nil {
+		return VersionedArtifactRef{}, fmt.Errorf("store artifact version payload: %w", err)
+	}
+	version, updated, err := g.repo.CreateArtifactVersion(ctx, artifact, &artifacts.ArtifactVersion{
+		TenantID:              req.TenantID,
+		StorageURI:            storageURI,
+		ContentHash:           artifacts.ContentHash(req.Payload),
+		SourcePlanExecutionID: nullableUUID(req.PlanExecutionID),
+		SourceStepExecutionID: nullableUUID(req.StepExecutionID),
+		SourceVersionID:       nullableUUID(req.SourceArtifactVersionID),
+		CreatedByKind:         artifactsv1.ArtifactVersionCreatedByKind_ARTIFACT_VERSION_CREATED_BY_KIND_INTEGRATION,
+		EditSummary:           req.EditSummary,
+	})
+	if err != nil {
+		return VersionedArtifactRef{}, fmt.Errorf("create artifact version: %w", err)
+	}
+	return VersionedArtifactRef{
+		ArtifactID:        updated.ID.String(),
+		ArtifactVersionID: version.ID.String(),
+		ArtifactTypeKey:   updated.ArtifactTypeKey,
+		ContentHash:       version.ContentHash,
+	}, nil
 }
 
 func nullableUUID(raw string) uuid.NullUUID {

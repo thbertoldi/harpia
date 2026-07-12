@@ -63,10 +63,12 @@ func buildPlanExecutionSnapshot(
 	included := configuration.GetIncludedOptionalCapabilities()
 
 	installationSnapshots := make(map[string]workflow.ExecutorInstallationSnapshot, len(template.Steps))
+	activeStepKeys := make([]string, 0, len(template.Steps))
 	for _, step := range template.Steps {
 		if stepOptedOut(stepToProto(&step), included) {
 			continue
 		}
+		activeStepKeys = append(activeStepKeys, step.Key)
 		binding := bindingsByStep[step.Key]
 		if binding == nil {
 			return workflow.PlanExecutionSnapshot{}, fmt.Errorf("missing slot binding for step %q", step.Key)
@@ -90,6 +92,7 @@ func buildPlanExecutionSnapshot(
 		SchemaVersion:         executionSnapshotSchemaVersion,
 		Configuration:         configuration,
 		Template:              templateProto,
+		ActiveStepKeys:        activeStepKeys,
 		ExecutorInstallations: installationSnapshots,
 		SnapshotAt:            now.UTC().Format(time.RFC3339),
 	}, nil

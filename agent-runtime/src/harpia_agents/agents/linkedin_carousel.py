@@ -6,22 +6,24 @@ import json
 from collections.abc import Mapping
 
 from google.protobuf.json_format import MessageToDict
-from harpia.artifacts.v1.artifacts_pb2 import CarouselDraft, CarouselSlide, TextDraft
+from harpia.artifacts.v1.artifacts_pb2 import (
+    CarouselDraft,
+    CarouselSlide,
+    LinkedInPost,
+)
 from langgraph.graph import END, StateGraph
 from pydantic import BaseModel, ConfigDict
 
-from harpia_agents.agents.linkedin_voice import parse_text_draft_payload
 from harpia_agents.agents.manifest import AgentType, resolve_manifest_path
+from harpia_agents.agents.newsletter_writer import ElicitationRequest
 from harpia_agents.llm import ChatMessage, LLMRegistry
 
 MANIFEST_ID = "linkedin-carousel-senior"
 MANIFEST_PATH = resolve_manifest_path(MANIFEST_ID)
 _KNOWN_MODEL_IDS = tuple(model.model_id for model in LLMRegistry.default().list_models())
 MANIFEST = AgentType.from_yaml(MANIFEST_PATH, model_ids=_KNOWN_MODEL_IDS)
-_OUTPUT_SCHEMA = MANIFEST.to_dict()["output_schema"]
-_OUTPUT_REQUIRED_FIELDS = tuple(_OUTPUT_SCHEMA.get("required", []))
 
-type AgentRunResult = CarouselDraft
+type AgentRunResult = LinkedInPost | ElicitationRequest
 
 
 class LinkedInCarouselState(BaseModel):
@@ -29,7 +31,10 @@ class LinkedInCarouselState(BaseModel):
 
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 
-    text_draft: TextDraft
+    post: LinkedInPost
+    carousel_goal: str
+    audience: str
+    review_feedback: str = ""
     carousel_draft: CarouselDraft | None = None
 
 
@@ -47,14 +52,8 @@ def _strip_code_fences(raw: str) -> str:
 
 
 def _validate_carousel_draft_schema(draft: CarouselDraft) -> None:
-    for field_name in _OUTPUT_REQUIRED_FIELDS:
-        if field_name == "slides":
-            continue
-        value = getattr(draft, field_name, "")
-        if not isinstance(value, str) or not value.strip():
-            raise ValueError(
-                f"output_schema violation: `{field_name}` must be a non-empty string"
-            )
+    if not draft.title.strip():
+        raise ValueError("carousel title must be a non-empty string")
     if not draft.slides:
         raise ValueError("output_schema violation: `slides` must contain at least one slide")
     for slide in draft.slides:
@@ -103,12 +102,9 @@ def _build_graph(*, llm_registry: LLMRegistry, model_id: str):
     )
 
     async def draft_carousel(state: LinkedInCarouselState) -> dict[str, object]:
-        title = state.text_draft.title.strip()
-        body = state.text_draft.body.strip()
-        if not title or not body:
-            raise ValueError(
-                "input_schema violation: `title` and `body` must be non-empty strings"
-            )
+        text = state.post.text.text.strip()
+        if not text:
+            raise ValueError("input_schema violation: LinkedInPost.text.text must be non-empty")
 
         result = await llm_registry.complete(
             model_id=model_id,
@@ -128,7 +124,12 @@ def _build_graph(*, llm_registry: LLMRegistry, model_id: str):
                 ),
                 ChatMessage(
                     role="user",
-                    content=f"title: {title}\n\nbody:\n{body}",
+                    content=(
+                        f"post text:\n{text}\n\n"
+                        f"carousel goal: {state.carousel_goal}\n"
+                        f"audience: {state.audience}\n"
+                        f"revision feedback: {state.review_feedback or 'none'}"
+                    ),
                 ),
             ],
         )
@@ -153,20 +154,56 @@ def _build_graph(*, llm_registry: LLMRegistry, model_id: str):
 
 
 async def run(
-    input_text_draft: TextDraft | Mapping[str, object],
+    input_post: LinkedInPost | Mapping[str, object],
     *,
     llm_registry: LLMRegistry,
     model_id: str = MANIFEST.model_id,
+    elicitation_responses: Mapping[str, str] | None = None,
+    review_feedback: str = "",
 ) -> AgentRunResult:
-    """Run LinkedIn carousel drafting and return a carousel draft."""
-    text_draft = parse_text_draft_payload(input_text_draft)
+    """Return a carousel-enriched post or request the missing carousel context.
+
+    ``carousel_goal`` and ``audience`` are intentionally elicited before the
+    first candidate. A resumed run supplies them in ``elicitation_responses``;
+    review feedback is carried into the drafting prompt as a revision request.
+    """
+    post = _parse_linkedin_post(input_post)
+    answers = {key: value.strip() for key, value in (elicitation_responses or {}).items() if value.strip()}
+    missing = tuple(field for field in ("carousel_goal", "audience") if not answers.get(field))
+    if missing:
+        return ElicitationRequest(
+            thread_id="linkedin-carousel-context",
+            question="What should this carousel achieve, and who is it for?",
+            required_fields=missing,
+        )
+
     graph = _build_graph(llm_registry=llm_registry, model_id=model_id)
-    state = LinkedInCarouselState(text_draft=text_draft)
+    state = LinkedInCarouselState(
+        post=post,
+        carousel_goal=answers["carousel_goal"],
+        audience=answers["audience"],
+        review_feedback=review_feedback.strip(),
+    )
     result_state = LinkedInCarouselState.model_validate(await graph.ainvoke(state.model_dump()))
 
     if result_state.carousel_draft is None:
         raise RuntimeError("linkedin carousel agent did not produce a result")
-    return result_state.carousel_draft
+    enriched = LinkedInPost()
+    enriched.CopyFrom(post)
+    enriched.carousel.CopyFrom(result_state.carousel_draft)
+    return enriched
+
+
+def _parse_linkedin_post(input_post: LinkedInPost | Mapping[str, object]) -> LinkedInPost:
+    if isinstance(input_post, LinkedInPost):
+        parsed = LinkedInPost()
+        parsed.CopyFrom(input_post)
+        return parsed
+    parsed = LinkedInPost()
+    from google.protobuf.json_format import ParseDict
+
+    ParseDict(dict(input_post), parsed)
+    return parsed
 
 
 def carousel_draft_to_mapping(carousel_draft: CarouselDraft) -> dict[str, object]:

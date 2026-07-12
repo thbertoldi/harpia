@@ -8,6 +8,7 @@ from connectrpc.errors import ConnectError
 from google.protobuf.json_format import MessageToDict, ParseDict
 from harpia.artifacts.v1.artifacts_pb2 import (
     CarouselDraft,
+    LinkedInPost,
     LinkedInPostDraft,
     NewsList,
     TextDraft,
@@ -122,7 +123,11 @@ async def _resolve_input_payload(
 
         artifact_id = str(artifact.get("artifact_id", "")).strip()
         if artifact_id:
-            return await client.get_payload(tenant_id=tenant_id, artifact_id=artifact_id)
+            return await client.get_payload(
+                tenant_id=tenant_id,
+                artifact_id=artifact_id,
+                artifact_version_id=str(artifact.get("artifact_version_id", "")).strip(),
+            )
 
         literal = _parse_literal_json(artifact.get("literal_json"))
         if literal is not None:
@@ -170,6 +175,16 @@ def _extract_elicitation_responses(input_payload: dict) -> dict[str, str] | None
     return parsed or None
 
 
+def _input_artifact_ref(input_payload: dict, artifact_type_key: str) -> dict[str, object] | None:
+    input_artifacts = input_payload.get("input_artifacts", [])
+    if not isinstance(input_artifacts, list):
+        return None
+    for artifact in input_artifacts:
+        if isinstance(artifact, dict) and str(artifact.get("artifact_type_key", "")).strip() == artifact_type_key:
+            return artifact
+    return None
+
+
 @activity.defn(name="RunAgentActivity")
 async def run_agent_activity(input_payload: dict) -> dict:
     """Run a manifest-backed agent and return executor activity contract fields."""
@@ -185,7 +200,7 @@ async def _run_agent_with_heartbeat(
     manifest_id: str,
     *,
     tenant_id: str,
-    agent_input: NewsList | TextDraft,
+    agent_input: NewsList | TextDraft | LinkedInPost,
     elicitation_responses: dict[str, str] | None,
     output_artifact_type_key: str = "",
 ) -> AgentRunResult:
@@ -242,18 +257,22 @@ async def _run_agent_activity(input_payload: dict) -> dict:
         payload = await _resolve_input_payload(
             input_payload,
             tenant_id=tenant_id,
-            artifact_type_key="harpia.artifacts.v1.TextDraft",
+            artifact_type_key="harpia.artifacts.v1.LinkedInPost",
         )
-        agent_input = TextDraft()
+        agent_input = LinkedInPost()
         ParseDict(payload, agent_input)
         elicitation_responses = _extract_elicitation_responses(input_payload)
     elif manifest_id == "linkedin-content-specialist":
-        payload = await _resolve_input_payload(
-            input_payload,
-            tenant_id=tenant_id,
-            artifact_type_key="harpia.artifacts.v1.TextDraft",
+        input_artifacts = input_payload.get("input_artifacts", [])
+        has_post_input = isinstance(input_artifacts, list) and any(
+            isinstance(artifact, dict)
+            and str(artifact.get("artifact_type_key", "")).strip()
+            == "harpia.artifacts.v1.LinkedInPost"
+            for artifact in input_artifacts
         )
-        agent_input = TextDraft()
+        input_type = "harpia.artifacts.v1.LinkedInPost" if has_post_input else "harpia.artifacts.v1.TextDraft"
+        payload = await _resolve_input_payload(input_payload, tenant_id=tenant_id, artifact_type_key=input_type)
+        agent_input = LinkedInPost() if has_post_input else TextDraft()
         ParseDict(payload, agent_input)
         elicitation_responses = _extract_elicitation_responses(input_payload)
     else:
@@ -285,15 +304,44 @@ async def _run_agent_activity(input_payload: dict) -> dict:
         output_type = "harpia.artifacts.v1.TextDraft"
     elif isinstance(result, LinkedInPostDraft):
         output_type = "harpia.artifacts.v1.LinkedInPostDraft"
+    elif isinstance(result, LinkedInPost):
+        output_type = "harpia.artifacts.v1.LinkedInPost"
     elif isinstance(result, CarouselDraft):
         output_type = "harpia.artifacts.v1.CarouselDraft"
     else:
         raise ValueError("unsupported agent result type")
 
     payload = MessageToDict(result, preserving_proto_field_name=True)
-    artifact_id = await ArtifactPayloadClient().create_payload(
+    artifact_client = ArtifactPayloadClient()
+    output_key = str(input_payload.get("output_artifact_type_key") or output_type)
+    source_post = _input_artifact_ref(input_payload, "harpia.artifacts.v1.LinkedInPost")
+    if output_key == "harpia.artifacts.v1.LinkedInPost" and source_post is not None:
+        source_artifact_id = str(source_post.get("artifact_id", "")).strip()
+        if not source_artifact_id:
+            raise ValueError("LinkedInPost enrichment requires an artifact-backed input")
+        expected_hash = str(source_post.get("content_hash", "")).strip()
+        if not expected_hash:
+            expected_hash = await artifact_client.get_current_content_hash(
+                tenant_id=tenant_id,
+                artifact_id=source_artifact_id,
+            )
+        artifact_id, artifact_version_id, content_hash = await artifact_client.create_version_payload(
+            tenant_id=tenant_id,
+            artifact_id=source_artifact_id,
+            expected_content_hash=expected_hash,
+            payload=payload,
+            edit_summary="LinkedIn post enrichment candidate",
+        )
+        return {
+            "status": "completed",
+            "output_artifact_id": artifact_id,
+            "output_artifact_version_id": artifact_version_id,
+            "output_content_hash": content_hash,
+        }
+
+    artifact_id = await artifact_client.create_payload(
         tenant_id=tenant_id,
-        artifact_type_key=str(input_payload.get("output_artifact_type_key") or output_type),
+        artifact_type_key=output_key,
         payload=payload,
         step_execution_id=str(input_payload.get("step_execution_id", "")),
         plan_execution_id=str(input_payload.get("plan_execution_id", "")),

@@ -17,9 +17,8 @@ import (
 )
 
 // Handler satisfies the image-asset-generator integration SKU contract: it
-// reads a TextDraft input, derives a prompt, calls the configured image
-// provider, stores the image bytes in the PayloadStore (inline base64 in the
-// ImageAsset payload for preview rendering), and creates an ImageAsset artifact.
+// reads a versioned LinkedInPost, creates an ImageAsset, and returns a new
+// version of that same post with the image ArtifactRef appended.
 type Handler struct {
 	artifacts runtime.ExecutorArtifactStore
 	resolver  ProviderResolver
@@ -44,21 +43,28 @@ func (h *Handler) Execute(ctx context.Context, req runtime.IntegrationExecutionR
 	if err != nil {
 		return failedResult(err), nil
 	}
-
-	draftPayload, err := h.artifacts.LoadPayloadForType(ctx, req.TenantID, req.InputArtifacts, artifacts.TypeKeyTextDraft)
-	if err != nil {
-		return failedResult(err), nil
-	}
-	if err := artifacts.ValidatePayload(artifacts.TypeKeyTextDraft, draftPayload); err != nil {
-		return failedResult(err), nil
-	}
-
-	prompt, err := derivePrompt(draftPayload)
-	if err != nil {
-		return failedResult(err), nil
-	}
-
 	provider, err := h.resolver(config)
+	if err != nil {
+		return failedResult(err), nil
+	}
+
+	postRef, err := linkedInPostInputRef(req.InputArtifacts)
+	if err != nil {
+		return failedResult(err), nil
+	}
+	postPayload, err := h.artifacts.LoadPayloadForType(ctx, req.TenantID, req.InputArtifacts, artifacts.TypeKeyLinkedInPost)
+	if err != nil {
+		return failedResult(err), nil
+	}
+	if err := artifacts.ValidatePayload(artifacts.TypeKeyLinkedInPost, postPayload); err != nil {
+		return failedResult(err), nil
+	}
+
+	post := &artifactsv1.LinkedInPost{}
+	if err := protojson.Unmarshal(postPayload, post); err != nil {
+		return failedResult(fmt.Errorf("%w: parse LinkedIn post artifact: %v", ErrInvalidInput, err)), nil
+	}
+	prompt, err := derivePrompt(post)
 	if err != nil {
 		return failedResult(err), nil
 	}
@@ -86,9 +92,9 @@ func (h *Handler) Execute(ctx context.Context, req runtime.IntegrationExecutionR
 		return runtime.IntegrationExecutionResult{}, fmt.Errorf("marshal image asset payload: %w", err)
 	}
 
-	outputArtifactID, err := h.artifacts.CreateValidatedPayload(ctx, runtime.CreateArtifactRequest{
+	imageRef, err := h.artifacts.CreateValidatedPayloadRef(ctx, runtime.CreateArtifactRequest{
 		TenantID:              req.TenantID,
-		OutputArtifactTypeKey: req.OutputArtifactTypeKey,
+		OutputArtifactTypeKey: artifacts.TypeKeyImageAsset,
 		PlanExecutionID:       req.PlanExecutionID,
 		StepExecutionID:       req.StepExecutionID,
 		Payload:               payload,
@@ -96,28 +102,68 @@ func (h *Handler) Execute(ctx context.Context, req runtime.IntegrationExecutionR
 	if err != nil {
 		return runtime.IntegrationExecutionResult{}, fmt.Errorf("create image asset artifact: %w", err)
 	}
+	post.Images = append(post.Images, &artifactsv1.ArtifactRef{
+		ArtifactId:        imageRef.ArtifactID,
+		ArtifactVersionId: imageRef.ArtifactVersionID,
+		ArtifactTypeKey:   imageRef.ArtifactTypeKey,
+		ContentHash:       imageRef.ContentHash,
+	})
+	enrichedPayload, err := protojson.Marshal(post)
+	if err != nil {
+		return runtime.IntegrationExecutionResult{}, fmt.Errorf("marshal enriched LinkedIn post: %w", err)
+	}
+	enrichedRef, err := h.artifacts.CreateValidatedVersionPayload(ctx, runtime.CreateArtifactVersionRequest{
+		TenantID:                req.TenantID,
+		ArtifactID:              postRef.ArtifactID,
+		ExpectedContentHash:     postRef.ContentHash,
+		SourceArtifactVersionID: postRef.ArtifactVersionID,
+		OutputArtifactTypeKey:   artifacts.TypeKeyLinkedInPost,
+		PlanExecutionID:         req.PlanExecutionID,
+		StepExecutionID:         req.StepExecutionID,
+		EditSummary:             "Generated image enrichment",
+		Payload:                 enrichedPayload,
+	})
+	if err != nil {
+		return runtime.IntegrationExecutionResult{}, fmt.Errorf("create enriched LinkedIn post version: %w", err)
+	}
 
 	return runtime.IntegrationExecutionResult{
-		Status:           runtime.IntegrationStatusCompleted,
-		OutputArtifactID: outputArtifactID,
+		Status:                  runtime.IntegrationStatusCompleted,
+		OutputArtifactID:        enrichedRef.ArtifactID,
+		OutputArtifactVersionID: enrichedRef.ArtifactVersionID,
+		OutputArtifactTypeKey:   enrichedRef.ArtifactTypeKey,
+		OutputContentHash:       enrichedRef.ContentHash,
 	}, nil
 }
 
-// derivePrompt extracts the image generation prompt from a TextDraft payload.
-// The draft body is the prompt; the title is used as a fallback so a
-// title-only draft still produces an image.
-func derivePrompt(draftPayload []byte) (string, error) {
-	draft := &artifactsv1.TextDraft{}
-	if err := protojson.Unmarshal(draftPayload, draft); err != nil {
-		return "", fmt.Errorf("%w: parse text draft artifact: %v", ErrInvalidInput, err)
+// derivePrompt extracts an image-generation prompt from the composed post.
+func derivePrompt(post *artifactsv1.LinkedInPost) (string, error) {
+	if post == nil || post.Text == nil {
+		return "", fmt.Errorf("%w: LinkedIn post text is required", ErrInvalidInput)
 	}
-	if body := strings.TrimSpace(draft.Body); body != "" {
-		return body, nil
+	if text := strings.TrimSpace(post.Text.Text); text != "" {
+		return text, nil
 	}
-	if title := strings.TrimSpace(draft.Title); title != "" {
-		return title, nil
+	if hook := strings.TrimSpace(post.Text.Hook); hook != "" {
+		return hook, nil
 	}
-	return "", fmt.Errorf("%w: text draft body is empty; cannot derive prompt", ErrInvalidInput)
+	return "", fmt.Errorf("%w: LinkedIn post text is empty; cannot derive prompt", ErrInvalidInput)
+}
+
+func linkedInPostInputRef(refs []runtime.InputArtifactRef) (runtime.VersionedArtifactRef, error) {
+	for _, ref := range refs {
+		if ref.ArtifactTypeKey != artifacts.TypeKeyLinkedInPost {
+			continue
+		}
+		if strings.TrimSpace(ref.ArtifactID) == "" || strings.TrimSpace(ref.ArtifactVersionID) == "" || strings.TrimSpace(ref.ContentHash) == "" {
+			return runtime.VersionedArtifactRef{}, fmt.Errorf("%w: LinkedIn post input must be version-pinned", ErrInvalidInput)
+		}
+		return runtime.VersionedArtifactRef{
+			ArtifactID: ref.ArtifactID, ArtifactVersionID: ref.ArtifactVersionID,
+			ArtifactTypeKey: ref.ArtifactTypeKey, ContentHash: ref.ContentHash,
+		}, nil
+	}
+	return runtime.VersionedArtifactRef{}, fmt.Errorf("%w: missing LinkedIn post input", ErrInvalidInput)
 }
 
 // deriveAltText produces a short accessible label for the generated image.
