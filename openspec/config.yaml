@@ -19,3 +19,4 @@ rules:
   tasks:
     - "Make every task executor-cold and assume the executor has no conversation context."
     - "For each task, state the intended behavior, exact file paths, dependencies and order, Given/When/Then acceptance criteria, exact focused verification commands, and every applicable AGENTS.md whole-surface gate."
+    - "Every behavior change MUST end with a non-deferrable, machine-executable acceptance task carrying the exact command `mise run acceptance`; it cannot be deferred or replaced by an unchecked manual smoke task."

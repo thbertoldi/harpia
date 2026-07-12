@@ -35,10 +35,9 @@ Archive a completed change in the experimental workflow.
    - `planningHome`, `changeRoot`, `artifactPaths`, and `actionContext`: path and scope context
    - `artifacts`: List of artifacts with their status (`done` or other)
 
-   **If any artifacts are not `done`:**
-   - Display warning listing incomplete artifacts
-   - Use **AskUserQuestion tool** to confirm user wants to proceed
-   - Proceed if user confirms
+    **If any artifacts are not `done`:**
+    - Stop the archive workflow and display the incomplete artifacts.
+    - Do not offer a confirmation override; complete the artifacts first.
 
 3. **Check task completion status**
 
@@ -46,12 +45,15 @@ Archive a completed change in the experimental workflow.
 
    Count tasks marked with `- [ ]` (incomplete) vs `- [x]` (complete).
 
-   **If incomplete tasks found:**
-   - Display warning showing count of incomplete tasks
-   - Use **AskUserQuestion tool** to confirm user wants to proceed
-   - Proceed if user confirms
+    **If incomplete tasks found:**
+    - Stop the archive workflow and display the count of incomplete tasks.
+    - Do not offer a confirmation override; complete the tasks first.
 
-   **If no tasks file exists:** Proceed without task-related warning.
+    **If no tasks file exists:** Stop the archive workflow; a completed task list is required.
+
+    Run `mise run acceptance` after task completion. If it fails, or the final checked
+    task does not carry the exact `mise run acceptance` command, stop the archive workflow.
+    Do not offer a confirmation override for unverified acceptance.
 
 4. **Assess delta spec sync state**
 
@@ -92,7 +94,7 @@ Archive a completed change in the experimental workflow.
    - Schema that was used
    - Archive location
    - Whether specs were synced (if applicable)
-   - Note about any warnings (incomplete artifacts/tasks)
+    - Verified acceptance result
 
 **Output On Success**
 
@@ -110,7 +112,7 @@ All artifacts complete. All tasks complete.
 **Guardrails**
 - Always prompt for change selection if not provided
 - Use artifact graph (openspec status --json) for completion checking
-- Don't block archive on warnings - just inform and confirm
+- Hard-stop before archive when artifacts/tasks are incomplete or acceptance is unverified; never offer a confirmation override
 - Preserve .openspec.yaml when moving to archive (it moves with the directory)
 - Show clear summary of what happened
 - If sync is requested, use openspec-sync-specs approach (agent-driven)

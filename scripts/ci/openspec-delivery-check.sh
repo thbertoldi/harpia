@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Enforce durable archive evidence. This intentionally scans historical archives
+# rather than repairing them: a non-zero result identifies delivery drift that
+# must be resolved in a dedicated follow-up change.
+root_dir=$(git rev-parse --show-toplevel)
+archive_dir="$root_dir/openspec/changes/archive"
+
+if [[ ! -d "$archive_dir" ]]; then
+  exit 0
+fi
+
+failures=0
+
+fail() {
+  printf 'openspec-delivery-check: %s\n' "$*" >&2
+  failures=1
+}
+
+contains_unresolved_deferred() {
+  local line=${1,,}
+  [[ "$line" == *deferred* ]] && [[ ! "$line" =~ openspec/changes/[a-z0-9-]+ ]] && [[ ! "$line" =~ follow-up[[:space:]]+change:[[:space:]]*[a-z0-9-]+ ]]
+}
+
+shopt -s nullglob
+for change_dir in "$archive_dir"/*; do
+  [[ -d "$change_dir" ]] || continue
+  change_name=${change_dir##*/}
+  tasks_file="$change_dir/tasks.md"
+
+  if [[ ! -f "$tasks_file" ]]; then
+    fail "$change_name has no tasks.md"
+    continue
+  fi
+
+  last_task=''
+  line_no=0
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    ((line_no += 1))
+    if [[ "$line" =~ ^[[:space:]]*-[[:space:]]+\[[[:space:]]\] ]]; then
+      fail "$change_name/tasks.md:$line_no has an unchecked task"
+    fi
+    if [[ "$line" =~ ^[[:space:]]*-[[:space:]]+\[[xX]\] ]]; then
+      last_task="$line"
+      lower_line=${line,,}
+      if [[ "$lower_line" == *"n/a"* || "$lower_line" == *"conditional"* ]] && [[ ! "$line" =~ N/A[[:space:]]because[[:space:]]no[[:space:]].+[[:space:]]files[[:space:]]changed ]]; then
+        fail "$change_name/tasks.md:$line_no has conditional/N/A work without explicit 'N/A because no <surface> files changed' evidence"
+      fi
+    fi
+  done < "$tasks_file"
+
+  if [[ -z "$last_task" || "$last_task" != *"mise run acceptance"* ]]; then
+    fail "$change_name/tasks.md must end with a checked acceptance task carrying exact command: mise run acceptance"
+  fi
+
+  for note in "$change_dir"/*.md; do
+    [[ -f "$note" ]] || continue
+    note_line=0
+    while IFS= read -r line || [[ -n "$line" ]]; do
+      ((note_line += 1))
+      lower_line=${line,,}
+      if [[ "$lower_line" == *"agent-incapable"* ]]; then
+        fail "$change_name/${note##*/}:$note_line contains prohibited agent-incapable completion note"
+      fi
+      if contains_unresolved_deferred "$line"; then
+        fail "$change_name/${note##*/}:$note_line contains unresolved DEFERRED work; move it to a linked follow-up change"
+      fi
+    done < "$note"
+  done
+done
+
+exit "$failures"

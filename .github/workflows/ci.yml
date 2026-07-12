@@ -64,7 +64,7 @@ jobs:
         include:
           - lang: go
             working-directory: control-plane
-            run: go test ./...
+            run: go test $(go list ./... | grep -vE '/internal/(acceptance|audit)$')
           - lang: python
             working-directory: agent-runtime
             run: |
@@ -143,6 +143,53 @@ jobs:
       - name: Validate Helm template
         run: helm template test deploy/harpia/ > /dev/null
 
+  acceptance:
+    name: Acceptance
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: harpia
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd "pg_isready -U postgres -d harpia"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+      - name: Run database migrations
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/harpia?sslmode=disable
+        run: mise run db-migrate
+      - name: Provision non-superuser acceptance app role
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql "postgres://postgres@localhost:5432/harpia?sslmode=disable" <<'SQL'
+          CREATE ROLE harpia_app LOGIN PASSWORD 'harpia-app-password' NOBYPASSRLS;
+          GRANT CONNECT ON DATABASE harpia TO harpia_app;
+          GRANT USAGE ON SCHEMA public TO harpia_app;
+          GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO harpia_app;
+          GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO harpia_app;
+          ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO harpia_app;
+          SQL
+      - name: Run production acceptance
+        env:
+          HARPIA_TEST_DATABASE_URL: postgres://harpia_app:harpia-app-password@localhost:5432/harpia?sslmode=disable
+        run: mise run acceptance
+      - name: Run full Go suite with the acceptance app role
+        env:
+          HARPIA_TEST_DATABASE_URL: postgres://harpia_app:harpia-app-password@localhost:5432/harpia?sslmode=disable
+        run: cd control-plane && go test ./...
+      - name: Enforce archived delivery evidence
+        run: mise run openspec-delivery-check
+
   publish-chart:
     name: Publish Helm Chart
     if: github.event_name == 'push' && github.ref == 'refs/heads/trunk'
@@ -170,7 +217,7 @@ jobs:
   build-containers:
     name: Build and Publish Containers
     if: github.event_name == 'push' && github.ref == 'refs/heads/trunk'
-    needs: [lint, test, tooling, buf-breaking, helm-lint]
+    needs: [lint, test, tooling, buf-breaking, helm-lint, acceptance]
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -96,6 +96,7 @@ changed files:
 - Frontend types: `cd frontend && bun run check` — **12 pre-existing baseline errors**;
   introduce no new ones.
 - Backend: `cd control-plane && go test ./...`
+- Acceptance: `mise run acceptance` is required before delivery/archive; unchecked acceptance means the change is not done.
 - Proto: `cd proto && buf lint`
 - Run the app (single command): `mise run dev` (Tilt; DeepSeek key in `deploy/dev/kind/secrets.local.env`).
 

@@ -52,6 +52,14 @@ run = [
     "cd frontend && bun test",
 ]
 
+[tasks.acceptance]
+description = "Run deterministic production-logic acceptance tests"
+run = "cd control-plane && go test ./internal/acceptance -count=1"
+
+[tasks.openspec-delivery-check]
+description = "Reject archived OpenSpec changes without verified delivery evidence"
+run = "bash scripts/ci/openspec-delivery-check.sh"
+
 [tasks."test:e2e"]
 description = "Run frontend Playwright E2E tests"
 run = "cd frontend && bun run test:e2e"
@@ -147,7 +155,7 @@ run = "helm template test deploy/harpia/ > /dev/null"
 
 [tasks.db-migrate]
 description = "Run database migrations"
-run = "cd database && atlas migrate apply --dir migrations --url \"$DATABASE_URL\""
+run = "cd database && atlas migrate apply --dir file://migrations --url \"$DATABASE_URL\""
 
 [tasks.dispatch]
 description = "Run the coding-agent dispatcher"

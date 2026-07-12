@@ -28,10 +28,9 @@ Archive a completed change in the experimental workflow.
    - `planningHome`, `changeRoot`, `artifactPaths`, and `actionContext`: path and scope context
    - `artifacts`: List of artifacts with their status (`done` or other)
 
-   **If any artifacts are not `done`:**
-   - Display warning listing incomplete artifacts
-   - Prompt user for confirmation to continue
-   - Proceed if user confirms
+    **If any artifacts are not `done`:**
+    - Stop the archive workflow and display the incomplete artifacts.
+    - Do not offer a confirmation override; complete the artifacts first.
 
 3. **Check task completion status**
 
@@ -39,12 +38,15 @@ Archive a completed change in the experimental workflow.
 
    Count tasks marked with `- [ ]` (incomplete) vs `- [x]` (complete).
 
-   **If incomplete tasks found:**
-   - Display warning showing count of incomplete tasks
-   - Prompt user for confirmation to continue
-   - Proceed if user confirms
+    **If incomplete tasks found:**
+    - Stop the archive workflow and display the count of incomplete tasks.
+    - Do not offer a confirmation override; complete the tasks first.
 
-   **If no tasks file exists:** Proceed without task-related warning.
+    **If no tasks file exists:** Stop the archive workflow; a completed task list is required.
+
+    Run `mise run acceptance` after task completion. If it fails, or the final checked
+    task does not carry the exact `mise run acceptance` command, stop the archive workflow.
+    Do not offer a confirmation override for unverified acceptance.
 
 4. **Assess delta spec sync state**
 
@@ -85,7 +87,7 @@ Archive a completed change in the experimental workflow.
    - Schema that was used
    - Archive location
    - Spec sync status (synced / sync skipped / no delta specs)
-   - Note about any warnings (incomplete artifacts/tasks)
+    - Verified acceptance result
 
 **Output On Success**
 
@@ -113,24 +115,6 @@ All artifacts complete. All tasks complete.
 All artifacts complete. All tasks complete.
 ```
 
-**Output On Success With Warnings**
-
-```
-## Archive Complete (with warnings)
-
-**Change:** <change-name>
-**Schema:** <schema-name>
-**Archived to:** the archive path derived from `planningHome.changesDir`/YYYY-MM-DD-<name>/
-**Specs:** Sync skipped (user chose to skip)
-
-**Warnings:**
-- Archived with 2 incomplete artifacts
-- Archived with 3 incomplete tasks
-- Delta spec sync was skipped (user chose to skip)
-
-Review the archive if this was not intentional.
-```
-
 **Output On Error (Archive Exists)**
 
 ```
@@ -150,7 +134,7 @@ Target archive directory already exists.
 **Guardrails**
 - Always prompt for change selection if not provided
 - Use artifact graph (openspec status --json) for completion checking
-- Don't block archive on warnings - just inform and confirm
+- Hard-stop before archive when artifacts/tasks are incomplete or acceptance is unverified; never offer a confirmation override
 - Preserve .openspec.yaml when moving to archive (it moves with the directory)
 - Show clear summary of what happened
 - If sync is requested, use the Skill tool to invoke `openspec-sync-specs` (agent-driven)
