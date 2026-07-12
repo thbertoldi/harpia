@@ -60,6 +60,15 @@ type postgresStore struct {
 func (s *postgresStore) AppendMessage(ctx context.Context, tenantID uuid.UUID, input AppendInput) (*chatv1.ThreadMessage, error) {
 	var msg *chatv1.ThreadMessage
 	err := database.WithTenant(ctx, s.pool, tenantID, func(q database.Querier) error {
+		// Serialize concurrent appends on the same thread so the per-thread
+		// sequence counter is race-free (AppendMessageTx's own contract).
+		threadID, err := uuid.Parse(input.ThreadID)
+		if err != nil {
+			return fmt.Errorf("chat: AppendMessage: parse thread id: %w", err)
+		}
+		if err := LockThreadForUpdate(ctx, q, tenantID, threadID); err != nil {
+			return err
+		}
 		var appendErr error
 		msg, appendErr = AppendMessageTx(ctx, q, tenantID, input)
 		return appendErr

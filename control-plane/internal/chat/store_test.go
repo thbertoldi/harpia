@@ -106,8 +106,7 @@ func TestAppendMessageConcurrentIntegration(t *testing.T) {
 	defer pool.Close()
 
 	store := NewPostgresStore(pool)
-	tenantID := uuid.New()
-	threadID := uuid.New().String()
+	tenantID, threadID := setupChatTxFixtures(t, ctx, pool)
 
 	const workers = 8
 	var wg sync.WaitGroup
@@ -117,8 +116,8 @@ func TestAppendMessageConcurrentIntegration(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			_, appendErr := store.AppendMessage(ctx, tenantID, AppendInput{
-				ThreadID:    threadID,
-				Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
+			ThreadID:    threadID.String(),
+			Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
 				Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_USER_TEXT,
 				Text:        "concurrent",
 				PayloadJSON: "{}",
@@ -134,7 +133,7 @@ func TestAppendMessageConcurrentIntegration(t *testing.T) {
 		t.Fatalf("concurrent append failed: %v", appendErr)
 	}
 
-	msgs, err := store.ListMessages(ctx, tenantID, threadID, 0, 0)
+	msgs, err := store.ListMessages(ctx, tenantID, threadID.String(), 0, 0)
 	if err != nil {
 		t.Fatalf("list messages: %v", err)
 	}
