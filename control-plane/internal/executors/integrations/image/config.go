@@ -10,10 +10,9 @@ const (
 	ProviderOpenAI = "openai"
 	ProviderNoop   = "noop"
 
-	defaultModel    = "dall-e-3"
-	defaultSize     = "1024x1024"
-	defaultQuality  = "standard"
-	noAPIKeyEnvName = "HARPIA_IMAGE_NOOP_KEY" // referenced by noop configs that still carry api_key_env
+	defaultModel   = "dall-e-3"
+	defaultSize    = "1024x1024"
+	defaultQuality = "standard"
 )
 
 // knownModels are the OpenAI Images API models the DALL-E adapter supports.
@@ -38,11 +37,10 @@ var knownQualities = map[string]struct{}{
 }
 
 // InstallationConfig is the tenant-side configuration for an image-asset-generator
-// installation. The API key is referenced by environment variable name
-// (APIKeyEnv), never stored inline in config_json.
+// installation. Provider credentials are deliberately excluded: the server resolves
+// them from its own provider-to-environment configuration at execution time.
 type InstallationConfig struct {
 	Provider       string `json:"provider"`
-	APIKeyEnv      string `json:"api_key_env"`
 	Model          string `json:"model"`
 	DefaultSize    string `json:"default_size"`
 	DefaultQuality string `json:"default_quality"`
@@ -50,9 +48,7 @@ type InstallationConfig struct {
 
 // ParseInstallationConfig parses and validates an image-asset-generator
 // installation config. It rejects empty configs, unknown providers, inline API
-// keys (api_key/key fields), and provider-specific invalid model/size/quality
-// values. For the noop provider the api_key_env is optional (dev path); for
-// openai it is required.
+// keys, and provider-specific invalid model/size/quality values.
 func ParseInstallationConfig(raw json.RawMessage) (InstallationConfig, error) {
 	trimmed := strings.TrimSpace(string(raw))
 	if trimmed == "" || trimmed == "{}" || trimmed == "null" {
@@ -62,7 +58,7 @@ func ParseInstallationConfig(raw json.RawMessage) (InstallationConfig, error) {
 		return InstallationConfig{}, fmt.Errorf("%w: config_json must be valid JSON", ErrInvalidConfig)
 	}
 
-	if err := rejectInlineAPIKey(raw); err != nil {
+	if err := validateTenantConfigFields(raw); err != nil {
 		return InstallationConfig{}, err
 	}
 
@@ -79,11 +75,6 @@ func ParseInstallationConfig(raw json.RawMessage) (InstallationConfig, error) {
 		return InstallationConfig{}, fmt.Errorf("%w: provider must be openai or noop", ErrInvalidConfig)
 	}
 
-	config.APIKeyEnv = strings.TrimSpace(config.APIKeyEnv)
-	if config.Provider == ProviderOpenAI && config.APIKeyEnv == "" {
-		return InstallationConfig{}, fmt.Errorf("%w: api_key_env is required for provider openai", ErrInvalidConfig)
-	}
-
 	config.Model = strings.TrimSpace(config.Model)
 	config.DefaultSize = strings.TrimSpace(config.DefaultSize)
 	config.DefaultQuality = strings.TrimSpace(config.DefaultQuality)
@@ -97,18 +88,22 @@ func ParseInstallationConfig(raw json.RawMessage) (InstallationConfig, error) {
 	return config, nil
 }
 
-// rejectInlineAPIKey fails when config_json carries an inline api_key or key
-// field. The API key must live in the worker environment and be referenced by
-// api_key_env so it never enters config_json or Temporal history.
-func rejectInlineAPIKey(raw json.RawMessage) error {
+// validateTenantConfigFields permits only the documented tenant configuration
+// shape. In particular, credential-like keys and api_key_env are rejected so
+// a tenant cannot influence which worker secret os.Getenv reads.
+func validateTenantConfigFields(raw json.RawMessage) error {
 	var probe map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &probe); err != nil {
 		return fmt.Errorf("%w: config_json must be a JSON object", ErrInvalidConfig)
 	}
 	for field := range probe {
-		switch strings.ToLower(strings.TrimSpace(field)) {
-		case "api_key", "key", "apikey", "secret", "token":
-			return fmt.Errorf("%w: api key must be referenced via api_key_env, not stored inline as %q", ErrInvalidConfig, field)
+		switch normalized := strings.ToLower(strings.TrimSpace(field)); normalized {
+		case "api_key", "key", "api_key_env", "apikey", "secret", "token":
+			return fmt.Errorf("%w: credential field %q is not allowed", ErrInvalidConfig, field)
+		case "provider", "model", "default_size", "default_quality":
+			continue
+		default:
+			return fmt.Errorf("%w: unsupported field %q", ErrInvalidConfig, field)
 		}
 	}
 	return nil

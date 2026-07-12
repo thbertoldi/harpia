@@ -2,6 +2,7 @@
   import {
     AlertTriangle,
     CheckCircle2,
+    Image,
     Link2,
     Plug,
     ShieldAlert,
@@ -27,6 +28,7 @@
     type DemoIntegrationCard,
     type DemoIntegrationFormValues,
     type DemoIntegrationGroup,
+    type ImageIntegrationProvider,
   } from "$lib/integrations/executor-installations";
   import { locale, translate } from "$lib/i18n";
   import { chipFlash, hoverCardLift } from "$lib/motion/transitions";
@@ -324,6 +326,8 @@
                       <div class="mb-2 flex items-center gap-2">
                         {#if card.kind === "rss"}
                           <Plug class="size-4 text-text-muted" />
+                        {:else if card.kind === "image"}
+                          <Image class="size-4 text-text-muted" />
                         {:else}
                           <Link2 class="size-4 text-text-muted" />
                         {/if}
@@ -332,10 +336,15 @@
                         </HarpyHeading>
                       </div>
                       <p class="font-body text-sm text-text-muted">
-                        {translate(
-                          `integrations.${card.kind}.description`,
-                          $locale,
-                        )}
+                        {card.kind === "image"
+                          ? translate(
+                              "executors.image-asset-generator.description",
+                              $locale,
+                            )
+                          : translate(
+                              `integrations.${card.kind}.description`,
+                              $locale,
+                            )}
                       </p>
                     </div>
                     <span
@@ -468,6 +477,124 @@
                               </p>
                             {/if}
                           </div>
+                        </div>
+                      {:else if card.kind === "image"}
+                        <div>
+                          <label
+                            for={`image-provider-${cardKey}`}
+                            class="mb-1 block font-mono text-[10px] tracking-widest text-text-muted-dark uppercase"
+                          >
+                            {translate(
+                              "executors.image-asset-generator.provider",
+                              $locale,
+                            )}
+                          </label>
+                          <select
+                            id={`image-provider-${cardKey}`}
+                            value={form.imageProvider}
+                            onchange={(event) =>
+                              updateForm(card, {
+                                imageProvider: (
+                                  event.currentTarget as HTMLSelectElement
+                                ).value as ImageIntegrationProvider,
+                              })}
+                            class="w-full rounded-md border border-border bg-surface px-3 py-2 font-body text-sm text-text outline-none focus:border-primary"
+                          >
+                            <option value="noop">
+                              {translate(
+                                "executors.image-asset-generator.provider.noop",
+                                $locale,
+                              )}
+                            </option>
+                            <option value="openai">
+                              {translate(
+                                "executors.image-asset-generator.provider.openai",
+                                $locale,
+                              )}
+                            </option>
+                          </select>
+                          <p
+                            class="mt-1 font-body text-xs text-text-muted-dark"
+                          >
+                            {translate(
+                              "executors.image-asset-generator.providerHelp",
+                              $locale,
+                            )}
+                          </p>
+                        </div>
+
+                        <div>
+                          <label
+                            for={`image-model-${cardKey}`}
+                            class="mb-1 block font-mono text-[10px] tracking-widest text-text-muted-dark uppercase"
+                          >
+                            {translate(
+                              "executors.image-asset-generator.model",
+                              $locale,
+                            )}
+                          </label>
+                          <input
+                            id={`image-model-${cardKey}`}
+                            value={form.imageModel}
+                            oninput={(event) =>
+                              updateForm(card, {
+                                imageModel: inputValue(event),
+                              })}
+                            class="w-full rounded-md border border-border bg-surface px-3 py-2 font-mono text-xs text-text outline-none focus:border-primary"
+                          />
+                        </div>
+
+                        <div>
+                          <label
+                            for={`image-size-${cardKey}`}
+                            class="mb-1 block font-mono text-[10px] tracking-widest text-text-muted-dark uppercase"
+                          >
+                            {translate(
+                              "executors.image-asset-generator.default_size",
+                              $locale,
+                            )}
+                          </label>
+                          <select
+                            id={`image-size-${cardKey}`}
+                            value={form.imageDefaultSize}
+                            onchange={(event) =>
+                              updateForm(card, {
+                                imageDefaultSize: (
+                                  event.currentTarget as HTMLSelectElement
+                                ).value,
+                              })}
+                            class="w-full rounded-md border border-border bg-surface px-3 py-2 font-body text-sm text-text outline-none focus:border-primary"
+                          >
+                            <option value="1024x1024">1024x1024</option>
+                            <option value="1792x1024">1792x1024</option>
+                            <option value="1024x1792">1024x1792</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label
+                            for={`image-quality-${cardKey}`}
+                            class="mb-1 block font-mono text-[10px] tracking-widest text-text-muted-dark uppercase"
+                          >
+                            {translate(
+                              "executors.image-asset-generator.default_quality",
+                              $locale,
+                            )}
+                          </label>
+                          <select
+                            id={`image-quality-${cardKey}`}
+                            value={form.imageDefaultQuality}
+                            onchange={(event) =>
+                              updateForm(card, {
+                                imageDefaultQuality: (
+                                  event.currentTarget as HTMLSelectElement
+                                ).value,
+                              })}
+                            class="w-full rounded-md border border-border bg-surface px-3 py-2 font-body text-sm text-text outline-none focus:border-primary"
+                          >
+                            <option value="standard">standard</option>
+                            <option value="hd">hd</option>
+                          </select>
                         </div>
                       {:else}
                         <div>

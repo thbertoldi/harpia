@@ -11,7 +11,7 @@ The handler runs in the Go control-plane Temporal worker (not the Python agent-r
 **Goals:**
 - Implement the `image-asset-generator` integration handler so the `generate-image` step can actually produce images.
 - Support at least one image provider (OpenAI DALL-E via Images API) as the initial adapter, with a clean port interface for adding more.
-- Validate installation config (API key reference, provider, model, dimensions).
+- Validate installation config (provider, model, dimensions) and prevent tenant credential references.
 - Register in bootstrap so the executor is live.
 - Support `ImageAsset` preview rendering (presigned URL or inline fallback).
 - Declare the `image-generation` capability on the SKU compatibility metadata.
@@ -45,17 +45,16 @@ The input artifact is `harpia.artifacts.v1.TextDraft`. The handler extracts the 
 
 ### D4: Config shape
 
-`InstallationConfig` JSON:
+Tenant `InstallationConfig` JSON:
 ```json
 {
   "provider": "openai",
-  "api_key_env": "OPENAI_API_KEY",
   "model": "dall-e-3",
   "default_size": "1024x1024",
   "default_quality": "standard"
 }
 ```
-The API key is referenced by environment variable name (`api_key_env`), NOT stored inline in `config_json`. This follows the pattern where the control-plane worker has the key in its environment (set via Kubernetes Secret). The `config_validator` checks that `provider` and `api_key_env` are non-empty and that `model` is a known value.
+The tenant never supplies a credential or an environment-variable name. The config validator accepts only these four fields and rejects `api_key`, `key`, `api_key_env`, and other credential-like fields. At execution time, a server-owned `ProviderResolver` maps the selected provider to an environment variable using `config.Config.ImageProviderAPIKeyEnvs`; its default is `openai → OPENAI_API_KEY`, with deployment override through `HARPIA_IMAGE_PROVIDER_API_KEY_ENVS`. The resolver calls `os.Getenv` only with this server-owned mapping. Missing OpenAI credentials produce a non-retryable provider error that names `openai`, never the environment variable.
 
 ### D5: Output artifact
 
@@ -67,7 +66,7 @@ Add an `ImageAsset` case to `artifacts/preview.go` that returns a presigned URL 
 
 ## Risks / Trade-offs
 
-- **[API key in environment vs. encrypted store]** → Pre-v1, environment variables via Kubernetes Secrets are acceptable. The Sol architecture for Odoo credentials recommends an encrypted credential table; this image executor should migrate to that pattern when it lands. For now, `api_key_env` keeps the key out of `config_json` and Temporal history.
+- **[API key in environment vs. encrypted store]** → Pre-v1, environment variables via Kubernetes Secrets are acceptable. The provider-to-environment map is server configuration, never tenant data, which keeps both the credential and its lookup name out of `config_json` and Temporal history.
 - **[Provider API rate limits / cost]** → Image generation has real per-call cost. The handler propagates provider rate-limit errors as `RetryableError` so Temporal backs off. Budget/credit enforcement is a separate concern (existing budget system applies).
 - **[Large image payloads in Temporal history]** → The handler stores image bytes in the PayloadStore (S3) and returns only the artifact ID in the `IntegrationExecutionResult`. No image bytes enter Temporal activity input/output.
 - **[Provider outage]** → Propagated as `RetryableError` with the standard Temporal retry policy (3 attempts). After exhaustion, the step fails and the plan execution surfaces the error.

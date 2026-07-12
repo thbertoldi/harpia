@@ -31,6 +31,6 @@ type GenerateResult struct {
 }
 
 // ProviderResolver selects a configured provider for an installation. The
-// handler invokes it at execution time so the OpenAI adapter can resolve the
-// API key from the worker environment lazily.
+// handler invokes it at execution time; resolver configuration, including any
+// credential environment names, is server-controlled.
 type ProviderResolver func(cfg InstallationConfig) (ImageProvider, error)

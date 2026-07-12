@@ -35,22 +35,31 @@ The system SHALL define an `ImageProvider` port interface so that multiple image
 
 ### Requirement: Installation config validation
 
-The system SHALL validate the `image-asset-generator` installation config at creation and update time via a registered `ConfigValidator`. The config MUST specify a `provider` and an `api_key_env` (environment variable name where the API key is stored). The API key itself MUST NOT be stored in `config_json`.
+The system SHALL validate the `image-asset-generator` installation config at creation and update time via a registered `ConfigValidator`. The config MUST specify a `provider` and MAY contain only `provider`, `model`, `default_size`, and `default_quality`. Credential values and credential environment names MUST NOT be stored in `config_json`.
 
 #### Scenario: Valid config accepted
 
-- **WHEN** an installation is created with `{"provider": "openai", "api_key_env": "OPENAI_API_KEY", "model": "dall-e-3"}`
+- **WHEN** an installation is created with `{"provider": "openai", "model": "dall-e-3", "default_size": "1024x1024", "default_quality": "standard"}`
 - **THEN** the config validator accepts it without error
 
 #### Scenario: Missing provider rejected
 
-- **WHEN** an installation is created with `{"api_key_env": "OPENAI_API_KEY"}` (no `provider`)
+- **WHEN** an installation is created with `{"model": "dall-e-3"}` (no `provider`)
 - **THEN** the config validator rejects it with an error indicating `provider` is required
 
-#### Scenario: API key in config_json rejected
+#### Scenario: Credential fields in config_json rejected
 
-- **WHEN** an installation is created with an inline `api_key` or `key` field in `config_json`
-- **THEN** the config validator rejects it with an error indicating the API key must be referenced via `api_key_env`, not stored inline
+- **WHEN** an installation is created or updated with an `api_key`, `key`, or `api_key_env` field in `config_json`
+- **THEN** the config validator rejects it
+
+### Requirement: Server-controlled credential resolution
+
+The system SHALL map image providers to credential environment names from server configuration, defaulting `openai` to `OPENAI_API_KEY`. No tenant-controlled config string may be passed to `os.Getenv`.
+
+#### Scenario: OpenAI server credential missing
+
+- **WHEN** an OpenAI image installation executes and the server-configured OpenAI credential is unset
+- **THEN** the step fails with a non-retryable `ProviderError` that names `openai` and does not disclose the environment-variable name
 
 ### Requirement: ImageAsset preview rendering
 
@@ -74,3 +83,12 @@ The system SHALL declare the `image-generation` capability on the `image-asset-g
 
 - **WHEN** a plan step declares `required_capabilities: ["image-generation"]` or `optional_capabilities: ["image-generation"]`
 - **THEN** the `image-asset-generator` SKU is included in the list of compatible executors for that step
+
+### Requirement: Image generator installation administration
+
+The admin integrations surface SHALL list `image-asset-generator` alongside the RSS and LinkedIn integration SKUs and save its tenant config as only `provider`, `model`, `default_size`, and `default_quality`.
+
+#### Scenario: Create a noop installation
+
+- **WHEN** an administrator creates an image generator installation with `provider: noop`
+- **THEN** the installation saves and appears in the integrations list with no credential input or stored credential field, and the UI immediately confirms the save

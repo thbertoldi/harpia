@@ -7,9 +7,9 @@ var (
 	ErrInvalidInput  = errors.New("invalid image generation input")
 )
 
-// ProviderError indicates a transient image provider API failure (rate limit,
-// upstream outage, network error) that Temporal should retry. Non-transient
-// provider failures (bad request, auth) should NOT be wrapped in ProviderError.
+// ProviderError describes an image provider failure. Provider.Generate failures
+// are retryable when the handler receives them; provider-resolution failures
+// (such as missing server credentials) are returned as terminal failed results.
 type ProviderError struct {
 	Provider string
 	Cause    error

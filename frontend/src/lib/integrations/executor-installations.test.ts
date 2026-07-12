@@ -25,12 +25,17 @@ const BASE_VALUES: DemoIntegrationFormValues = {
   feeds: [],
   linkedinMode: "oauth",
   oauthCredentialId: "",
+  imageProvider: "noop",
+  imageModel: "dall-e-3",
+  imageDefaultSize: "1024x1024",
+  imageDefaultQuality: "standard",
 };
 
 describe("integration executor installations", () => {
   it("maps demo executor SKU keys to integration kinds", () => {
     expect(integrationKindForSkuKey("rss-news-feed")).toBe("rss");
     expect(integrationKindForSkuKey("linkedin-publish")).toBe("linkedin");
+    expect(integrationKindForSkuKey("image-asset-generator")).toBe("image");
     expect(integrationKindForSkuKey("generic-server")).toBeNull();
   });
 
@@ -73,6 +78,23 @@ describe("integration executor installations", () => {
         linkedinMode: "approval_only",
       }),
     ).toBeNull();
+  });
+
+  it("builds image generator config without credential fields", () => {
+    const config = buildIntegrationConfigJSON("image", {
+      ...BASE_VALUES,
+      imageProvider: "openai",
+      imageModel: " dall-e-3 ",
+      imageDefaultSize: "1792x1024",
+      imageDefaultQuality: "hd",
+    });
+
+    expect(JSON.parse(config)).toEqual({
+      provider: "openai",
+      model: "dall-e-3",
+      default_size: "1792x1024",
+      default_quality: "hd",
+    });
   });
 
   it("validates required RSS and LinkedIn fields", () => {
@@ -134,6 +156,48 @@ describe("integration executor installations", () => {
       feeds: ["https://example.com/feed.xml", "https://news.example/rss"],
       linkedinMode: "oauth",
       oauthCredentialId: "",
+      imageProvider: "noop",
+      imageModel: "dall-e-3",
+      imageDefaultSize: "1024x1024",
+      imageDefaultQuality: "standard",
+    });
+  });
+
+  it("hydrates the credential-free image generator form from a persisted installation", () => {
+    const card: DemoIntegrationCard = {
+      kind: "image",
+      sku: create(ExecutorSKUSchema, {
+        id: "sku-image",
+        key: "image-asset-generator",
+        displayName: "Image Asset Generator",
+        kind: ExecutorKind.INTEGRATION,
+      }),
+      installation: create(ExecutorInstallationSchema, {
+        id: "inst-image",
+        tenantId: "tenant-1",
+        executorSkuId: "sku-image",
+        kind: ExecutorKind.INTEGRATION,
+        displayName: "OpenAI image generator",
+        enabled: true,
+        detail: {
+          case: "integration",
+          value: create(IntegrationInstallationSchema, {
+            connectionStatus: ConnectionStatus.CONNECTED,
+            configJson:
+              '{"provider":"openai","model":"dall-e-3","default_size":"1792x1024","default_quality":"hd"}',
+          }),
+        },
+      }),
+      connectionStatus: ConnectionStatus.CONNECTED,
+      configured: true,
+    };
+
+    expect(formValuesFromCard(card)).toMatchObject({
+      displayName: "OpenAI image generator",
+      imageProvider: "openai",
+      imageModel: "dall-e-3",
+      imageDefaultSize: "1792x1024",
+      imageDefaultQuality: "hd",
     });
   });
 

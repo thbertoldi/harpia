@@ -12,11 +12,13 @@ import { executorClient } from "$lib/rpc";
 export const DEMO_INTEGRATION_SKU_KEYS = [
   "rss-news-feed",
   "linkedin-publish",
+  "image-asset-generator",
 ] as const;
 
 export type DemoIntegrationSkuKey = (typeof DEMO_INTEGRATION_SKU_KEYS)[number];
-export type DemoIntegrationKind = "rss" | "linkedin";
+export type DemoIntegrationKind = "rss" | "linkedin" | "image";
 export type LinkedInIntegrationMode = "oauth" | "approval_only";
+export type ImageIntegrationProvider = "noop" | "openai";
 export type IntegrationValidationCode =
   | "rssFeedsRequired"
   | "rssFeedInvalidUrl"
@@ -28,6 +30,10 @@ export interface DemoIntegrationFormValues {
   feeds: string[];
   linkedinMode: LinkedInIntegrationMode;
   oauthCredentialId: string;
+  imageProvider: ImageIntegrationProvider;
+  imageModel: string;
+  imageDefaultSize: string;
+  imageDefaultQuality: string;
 }
 
 export interface DemoIntegrationCard {
@@ -67,6 +73,8 @@ export function integrationKindForSkuKey(
       return "rss";
     case "linkedin-publish":
       return "linkedin";
+    case "image-asset-generator":
+      return "image";
     default:
       return null;
   }
@@ -174,6 +182,14 @@ export function formValuesFromCard(
     oauthCredentialId: isString(config.oauth_credential_id)
       ? config.oauth_credential_id
       : "",
+    imageProvider: config.provider === "openai" ? "openai" : "noop",
+    imageModel:
+      isString(config.model) && config.model.trim() ? config.model : "dall-e-3",
+    imageDefaultSize:
+      config.default_size === "1792x1024" || config.default_size === "1024x1792"
+        ? config.default_size
+        : "1024x1024",
+    imageDefaultQuality: config.default_quality === "hd" ? "hd" : "standard",
   };
 }
 
@@ -206,6 +222,15 @@ export function buildIntegrationConfigJSON(
 ): string {
   if (kind === "rss") {
     return JSON.stringify({ feeds: normalizedFeeds(values.feeds) });
+  }
+
+  if (kind === "image") {
+    return JSON.stringify({
+      provider: values.imageProvider,
+      model: values.imageModel.trim() || "dall-e-3",
+      default_size: values.imageDefaultSize,
+      default_quality: values.imageDefaultQuality,
+    });
   }
 
   if (values.linkedinMode === "approval_only") {
