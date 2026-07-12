@@ -1,6 +1,8 @@
 package plans
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -13,6 +15,23 @@ import (
 func TestMergeParameterValue_IntoEmpty(t *testing.T) {
 	got := MergeParameterValue("", "theme", "AI operations")
 	assertJSONEqual(t, got, `{"theme":"AI operations"}`)
+}
+
+func TestConfigurationAuditDraftRedactsSecretParameterValues(t *testing.T) {
+	config := &PlanConfiguration{
+		ID:               uuid.New(),
+		Status:           ConfigurationStatusRunnable,
+		ParameterValues:  json.RawMessage(`{"theme":"safe","api_token":"never-store-me"}`),
+		SlotBindings:     json.RawMessage(`[]`),
+		OverseerBindings: json.RawMessage(`[]`),
+		BehaviorPolicies: json.RawMessage(`{}`),
+	}
+	draft := configurationCreatedAuditDraft(config)
+	for _, entry := range draft.Diff {
+		if entry.Field == "parameter_values" && strings.Contains(entry.After, "never-store-me") {
+			t.Fatalf("secret-like parameter value reached audit draft: %s", entry.After)
+		}
+	}
 }
 
 func TestMergeParameterValue_OverwriteExisting(t *testing.T) {

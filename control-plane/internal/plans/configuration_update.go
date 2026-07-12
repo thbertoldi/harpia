@@ -12,8 +12,109 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
+	"github.com/harpia/control-plane/internal/audit"
 	"github.com/harpia/control-plane/internal/database"
 )
+
+var configurationAuditFields = []string{
+	"status", "parameter_values", "slot_bindings", "overseer_bindings", "behavior_policies",
+}
+
+func configurationCreatedAuditDraft(config *PlanConfiguration) audit.EventDraft {
+	if config == nil {
+		return audit.EventDraft{}
+	}
+	return audit.EventDraft{
+		EventType:      "plan_configuration.created",
+		BoundedContext: "plan_management",
+		HasSubject:     true,
+		Subject:        audit.Subject{Type: "plan_configuration", ID: config.ID.String()},
+		Diff: []audit.DiffEntry{
+			{Field: "status", After: config.Status, HasAfter: true},
+			{Field: "parameter_values", After: safeAuditJSON(config.ParameterValues), HasAfter: true},
+			{Field: "slot_bindings", After: canonicalAuditJSON(config.SlotBindings), HasAfter: true},
+			{Field: "overseer_bindings", After: canonicalAuditJSON(config.OverseerBindings), HasAfter: true},
+			{Field: "behavior_policies", After: canonicalAuditJSON(config.BehaviorPolicies), HasAfter: true},
+		},
+		DiffAllowlist: configurationAuditFields,
+	}
+}
+
+func configurationUpdatedAuditDraft(before, after *PlanConfiguration) audit.EventDraft {
+	if after == nil {
+		return audit.EventDraft{}
+	}
+	draft := audit.EventDraft{
+		EventType:      "plan_configuration.updated",
+		BoundedContext: "plan_management",
+		HasSubject:     true,
+		Subject:        audit.Subject{Type: "plan_configuration", ID: after.ID.String()},
+		DiffAllowlist:  configurationAuditFields,
+	}
+	if before == nil {
+		return draft
+	}
+	appendChanged := func(field, oldValue, newValue string) {
+		if oldValue != newValue {
+			draft.Diff = append(draft.Diff, audit.DiffEntry{Field: field, Before: oldValue, After: newValue, HasBefore: true, HasAfter: true})
+		}
+	}
+	appendChanged("status", before.Status, after.Status)
+	appendChanged("parameter_values", safeAuditJSON(before.ParameterValues), safeAuditJSON(after.ParameterValues))
+	appendChanged("slot_bindings", canonicalAuditJSON(before.SlotBindings), canonicalAuditJSON(after.SlotBindings))
+	appendChanged("overseer_bindings", canonicalAuditJSON(before.OverseerBindings), canonicalAuditJSON(after.OverseerBindings))
+	appendChanged("behavior_policies", canonicalAuditJSON(before.BehaviorPolicies), canonicalAuditJSON(after.BehaviorPolicies))
+	if before.Status != after.Status {
+		draft.EventType = "plan_configuration.status_changed"
+	}
+	return draft
+}
+
+// safeAuditJSON canonicalizes selected configuration parameter values and
+// replaces secret-shaped keys before they enter the generic diff field. The
+// recorder's allowlist/denylist remains the final safety boundary.
+func safeAuditJSON(raw json.RawMessage) string {
+	var value any
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return "{}"
+	}
+	redactAuditValue(value)
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		return "{}"
+	}
+	return string(encoded)
+}
+
+func redactAuditValue(value any) {
+	switch node := value.(type) {
+	case map[string]any:
+		for key, child := range node {
+			lower := strings.ToLower(strings.TrimSpace(key))
+			if strings.Contains(lower, "secret") || strings.Contains(lower, "token") || strings.Contains(lower, "password") || strings.Contains(lower, "api_key") || strings.Contains(lower, "credential") {
+				node[key] = "<redacted>"
+				continue
+			}
+			redactAuditValue(child)
+		}
+	case []any:
+		for _, child := range node {
+			redactAuditValue(child)
+		}
+	}
+}
+
+func canonicalAuditJSON(raw json.RawMessage) string {
+	var value any
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return "{}"
+	}
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		return "{}"
+	}
+	return string(encoded)
+}
 
 // applyConfigurationUpdate is the single mutation path for a plan configuration
 // projection. It runs entirely against the provided Querier — typically a tx the

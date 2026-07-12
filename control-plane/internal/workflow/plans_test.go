@@ -272,9 +272,9 @@ func TestPlanWorkflowSkipsNonSelectedBranch(t *testing.T) {
 			env.OnActivity(StartPlanExecutionActivityName, mock.Anything, input).Return(nil)
 			if tc.wantSkipCalls {
 				env.OnActivity(CreateSkippedStepExecutionActivityName, mock.Anything, mock.Anything).Return(
-					func(ctx context.Context, skipInput CreateSkippedStepInput) error {
+					func(ctx context.Context, skipInput CreateSkippedStepInput) (StepExecutionRecord, error) {
 						skippedSteps = append(skippedSteps, skipInput.PlanStepKey)
-						return nil
+						return StepExecutionRecord{ID: "skipped-" + skipInput.PlanStepKey, PlanStepKey: skipInput.PlanStepKey}, nil
 					},
 				)
 			}
@@ -390,9 +390,9 @@ func TestPlanWorkflowSkipsOptedOutCapability(t *testing.T) {
 			env.OnActivity(StartPlanExecutionActivityName, mock.Anything, input).Return(nil)
 			if tc.wantSkipCalls {
 				env.OnActivity(CreateSkippedStepExecutionActivityName, mock.Anything, mock.Anything).Return(
-					func(ctx context.Context, skipInput CreateSkippedStepInput) error {
+					func(ctx context.Context, skipInput CreateSkippedStepInput) (StepExecutionRecord, error) {
 						skippedSteps = append(skippedSteps, skipInput.PlanStepKey)
-						return nil
+						return StepExecutionRecord{ID: "skipped-" + skipInput.PlanStepKey, PlanStepKey: skipInput.PlanStepKey}, nil
 					},
 				)
 			}
@@ -468,6 +468,28 @@ func TestPlanActivityOptionsUseBoundedRetries(t *testing.T) {
 	}
 	if options.RetryPolicy.MaximumInterval <= 0 {
 		t.Fatal("MaximumInterval must be positive")
+	}
+}
+
+func TestWorkflowAuditEventsUseStableDedupeKeys(t *testing.T) {
+	input := PlanWorkflowInput{
+		TenantID:        "22222222-2222-2222-2222-222222222222",
+		PlanExecutionID: "11111111-1111-1111-1111-111111111111",
+	}
+	planEvent := planTransitionAudit(input, "plan_execution.started", "pending", "running")
+	if got, want := planEvent.DedupeKey, input.PlanExecutionID+":plan_execution.started"; got != want {
+		t.Fatalf("plan transition key = %q, want %q", got, want)
+	}
+	stepEvent := stepTransitionAudit(input.TenantID, "step-1", "step_execution.completed", "running", "completed")
+	if got, want := stepEvent.DedupeKey, "step-1:step_execution.completed"; got != want {
+		t.Fatalf("step transition key = %q, want %q", got, want)
+	}
+	approval := approvalDecisionAudit(ResolveApprovalRequestInput{TenantID: input.TenantID, ApprovalRequestID: "approval-1", Approved: true})
+	if got, want := approval.DedupeKey, "approval-1:approval.decided:approve"; got != want {
+		t.Fatalf("approval decision key = %q, want %q", got, want)
+	}
+	if approval.Decision != "approve" || approval.SubjectType != "approval_request" {
+		t.Fatalf("approval event is not typed/decided: %#v", approval)
 	}
 }
 
@@ -1094,6 +1116,7 @@ func newPlanWorkflowTestEnv(t *testing.T) *testsuite.TestWorkflowEnvironment {
 	env.RegisterActivity(ResolveApprovalRequestActivity)
 	env.RegisterActivity(CompletePlanExecutionActivity)
 	env.RegisterActivity(FailPlanExecutionActivity)
+	env.RegisterActivity(RecordAuditActivity)
 	return env
 }
 
@@ -1109,8 +1132,8 @@ func CreateStepExecutionActivity(context.Context, CreateStepExecutionInput) (Ste
 	return StepExecutionRecord{}, unexpectedActivityError("CreateStepExecutionActivity")
 }
 
-func CreateSkippedStepExecutionActivity(context.Context, CreateSkippedStepInput) error {
-	return unexpectedActivityError("CreateSkippedStepExecutionActivity")
+func CreateSkippedStepExecutionActivity(context.Context, CreateSkippedStepInput) (StepExecutionRecord, error) {
+	return StepExecutionRecord{}, unexpectedActivityError("CreateSkippedStepExecutionActivity")
 }
 
 func RunIntegrationActivity(context.Context, ExecutorActivityInput) (ExecutorActivityResult, error) {
@@ -1155,6 +1178,10 @@ func CompletePlanExecutionActivity(context.Context, PlanWorkflowInput) error {
 
 func FailPlanExecutionActivity(context.Context, PlanFailureInput) error {
 	return unexpectedActivityError("FailPlanExecutionActivity")
+}
+
+func RecordAuditActivity(context.Context, AuditEvent) error {
+	return nil
 }
 
 func unexpectedActivityError(name string) error {
@@ -1304,12 +1331,12 @@ func multiBranchSnapshot(outputFormat plansv1.ContentOutputFormat) PlanExecution
 			},
 		},
 		ExecutorInstallations: map[string]ExecutorInstallationSnapshot{
-			"fetch-news":        {ID: "installation-fetch", Kind: ExecutorKindIntegration},
-			"write-draft":       {ID: "installation-write", Kind: ExecutorKindAgent},
+			"fetch-news":         {ID: "installation-fetch", Kind: ExecutorKindIntegration},
+			"write-draft":        {ID: "installation-write", Kind: ExecutorKindAgent},
 			"adapt-for-linkedin": {ID: "installation-adapt", Kind: ExecutorKindAgent},
-			"publish-post":      {ID: "installation-publish-post", Kind: ExecutorKindIntegration},
-			"draft-carousel":    {ID: "installation-draft-carousel", Kind: ExecutorKindAgent},
-			"publish-carousel":  {ID: "installation-publish-carousel", Kind: ExecutorKindIntegration},
+			"publish-post":       {ID: "installation-publish-post", Kind: ExecutorKindIntegration},
+			"draft-carousel":     {ID: "installation-draft-carousel", Kind: ExecutorKindAgent},
+			"publish-carousel":   {ID: "installation-publish-carousel", Kind: ExecutorKindIntegration},
 		},
 	}
 }
@@ -1359,7 +1386,7 @@ func optOutCapabilitySnapshot(includedCapabilities []string) PlanExecutionSnapsh
 					InputArtifactTypeId:  "harpia.artifacts.v1.TextDraft",
 					OutputArtifactTypeId: "harpia.artifacts.v1.ImageAsset",
 					ExecutorRequirement: &plansv1.ExecutorRequirement{
-						ExecutorKind:        plansv1.ExecutorKind_EXECUTOR_KIND_AGENT,
+						ExecutorKind:         plansv1.ExecutorKind_EXECUTOR_KIND_AGENT,
 						OptionalCapabilities: []string{"image-generation"},
 					},
 				},

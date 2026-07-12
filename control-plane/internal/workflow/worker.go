@@ -33,6 +33,7 @@ func StartWorker(ctx context.Context, temporalClient client.Client, taskQueue st
 		w.RegisterActivity(planActivities.ResolveApprovalRequestActivity)
 		w.RegisterActivity(planActivities.CompletePlanExecutionActivity)
 		w.RegisterActivity(planActivities.FailPlanExecutionActivity)
+		w.RegisterActivity(planActivities.RecordAuditActivity)
 	}
 
 	slog.Info("starting temporal worker", "task_queue", taskQueue)

@@ -182,6 +182,7 @@ func (i *RequestContextInterceptor) resolveDevContext(tenantRef string) (Request
 		UserID:      stableUserUUIDFromSubject(DevUserSubject),
 		Roles:       []string{selected.Role},
 		Tenants:     []TenantMembership{membership},
+		UsedDevAuth: true,
 	}, nil
 }
 

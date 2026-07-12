@@ -1,6 +1,8 @@
 package executors
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
 
 	executorsv1 "github.com/harpia/control-plane/gen/harpia/executors/v1"
@@ -27,6 +29,16 @@ func TestDBKindRoundTrip(t *testing.T) {
 		if got != tc.db {
 			t.Fatalf("protoKindToDB(%v) = %q, want %q", tc.proto, got, tc.db)
 		}
+	}
+}
+
+func TestInstallationAuditMetadataOmitsConfigSecrets(t *testing.T) {
+	metadata := installationConfigMetadata(json.RawMessage(`{"feed_url":"https://example.test/feed","oauth_token":"never-store-me","api_key":"also-secret"}`))
+	if strings.Contains(metadata, "never-store-me") || strings.Contains(metadata, "also-secret") || strings.Contains(metadata, "oauth_token") || strings.Contains(metadata, "api_key") {
+		t.Fatalf("secret config reached audit metadata: %s", metadata)
+	}
+	if !strings.Contains(metadata, "feed_url") {
+		t.Fatalf("safe config metadata missing safe key: %s", metadata)
 	}
 }
 

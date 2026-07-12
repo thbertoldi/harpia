@@ -17,6 +17,7 @@ import (
 
 	chatv1 "github.com/harpia/control-plane/gen/harpia/chat/v1"
 	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
+	"github.com/harpia/control-plane/internal/audit"
 	"github.com/harpia/control-plane/internal/chat"
 	"github.com/harpia/control-plane/internal/database"
 	"github.com/harpia/control-plane/internal/identity"
@@ -367,6 +368,10 @@ func (h *PlanHandler) CreatePlanConfiguration(ctx context.Context, req *connect.
 			_ = err
 		}
 	}
+	// The interceptor owns actor/tenant/trace capture and records only after
+	// this successful RPC returns. Supply it a typed subject plus selected,
+	// safe configuration values; no recorder call occurs in this domain handler.
+	audit.EnrichRequestDraft(ctx, configurationCreatedAuditDraft(created))
 
 	return connect.NewResponse(&plansv1.CreatePlanConfigurationResponse{
 		PlanConfiguration: configurationToProto(created, template),
@@ -540,6 +545,7 @@ func (h *PlanHandler) UpdatePlanConfiguration(ctx context.Context, req *connect.
 		updated.Status != ConfigurationStatusDraft {
 		_ = h.assistant.NextTurn(ctx, tenantID, updated.ID)
 	}
+	audit.EnrichRequestDraft(ctx, configurationUpdatedAuditDraft(existing, updated))
 
 	return connect.NewResponse(&plansv1.UpdatePlanConfigurationResponse{
 		PlanConfiguration: configurationToProto(updated, template),
@@ -827,6 +833,17 @@ func (h *PlanHandler) CreatePlanExecution(ctx context.Context, req *connect.Requ
 		}
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("start plan workflow: %w", err))
 	}
+	audit.EnrichRequestDraft(ctx, audit.EventDraft{
+		EventType:      "plan_execution.created",
+		BoundedContext: "plan_management",
+		HasSubject:     true,
+		Subject:        audit.Subject{Type: "plan_execution", ID: execution.ID.String()},
+		Diff: []audit.DiffEntry{
+			{Field: "status", After: execution.Status, HasAfter: true},
+			{Field: "plan_configuration_id", After: configID.String(), HasAfter: true},
+		},
+		DiffAllowlist: []string{"status", "plan_configuration_id"},
+	})
 
 	return connect.NewResponse(&plansv1.CreatePlanExecutionResponse{
 		PlanExecution: executionToProto(execution),

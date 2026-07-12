@@ -25,6 +25,9 @@ type RequestContext struct {
 	UserID      string
 	Roles       []string
 	Tenants     []TenantMembership
+	// UsedDevAuth is true only after the enabled development token has been
+	// successfully resolved. It deliberately exposes no credential material.
+	UsedDevAuth bool
 }
 
 func WithRequestContext(ctx context.Context, rc RequestContext) context.Context {

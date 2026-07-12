@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/google/uuid"
 	"go.temporal.io/sdk/client"
 
 	"github.com/harpia/control-plane/gen/harpia/agents/v1/agentsv1connect"
@@ -84,6 +85,21 @@ func runWorker(ctx context.Context, cfg *config.Config) {
 	executorRepo := executors.NewRepository(pool)
 	chatStore := chat.NewPostgresStore(pool)
 	artifactRepo := artifacts.NewRepository(pool)
+	auditRepo := audit.NewRepository(pool)
+	auditWriter, auditQueue := audit.NewWriter(audit.WriterOptions{
+		Repo:   auditRepo,
+		Config: auditWriterConfig(cfg),
+		Logger: slog.Default(),
+	})
+	auditWriter.Start()
+	defer func() {
+		drainCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := auditWriter.Shutdown(drainCtx); err != nil {
+			slog.Error("worker audit writer drain failed", "error", err)
+		}
+	}()
+	workerAuditRecorder := audit.NewRecorder(audit.RecorderOptions{Queue: auditQueue, Logger: slog.Default()})
 
 	tenantObjectStore := storage.NewTenantObjectStore(cfg.GarageBucket)
 	garageStore, err := artifacts.NewGarageStore(artifacts.GarageConfig{
@@ -106,6 +122,7 @@ func runWorker(ctx context.Context, cfg *config.Config) {
 	planActivities := &workflow.PlanActivities{
 		Runtime:      plans.NewRuntimeRepository(planRepo, executorRepo, chatStore),
 		Integrations: executorRuntime.Integrations,
+		Audit:        workflowAuditRecorder{recorder: workerAuditRecorder},
 	}
 
 	c, err := client.Dial(client.Options{HostPort: cfg.TemporalHost})
@@ -376,7 +393,7 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 			DefaultTenantID:            tenantID,
 			AutoProvisionDefaultTenant: cfg.AutoProvisionDefaultTenant,
 		}),
-	})}
+	}), audit.NewAuditInterceptor(auditRecorder)}
 	if cacheResources.rateLimiter != nil {
 		interceptors = append(interceptors, server.NewRateLimitInterceptor(cacheResources.rateLimiter, 100))
 	}
@@ -491,6 +508,50 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 // by workflow audit activities. It is assigned during API startup once the
 // bounded writer queue exists.
 var auditRecorder audit.Recorder
+
+// workflowAuditRecorder is the composition-root adapter from the workflow
+// package's transport-free activity event to the shared audit recorder. It
+// keeps the workflow package free of Connect and pgx while preserving the same
+// redaction/queue/write path as public RPC events.
+type workflowAuditRecorder struct {
+	recorder audit.Recorder
+}
+
+func (r workflowAuditRecorder) RecordAudit(ctx context.Context, event workflow.AuditEvent) error {
+	if r.recorder == nil {
+		return nil
+	}
+	tenantID, err := uuid.Parse(event.TenantID)
+	if err != nil {
+		return fmt.Errorf("workflow audit tenant id: %w", err)
+	}
+	diff := make([]audit.DiffEntry, 0, len(event.Diff))
+	allowlist := make([]string, 0, len(event.Diff))
+	for _, entry := range event.Diff {
+		diff = append(diff, audit.DiffEntry{
+			Field: entry.Field, Before: entry.Before, After: entry.After,
+			HasBefore: entry.Before != "", HasAfter: entry.After != "",
+		})
+		allowlist = append(allowlist, entry.Field)
+	}
+	return r.recorder.Record(ctx, audit.EventDraft{
+		TenantID:       tenantID,
+		DedupeKey:      event.DedupeKey,
+		EventType:      event.EventType,
+		BoundedContext: event.BoundedContext,
+		Actor: audit.Actor{
+			Kind:        "workflow_engine",
+			ID:          "temporal",
+			DisplayName: "Workflow engine",
+			AgentType:   "temporal",
+		},
+		Subject:       audit.Subject{Type: event.SubjectType, ID: event.SubjectID},
+		HasSubject:    event.SubjectType != "" && event.SubjectID != "",
+		Diff:          diff,
+		DiffAllowlist: allowlist,
+		Decision:      event.Decision,
+	})
+}
 
 // auditWriterConfig maps the operator-configured audit values into the
 // writer's tuning, applying conservative defaults when unset.

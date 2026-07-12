@@ -63,6 +63,9 @@ func TestRequestContextInterceptorPopulatesContext(t *testing.T) {
 		if _, err := uuid.Parse(rc.UserID); err != nil {
 			t.Fatalf("user ID is not a parseable UUID: %v", err)
 		}
+		if !rc.UsedDevAuth {
+			t.Fatal("enabled dev token must be represented without exposing the token")
+		}
 		return connect.NewResponse(&identityv1.GetTenantResponse{}), nil
 	})
 	req := connect.NewRequest(&identityv1.GetTenantRequest{TenantId: DevTenantAlias})

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	executorsv1 "github.com/harpia/control-plane/gen/harpia/executors/v1"
+	"github.com/harpia/control-plane/internal/audit"
 	"github.com/harpia/control-plane/internal/identity"
 )
 
@@ -371,6 +373,7 @@ func (h *Handler) CreateExecutorInstallation(ctx context.Context, req *connect.R
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
+	audit.EnrichRequestDraft(ctx, installationCreatedAuditDraft(created))
 
 	return connect.NewResponse(&executorsv1.CreateExecutorInstallationResponse{
 		Installation: installationToProto(created),
@@ -481,6 +484,7 @@ func (h *Handler) UpdateExecutorInstallation(ctx context.Context, req *connect.R
 		}
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
+	audit.EnrichRequestDraft(ctx, installationUpdatedAuditDraft(existing, saved))
 
 	return connect.NewResponse(&executorsv1.UpdateExecutorInstallationResponse{
 		Installation: installationToProto(saved),
@@ -496,10 +500,128 @@ func (h *Handler) DeleteExecutorInstallation(ctx context.Context, req *connect.R
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
+	existing, err := h.repo.GetInstallationByID(ctx, tenantID, installationID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, err)
+		}
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
 	if err := h.repo.DeleteInstallation(ctx, tenantID, installationID); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
+	audit.EnrichRequestDraft(ctx, installationDeletedAuditDraft(existing))
 	return connect.NewResponse(&executorsv1.DeleteExecutorInstallationResponse{}), nil
+}
+
+var installationAuditFields = []string{
+	"display_name", "enabled", "connection_status", "manifest_id", "manifest_version", "config_metadata", "deleted",
+}
+
+func installationCreatedAuditDraft(installation *ExecutorInstallation) audit.EventDraft {
+	if installation == nil {
+		return audit.EventDraft{}
+	}
+	draft := installationAuditDraft("executor_installation.created", installation)
+	for _, field := range installationAuditFields[:len(installationAuditFields)-1] {
+		if value, ok := installationAuditValue(installation, field); ok {
+			draft.Diff = append(draft.Diff, audit.DiffEntry{Field: field, After: value, HasAfter: true})
+		}
+	}
+	return draft
+}
+
+func installationUpdatedAuditDraft(before, after *ExecutorInstallation) audit.EventDraft {
+	draft := installationAuditDraft("executor_installation.updated", after)
+	if before == nil || after == nil {
+		return draft
+	}
+	for _, field := range installationAuditFields[:len(installationAuditFields)-1] {
+		oldValue, oldOK := installationAuditValue(before, field)
+		newValue, newOK := installationAuditValue(after, field)
+		if oldOK != newOK || oldValue != newValue {
+			entry := audit.DiffEntry{Field: field}
+			if oldOK {
+				entry.Before, entry.HasBefore = oldValue, true
+			}
+			if newOK {
+				entry.After, entry.HasAfter = newValue, true
+			}
+			draft.Diff = append(draft.Diff, entry)
+		}
+	}
+	return draft
+}
+
+func installationDeletedAuditDraft(installation *ExecutorInstallation) audit.EventDraft {
+	draft := installationAuditDraft("executor_installation.deleted", installation)
+	draft.Diff = []audit.DiffEntry{{Field: "deleted", Before: "false", After: "true", HasBefore: true, HasAfter: true}}
+	return draft
+}
+
+func installationAuditDraft(eventType string, installation *ExecutorInstallation) audit.EventDraft {
+	draft := audit.EventDraft{
+		EventType:      eventType,
+		BoundedContext: "executor_catalog",
+		DiffAllowlist:  installationAuditFields,
+	}
+	if installation != nil {
+		draft.HasSubject = true
+		draft.Subject = audit.Subject{Type: "executor_installation", ID: installation.ID.String()}
+	}
+	return draft
+}
+
+func installationAuditValue(installation *ExecutorInstallation, field string) (string, bool) {
+	if installation == nil {
+		return "", false
+	}
+	switch field {
+	case "display_name":
+		return installation.DisplayName, true
+	case "enabled":
+		return strconv.FormatBool(installation.Enabled), true
+	case "connection_status":
+		if installation.ConnectionStatus != nil {
+			return *installation.ConnectionStatus, true
+		}
+	case "manifest_id":
+		if installation.ManifestID != nil {
+			return *installation.ManifestID, true
+		}
+	case "manifest_version":
+		if installation.ManifestVersion != nil {
+			return *installation.ManifestVersion, true
+		}
+	case "config_metadata":
+		return installationConfigMetadata(installation.ConfigJSON), true
+	}
+	return "", false
+}
+
+// installationConfigMetadata deliberately records only non-secret top-level
+// key names. It never serializes config_json or a config value, so credentials,
+// feed URLs, OAuth tokens, and other connection secrets cannot enter the audit
+// draft even before the recorder's defensive redaction is applied.
+func installationConfigMetadata(raw json.RawMessage) string {
+	var config map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &config); err != nil || len(config) == 0 {
+		return "{}"
+	}
+	keys := make([]string, 0, len(config))
+	for key := range config {
+		lower := strings.ToLower(key)
+		if strings.Contains(lower, "secret") || strings.Contains(lower, "token") || strings.Contains(lower, "password") || strings.Contains(lower, "api_key") || strings.Contains(lower, "credential") {
+			continue
+		}
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	encoded, err := json.Marshal(map[string]any{"keys": keys})
+	if err != nil {
+		return "{}"
+	}
+	return string(encoded)
 }
 
 func pageParams(pageSize int32, pageToken string) (limit int, offset int, err error) {

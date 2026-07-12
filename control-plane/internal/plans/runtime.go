@@ -198,15 +198,15 @@ func (r *RuntimeRepository) CreateStepExecution(ctx context.Context, input workf
 // CreateSkippedStepExecution records a SKIPPED step row for a branch the run did
 // not select (e.g. a non-selected content_output_format branch). Skipped steps
 // carry no input artifact and emit no chat message — they are silent audit rows.
-func (r *RuntimeRepository) CreateSkippedStepExecution(ctx context.Context, input workflow.CreateSkippedStepInput) error {
+func (r *RuntimeRepository) CreateSkippedStepExecution(ctx context.Context, input workflow.CreateSkippedStepInput) (workflow.StepExecutionRecord, error) {
 	if r == nil || r.plans == nil {
-		return fmt.Errorf("plan runtime repository is not configured")
+		return workflow.StepExecutionRecord{}, fmt.Errorf("plan runtime repository is not configured")
 	}
 	tenantID, executionID, err := parseRuntimeTenantExecution(input.TenantID, input.PlanExecutionID)
 	if err != nil {
-		return err
+		return workflow.StepExecutionRecord{}, err
 	}
-	_, err = r.plans.CreateStepExecution(ctx, &StepExecution{
+	step, err := r.plans.CreateStepExecution(ctx, &StepExecution{
 		TenantID:        tenantID,
 		PlanExecutionID: executionID,
 		PlanStepKey:     input.PlanStepKey,
@@ -217,7 +217,10 @@ func (r *RuntimeRepository) CreateSkippedStepExecution(ctx context.Context, inpu
 		// installation exists.
 		ExecutorInstallationSnapshot: json.RawMessage(`{"skipped":true}`),
 	})
-	return err
+	if err != nil {
+		return workflow.StepExecutionRecord{}, err
+	}
+	return workflow.StepExecutionRecord{ID: step.ID.String(), PlanStepKey: step.PlanStepKey, Attempt: step.Attempt}, nil
 }
 
 func (r *RuntimeRepository) ResumeStepExecution(ctx context.Context, input workflow.StepStatusUpdateInput) error {

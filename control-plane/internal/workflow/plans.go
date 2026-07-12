@@ -36,6 +36,7 @@ const (
 	ResolveApprovalRequestActivityName          = "ResolveApprovalRequestActivity"
 	CompletePlanExecutionActivityName           = "CompletePlanExecutionActivity"
 	FailPlanExecutionActivityName               = "FailPlanExecutionActivity"
+	RecordAuditActivityName                     = "RecordAuditActivity"
 
 	PlanElicitationResponseSignalName = "plan-elicitation-response"
 	PlanApprovalDecisionSignalName    = "plan-approval-decision"
@@ -231,12 +232,39 @@ type ResolveApprovalRequestInput struct {
 	Reason            string `json:"reason,omitempty"`
 }
 
+// AuditDiff and AuditEvent are the workflow-owned, transport-free contract for
+// the audit activity. The API process adapts it to audit.Recorder at wiring
+// time, keeping Temporal workflow code free of database and Connect concerns.
+type AuditDiff struct {
+	Field  string `json:"field"`
+	Before string `json:"before,omitempty"`
+	After  string `json:"after,omitempty"`
+}
+
+type AuditEvent struct {
+	TenantID       string      `json:"tenant_id"`
+	EventType      string      `json:"event_type"`
+	BoundedContext string      `json:"bounded_context"`
+	SubjectType    string      `json:"subject_type"`
+	SubjectID      string      `json:"subject_id"`
+	Decision       string      `json:"decision,omitempty"`
+	DedupeKey      string      `json:"dedupe_key"`
+	Diff           []AuditDiff `json:"diff,omitempty"`
+}
+
+// AuditRecorder is implemented by API wiring. Its narrow semantic contract
+// keeps the workflow package independent of the audit adapter's pgx/Connect
+// dependencies.
+type AuditRecorder interface {
+	RecordAudit(ctx context.Context, event AuditEvent) error
+}
+
 type PlanRuntimeStore interface {
 	CreateScheduledExecution(ctx context.Context, tenantID, configID, executionID uuid.UUID) (PlanWorkflowInput, error)
 	LoadPlanExecution(ctx context.Context, tenantID, executionID uuid.UUID) (LoadedPlanExecution, error)
 	StartPlanExecution(ctx context.Context, tenantID, executionID uuid.UUID) error
 	CreateStepExecution(ctx context.Context, input CreateStepExecutionInput) (StepExecutionRecord, error)
-	CreateSkippedStepExecution(ctx context.Context, input CreateSkippedStepInput) error
+	CreateSkippedStepExecution(ctx context.Context, input CreateSkippedStepInput) (StepExecutionRecord, error)
 	ResumeStepExecution(ctx context.Context, input StepStatusUpdateInput) error
 	CompleteStepExecution(ctx context.Context, input StepStatusUpdateInput) error
 	FailStepExecution(ctx context.Context, input StepStatusUpdateInput) error
@@ -251,6 +279,7 @@ type PlanRuntimeStore interface {
 type PlanActivities struct {
 	Runtime      PlanRuntimeStore
 	Integrations executors.IntegrationRunner
+	Audit        AuditRecorder
 }
 
 func (a *PlanActivities) CreateScheduledPlanExecutionActivity(ctx context.Context, input PlanExecutionInput) (PlanWorkflowInput, error) {
@@ -293,21 +322,35 @@ func (a *PlanActivities) StartPlanExecutionActivity(ctx context.Context, input P
 	if err != nil {
 		return err
 	}
-	return a.Runtime.StartPlanExecution(ctx, tenantID, executionID)
+	if err := a.Runtime.StartPlanExecution(ctx, tenantID, executionID); err != nil {
+		return err
+	}
+	a.recordAudit(ctx, planTransitionAudit(input, "plan_execution.started", "pending", "running"))
+	return nil
 }
 
 func (a *PlanActivities) CreateStepExecutionActivity(ctx context.Context, input CreateStepExecutionInput) (StepExecutionRecord, error) {
 	if a == nil || a.Runtime == nil {
 		return StepExecutionRecord{}, fmt.Errorf("plan runtime store is not configured")
 	}
-	return a.Runtime.CreateStepExecution(ctx, input)
+	record, err := a.Runtime.CreateStepExecution(ctx, input)
+	if err != nil {
+		return StepExecutionRecord{}, err
+	}
+	a.recordAudit(ctx, stepTransitionAudit(input.TenantID, record.ID, "step_execution.started", "", "running"))
+	return record, nil
 }
 
-func (a *PlanActivities) CreateSkippedStepExecutionActivity(ctx context.Context, input CreateSkippedStepInput) error {
+func (a *PlanActivities) CreateSkippedStepExecutionActivity(ctx context.Context, input CreateSkippedStepInput) (StepExecutionRecord, error) {
 	if a == nil || a.Runtime == nil {
-		return fmt.Errorf("plan runtime store is not configured")
+		return StepExecutionRecord{}, fmt.Errorf("plan runtime store is not configured")
 	}
-	return a.Runtime.CreateSkippedStepExecution(ctx, input)
+	record, err := a.Runtime.CreateSkippedStepExecution(ctx, input)
+	if err != nil {
+		return StepExecutionRecord{}, err
+	}
+	a.recordAudit(ctx, stepTransitionAudit(input.TenantID, record.ID, "step_execution.skipped", "", "skipped"))
+	return record, nil
 }
 
 func (a *PlanActivities) ResumeStepExecutionActivity(ctx context.Context, input StepStatusUpdateInput) error {
@@ -321,14 +364,22 @@ func (a *PlanActivities) CompleteStepExecutionActivity(ctx context.Context, inpu
 	if a == nil || a.Runtime == nil {
 		return fmt.Errorf("plan runtime store is not configured")
 	}
-	return a.Runtime.CompleteStepExecution(ctx, input)
+	if err := a.Runtime.CompleteStepExecution(ctx, input); err != nil {
+		return err
+	}
+	a.recordAudit(ctx, stepTransitionAudit(input.TenantID, input.StepExecutionID, "step_execution.completed", "running", "completed"))
+	return nil
 }
 
 func (a *PlanActivities) FailStepExecutionActivity(ctx context.Context, input StepStatusUpdateInput) error {
 	if a == nil || a.Runtime == nil {
 		return fmt.Errorf("plan runtime store is not configured")
 	}
-	return a.Runtime.FailStepExecution(ctx, input)
+	if err := a.Runtime.FailStepExecution(ctx, input); err != nil {
+		return err
+	}
+	a.recordAudit(ctx, stepTransitionAudit(input.TenantID, input.StepExecutionID, "step_execution.failed", "running", "failed"))
+	return nil
 }
 
 func (a *PlanActivities) AwaitElicitationStepExecutionActivity(ctx context.Context, input StepStatusUpdateInput) error {
@@ -349,14 +400,22 @@ func (a *PlanActivities) CreateApprovalRequestActivity(ctx context.Context, inpu
 	if a == nil || a.Runtime == nil {
 		return fmt.Errorf("plan runtime store is not configured")
 	}
-	return a.Runtime.CreateApprovalRequest(ctx, input)
+	if err := a.Runtime.CreateApprovalRequest(ctx, input); err != nil {
+		return err
+	}
+	a.recordAudit(ctx, approvalCreatedAudit(input))
+	return nil
 }
 
 func (a *PlanActivities) ResolveApprovalRequestActivity(ctx context.Context, input ResolveApprovalRequestInput) error {
 	if a == nil || a.Runtime == nil {
 		return fmt.Errorf("plan runtime store is not configured")
 	}
-	return a.Runtime.ResolveApprovalRequest(ctx, input)
+	if err := a.Runtime.ResolveApprovalRequest(ctx, input); err != nil {
+		return err
+	}
+	a.recordAudit(ctx, approvalDecisionAudit(input))
+	return nil
 }
 
 func (a *PlanActivities) CompletePlanExecutionActivity(ctx context.Context, input PlanWorkflowInput) error {
@@ -367,7 +426,11 @@ func (a *PlanActivities) CompletePlanExecutionActivity(ctx context.Context, inpu
 	if err != nil {
 		return err
 	}
-	return a.Runtime.CompletePlanExecution(ctx, tenantID, executionID)
+	if err := a.Runtime.CompletePlanExecution(ctx, tenantID, executionID); err != nil {
+		return err
+	}
+	a.recordAudit(ctx, planTransitionAudit(input, "plan_execution.completed", "running", "completed"))
+	return nil
 }
 
 func (a *PlanActivities) FailPlanExecutionActivity(ctx context.Context, input PlanFailureInput) error {
@@ -378,7 +441,59 @@ func (a *PlanActivities) FailPlanExecutionActivity(ctx context.Context, input Pl
 	if err != nil {
 		return err
 	}
-	return a.Runtime.FailPlanExecution(ctx, tenantID, executionID, strings.TrimSpace(input.Error))
+	if err := a.Runtime.FailPlanExecution(ctx, tenantID, executionID, strings.TrimSpace(input.Error)); err != nil {
+		return err
+	}
+	a.recordAudit(ctx, AuditEvent{
+		TenantID: input.TenantID, EventType: "plan_execution.failed", BoundedContext: "workflow_engine",
+		SubjectType: "plan_execution", SubjectID: input.PlanExecutionID,
+		DedupeKey: input.PlanExecutionID + ":plan_execution.failed",
+		Diff:      []AuditDiff{{Field: "status", Before: "running", After: "failed"}},
+	})
+	return nil
+}
+
+// RecordAuditActivity is scheduled by workflow code for signal receipt. Other
+// lifecycle activities call the same recorder after their successful state
+// transition. This is intentionally best effort: audit queue pressure must not
+// fail a governed operation after its state was committed.
+func (a *PlanActivities) RecordAuditActivity(ctx context.Context, event AuditEvent) error {
+	a.recordAudit(ctx, event)
+	return nil
+}
+
+func (a *PlanActivities) recordAudit(ctx context.Context, event AuditEvent) {
+	if a == nil || a.Audit == nil {
+		return
+	}
+	_ = a.Audit.RecordAudit(ctx, event)
+}
+
+// Workflow audit dedupe keys are deterministic because Temporal activities are
+// at-least-once: execution transitions use execution_id + transition;
+// StepExecution transitions use the persisted step_execution_id + transition;
+// approval creation/decisions use request_id (+ decision); signal receipts use
+// their stable execution/request/step identifiers. The audit table suppresses
+// duplicate keys within a tenant while preserving distinct retries/attempts.
+func planTransitionAudit(input PlanWorkflowInput, eventType, before, after string) AuditEvent {
+	return AuditEvent{TenantID: input.TenantID, EventType: eventType, BoundedContext: "workflow_engine", SubjectType: "plan_execution", SubjectID: input.PlanExecutionID, DedupeKey: input.PlanExecutionID + ":" + eventType, Diff: []AuditDiff{{Field: "status", Before: before, After: after}}}
+}
+
+func stepTransitionAudit(tenantID, stepID, eventType, before, after string) AuditEvent {
+	return AuditEvent{TenantID: tenantID, EventType: eventType, BoundedContext: "workflow_engine", SubjectType: "step_execution", SubjectID: stepID, DedupeKey: stepID + ":" + eventType, Diff: []AuditDiff{{Field: "status", Before: before, After: after}}}
+}
+
+func approvalCreatedAudit(input CreateApprovalRequestInput) AuditEvent {
+	return AuditEvent{TenantID: input.TenantID, EventType: "approval.created", BoundedContext: "human_interaction", SubjectType: "approval_request", SubjectID: input.ApprovalRequestID, DedupeKey: input.PlanExecutionID + ":approval:" + input.ApprovalRequestID + ":created", Diff: []AuditDiff{{Field: "status", After: "pending"}}}
+}
+
+func approvalDecisionAudit(input ResolveApprovalRequestInput) AuditEvent {
+	decision := "reject"
+	status := "rejected"
+	if input.Approved {
+		decision, status = "approve", "approved"
+	}
+	return AuditEvent{TenantID: input.TenantID, EventType: "approval.decided", BoundedContext: "human_interaction", SubjectType: "approval_request", SubjectID: input.ApprovalRequestID, Decision: decision, DedupeKey: input.ApprovalRequestID + ":approval.decided:" + decision, Diff: []AuditDiff{{Field: "status", Before: "pending", After: status}, {Field: "decision", After: decision}}}
 }
 
 func (a *PlanActivities) RunAgentActivity(ctx context.Context, input ExecutorActivityInput) (ExecutorActivityResult, error) {
@@ -554,7 +669,7 @@ func runPlanWorkflow(ctx workflow.Context, input PlanWorkflowInput) (PlanWorkflo
 			}).Get(ctx, nil); err != nil {
 				return result, failPlan(ctx, input, err)
 			}
-			decision, err := waitForApprovalDecision(ctx, stepRecord.ID, approvalRequestID)
+			decision, err := waitForApprovalDecision(ctx, input, stepRecord.ID, approvalRequestID)
 			if err != nil {
 				_ = workflow.ExecuteActivity(ctx, FailStepExecutionActivityName, StepStatusUpdateInput{
 					TenantID:        input.TenantID,
@@ -661,7 +776,7 @@ func runPlanWorkflow(ctx workflow.Context, input PlanWorkflowInput) (PlanWorkflo
 				if err := workflow.ExecuteActivity(ctx, AwaitElicitationStepExecutionActivityName, awaitInput).Get(ctx, nil); err != nil {
 					return result, failPlan(ctx, input, err)
 				}
-				response, timedOut, err := waitForElicitationResponse(ctx, stepRecord.ID, threadID, policies)
+				response, timedOut, err := waitForElicitationResponse(ctx, input, stepRecord.ID, threadID, policies)
 				if err != nil {
 					_ = workflow.ExecuteActivity(ctx, FailStepExecutionActivityName, StepStatusUpdateInput{
 						TenantID:        input.TenantID,
@@ -857,6 +972,7 @@ func runExecutorActivity(ctx workflow.Context, kind string, input ExecutorActivi
 
 func waitForElicitationResponse(
 	ctx workflow.Context,
+	input PlanWorkflowInput,
 	stepExecutionID string,
 	elicitationThreadID string,
 	policies *plansv1.PlanBehaviorPolicies,
@@ -891,18 +1007,44 @@ func waitForElicitationResponse(
 	if !received {
 		return ElicitationResponseSignal{}, false, errors.New("no elicitation response received")
 	}
+	// A signal becomes auditable only after its identity has been validated for
+	// the awaiting step/thread. Temporal replays schedule this activity again,
+	// so the deterministic key includes the stable execution, step, and thread.
+	scheduleAudit(ctx, AuditEvent{
+		TenantID: input.TenantID, EventType: "workflow.signal_received", BoundedContext: "workflow_engine",
+		SubjectType: "step_execution", SubjectID: stepExecutionID,
+		DedupeKey: input.PlanExecutionID + ":signal:elicitation:" + stepExecutionID + ":" + elicitationThreadID,
+		Diff:      []AuditDiff{{Field: "signal", After: PlanElicitationResponseSignalName}},
+	})
 	return response, false, nil
 }
 
-func waitForApprovalDecision(ctx workflow.Context, stepExecutionID string, approvalRequestID string) (ApprovalDecisionSignal, error) {
+func waitForApprovalDecision(ctx workflow.Context, input PlanWorkflowInput, stepExecutionID string, approvalRequestID string) (ApprovalDecisionSignal, error) {
 	signalChan := workflow.GetSignalChannel(ctx, PlanApprovalDecisionSignalName)
 	for {
 		var decision ApprovalDecisionSignal
 		signalChan.Receive(ctx, &decision)
 		if validateApprovalDecisionSignal(decision, stepExecutionID, approvalRequestID) == nil {
+			decisionName := "reject"
+			if decision.Approved {
+				decisionName = "approve"
+			}
+			scheduleAudit(ctx, AuditEvent{
+				TenantID: input.TenantID, EventType: "workflow.signal_received", BoundedContext: "workflow_engine",
+				SubjectType: "approval_request", SubjectID: approvalRequestID,
+				DedupeKey: input.PlanExecutionID + ":signal:approval:" + approvalRequestID + ":" + decisionName,
+				Diff:      []AuditDiff{{Field: "signal", After: PlanApprovalDecisionSignalName}},
+			})
 			return decision, nil
 		}
 	}
+}
+
+func scheduleAudit(ctx workflow.Context, event AuditEvent) {
+	// Best effort is intentional: state transitions have already been recorded
+	// by their owning activities, and recorder queue pressure must not make a
+	// deterministic workflow fail. The activity, never workflow code, writes.
+	_ = workflow.ExecuteActivity(ctx, RecordAuditActivityName, event).Get(ctx, nil)
 }
 
 func validateElicitationResponseSignal(signal ElicitationResponseSignal, stepExecutionID string, elicitationThreadID string) error {
