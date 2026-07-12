@@ -30,6 +30,7 @@ type runtimePlanStore interface {
 	UpdateExecutionStatus(ctx context.Context, tenantID, executionID uuid.UUID, status string, completedAt *time.Time) error
 	GetPlanConfigurationIDForExecution(ctx context.Context, tenantID, executionID uuid.UUID) (uuid.UUID, error)
 	CreateStepExecution(ctx context.Context, step *StepExecution) (*StepExecution, error)
+	GetStepExecution(ctx context.Context, tenantID, stepID uuid.UUID) (*StepExecution, error)
 	UpdateStepExecutionStatus(ctx context.Context, tenantID, stepID uuid.UUID, status, outputArtifactID, elicitationThreadID, approvalRequestID string) error
 	UpsertElicitation(ctx context.Context, elicitation *Elicitation) (*Elicitation, error)
 	MarkElicitationTimedOutByStep(ctx context.Context, tenantID, stepID uuid.UUID, threadID string) error
@@ -269,7 +270,38 @@ func (r *RuntimeRepository) FailStepExecution(ctx context.Context, input workflo
 	if err != nil {
 		return err
 	}
-	return r.plans.UpdateStepExecutionStatus(ctx, tenantID, stepID, StepStatusFailed, "", "", "")
+	if err := r.plans.UpdateStepExecutionStatus(ctx, tenantID, stepID, StepStatusFailed, "", "", ""); err != nil {
+		return err
+	}
+	if r.chat != nil {
+		// Surface the failure in the chat thread so the operator sees which
+		// step failed instead of a silent "nothing happened". The step key and
+		// execution id come from the step-execution row (the workflow does not
+		// pass them on FailStepExecutionActivity). The error summary is kept
+		// generic: we never leak credentials, stack traces, or internal paths.
+		step, lookupErr := r.plans.GetStepExecution(ctx, tenantID, stepID)
+		if lookupErr != nil {
+			return fmt.Errorf("load failed step execution for chat message: %w", lookupErr)
+		}
+		configID, configErr := r.plans.GetPlanConfigurationIDForExecution(ctx, tenantID, step.PlanExecutionID)
+		if configErr != nil {
+			return fmt.Errorf("resolve plan configuration for failed step: %w", configErr)
+		}
+		threadID, threadErr := r.owningThreadID(ctx, tenantID, configID)
+		if threadErr != nil {
+			return threadErr
+		}
+		execID := step.PlanExecutionID
+		_, _ = r.chat.AppendMessage(ctx, tenantID, chat.AppendInput{
+			ThreadID:    threadID,
+			ExecutionID: &execID,
+			Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
+			Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_STEP_FAILED,
+			Text:        "Step " + step.PlanStepKey + " failed.",
+			PayloadJSON: chat.BuildStepFailedPayload(step.PlanStepKey, step.ID.String(), ""),
+		})
+	}
+	return nil
 }
 
 func (r *RuntimeRepository) AwaitElicitationStepExecution(ctx context.Context, input workflow.StepStatusUpdateInput) error {

@@ -177,4 +177,5 @@ enum ThreadMessageKind {
   THREAD_MESSAGE_KIND_ARTIFACT_UPDATED = 23;
   THREAD_MESSAGE_KIND_ERROR_RAISED = 24;
   THREAD_MESSAGE_KIND_ERROR_RECOVERED = 25;
+  THREAD_MESSAGE_KIND_STEP_FAILED = 26;            // payload_json: { "step_key": "...", "step_execution_id": "...", "error": "..." }
 }

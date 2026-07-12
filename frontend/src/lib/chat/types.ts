@@ -20,6 +20,7 @@ export type ChatMessageKind =
   | "RUN_FAILED"
   | "STEP_STARTED"
   | "STEP_BOUND"
+  | "STEP_FAILED"
   | "ELICITATION_RAISED"
   | "ELICITATION_ANSWERED"
   | "APPROVAL_RAISED"
@@ -67,6 +68,7 @@ const KIND_FROM_PROTO: Record<number, ChatMessageKind> = {
   [ProtoThreadMessageKind.RUN_FAILED]: "RUN_FAILED",
   [ProtoThreadMessageKind.STEP_STARTED]: "STEP_STARTED",
   [ProtoThreadMessageKind.STEP_BOUND]: "STEP_BOUND",
+  [ProtoThreadMessageKind.STEP_FAILED]: "STEP_FAILED",
   [ProtoThreadMessageKind.ELICITATION_RAISED]: "ELICITATION_RAISED",
   [ProtoThreadMessageKind.ELICITATION_ANSWERED]: "ELICITATION_ANSWERED",
   [ProtoThreadMessageKind.APPROVAL_RAISED]: "APPROVAL_RAISED",
@@ -101,6 +103,7 @@ const KIND_TO_PROTO: Record<ChatMessageKind, ProtoThreadMessageKind> = {
   RUN_FAILED: ProtoThreadMessageKind.RUN_FAILED,
   STEP_STARTED: ProtoThreadMessageKind.STEP_STARTED,
   STEP_BOUND: ProtoThreadMessageKind.STEP_BOUND,
+  STEP_FAILED: ProtoThreadMessageKind.STEP_FAILED,
   ELICITATION_RAISED: ProtoThreadMessageKind.ELICITATION_RAISED,
   ELICITATION_ANSWERED: ProtoThreadMessageKind.ELICITATION_ANSWERED,
   APPROVAL_RAISED: ProtoThreadMessageKind.APPROVAL_RAISED,

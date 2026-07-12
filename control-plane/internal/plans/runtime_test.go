@@ -2,6 +2,7 @@ package plans
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -73,6 +74,51 @@ func TestRuntimeInteractionEventsUseConfigurationOriginThread(t *testing.T) {
 	}
 }
 
+func TestFailStepExecutionEmitsStepFailedChatMessage(t *testing.T) {
+	tenantID := uuid.New()
+	configurationID := uuid.New()
+	executionID := uuid.New()
+	stepID := uuid.New()
+	originThreadID := uuid.New()
+	store := &fakeRuntimePlanStore{
+		configuration: &PlanConfiguration{
+			ID:             configurationID,
+			TenantID:       tenantID,
+			OriginThreadID: originThreadID,
+		},
+		execution: &PlanExecution{
+			ID:                  executionID,
+			TenantID:            tenantID,
+			PlanConfigurationID: configurationID,
+			Status:              ExecutionStatusRunning,
+		},
+		stepID: stepID,
+	}
+	messages := &fakeRuntimeChat{}
+	runtime := &RuntimeRepository{plans: store, chat: messages}
+
+	if err := runtime.FailStepExecution(context.Background(), workflow.StepStatusUpdateInput{
+		TenantID:        tenantID.String(),
+		StepExecutionID: stepID.String(),
+	}); err != nil {
+		t.Fatalf("FailStepExecution: %v", err)
+	}
+
+	if len(messages.appended) != 1 {
+		t.Fatalf("appended messages = %d, want 1", len(messages.appended))
+	}
+	msg := messages.appended[0]
+	if msg.Kind != chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_STEP_FAILED {
+		t.Fatalf("message kind = %s, want STEP_FAILED", msg.Kind)
+	}
+	if msg.ThreadID != originThreadID.String() {
+		t.Fatalf("message thread = %q, want %q", msg.ThreadID, originThreadID.String())
+	}
+	if !strings.Contains(msg.Text, "publish") {
+		t.Fatalf("message text = %q, want it to contain the step key", msg.Text)
+	}
+}
+
 type fakeRuntimePlanStore struct {
 	configuration *PlanConfiguration
 	execution     *PlanExecution
@@ -108,6 +154,15 @@ func (f *fakeRuntimePlanStore) CreateStepExecution(_ context.Context, step *Step
 	created.ID = f.stepID
 	created.Attempt = 1
 	return &created, nil
+}
+
+func (f *fakeRuntimePlanStore) GetStepExecution(_ context.Context, _ uuid.UUID, stepID uuid.UUID) (*StepExecution, error) {
+	return &StepExecution{
+		ID:               stepID,
+		PlanExecutionID:  f.execution.ID,
+		PlanStepKey:      "publish",
+		Status:           StepStatusFailed,
+	}, nil
 }
 
 func (f *fakeRuntimePlanStore) UpdateStepExecutionStatus(context.Context, uuid.UUID, uuid.UUID, string, string, string, string) error {

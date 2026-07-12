@@ -80,6 +80,8 @@
   "thread.event.run_failed_reason": "Execução falhou: {reason}.",
   "thread.event.step_started": "Etapa {step} iniciada.",
   "thread.event.step_bound": "Etapa {step} concluída.",
+  "thread.event.step_failed": "Etapa {step} falhou.",
+  "thread.event.step_failed_reason": "Etapa {step} falhou: {reason}.",
   "thread.event.policy_rebound": "Política atualizada: {value}.",
   "thread.elicitation.raised": "Uma pergunta foi feita.",
   "thread.elicitation.answered": "Uma pergunta foi respondida.",

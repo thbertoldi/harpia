@@ -146,6 +146,22 @@ export function eventTextKey(
         params: { step: stepKey ? stepTitleFor(stepKey) : "" },
       };
     }
+    case "STEP_FAILED": {
+      const stepKey = parseStepKey(message.payloadJson);
+      const reason = parseRunFailureReason(message.payloadJson);
+      return reason
+        ? {
+            key: "thread.event.step_failed_reason",
+            params: {
+              step: stepKey ? stepTitleFor(stepKey) : "",
+              reason,
+            },
+          }
+        : {
+            key: "thread.event.step_failed",
+            params: { step: stepKey ? stepTitleFor(stepKey) : "" },
+          };
+    }
     case "STEP_REBOUND": {
       const rebound = parsePolicyRebound(message.payloadJson);
       if (!rebound) return null;

@@ -121,6 +121,33 @@ describe("eventTextKey — step events use the title resolver", () => {
     });
   });
 
+  it("maps STEP_FAILED without a reason to the generic key", () => {
+    expect(
+      eventTextKey(
+        message("STEP_FAILED", '{"step_key": "write-draft"}'),
+        titles,
+      ),
+    ).toEqual({
+      key: "thread.event.step_failed",
+      params: { step: "Write draft" },
+    });
+  });
+
+  it("maps STEP_FAILED with a reason to the reason key", () => {
+    expect(
+      eventTextKey(
+        message(
+          "STEP_FAILED",
+          '{"step_key": "write-draft", "error": "LLM provider not configured"}',
+        ),
+        titles,
+      ),
+    ).toEqual({
+      key: "thread.event.step_failed_reason",
+      params: { step: "Write draft", reason: "LLM provider not configured" },
+    });
+  });
+
   it("falls back to the raw step_key when no resolver is supplied", () => {
     expect(
       eventTextKey(message("STEP_STARTED", '{"step_key": "write-draft"}')),

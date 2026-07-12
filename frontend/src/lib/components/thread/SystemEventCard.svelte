@@ -63,7 +63,7 @@
       ? Play
       : message.kind === "RUN_COMPLETED"
         ? Check
-        : message.kind === "RUN_FAILED"
+        : message.kind === "RUN_FAILED" || message.kind === "STEP_FAILED"
           ? AlertTriangle
           : message.kind === "STEP_BOUND" || message.kind === "STEP_STARTED"
             ? Activity

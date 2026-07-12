@@ -45,6 +45,18 @@ func BuildStepBoundPayload(stepKey, outputArtifactID string) string {
 	})
 }
 
+// BuildStepFailedPayload returns the JSON payload for a STEP_FAILED message.
+// errorMessage is a short, safe, human-readable summary — never credentials or
+// stack traces. An empty errorMessage is acceptable when only the step identity
+// is known.
+func BuildStepFailedPayload(stepKey, stepExecutionID, errorMessage string) string {
+	return mustEncodeJSON(map[string]string{
+		"step_key":          stepKey,
+		"step_execution_id": stepExecutionID,
+		"error":             errorMessage,
+	})
+}
+
 // BuildStepStartedPayload returns the JSON payload for a STEP_STARTED message.
 // Mirrors STEP_BOUND but without an output artifact (which doesn't exist yet
 // at start-of-step time).

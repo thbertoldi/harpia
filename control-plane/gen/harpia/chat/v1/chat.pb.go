@@ -161,6 +161,7 @@ const (
 	ThreadMessageKind_THREAD_MESSAGE_KIND_ARTIFACT_UPDATED      ThreadMessageKind = 23
 	ThreadMessageKind_THREAD_MESSAGE_KIND_ERROR_RAISED          ThreadMessageKind = 24
 	ThreadMessageKind_THREAD_MESSAGE_KIND_ERROR_RECOVERED       ThreadMessageKind = 25
+	ThreadMessageKind_THREAD_MESSAGE_KIND_STEP_FAILED           ThreadMessageKind = 26 // payload_json: { "step_key": "...", "step_execution_id": "...", "error": "..." }
 )
 
 // Enum value maps for ThreadMessageKind.
@@ -192,6 +193,7 @@ var (
 		23: "THREAD_MESSAGE_KIND_ARTIFACT_UPDATED",
 		24: "THREAD_MESSAGE_KIND_ERROR_RAISED",
 		25: "THREAD_MESSAGE_KIND_ERROR_RECOVERED",
+		26: "THREAD_MESSAGE_KIND_STEP_FAILED",
 	}
 	ThreadMessageKind_value = map[string]int32{
 		"THREAD_MESSAGE_KIND_UNSPECIFIED":           0,
@@ -220,6 +222,7 @@ var (
 		"THREAD_MESSAGE_KIND_ARTIFACT_UPDATED":      23,
 		"THREAD_MESSAGE_KIND_ERROR_RAISED":          24,
 		"THREAD_MESSAGE_KIND_ERROR_RECOVERED":       25,
+		"THREAD_MESSAGE_KIND_STEP_FAILED":           26,
 	}
 )
 
@@ -1467,7 +1470,7 @@ const file_harpia_chat_v1_chat_proto_rawDesc = "" +
 	"\x1fTHREAD_MESSAGE_ROLE_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cTHREAD_MESSAGE_ROLE_OVERSEER\x10\x01\x12\x1d\n" +
 	"\x19THREAD_MESSAGE_ROLE_AGENT\x10\x02\x12\x1e\n" +
-	"\x1aTHREAD_MESSAGE_ROLE_SYSTEM\x10\x03*\xa7\b\n" +
+	"\x1aTHREAD_MESSAGE_ROLE_SYSTEM\x10\x03*\xcc\b\n" +
 	"\x11ThreadMessageKind\x12#\n" +
 	"\x1fTHREAD_MESSAGE_KIND_UNSPECIFIED\x10\x00\x12!\n" +
 	"\x1dTHREAD_MESSAGE_KIND_USER_TEXT\x10\x01\x12&\n" +
@@ -1495,7 +1498,8 @@ const file_harpia_chat_v1_chat_proto_rawDesc = "" +
 	"$THREAD_MESSAGE_KIND_ARTIFACT_CREATED\x10\x16\x12(\n" +
 	"$THREAD_MESSAGE_KIND_ARTIFACT_UPDATED\x10\x17\x12$\n" +
 	" THREAD_MESSAGE_KIND_ERROR_RAISED\x10\x18\x12'\n" +
-	"#THREAD_MESSAGE_KIND_ERROR_RECOVERED\x10\x192\x9b\x06\n" +
+	"#THREAD_MESSAGE_KIND_ERROR_RECOVERED\x10\x19\x12#\n" +
+	"\x1fTHREAD_MESSAGE_KIND_STEP_FAILED\x10\x1a2\x9b\x06\n" +
 	"\rThreadService\x12Y\n" +
 	"\fCreateThread\x12#.harpia.chat.v1.CreateThreadRequest\x1a$.harpia.chat.v1.CreateThreadResponse\x12P\n" +
 	"\tGetThread\x12 .harpia.chat.v1.GetThreadRequest\x1a!.harpia.chat.v1.GetThreadResponse\x12X\n" +

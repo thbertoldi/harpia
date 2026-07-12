@@ -80,6 +80,8 @@
   "thread.event.run_failed_reason": "Run failed: {reason}.",
   "thread.event.step_started": "Step {step} started.",
   "thread.event.step_bound": "Step {step} completed.",
+  "thread.event.step_failed": "Step {step} failed.",
+  "thread.event.step_failed_reason": "Step {step} failed: {reason}.",
   "thread.event.policy_rebound": "Policy updated: {value}.",
   "thread.elicitation.raised": "A question was raised.",
   "thread.elicitation.answered": "A question was answered.",
