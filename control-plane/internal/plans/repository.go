@@ -679,9 +679,10 @@ func (r *Repository) CreateStepExecution(ctx context.Context, step *StepExecutio
 				INSERT INTO step_executions (
 					tenant_id, plan_execution_id, plan_step_key, status, input_artifact_id,
 					input_artifact_version_id, input_artifact_type_key, input_content_hash,
+					output_artifact_id, output_artifact_version_id, output_artifact_type_key, output_content_hash,
 					executor_installation_snapshot, attempt
 				)
-				SELECT $1, $2, $3, $4, NULLIF($5, ''), $6, NULLIF($7, ''), NULLIF($8, ''), $9,
+				SELECT $1, $2, $3, $4, NULLIF($5, ''), $6, NULLIF($7, ''), NULLIF($8, ''), NULLIF($9, ''), $10, NULLIF($11, ''), NULLIF($12, ''), $13,
 				       COALESCE((
 					       SELECT MAX(prior.attempt) + 1
 					       FROM step_executions prior
@@ -705,7 +706,7 @@ func (r *Repository) CreateStepExecution(ctx context.Context, step *StepExecutio
 			LIMIT 1`,
 			step.TenantID, step.PlanExecutionID, step.PlanStepKey, step.Status,
 			step.InputArtifactID, nullableUUIDValue(step.InputArtifactVersionID), step.InputArtifactTypeKey,
-			step.InputContentHash, step.ExecutorInstallationSnapshot,
+			step.InputContentHash, step.OutputArtifactID, nullableUUIDValue(step.OutputArtifactVersionID), step.OutputArtifactTypeKey, step.OutputContentHash, step.ExecutorInstallationSnapshot,
 		)
 		return scanStepExecution(row, &created)
 	})
@@ -748,6 +749,25 @@ func (r *Repository) UpdateStepExecutionStatus(
 		return fmt.Errorf("update step execution status: %w", err)
 	}
 	return nil
+}
+
+func (r *Repository) UpdateStepExecutionRefs(ctx context.Context, tenantID, stepExecutionID uuid.UUID, status string, inputRef, outputRef *StepExecution) error {
+	return database.WithTenant(ctx, r.pool, tenantID, func(q database.Querier) error {
+		_, err := q.Exec(ctx, `UPDATE step_executions SET status = $1,
+			input_artifact_id = COALESCE(NULLIF($2, ''), input_artifact_id),
+			input_artifact_version_id = COALESCE($3, input_artifact_version_id),
+			input_artifact_type_key = COALESCE(NULLIF($4, ''), input_artifact_type_key),
+			input_content_hash = COALESCE(NULLIF($5, ''), input_content_hash),
+			output_artifact_id = COALESCE(NULLIF($6, ''), output_artifact_id),
+			output_artifact_version_id = COALESCE($7, output_artifact_version_id),
+			output_artifact_type_key = COALESCE(NULLIF($8, ''), output_artifact_type_key),
+			output_content_hash = COALESCE(NULLIF($9, ''), output_content_hash), updated_at = now()
+			WHERE id = $10 AND tenant_id = $11`, status,
+			inputRef.InputArtifactID, nullableUUIDValue(inputRef.InputArtifactVersionID), inputRef.InputArtifactTypeKey, inputRef.InputContentHash,
+			outputRef.OutputArtifactID, nullableUUIDValue(outputRef.OutputArtifactVersionID), outputRef.OutputArtifactTypeKey, outputRef.OutputContentHash,
+			stepExecutionID, tenantID)
+		return err
+	})
 }
 
 func (r *Repository) CreatePlanApprovalRequest(ctx context.Context, request *PlanApprovalRequest) error {

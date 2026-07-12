@@ -45,6 +45,19 @@ func BuildStepBoundPayload(stepKey, outputArtifactID string) string {
 	})
 }
 
+// BuildStepBoundPayloadRef records the complete immutable artifact identity for
+// execution-scoped previews. The legacy helper remains for existing callers.
+func BuildStepBoundPayloadRef(stepKey, artifactID, artifactVersionID, artifactTypeKey, contentHash string) string {
+	return mustEncodeJSON(map[string]string{"step_key": stepKey, "output_artifact_id": artifactID, "output_artifact_version_id": artifactVersionID, "output_artifact_type_key": artifactTypeKey, "output_content_hash": contentHash})
+}
+
+func BuildReviewRaisedPayload(reviewID uuid.UUID) string {
+	return mustEncodeJSON(map[string]string{"review_request_id": reviewID.String()})
+}
+func BuildReviewDecidedPayload(reviewID uuid.UUID, decision string) string {
+	return mustEncodeJSON(map[string]string{"review_request_id": reviewID.String(), "decision": decision})
+}
+
 // BuildStepFailedPayload returns the JSON payload for a STEP_FAILED message.
 // errorMessage is a short, safe, human-readable summary — never credentials or
 // stack traces. An empty errorMessage is acceptable when only the step identity

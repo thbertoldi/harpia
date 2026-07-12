@@ -34,12 +34,15 @@ const (
 	ResumeStepExecutionActivityName             = "ResumeStepExecutionActivity"
 	CreateApprovalRequestActivityName           = "CreateApprovalRequestActivity"
 	ResolveApprovalRequestActivityName          = "ResolveApprovalRequestActivity"
+	CreateReviewRequestActivityName             = "CreateReviewRequestActivity"
+	ResolveReviewRequestActivityName            = "ResolveReviewRequestActivity"
 	CompletePlanExecutionActivityName           = "CompletePlanExecutionActivity"
 	FailPlanExecutionActivityName               = "FailPlanExecutionActivity"
 	RecordAuditActivityName                     = "RecordAuditActivity"
 
 	PlanElicitationResponseSignalName = "plan-elicitation-response"
 	PlanApprovalDecisionSignalName    = "plan-approval-decision"
+	PlanReviewDecisionSignalName      = "plan-review-decision"
 
 	ExecutorResultStatusCompleted            = "completed"
 	ExecutorResultStatusFailed               = "failed"
@@ -139,6 +142,7 @@ type CreateStepExecutionInput struct {
 	PlanExecutionID              string                       `json:"plan_execution_id"`
 	PlanStepKey                  string                       `json:"plan_step_key"`
 	InputArtifactID              string                       `json:"input_artifact_id,omitempty"`
+	InputArtifactRef             ArtifactRef                  `json:"input_artifact_ref,omitempty"`
 	ExecutorInstallationSnapshot ExecutorInstallationSnapshot `json:"executor_installation_snapshot"`
 }
 
@@ -146,9 +150,10 @@ type CreateStepExecutionInput struct {
 // did not execute (a non-selected output-format branch). Skipped steps record a
 // SKIPPED row with no input artifact and emit no chat message.
 type CreateSkippedStepInput struct {
-	TenantID        string `json:"tenant_id"`
-	PlanExecutionID string `json:"plan_execution_id"`
-	PlanStepKey     string `json:"plan_step_key"`
+	TenantID        string      `json:"tenant_id"`
+	PlanExecutionID string      `json:"plan_execution_id"`
+	PlanStepKey     string      `json:"plan_step_key"`
+	ArtifactRef     ArtifactRef `json:"artifact_ref"`
 }
 
 type StepExecutionRecord struct {
@@ -159,10 +164,11 @@ type StepExecutionRecord struct {
 }
 
 type StepStatusUpdateInput struct {
-	TenantID            string `json:"tenant_id"`
-	StepExecutionID     string `json:"step_execution_id"`
-	OutputArtifactID    string `json:"output_artifact_id,omitempty"`
-	ElicitationThreadID string `json:"elicitation_thread_id,omitempty"`
+	TenantID            string      `json:"tenant_id"`
+	StepExecutionID     string      `json:"step_execution_id"`
+	OutputArtifactID    string      `json:"output_artifact_id,omitempty"`
+	OutputArtifactRef   ArtifactRef `json:"output_artifact_ref,omitempty"`
+	ElicitationThreadID string      `json:"elicitation_thread_id,omitempty"`
 	// Elicitation persistence fields (E5.1), populated when a step pauses for an
 	// elicitation so the runtime can durably record the in-app thread.
 	PlanExecutionID       string `json:"plan_execution_id,omitempty"`
@@ -174,12 +180,14 @@ type StepStatusUpdateInput struct {
 }
 
 type ArtifactRef struct {
-	Source          string `json:"source"`
-	StepKey         string `json:"step_key,omitempty"`
-	InputName       string `json:"input_name,omitempty"`
-	ArtifactID      string `json:"artifact_id,omitempty"`
-	LiteralJSON     string `json:"literal_json,omitempty"`
-	ArtifactTypeKey string `json:"artifact_type_key,omitempty"`
+	Source            string `json:"source"`
+	StepKey           string `json:"step_key,omitempty"`
+	InputName         string `json:"input_name,omitempty"`
+	ArtifactID        string `json:"artifact_id,omitempty"`
+	ArtifactVersionID string `json:"artifact_version_id,omitempty"`
+	ContentHash       string `json:"content_hash,omitempty"`
+	LiteralJSON       string `json:"literal_json,omitempty"`
+	ArtifactTypeKey   string `json:"artifact_type_key,omitempty"`
 }
 
 type ExecutorActivityInput struct {
@@ -194,12 +202,15 @@ type ExecutorActivityInput struct {
 }
 
 type ExecutorActivityResult struct {
-	Status                string `json:"status"`
-	OutputArtifactID      string `json:"output_artifact_id,omitempty"`
-	ElicitationThreadID   string `json:"elicitation_thread_id,omitempty"`
-	ElicitationPrompt     string `json:"elicitation_prompt,omitempty"`
-	ElicitationSchemaJSON string `json:"elicitation_schema_json,omitempty"`
-	Error                 string `json:"error,omitempty"`
+	Status                  string `json:"status"`
+	OutputArtifactID        string `json:"output_artifact_id,omitempty"`
+	OutputArtifactVersionID string `json:"output_artifact_version_id,omitempty"`
+	OutputArtifactTypeKey   string `json:"output_artifact_type_key,omitempty"`
+	OutputContentHash       string `json:"output_content_hash,omitempty"`
+	ElicitationThreadID     string `json:"elicitation_thread_id,omitempty"`
+	ElicitationPrompt       string `json:"elicitation_prompt,omitempty"`
+	ElicitationSchemaJSON   string `json:"elicitation_schema_json,omitempty"`
+	Error                   string `json:"error,omitempty"`
 }
 
 type ElicitationResponseSignal struct {
@@ -216,13 +227,37 @@ type ApprovalDecisionSignal struct {
 	Reason            string `json:"reason,omitempty"`
 }
 
+type ReviewDecisionSignal struct {
+	StepExecutionID string `json:"step_execution_id"`
+	ReviewRequestID string `json:"review_request_id"`
+	Decision        string `json:"decision"`
+	Feedback        string `json:"feedback,omitempty"`
+}
+
+type CreateReviewRequestInput struct {
+	TenantID           string      `json:"tenant_id"`
+	PlanExecutionID    string      `json:"plan_execution_id"`
+	StepExecutionID    string      `json:"step_execution_id"`
+	PlanStepKey        string      `json:"plan_step_key"`
+	SubjectArtifactRef ArtifactRef `json:"subject_artifact_ref"`
+}
+
+type ResolveReviewRequestInput struct {
+	TenantID        string `json:"tenant_id"`
+	StepExecutionID string `json:"step_execution_id"`
+	ReviewRequestID string `json:"review_request_id"`
+	Decision        string `json:"decision"`
+	Feedback        string `json:"feedback,omitempty"`
+}
+
 type CreateApprovalRequestInput struct {
-	TenantID          string `json:"tenant_id"`
-	PlanExecutionID   string `json:"plan_execution_id"`
-	StepExecutionID   string `json:"step_execution_id"`
-	PlanStepKey       string `json:"plan_step_key"`
-	ApprovalRequestID string `json:"approval_request_id"`
-	InputArtifactID   string `json:"input_artifact_id,omitempty"`
+	TenantID           string      `json:"tenant_id"`
+	PlanExecutionID    string      `json:"plan_execution_id"`
+	StepExecutionID    string      `json:"step_execution_id"`
+	PlanStepKey        string      `json:"plan_step_key"`
+	ApprovalRequestID  string      `json:"approval_request_id"`
+	InputArtifactID    string      `json:"input_artifact_id,omitempty"`
+	SubjectArtifactRef ArtifactRef `json:"subject_artifact_ref"`
 }
 
 type ResolveApprovalRequestInput struct {
@@ -273,6 +308,8 @@ type PlanRuntimeStore interface {
 	TimeoutElicitationStepExecution(ctx context.Context, input StepStatusUpdateInput) error
 	CreateApprovalRequest(ctx context.Context, input CreateApprovalRequestInput) error
 	ResolveApprovalRequest(ctx context.Context, input ResolveApprovalRequestInput) error
+	CreateReviewRequest(ctx context.Context, input CreateReviewRequestInput) (string, error)
+	ResolveReviewRequest(ctx context.Context, input ResolveReviewRequestInput) error
 	CompletePlanExecution(ctx context.Context, tenantID, executionID uuid.UUID) error
 	FailPlanExecution(ctx context.Context, tenantID, executionID uuid.UUID, reason string) error
 }
@@ -417,6 +454,20 @@ func (a *PlanActivities) ResolveApprovalRequestActivity(ctx context.Context, inp
 	}
 	a.recordAudit(ctx, approvalDecisionAudit(input))
 	return nil
+}
+
+func (a *PlanActivities) CreateReviewRequestActivity(ctx context.Context, input CreateReviewRequestInput) (string, error) {
+	if a == nil || a.Runtime == nil {
+		return "", fmt.Errorf("plan runtime store is not configured")
+	}
+	return a.Runtime.CreateReviewRequest(ctx, input)
+}
+
+func (a *PlanActivities) ResolveReviewRequestActivity(ctx context.Context, input ResolveReviewRequestInput) error {
+	if a == nil || a.Runtime == nil {
+		return fmt.Errorf("plan runtime store is not configured")
+	}
+	return a.Runtime.ResolveReviewRequest(ctx, input)
 }
 
 func (a *PlanActivities) CompletePlanExecutionActivity(ctx context.Context, input PlanWorkflowInput) error {
@@ -627,12 +678,24 @@ func runPlanWorkflow(ctx workflow.Context, input PlanWorkflowInput) (PlanWorkflo
 			continue
 		}
 		if shouldSkipStepForOptOut(step, loaded.Snapshot.Configuration) {
+			alias := ArtifactRef{}
+			if step.GetInputArtifactTypeId() == step.GetOutputArtifactTypeId() {
+				var aliasErr error
+				alias, aliasErr = aliasUpstreamArtifact(step, dependencies[step.Key], outputs)
+				if aliasErr != nil {
+					return result, failPlan(ctx, input, aliasErr)
+				}
+			}
 			if err := workflow.ExecuteActivity(ctx, CreateSkippedStepExecutionActivityName, CreateSkippedStepInput{
 				TenantID:        input.TenantID,
 				PlanExecutionID: input.PlanExecutionID,
 				PlanStepKey:     step.Key,
+				ArtifactRef:     alias,
 			}).Get(ctx, nil); err != nil {
 				return result, failPlan(ctx, input, err)
+			}
+			if alias.ArtifactID != "" {
+				outputs[step.Key] = alias
 			}
 			continue
 		}
@@ -661,12 +724,13 @@ func runPlanWorkflow(ctx workflow.Context, input PlanWorkflowInput) (PlanWorkflo
 		if requiresPublishApproval(step, policies) {
 			approvalRequestID := planApprovalRequestID(input.PlanExecutionID, stepRecord.ID)
 			if err := workflow.ExecuteActivity(ctx, CreateApprovalRequestActivityName, CreateApprovalRequestInput{
-				TenantID:          input.TenantID,
-				PlanExecutionID:   input.PlanExecutionID,
-				ApprovalRequestID: approvalRequestID,
-				StepExecutionID:   stepRecord.ID,
-				PlanStepKey:       step.Key,
-				InputArtifactID:   stepRecord.InputArtifactID,
+				TenantID:           input.TenantID,
+				PlanExecutionID:    input.PlanExecutionID,
+				ApprovalRequestID:  approvalRequestID,
+				StepExecutionID:    stepRecord.ID,
+				PlanStepKey:        step.Key,
+				InputArtifactID:    stepRecord.InputArtifactID,
+				SubjectArtifactRef: firstArtifactRef(inputArtifacts),
 			}).Get(ctx, nil); err != nil {
 				return result, failPlan(ctx, input, err)
 			}
@@ -732,19 +796,38 @@ func runPlanWorkflow(ctx workflow.Context, input PlanWorkflowInput) (PlanWorkflo
 					}).Get(ctx, nil)
 					return result, failPlan(ctx, input, fmt.Errorf("step %q completed without output artifact", step.Key))
 				}
+				outputRef := ArtifactRef{Source: "step_output", StepKey: step.Key, ArtifactID: executorResult.OutputArtifactID, ArtifactVersionID: executorResult.OutputArtifactVersionID, ArtifactTypeKey: executorResult.OutputArtifactTypeKey, ContentHash: executorResult.OutputContentHash}
+				if outputRef.ArtifactTypeKey == "" {
+					outputRef.ArtifactTypeKey = step.OutputArtifactTypeId
+				}
+				if requiresReview(step) {
+					reviewID, reviewErr := createAndWaitForReview(ctx, input, stepRecord, step, outputRef)
+					if reviewErr != nil {
+						return result, failPlan(ctx, input, reviewErr)
+					}
+					decision, decisionErr := waitForReviewDecision(ctx, input, stepRecord.ID, reviewID)
+					if decisionErr != nil {
+						return result, failPlan(ctx, input, decisionErr)
+					}
+					if err := workflow.ExecuteActivity(ctx, ResolveReviewRequestActivityName, ResolveReviewRequestInput{TenantID: input.TenantID, StepExecutionID: stepRecord.ID, ReviewRequestID: reviewID, Decision: decision.Decision, Feedback: decision.Feedback}).Get(ctx, nil); err != nil {
+						return result, failPlan(ctx, input, err)
+					}
+					if decision.Decision == "revise" {
+						executorInput.ElicitationResponse = &ElicitationResponseSignal{StepExecutionID: stepRecord.ID, ResponseText: `{"review_feedback":` + fmt.Sprintf("%q", decision.Feedback) + `}`}
+						continue
+					}
+				}
 				if err := workflow.ExecuteActivity(ctx, CompleteStepExecutionActivityName, StepStatusUpdateInput{
-					TenantID:         input.TenantID,
-					StepExecutionID:  stepRecord.ID,
-					OutputArtifactID: executorResult.OutputArtifactID,
+					TenantID:          input.TenantID,
+					StepExecutionID:   stepRecord.ID,
+					PlanExecutionID:   input.PlanExecutionID,
+					PlanStepKey:       step.Key,
+					OutputArtifactID:  executorResult.OutputArtifactID,
+					OutputArtifactRef: outputRef,
 				}).Get(ctx, nil); err != nil {
 					return result, failPlan(ctx, input, err)
 				}
-				outputs[step.Key] = ArtifactRef{
-					Source:          "step_output",
-					StepKey:         step.Key,
-					ArtifactID:      executorResult.OutputArtifactID,
-					ArtifactTypeKey: step.OutputArtifactTypeId,
-				}
+				outputs[step.Key] = outputRef
 
 			case ExecutorResultStatusElicitationRequested:
 				elicitationRounds++
@@ -940,11 +1023,13 @@ func createRunningStep(
 	}
 
 	var record StepExecutionRecord
+	inputRef := firstArtifactRef(inputArtifacts)
 	err := workflow.ExecuteActivity(ctx, CreateStepExecutionActivityName, CreateStepExecutionInput{
 		TenantID:                     input.TenantID,
 		PlanExecutionID:              input.PlanExecutionID,
 		PlanStepKey:                  step.Key,
 		InputArtifactID:              inputArtifactID,
+		InputArtifactRef:             inputRef,
 		ExecutorInstallationSnapshot: installation,
 	}).Get(ctx, &record)
 	return record, err
@@ -1069,6 +1154,61 @@ func validateApprovalDecisionSignal(signal ApprovalDecisionSignal, stepExecution
 		return fmt.Errorf("approval request id %q does not match awaiting request %q", signal.ApprovalRequestID, approvalRequestID)
 	}
 	return nil
+}
+
+func requiresReview(step *plansv1.PlanStep) bool {
+	return step != nil && step.GetHumanInteractionPolicy().GetReviewMode() == plansv1.ReviewMode_REVIEW_MODE_REQUIRED
+}
+
+func createAndWaitForReview(ctx workflow.Context, input PlanWorkflowInput, record StepExecutionRecord, step *plansv1.PlanStep, subject ArtifactRef) (string, error) {
+	if strings.TrimSpace(subject.ArtifactID) == "" || strings.TrimSpace(subject.ArtifactVersionID) == "" || strings.TrimSpace(subject.ContentHash) == "" {
+		return "", fmt.Errorf("step %q review candidate is not version-pinned", step.Key)
+	}
+	var reviewID string
+	err := workflow.ExecuteActivity(ctx, CreateReviewRequestActivityName, CreateReviewRequestInput{TenantID: input.TenantID, PlanExecutionID: input.PlanExecutionID, StepExecutionID: record.ID, PlanStepKey: step.Key, SubjectArtifactRef: subject}).Get(ctx, &reviewID)
+	return reviewID, err
+}
+
+func waitForReviewDecision(ctx workflow.Context, input PlanWorkflowInput, stepExecutionID, reviewRequestID string) (ReviewDecisionSignal, error) {
+	channel := workflow.GetSignalChannel(ctx, PlanReviewDecisionSignalName)
+	for {
+		var signal ReviewDecisionSignal
+		channel.Receive(ctx, &signal)
+		if strings.TrimSpace(signal.StepExecutionID) != strings.TrimSpace(stepExecutionID) || strings.TrimSpace(signal.ReviewRequestID) != strings.TrimSpace(reviewRequestID) {
+			continue
+		}
+		if signal.Decision != "accept" && signal.Decision != "revise" {
+			continue
+		}
+		if signal.Decision == "revise" && strings.TrimSpace(signal.Feedback) == "" {
+			continue
+		}
+		return signal, nil
+	}
+}
+
+func aliasUpstreamArtifact(step *plansv1.PlanStep, upstream []string, outputs map[string]ArtifactRef) (ArtifactRef, error) {
+	if len(upstream) != 1 {
+		return ArtifactRef{}, fmt.Errorf("optional step %q requires exactly one upstream artifact to alias", step.Key)
+	}
+	ref, ok := outputs[upstream[0]]
+	if !ok || strings.TrimSpace(ref.ArtifactID) == "" {
+		return ArtifactRef{}, fmt.Errorf("optional step %q cannot alias missing upstream output %q", step.Key, upstream[0])
+	}
+	if ref.ArtifactTypeKey != step.GetInputArtifactTypeId() || step.GetInputArtifactTypeId() != step.GetOutputArtifactTypeId() {
+		return ArtifactRef{}, fmt.Errorf("optional step %q is not identity-shaped", step.Key)
+	}
+	ref.StepKey = step.Key
+	return ref, nil
+}
+
+func firstArtifactRef(refs []ArtifactRef) ArtifactRef {
+	for _, ref := range refs {
+		if strings.TrimSpace(ref.ArtifactID) != "" {
+			return ref
+		}
+	}
+	return ArtifactRef{}
 }
 
 func elicitationTimeoutDuration(policies *plansv1.PlanBehaviorPolicies) time.Duration {

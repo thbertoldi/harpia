@@ -12,6 +12,7 @@ import (
 	chatv1 "github.com/harpia/control-plane/gen/harpia/chat/v1"
 	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
 
+	"github.com/harpia/control-plane/internal/artifacts"
 	"github.com/harpia/control-plane/internal/chat"
 	"github.com/harpia/control-plane/internal/workflow"
 )
@@ -20,6 +21,11 @@ type RuntimeRepository struct {
 	chat      chat.Store
 	plans     runtimePlanStore
 	executors ExecutorLookup
+	artifacts ArtifactVersionVerifier
+}
+
+type ArtifactVersionVerifier interface {
+	GetArtifactVersion(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) (*artifacts.ArtifactVersion, error)
 }
 
 type runtimePlanStore interface {
@@ -32,17 +38,27 @@ type runtimePlanStore interface {
 	CreateStepExecution(ctx context.Context, step *StepExecution) (*StepExecution, error)
 	GetStepExecution(ctx context.Context, tenantID, stepID uuid.UUID) (*StepExecution, error)
 	UpdateStepExecutionStatus(ctx context.Context, tenantID, stepID uuid.UUID, status, outputArtifactID, elicitationThreadID, approvalRequestID string) error
+	UpdateStepExecutionRefs(ctx context.Context, tenantID, stepExecutionID uuid.UUID, status string, inputRef, outputRef *StepExecution) error
 	UpsertElicitation(ctx context.Context, elicitation *Elicitation) (*Elicitation, error)
 	MarkElicitationTimedOutByStep(ctx context.Context, tenantID, stepID uuid.UUID, threadID string) error
 	CreatePlanApprovalRequest(ctx context.Context, request *PlanApprovalRequest) error
 	ResolvePlanApprovalRequest(ctx context.Context, tenantID uuid.UUID, requestID string, stepExecutionID uuid.UUID, approved bool, reason string) error
+	GetPlanApprovalRequest(ctx context.Context, tenantID uuid.UUID, approvalID string) (*PlanApprovalRequest, error)
+	CreatePlanReviewRequest(ctx context.Context, request *PlanReviewRequest) (*PlanReviewRequest, error)
+	GetPlanReviewRequest(ctx context.Context, tenantID, reviewID uuid.UUID) (*PlanReviewRequest, error)
+	MarkReviewDecided(ctx context.Context, tenantID, reviewID uuid.UUID, decision, feedback string, decidedBy uuid.NullUUID) (*PlanReviewRequest, error)
 }
 
-func NewRuntimeRepository(planRepo *Repository, executors ExecutorLookup, chatStore chat.Store) *RuntimeRepository {
+func NewRuntimeRepository(planRepo *Repository, executors ExecutorLookup, chatStore chat.Store, artifactVersions ...ArtifactVersionVerifier) *RuntimeRepository {
+	var verifier ArtifactVersionVerifier
+	if len(artifactVersions) > 0 {
+		verifier = artifactVersions[0]
+	}
 	return &RuntimeRepository{
 		chat:      chatStore,
 		plans:     planRepo,
 		executors: executors,
+		artifacts: verifier,
 	}
 }
 
@@ -160,6 +176,9 @@ func (r *RuntimeRepository) CreateStepExecution(ctx context.Context, input workf
 		PlanStepKey:                  input.PlanStepKey,
 		Status:                       StepStatusRunning,
 		InputArtifactID:              input.InputArtifactID,
+		InputArtifactVersionID:       nullableRuntimeUUID(input.InputArtifactRef.ArtifactVersionID),
+		InputArtifactTypeKey:         input.InputArtifactRef.ArtifactTypeKey,
+		InputContentHash:             input.InputArtifactRef.ContentHash,
 		ExecutorInstallationSnapshot: rawInstallation,
 	})
 	if err != nil {
@@ -208,10 +227,18 @@ func (r *RuntimeRepository) CreateSkippedStepExecution(ctx context.Context, inpu
 		return workflow.StepExecutionRecord{}, err
 	}
 	step, err := r.plans.CreateStepExecution(ctx, &StepExecution{
-		TenantID:        tenantID,
-		PlanExecutionID: executionID,
-		PlanStepKey:     input.PlanStepKey,
-		Status:          StepStatusSkipped,
+		TenantID:                tenantID,
+		PlanExecutionID:         executionID,
+		PlanStepKey:             input.PlanStepKey,
+		Status:                  StepStatusSkipped,
+		InputArtifactID:         input.ArtifactRef.ArtifactID,
+		InputArtifactVersionID:  nullableRuntimeUUID(input.ArtifactRef.ArtifactVersionID),
+		InputArtifactTypeKey:    input.ArtifactRef.ArtifactTypeKey,
+		InputContentHash:        input.ArtifactRef.ContentHash,
+		OutputArtifactID:        input.ArtifactRef.ArtifactID,
+		OutputArtifactVersionID: nullableRuntimeUUID(input.ArtifactRef.ArtifactVersionID),
+		OutputArtifactTypeKey:   input.ArtifactRef.ArtifactTypeKey,
+		OutputContentHash:       input.ArtifactRef.ContentHash,
 		// The step_executions.executor_installation_snapshot column is NOT NULL,
 		// but a skipped branch step runs no executor. Record a self-documenting
 		// placeholder so the row satisfies the constraint without implying an
@@ -237,7 +264,11 @@ func (r *RuntimeRepository) CompleteStepExecution(ctx context.Context, input wor
 	if err != nil {
 		return err
 	}
-	if err := r.plans.UpdateStepExecutionStatus(ctx, tenantID, stepID, StepStatusCompleted, input.OutputArtifactID, "", ""); err != nil {
+	output := &StepExecution{OutputArtifactID: input.OutputArtifactRef.ArtifactID, OutputArtifactVersionID: nullableRuntimeUUID(input.OutputArtifactRef.ArtifactVersionID), OutputArtifactTypeKey: input.OutputArtifactRef.ArtifactTypeKey, OutputContentHash: input.OutputArtifactRef.ContentHash}
+	if output.OutputArtifactID == "" {
+		output.OutputArtifactID = input.OutputArtifactID
+	}
+	if err := r.plans.UpdateStepExecutionRefs(ctx, tenantID, stepID, StepStatusCompleted, &StepExecution{}, output); err != nil {
 		return err
 	}
 	if r.chat != nil {
@@ -258,11 +289,80 @@ func (r *RuntimeRepository) CompleteStepExecution(ctx context.Context, input wor
 				Role:        chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM,
 				Kind:        chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_STEP_BOUND,
 				Text:        "Step " + input.PlanStepKey + " completed.",
-				PayloadJSON: chat.BuildStepBoundPayload(input.PlanStepKey, input.OutputArtifactID),
+				PayloadJSON: chat.BuildStepBoundPayloadRef(input.PlanStepKey, output.OutputArtifactID, nullableUUIDString(output.OutputArtifactVersionID), output.OutputArtifactTypeKey, output.OutputContentHash),
 			})
 		}
 	}
 	return nil
+}
+
+func (r *RuntimeRepository) CreateReviewRequest(ctx context.Context, input workflow.CreateReviewRequestInput) (string, error) {
+	tenantID, executionID, err := parseRuntimeTenantExecution(input.TenantID, input.PlanExecutionID)
+	if err != nil {
+		return "", err
+	}
+	stepID, err := uuid.Parse(input.StepExecutionID)
+	if err != nil {
+		return "", err
+	}
+	ref := input.SubjectArtifactRef
+	artifactID, err := uuid.Parse(ref.ArtifactID)
+	if err != nil {
+		return "", err
+	}
+	versionID, err := uuid.Parse(ref.ArtifactVersionID)
+	if err != nil {
+		return "", err
+	}
+	review, err := r.plans.CreatePlanReviewRequest(ctx, &PlanReviewRequest{TenantID: tenantID, PlanExecutionID: executionID, StepExecutionID: stepID, PlanStepKey: input.PlanStepKey, SubjectArtifactID: artifactID, SubjectArtifactVersionID: versionID, SubjectArtifactTypeKey: ref.ArtifactTypeKey, SubjectContentHash: ref.ContentHash, OverseerUserID: r.resolveOverseer(ctx, tenantID, executionID, input.PlanStepKey)})
+	if err != nil {
+		return "", err
+	}
+	if r.chat != nil {
+		if configID, err := r.plans.GetPlanConfigurationIDForExecution(ctx, tenantID, executionID); err == nil {
+			if threadID, err := r.owningThreadID(ctx, tenantID, configID); err == nil {
+				execID := executionID
+				_, _ = r.chat.AppendMessage(ctx, tenantID, chat.AppendInput{ThreadID: threadID, ExecutionID: &execID, Role: chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM, Kind: chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_REVIEW_RAISED, Text: "Review required on step " + input.PlanStepKey + ".", PayloadJSON: chat.BuildReviewRaisedPayload(review.ID)})
+			}
+		}
+	}
+	return review.ID.String(), nil
+}
+
+func (r *RuntimeRepository) ResolveReviewRequest(ctx context.Context, input workflow.ResolveReviewRequestInput) error {
+	tenantID, _, err := parseRuntimeTenantStep(input.TenantID, input.StepExecutionID)
+	if err != nil {
+		return err
+	}
+	reviewID, err := uuid.Parse(input.ReviewRequestID)
+	if err != nil {
+		return err
+	}
+	review, err := r.plans.GetPlanReviewRequest(ctx, tenantID, reviewID)
+	if err != nil {
+		return err
+	}
+	_, err = r.plans.MarkReviewDecided(ctx, tenantID, reviewID, input.Decision, input.Feedback, uuid.NullUUID{})
+	if err != nil {
+		return err
+	}
+	if r.chat != nil {
+		if configID, err := r.plans.GetPlanConfigurationIDForExecution(ctx, tenantID, review.PlanExecutionID); err == nil {
+			if threadID, err := r.owningThreadID(ctx, tenantID, configID); err == nil {
+				execID := review.PlanExecutionID
+				_, _ = r.chat.AppendMessage(ctx, tenantID, chat.AppendInput{ThreadID: threadID, ExecutionID: &execID, Role: chatv1.ThreadMessageRole_THREAD_MESSAGE_ROLE_SYSTEM, Kind: chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_REVIEW_DECIDED, Text: "Review decided.", PayloadJSON: chat.BuildReviewDecidedPayload(reviewID, input.Decision)})
+			}
+		}
+	}
+	return nil
+}
+
+func nullableRuntimeUUID(raw string) uuid.NullUUID {
+	id, err := uuid.Parse(strings.TrimSpace(raw))
+	if err != nil {
+		return uuid.NullUUID{}
+	}
+	return uuid.NullUUID{UUID: id, Valid: true}
 }
 
 func (r *RuntimeRepository) FailStepExecution(ctx context.Context, input workflow.StepStatusUpdateInput) error {
@@ -426,14 +526,21 @@ func (r *RuntimeRepository) CreateApprovalRequest(ctx context.Context, input wor
 	if err != nil {
 		return fmt.Errorf("parse step execution id: %w", err)
 	}
+	subject := input.SubjectArtifactRef
+	subjectID, subjectErr := uuid.Parse(strings.TrimSpace(subject.ArtifactID))
+	versionID, versionErr := uuid.Parse(strings.TrimSpace(subject.ArtifactVersionID))
+	if subjectErr != nil || versionErr != nil || strings.TrimSpace(subject.ArtifactTypeKey) == "" || strings.TrimSpace(subject.ContentHash) == "" {
+		return fmt.Errorf("approval request requires a complete version-pinned subject artifact reference")
+	}
 	if err := r.plans.CreatePlanApprovalRequest(ctx, &PlanApprovalRequest{
-		ID:              input.ApprovalRequestID,
-		TenantID:        tenantID,
-		PlanExecutionID: executionID,
-		StepExecutionID: stepID,
-		PlanStepKey:     input.PlanStepKey,
-		InputArtifactID: input.InputArtifactID,
-		Status:          ApprovalRequestStatusPending,
+		ID:                input.ApprovalRequestID,
+		TenantID:          tenantID,
+		PlanExecutionID:   executionID,
+		StepExecutionID:   stepID,
+		PlanStepKey:       input.PlanStepKey,
+		InputArtifactID:   input.InputArtifactID,
+		SubjectArtifactID: uuid.NullUUID{UUID: subjectID, Valid: true}, SubjectVersionID: uuid.NullUUID{UUID: versionID, Valid: true}, SubjectTypeKey: subject.ArtifactTypeKey, SubjectContentHash: subject.ContentHash,
+		Status: ApprovalRequestStatusPending,
 	}); err != nil {
 		return err
 	}
@@ -469,6 +576,25 @@ func (r *RuntimeRepository) ResolveApprovalRequest(ctx context.Context, input wo
 	tenantID, stepID, err := parseRuntimeTenantStep(input.TenantID, input.StepExecutionID)
 	if err != nil {
 		return err
+	}
+	request, err := r.plans.GetPlanApprovalRequest(ctx, tenantID, input.ApprovalRequestID)
+	if err != nil {
+		return err
+	}
+	if request.StepExecutionID != stepID {
+		return fmt.Errorf("approval request does not belong to step execution")
+	}
+	if input.Approved {
+		if r.artifacts == nil || !request.SubjectArtifactID.Valid || !request.SubjectVersionID.Valid || strings.TrimSpace(request.SubjectContentHash) == "" {
+			return fmt.Errorf("approval request has no verifiable pinned subject")
+		}
+		version, err := r.artifacts.GetArtifactVersion(ctx, tenantID, request.SubjectArtifactID.UUID, request.SubjectVersionID.UUID)
+		if err != nil {
+			return fmt.Errorf("load pinned approval subject: %w", err)
+		}
+		if version.ContentHash != request.SubjectContentHash {
+			return fmt.Errorf("pinned approval subject content hash mismatch")
+		}
 	}
 	return r.plans.ResolvePlanApprovalRequest(ctx, tenantID, input.ApprovalRequestID, stepID, input.Approved, input.Reason)
 }

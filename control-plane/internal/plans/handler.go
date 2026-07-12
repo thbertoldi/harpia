@@ -184,6 +184,8 @@ type PlanHandler struct {
 	signaler         PlanElicitationSignaler
 	approvals        ApprovalStore
 	approvalSignaler PlanApprovalSignaler
+	reviews          ReviewStore
+	reviewSignaler   PlanReviewSignaler
 }
 
 type PlanWorkflowStarter interface {
@@ -216,12 +218,16 @@ func NewPlanHandler(repo *Repository, executors ExecutorLookup, schedule *Schedu
 		workflowStarter: starter,
 		elicitations:    repo,
 		approvals:       repo,
+		reviews:         repo,
 	}
 	if signaler, ok := starter.(PlanElicitationSignaler); ok {
 		handler.signaler = signaler
 	}
 	if approvalSignaler, ok := starter.(PlanApprovalSignaler); ok {
 		handler.approvalSignaler = approvalSignaler
+	}
+	if reviewSignaler, ok := starter.(PlanReviewSignaler); ok {
+		handler.reviewSignaler = reviewSignaler
 	}
 	return handler, nil
 }

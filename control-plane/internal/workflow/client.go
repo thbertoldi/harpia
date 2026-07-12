@@ -39,6 +39,10 @@ func (tc *TemporalClient) SignalPlanApprovalDecision(ctx context.Context, workfl
 	return tc.client.SignalWorkflow(ctx, workflowID, runID, PlanApprovalDecisionSignalName, signal)
 }
 
+func (tc *TemporalClient) SignalPlanReviewDecision(ctx context.Context, workflowID string, runID string, signal ReviewDecisionSignal) error {
+	return tc.client.SignalWorkflow(ctx, workflowID, runID, PlanReviewDecisionSignalName, signal)
+}
+
 func (tc *TemporalClient) RawClient() client.Client {
 	return tc.client
 }

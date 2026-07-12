@@ -16,26 +16,26 @@ import (
 // checkpoint. It deliberately carries a complete immutable artifact reference
 // instead of reusing elicitation or approval state.
 type PlanReviewRequest struct {
-	ID                      uuid.UUID
-	TenantID                uuid.UUID
-	PlanExecutionID         uuid.UUID
-	PlanConfigurationID     uuid.UUID
-	ThreadID                uuid.UUID
-	StepExecutionID         uuid.UUID
-	PlanStepKey             string
-	SubjectArtifactID       uuid.UUID
+	ID                       uuid.UUID
+	TenantID                 uuid.UUID
+	PlanExecutionID          uuid.UUID
+	PlanConfigurationID      uuid.UUID
+	ThreadID                 uuid.UUID
+	StepExecutionID          uuid.UUID
+	PlanStepKey              string
+	SubjectArtifactID        uuid.UUID
 	SubjectArtifactVersionID uuid.UUID
-	SubjectArtifactTypeKey  string
-	SubjectContentHash      string
-	Status                  string
-	RevisionFeedback        string
-	Decision                string
-	OverseerUserID          uuid.NullUUID
-	DecidedByUserID         uuid.NullUUID
-	RequestedAt             time.Time
-	DecidedAt               *time.Time
-	CreatedAt               time.Time
-	UpdatedAt               time.Time
+	SubjectArtifactTypeKey   string
+	SubjectContentHash       string
+	Status                   string
+	RevisionFeedback         string
+	Decision                 string
+	OverseerUserID           uuid.NullUUID
+	DecidedByUserID          uuid.NullUUID
+	RequestedAt              time.Time
+	DecidedAt                *time.Time
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
 }
 
 type ReviewFilters struct {
@@ -174,6 +174,30 @@ func (r *Repository) ListPlanReviewRequests(ctx context.Context, tenantID uuid.U
 		return nil, err
 	}
 	return requests, nil
+}
+
+// MarkReviewDecided atomically resolves a pending review. The pending-status
+// predicate makes a Temporal/API retry safe: only the first authorized
+// decision changes the request.
+func (r *Repository) MarkReviewDecided(ctx context.Context, tenantID, reviewID uuid.UUID, decision, feedback string, decidedBy uuid.NullUUID) (*PlanReviewRequest, error) {
+	status := ReviewRequestStatusAccepted
+	if decision == "revise" {
+		status = ReviewRequestStatusRevisionRequested
+	}
+	var updated PlanReviewRequest
+	err := database.WithTenant(ctx, r.pool, tenantID, func(q database.Querier) error {
+		row := q.QueryRow(ctx, `UPDATE plan_review_requests
+			SET status = $1, decision = $2, revision_feedback = $3,
+			    decided_by_user_id = $4, decided_at = now(), updated_at = now()
+			WHERE id = $5 AND tenant_id = $6 AND status = $7
+			RETURNING `+planReviewRequestColumns,
+			status, decision, feedback, nullableUUIDValue(decidedBy), reviewID, tenantID, ReviewRequestStatusPending)
+		return scanPlanReviewRequest(row, &updated)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("mark review decided: %w", err)
+	}
+	return &updated, nil
 }
 
 func scanPlanReviewRequest(row pgx.Row, dest *PlanReviewRequest) error {

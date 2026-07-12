@@ -47,12 +47,13 @@ func TestRuntimeInteractionEventsUseConfigurationOriginThread(t *testing.T) {
 		t.Fatalf("CreateStepExecution: %v", err)
 	}
 	if err := runtime.CreateApprovalRequest(context.Background(), workflow.CreateApprovalRequestInput{
-		TenantID:          tenantID.String(),
-		PlanExecutionID:   executionID.String(),
-		StepExecutionID:   stepID.String(),
-		PlanStepKey:       "publish",
-		ApprovalRequestID: "approval-1",
-		InputArtifactID:   "artifact-1",
+		TenantID:           tenantID.String(),
+		PlanExecutionID:    executionID.String(),
+		StepExecutionID:    stepID.String(),
+		PlanStepKey:        "publish",
+		ApprovalRequestID:  "approval-1",
+		InputArtifactID:    "artifact-1",
+		SubjectArtifactRef: workflow.ArtifactRef{ArtifactID: uuid.NewString(), ArtifactVersionID: uuid.NewString(), ArtifactTypeKey: "harpia.artifacts.v1.LinkedInPost", ContentHash: "hash"},
 	}); err != nil {
 		t.Fatalf("CreateApprovalRequest: %v", err)
 	}
@@ -156,12 +157,29 @@ func (f *fakeRuntimePlanStore) CreateStepExecution(_ context.Context, step *Step
 	return &created, nil
 }
 
+func (f *fakeRuntimePlanStore) UpdateStepExecutionRefs(context.Context, uuid.UUID, uuid.UUID, string, *StepExecution, *StepExecution) error {
+	return nil
+}
+func (f *fakeRuntimePlanStore) CreatePlanReviewRequest(_ context.Context, request *PlanReviewRequest) (*PlanReviewRequest, error) {
+	request.ID = uuid.New()
+	return request, nil
+}
+func (f *fakeRuntimePlanStore) GetPlanReviewRequest(_ context.Context, _ uuid.UUID, reviewID uuid.UUID) (*PlanReviewRequest, error) {
+	return &PlanReviewRequest{ID: reviewID, PlanExecutionID: f.execution.ID}, nil
+}
+func (f *fakeRuntimePlanStore) MarkReviewDecided(_ context.Context, _ uuid.UUID, reviewID uuid.UUID, decision, feedback string, _ uuid.NullUUID) (*PlanReviewRequest, error) {
+	return &PlanReviewRequest{ID: reviewID, Decision: decision, RevisionFeedback: feedback}, nil
+}
+func (f *fakeRuntimePlanStore) GetPlanApprovalRequest(_ context.Context, _ uuid.UUID, approvalID string) (*PlanApprovalRequest, error) {
+	return &PlanApprovalRequest{ID: approvalID, StepExecutionID: f.stepID}, nil
+}
+
 func (f *fakeRuntimePlanStore) GetStepExecution(_ context.Context, _ uuid.UUID, stepID uuid.UUID) (*StepExecution, error) {
 	return &StepExecution{
-		ID:               stepID,
-		PlanExecutionID:  f.execution.ID,
-		PlanStepKey:      "publish",
-		Status:           StepStatusFailed,
+		ID:              stepID,
+		PlanExecutionID: f.execution.ID,
+		PlanStepKey:     "publish",
+		Status:          StepStatusFailed,
 	}, nil
 }
 
@@ -376,12 +394,12 @@ func TestBuildRetryPlanWorkflowInputToleratesSkippedUpstreamSteps(t *testing.T) 
 				CreatedAt:        now.Add(time.Minute),
 			},
 			{
-				ID:               failedStepID,
-				PlanExecutionID:  executionID,
-				PlanStepKey:      "failed-step",
-				Status:           StepStatusFailed,
-				Attempt:          1,
-				CreatedAt:        now.Add(2 * time.Minute),
+				ID:              failedStepID,
+				PlanExecutionID: executionID,
+				PlanStepKey:     "failed-step",
+				Status:          StepStatusFailed,
+				Attempt:         1,
+				CreatedAt:       now.Add(2 * time.Minute),
 			},
 		},
 	}, failedStepID)

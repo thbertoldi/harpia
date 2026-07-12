@@ -51,9 +51,11 @@ func mapIntegrationRequest(tenantID uuid.UUID, input ExecutorActivityInput) exec
 	inputArtifacts := make([]executors.InputArtifactRef, 0, len(input.InputArtifacts))
 	for _, ref := range input.InputArtifacts {
 		inputArtifacts = append(inputArtifacts, executors.InputArtifactRef{
-			ArtifactTypeKey: ref.ArtifactTypeKey,
-			ArtifactID:      ref.ArtifactID,
-			LiteralJSON:     ref.LiteralJSON,
+			ArtifactTypeKey:   ref.ArtifactTypeKey,
+			ArtifactID:        ref.ArtifactID,
+			ArtifactVersionID: ref.ArtifactVersionID,
+			ContentHash:       ref.ContentHash,
+			LiteralJSON:       ref.LiteralJSON,
 		})
 	}
 
@@ -82,8 +84,8 @@ func mapIntegrationResult(result executors.IntegrationExecutionResult) ExecutorA
 	switch result.Status {
 	case executors.IntegrationStatusCompleted:
 		return ExecutorActivityResult{
-			Status:           ExecutorResultStatusCompleted,
-			OutputArtifactID: result.OutputArtifactID,
+			Status: ExecutorResultStatusCompleted, OutputArtifactID: result.OutputArtifactID,
+			OutputArtifactVersionID: result.OutputArtifactVersionID, OutputArtifactTypeKey: result.OutputArtifactTypeKey, OutputContentHash: result.OutputContentHash,
 		}
 	default:
 		message := result.Error
