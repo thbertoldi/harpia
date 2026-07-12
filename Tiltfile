@@ -35,18 +35,22 @@ docker_build(
 )
 k8s_yaml('deploy/dev/kind/api.yaml')
 
+# The Temporal agent worker (harpia-agent-worker, reusing this image) has no
+# hot reload: it registers its activities ONCE at startup and then blocks on
+# worker.run() for the lifetime of the process. The previous live_update sync
+# (+ compileall) copied new source into /app/src in-place but never restarted
+# the PID-1 worker process, so a Python logic change (e.g. a carousel or
+# elicitation tweak) silently never took effect — the operator saw "no preview"
+# / "nothing happened" instead of the new behaviour. Dropping live_update makes
+# Tilt rebuild the image and redeploy the pod on any agent-runtime/agents
+# change, which restarts the worker so the new code loads. `only` scopes the
+# watched paths so Go/frontend changes don't trigger an unrelated Python
+# rebuild. The Go API's air-based live reload (harpia-api) is unaffected.
 docker_build(
     'harpia-agent',
     context='.',
     dockerfile='./agent-runtime/Containerfile',
-    live_update=[
-        sync('./agent-runtime/src', '/app/src'),
-        sync('./agents', '/app/agents'),
-        run(
-            'python -m compileall -q /app/src',
-            trigger=['./agent-runtime/src'],
-        ),
-    ],
+    only=['./agent-runtime', './agents'],
 )
 k8s_resource('harpia-agent', port_forwards=['18000:8000'])
 
