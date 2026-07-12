@@ -27,6 +27,18 @@ shopt -s nullglob
 for change_dir in "$archive_dir"/*; do
   [[ -d "$change_dir" ]] || continue
   change_name=${change_dir##*/}
+
+  # Grandfather archives created before the acceptance gate (2026-07-12).
+  # The gate enforces going forward; historical archives predate it and are
+  # reconciled in the dedicated `reconcile-historical-archives` follow-up
+  # change. Archive dirs are date-prefixed YYYY-MM-DD.
+  gate_cutoff="2026-07-12"
+  archive_date=${change_name:0:10}
+  if [[ "$archive_date" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] && [[ "$archive_date" < "$gate_cutoff" ]]; then
+    printf 'openspec-delivery-check: %s grandfathered (pre-acceptance-gate); tracked for reconciliation\n' "$change_name" >&2
+    continue
+  fi
+
   tasks_file="$change_dir/tasks.md"
 
   if [[ ! -f "$tasks_file" ]]; then
