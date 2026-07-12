@@ -1,4 +1,4 @@
-h1:VrYrHk3iO98q/H/nLftEeN140t2j3fk98AGl4qaZXKE=
+h1:VG6EJrPph0vr+dCgDSgJXFjRtjbdCDn4OqTbh4G1f4c=
 000001_initial_schema.sql h1:ftqC16BXTrfe3uzdOQErFk7uYG44t+M5PPhk0pRkHe4=
 000002_schema_sync.sql h1:M7nTp8ww9G1Dd+KzZdbYkaTqjMhbh2cp1reW3yGqE7Q=
 000003_tenant_rls_hardening.sql h1:SsBdrSPxoIsOkuT0yXRnVskct+H0fenhJZ/24Eu4F4k=
@@ -19,3 +19,4 @@ h1:VrYrHk3iO98q/H/nLftEeN140t2j3fk98AGl4qaZXKE=
 000018_audit_events.sql h1:G6egPvF3yJWn/xvxBEy4kbiEZYNfHVk+3wtkKtnMex0=
 000019_composable_linkedin_interactions.sql h1:FKwhDFx14jNBgZHWg6RoHZDC0/Wd8/UqGSeZ8SE4LZY=
 000020_plan_step_human_interaction_policy.sql h1:NRg9GMjaIM9gM/jW9hEr789x6TjhRNk/6L4LyD206ME=
+000021_linkedin_carousel_document_hash.sql h1:ZfkU7PHY8V9F2qi82bejeAWd6lj24cThSX0fK6DT03k=

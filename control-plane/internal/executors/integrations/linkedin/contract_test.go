@@ -1,44 +1,35 @@
-package linkedin_test
+package linkedin
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
-	"time"
 
+	"github.com/google/uuid"
 	"github.com/harpia/control-plane/internal/artifacts"
-	"github.com/harpia/control-plane/internal/executors"
-	"github.com/harpia/control-plane/internal/executors/contracttest"
-	"github.com/harpia/control-plane/internal/executors/integrations/linkedin"
 	"github.com/harpia/control-plane/internal/executors/runtime"
 )
 
+// This contract-level adapter test deliberately goes through Handler and the
+// real HTTPPublisher; it proves the pinned post is the sole source of a real
+// text publish request without contacting LinkedIn.
 func TestLinkedInPublishIntegrationContract(t *testing.T) {
-	store := contracttest.NewLinkedInArtifactStore()
-	handler := linkedin.NewHandler(store, &linkedin.FakePublisher{
-		Result: linkedin.PublishResult{
-			PostID:      "urn:li:share:123",
-			Permalink:   "https://www.linkedin.com/feed/update/urn:li:share:123",
-			PublishedAt: time.Date(2026, 2, 10, 15, 4, 5, 0, time.UTC),
-		},
-	})
-
-	contracttest.Run(t, contracttest.Suite{
-		Name:                    executors.SKULinkedInPublish,
-		Handler:                 handler,
-		Store:                   store,
-		SKUKey:                  executors.SKULinkedInPublish,
-		InputArtifactTypeKey:    artifacts.TypeKeyLinkedInPostDraft,
-		OutputArtifactTypeKey:   artifacts.TypeKeyPublishConfirmation,
-		ValidInstallationConfig: json.RawMessage(`{"oauth_credential_id":"cred-123"}`),
-		ValidInputLiteralJSON:   contracttest.ValidLinkedInPostDraftLiteral,
-		RetryableTrigger: func(ctx context.Context, req runtime.IntegrationExecutionRequest) error {
-			retryingHandler := linkedin.NewHandler(store, &linkedin.FakePublisher{
-				Err: linkedin.NewPublishTransientError(503, errors.New("service unavailable")),
-			})
-			_, err := retryingHandler.Execute(ctx, req)
-			return err
-		},
-	})
+	var posts int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/rest/posts" {
+			t.Fatalf("request=%s %s", r.Method, r.URL.Path)
+		}
+		posts++
+		w.Header().Set("X-RestLi-Id", "urn:li:share:contract")
+		w.WriteHeader(http.StatusCreated)
+	}))
+	defer server.Close()
+	publisher := NewHTTPPublisher(server.Client(), staticTokenResolver{token: "contract-token"})
+	publisher.baseURL = server.URL
+	handler := NewHandler(&handlerArtifactStore{post: handlerPost(t, false)}, publisher)
+	result, err := handler.Execute(context.Background(), runtime.IntegrationExecutionRequest{TenantID: uuid.New(), OutputArtifactTypeKey: artifacts.TypeKeyPublishConfirmation, InputArtifacts: []runtime.InputArtifactRef{pinnedPostInput()}, Installation: runtime.InstallationSnapshot{ConfigJSON: oauthConfig()}})
+	if err != nil || result.Status != runtime.IntegrationStatusCompleted || posts != 1 {
+		t.Fatalf("result=%#v posts=%d err=%v", result, posts, err)
+	}
 }

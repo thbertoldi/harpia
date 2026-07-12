@@ -36,6 +36,7 @@ const (
 	ResolveApprovalRequestActivityName          = "ResolveApprovalRequestActivity"
 	CreateReviewRequestActivityName             = "CreateReviewRequestActivity"
 	ResolveReviewRequestActivityName            = "ResolveReviewRequestActivity"
+	EnsureCarouselDocumentActivityName          = "EnsureCarouselDocumentActivity"
 	CompletePlanExecutionActivityName           = "CompletePlanExecutionActivity"
 	FailPlanExecutionActivityName               = "FailPlanExecutionActivity"
 	RecordAuditActivityName                     = "RecordAuditActivity"
@@ -315,9 +316,10 @@ type PlanRuntimeStore interface {
 }
 
 type PlanActivities struct {
-	Runtime      PlanRuntimeStore
-	Integrations executors.IntegrationRunner
-	Audit        AuditRecorder
+	Runtime       PlanRuntimeStore
+	Integrations  executors.IntegrationRunner
+	ArtifactStore executors.ExecutorArtifactStore
+	Audit         AuditRecorder
 }
 
 func (a *PlanActivities) CreateScheduledPlanExecutionActivity(ctx context.Context, input PlanExecutionInput) (PlanWorkflowInput, error) {
@@ -799,6 +801,15 @@ func runPlanWorkflow(ctx workflow.Context, input PlanWorkflowInput) (PlanWorkflo
 				outputRef := ArtifactRef{Source: "step_output", StepKey: step.Key, ArtifactID: executorResult.OutputArtifactID, ArtifactVersionID: executorResult.OutputArtifactVersionID, ArtifactTypeKey: executorResult.OutputArtifactTypeKey, ContentHash: executorResult.OutputContentHash}
 				if outputRef.ArtifactTypeKey == "" {
 					outputRef.ArtifactTypeKey = step.OutputArtifactTypeId
+				}
+				if outputRef.ArtifactTypeKey == "harpia.artifacts.v1.LinkedInPost" {
+					var ensured ArtifactRef
+					if err := workflow.ExecuteActivity(ctx, EnsureCarouselDocumentActivityName, EnsureCarouselDocumentInput{
+						TenantID: input.TenantID, PlanExecutionID: input.PlanExecutionID, StepExecutionID: stepRecord.ID, Candidate: outputRef,
+					}).Get(ctx, &ensured); err != nil {
+						return result, failPlan(ctx, input, fmt.Errorf("ensure carousel document for step %q: %w", step.Key, err))
+					}
+					outputRef = ensured
 				}
 				if requiresReview(step) {
 					reviewID, reviewErr := createAndWaitForReview(ctx, input, stepRecord, step, outputRef)

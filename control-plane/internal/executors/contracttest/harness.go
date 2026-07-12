@@ -289,12 +289,15 @@ func NewLinkedInArtifactStore() runtime.ExecutorArtifactStore {
 	return runtime.NewExecutorArtifactStore(&MemoryArtifactRepo{
 		Types: map[string]*artifacts.ArtifactType{
 			artifacts.TypeKeyPublishConfirmation: {ID: typeID, Key: artifacts.TypeKeyPublishConfirmation},
+			artifacts.TypeKeyLinkedInPost:        {ID: uuid.MustParse("55555555-5555-5555-5555-555555555556"), Key: artifacts.TypeKeyLinkedInPost},
 		},
 	}, &MemoryPayloadStore{})
 }
 
 // ValidLinkedInPostDraftLiteral is a schema-valid LinkedInPostDraft literal for contract tests.
 const ValidLinkedInPostDraftLiteral = `{"text":"Shipping LinkedIn publish integration.","hashtags":["harpia","automation"]}`
+
+const ValidLinkedInPostLiteral = `{"text":{"text":"Shipping LinkedIn publish integration.","hashtags":["harpia","automation"]}}`
 
 // AssertNewsListPayload validates a stored NewsList payload against the schema.
 func AssertNewsListPayload(t *testing.T, payload []byte) {

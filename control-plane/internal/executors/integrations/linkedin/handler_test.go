@@ -1,270 +1,103 @@
-package linkedin_test
+package linkedin
 
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"google.golang.org/protobuf/encoding/protojson"
 
+	artifactsv1 "github.com/harpia/control-plane/gen/harpia/artifacts/v1"
 	"github.com/harpia/control-plane/internal/artifacts"
-	"github.com/harpia/control-plane/internal/executors"
-	"github.com/harpia/control-plane/internal/executors/integrations/linkedin"
 	"github.com/harpia/control-plane/internal/executors/runtime"
 )
 
-type memoryArtifactRepo struct {
-	types     map[string]*artifacts.ArtifactType
-	artifacts map[uuid.UUID]*artifacts.Artifact
+type handlerArtifactStore struct {
+	post, pdf []byte
+	loaded    []runtime.VersionedArtifactRef
 }
 
-func (m *memoryArtifactRepo) GetTypeByID(_ context.Context, typeID uuid.UUID) (*artifacts.ArtifactType, error) {
-	for _, artifactType := range m.types {
-		if artifactType.ID == typeID {
-			return artifactType, nil
-		}
+func (s *handlerArtifactStore) LoadPayloadForType(context.Context, uuid.UUID, []runtime.InputArtifactRef, string) ([]byte, error) {
+	return nil, context.Canceled
+}
+func (s *handlerArtifactStore) LoadPinnedPayload(_ context.Context, _ uuid.UUID, ref runtime.VersionedArtifactRef) ([]byte, error) {
+	s.loaded = append(s.loaded, ref)
+	if ref.ArtifactTypeKey == artifacts.TypeKeyLinkedInPost {
+		return s.post, nil
+	}
+	if ref.ArtifactTypeKey == artifacts.TypeKeyLinkedInCarouselDocument {
+		return s.pdf, nil
 	}
 	return nil, context.Canceled
 }
-
-func (m *memoryArtifactRepo) GetTypeByKey(_ context.Context, key string) (*artifacts.ArtifactType, error) {
-	artifactType, ok := m.types[key]
-	if !ok {
-		return nil, context.Canceled
-	}
-	return artifactType, nil
+func (s *handlerArtifactStore) CreateValidatedPayload(context.Context, runtime.CreateArtifactRequest) (string, error) {
+	return "confirmation-id", nil
 }
-
-func (m *memoryArtifactRepo) CreateArtifact(_ context.Context, artifact *artifacts.Artifact) (*artifacts.Artifact, error) {
-	if m.artifacts == nil {
-		m.artifacts = make(map[uuid.UUID]*artifacts.Artifact)
-	}
-	created := *artifact
-	if created.ID == uuid.Nil {
-		created.ID = uuid.New()
-	}
-	if created.CreatedAt.IsZero() {
-		created.CreatedAt = time.Now().UTC()
-	}
-	m.artifacts[created.ID] = &created
-	return &created, nil
+func (s *handlerArtifactStore) CreateValidatedPayloadRef(context.Context, runtime.CreateArtifactRequest) (runtime.VersionedArtifactRef, error) {
+	return runtime.VersionedArtifactRef{}, context.Canceled
 }
-
-func (m *memoryArtifactRepo) GetArtifact(_ context.Context, tenantID, artifactID uuid.UUID) (*artifacts.Artifact, error) {
-	artifact, ok := m.artifacts[artifactID]
-	if !ok || artifact.TenantID != tenantID {
-		return nil, context.Canceled
-	}
-	return artifact, nil
+func (s *handlerArtifactStore) CreateValidatedVersionPayload(context.Context, runtime.CreateArtifactVersionRequest) (runtime.VersionedArtifactRef, error) {
+	return runtime.VersionedArtifactRef{}, context.Canceled
 }
-
-func (m *memoryArtifactRepo) GetArtifactVersion(_ context.Context, _, _, _ uuid.UUID) (*artifacts.ArtifactVersion, error) {
-	return nil, context.Canceled
+func pinnedPostInput() runtime.InputArtifactRef {
+	return runtime.InputArtifactRef{ArtifactTypeKey: artifacts.TypeKeyLinkedInPost, ArtifactID: "post-id", ArtifactVersionID: "post-v1", ContentHash: "post-hash"}
 }
-
-func (m *memoryArtifactRepo) CreateArtifactVersion(_ context.Context, _ *artifacts.Artifact, _ *artifacts.ArtifactVersion) (*artifacts.ArtifactVersion, *artifacts.Artifact, error) {
-	return nil, nil, context.Canceled
-}
-
-type memoryPayloadStore struct {
-	objects map[string][]byte
-}
-
-func (m *memoryPayloadStore) Put(_ context.Context, objectPath string, payload []byte) (string, error) {
-	if m.objects == nil {
-		m.objects = make(map[string][]byte)
-	}
-	uri := "s3://harpia/tenant/test/" + objectPath
-	m.objects[uri] = append([]byte(nil), payload...)
-	return uri, nil
-}
-
-func (m *memoryPayloadStore) Get(_ context.Context, storageURI string) ([]byte, error) {
-	payload, ok := m.objects[storageURI]
-	if !ok {
-		return nil, context.Canceled
-	}
-	return append([]byte(nil), payload...), nil
-}
-
-type linkedInTestArtifactStore struct {
-	*runtime.ExecutorArtifactStoreAdapter
-	repo    *memoryArtifactRepo
-	payload *memoryPayloadStore
-}
-
-func newLinkedInTestArtifactStore() *linkedInTestArtifactStore {
-	typeID := uuid.MustParse("44444444-4444-4444-4444-444444444444")
-	repo := &memoryArtifactRepo{
-		types: map[string]*artifacts.ArtifactType{
-			artifacts.TypeKeyPublishConfirmation: {ID: typeID, Key: artifacts.TypeKeyPublishConfirmation},
-		},
-	}
-	payload := &memoryPayloadStore{}
-	return &linkedInTestArtifactStore{
-		ExecutorArtifactStoreAdapter: runtime.NewExecutorArtifactStore(repo, payload),
-		repo:                         repo,
-		payload:                      payload,
-	}
-}
-
-func (s *linkedInTestArtifactStore) payloadForArtifact(t *testing.T, tenantID uuid.UUID, artifactIDRaw string) []byte {
+func handlerPost(t *testing.T, carousel bool) []byte {
 	t.Helper()
-
-	artifactID, err := uuid.Parse(artifactIDRaw)
-	if err != nil {
-		t.Fatalf("parse artifact id: %v", err)
+	post := testPost(carousel)
+	if carousel {
+		post.Carousel.DocumentArtifact = &artifactsv1.ArtifactRef{ArtifactId: "doc-id", ArtifactVersionId: "doc-v1", ArtifactTypeKey: artifacts.TypeKeyLinkedInCarouselDocument, ContentHash: "doc-hash"}
 	}
-	artifact, err := s.repo.GetArtifact(context.Background(), tenantID, artifactID)
+	payload, err := protojson.Marshal(post)
 	if err != nil {
-		t.Fatalf("load artifact: %v", err)
-	}
-	payload, err := s.payload.Get(context.Background(), artifact.StorageURI)
-	if err != nil {
-		t.Fatalf("load artifact payload: %v", err)
+		t.Fatal(err)
 	}
 	return payload
 }
-
-func TestHandlerExecuteSuccess(t *testing.T) {
-	store := newLinkedInTestArtifactStore()
-	publishedAt := time.Date(2026, 2, 10, 15, 4, 5, 0, time.UTC)
-	publisher := &linkedin.FakePublisher{
-		Result: linkedin.PublishResult{
-			PostID:      "urn:li:share:123",
-			Permalink:   "https://www.linkedin.com/feed/update/urn:li:share:123",
-			PublishedAt: publishedAt,
-		},
-	}
-	handler := linkedin.NewHandler(store, publisher)
-
-	result, err := handler.Execute(context.Background(), runtime.IntegrationExecutionRequest{
-		TenantID:              uuid.MustParse("22222222-2222-2222-2222-222222222222"),
-		StepExecutionID:       "step-publish-linkedin",
-		OutputArtifactTypeKey: artifacts.TypeKeyPublishConfirmation,
-		InputArtifacts: []runtime.InputArtifactRef{{
-			ArtifactTypeKey: artifacts.TypeKeyLinkedInPostDraft,
-			LiteralJSON:     `{"text":"Launching our integration this week!","hashtags":["harpia","automation"]}`,
-		}},
-		Installation: runtime.InstallationSnapshot{
-			ExecutorSKUKey: executors.SKULinkedInPublish,
-			ConfigJSON:     json.RawMessage(`{"oauth_credential_id":"cred-123"}`),
-		},
-	})
-	if err != nil {
-		t.Fatalf("Execute() error = %v", err)
-	}
-	if result.Status != runtime.IntegrationStatusCompleted {
-		t.Fatalf("Status = %q, want completed (%s)", result.Status, result.Error)
-	}
-	if result.OutputArtifactID == "" {
-		t.Fatal("expected output artifact id")
-	}
-	if publisher.Calls != 1 {
-		t.Fatalf("publisher calls = %d, want 1", publisher.Calls)
-	}
-	if publisher.LastRequest.OAuthCredentialID != "cred-123" {
-		t.Fatalf("oauth credential id = %q, want cred-123", publisher.LastRequest.OAuthCredentialID)
-	}
+func oauthConfig() json.RawMessage {
+	return json.RawMessage(`{"oauth_credential_id":"cred-123","author_urn":"urn:li:person:me"}`)
 }
 
-func TestHandlerApprovalOnlyCreatesDryRunConfirmationWithoutPublisher(t *testing.T) {
-	store := newLinkedInTestArtifactStore()
-	publisher := &linkedin.FakePublisher{}
-	handler := linkedin.NewHandler(store, publisher)
-	tenantID := uuid.MustParse("00000000-0000-4000-8000-000000000001")
-
-	result, err := handler.Execute(context.Background(), runtime.IntegrationExecutionRequest{
-		TenantID:              tenantID,
-		StepExecutionID:       "step-publish-linkedin",
-		OutputArtifactTypeKey: artifacts.TypeKeyPublishConfirmation,
-		InputArtifacts: []runtime.InputArtifactRef{{
-			ArtifactTypeKey: artifacts.TypeKeyLinkedInPostDraft,
-			LiteralJSON:     `{"text":"Ready for approval","hook":"Hook","hashtags":["sports"]}`,
-		}},
-		Installation: runtime.InstallationSnapshot{
-			ExecutorSKUKey: executors.SKULinkedInPublish,
-			ConfigJSON:     json.RawMessage(`{"mode":"approval_only"}`),
-		},
-	})
-	if err != nil {
-		t.Fatalf("Execute() error = %v", err)
+func TestHandlerPublishesOnlyVersionPinnedPostAndPinnedDocument(t *testing.T) {
+	store := &handlerArtifactStore{post: handlerPost(t, true), pdf: []byte("%PDF-1.4\npinned\n%%EOF\n")}
+	publisher := &FakePublisher{Result: PublishResult{PostID: "urn:li:share:123", PublishedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)}}
+	handler := NewHandler(store, publisher)
+	result, err := handler.Execute(context.Background(), runtime.IntegrationExecutionRequest{TenantID: uuid.New(), OutputArtifactTypeKey: artifacts.TypeKeyPublishConfirmation, InputArtifacts: []runtime.InputArtifactRef{pinnedPostInput()}, Installation: runtime.InstallationSnapshot{ConfigJSON: oauthConfig()}})
+	if err != nil || result.Status != runtime.IntegrationStatusCompleted {
+		t.Fatalf("Execute() = %#v, %v", result, err)
 	}
-	if result.Status != runtime.IntegrationStatusCompleted {
-		t.Fatalf("Status = %q, want completed (%s)", result.Status, result.Error)
+	if publisher.Calls != 1 || !strings.Contains(string(publisher.LastRequest.CarouselPDF), "pinned") {
+		t.Fatalf("publisher = %#v", publisher)
 	}
-	if publisher.Calls != 0 {
-		t.Fatalf("publisher calls = %d, want 0", publisher.Calls)
-	}
-
-	payload := store.payloadForArtifact(t, tenantID, result.OutputArtifactID)
-	if !strings.Contains(string(payload), `"platform":"linkedin-dry-run"`) {
-		t.Fatalf("payload = %s, want dry-run platform", payload)
-	}
-	if !strings.Contains(string(payload), `"externalId":"dry-run-step-publish-linkedin"`) {
-		t.Fatalf("payload = %s, want deterministic dry-run external id", payload)
+	if len(store.loaded) != 2 || store.loaded[0].ArtifactVersionID != "post-v1" || store.loaded[1].ArtifactVersionID != "doc-v1" {
+		t.Fatalf("loaded refs = %#v", store.loaded)
 	}
 }
-
-func TestHandlerExecuteOAuthReconnectRequired(t *testing.T) {
-	handler := linkedin.NewHandler(newLinkedInTestArtifactStore(), &linkedin.FakePublisher{
-		Err: linkedin.NewOAuthReconnectError("token expired", nil),
-	})
-
-	result, err := handler.Execute(context.Background(), runtime.IntegrationExecutionRequest{
-		TenantID:              uuid.MustParse("22222222-2222-2222-2222-222222222222"),
-		OutputArtifactTypeKey: artifacts.TypeKeyPublishConfirmation,
-		InputArtifacts: []runtime.InputArtifactRef{{
-			ArtifactTypeKey: artifacts.TypeKeyLinkedInPostDraft,
-			LiteralJSON:     `{"text":"Test post"}`,
-		}},
-		Installation: runtime.InstallationSnapshot{
-			ExecutorSKUKey: executors.SKULinkedInPublish,
-			ConfigJSON:     json.RawMessage(`{"oauth_credential_id":"cred-123"}`),
-		},
-	})
-	if err != nil {
-		t.Fatalf("Execute() error = %v", err)
-	}
-	if result.Status != runtime.IntegrationStatusFailed {
-		t.Fatalf("Status = %q, want failed", result.Status)
-	}
-	if result.Error == "" {
-		t.Fatal("expected reconnect failure message")
-	}
-	if want := runtime.ErrCodeOAuthReconnectRequired; !strings.Contains(result.Error, want) {
-		t.Fatalf("Error = %q, want contains %q", result.Error, want)
+func TestHandlerRefusesUnpinnedPostBeforePublisher(t *testing.T) {
+	handler := NewHandler(&handlerArtifactStore{}, &FakePublisher{})
+	publisher := handler.publisher.(*FakePublisher)
+	result, err := handler.Execute(context.Background(), runtime.IntegrationExecutionRequest{TenantID: uuid.New(), OutputArtifactTypeKey: artifacts.TypeKeyPublishConfirmation, InputArtifacts: []runtime.InputArtifactRef{{ArtifactTypeKey: artifacts.TypeKeyLinkedInPost, ArtifactID: "post-id"}}, Installation: runtime.InstallationSnapshot{ConfigJSON: oauthConfig()}})
+	if err != nil || result.Status != runtime.IntegrationStatusFailed || publisher.Calls != 0 {
+		t.Fatalf("result=%#v calls=%d err=%v", result, publisher.Calls, err)
 	}
 }
-
-func TestHandlerExecuteTransientFailureIsRetryable(t *testing.T) {
-	handler := linkedin.NewHandler(newLinkedInTestArtifactStore(), &linkedin.FakePublisher{
-		Err: linkedin.NewPublishTransientError(503, errors.New("service unavailable")),
-	})
-
-	_, err := handler.Execute(context.Background(), runtime.IntegrationExecutionRequest{
-		TenantID:              uuid.MustParse("22222222-2222-2222-2222-222222222222"),
-		OutputArtifactTypeKey: artifacts.TypeKeyPublishConfirmation,
-		InputArtifacts: []runtime.InputArtifactRef{{
-			ArtifactTypeKey: artifacts.TypeKeyLinkedInPostDraft,
-			LiteralJSON:     `{"text":"Test post"}`,
-		}},
-		Installation: runtime.InstallationSnapshot{
-			ExecutorSKUKey: executors.SKULinkedInPublish,
-			ConfigJSON:     json.RawMessage(`{"oauth_credential_id":"cred-123"}`),
-		},
-	})
-	if err == nil {
-		t.Fatal("expected retryable error")
+func TestHandlerRefusesCarouselWithoutPinnedDocumentBeforePublisher(t *testing.T) {
+	store := &handlerArtifactStore{post: handlerPostWithoutDocument(t)}
+	publisher := &FakePublisher{}
+	handler := NewHandler(store, publisher)
+	result, err := handler.Execute(context.Background(), runtime.IntegrationExecutionRequest{TenantID: uuid.New(), OutputArtifactTypeKey: artifacts.TypeKeyPublishConfirmation, InputArtifacts: []runtime.InputArtifactRef{pinnedPostInput()}, Installation: runtime.InstallationSnapshot{ConfigJSON: oauthConfig()}})
+	if err != nil || result.Status != runtime.IntegrationStatusFailed || publisher.Calls != 0 {
+		t.Fatalf("result=%#v calls=%d err=%v", result, publisher.Calls, err)
 	}
-	retryable, ok := runtime.IsRetryable(err)
-	if !ok {
-		t.Fatalf("error = %T(%v), want *runtime.RetryableError", err, err)
+}
+func handlerPostWithoutDocument(t *testing.T) []byte {
+	t.Helper()
+	payload, err := protojson.Marshal(testPost(true))
+	if err != nil {
+		t.Fatal(err)
 	}
-	if retryable.Code != runtime.ErrCodeLinkedInPublish {
-		t.Fatalf("retryable code = %q, want %q", retryable.Code, runtime.ErrCodeLinkedInPublish)
-	}
+	return payload
 }

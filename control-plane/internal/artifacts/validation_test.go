@@ -94,11 +94,11 @@ func TestValidatePayloadImageAsset(t *testing.T) {
 }
 
 func TestValidatePayloadLinkedInCarouselDocument(t *testing.T) {
-	if err := ValidatePayload(TypeKeyLinkedInCarouselDocument, []byte(`{"mimeType":"application/pdf","fileName":"carousel.pdf"}`)); err != nil {
+	if err := ValidatePayload(TypeKeyLinkedInCarouselDocument, []byte("%PDF-1.4\n%%EOF\n")); err != nil {
 		t.Fatalf("valid carousel document rejected: %v", err)
 	}
 
-	if err := ValidatePayload(TypeKeyLinkedInCarouselDocument, []byte(`{"mimeType":"image/png","fileName":"carousel.png"}`)); err == nil {
+	if err := ValidatePayload(TypeKeyLinkedInCarouselDocument, []byte("not-a-pdf")); err == nil {
 		t.Fatal("expected non-PDF carousel document to fail")
 	}
 }

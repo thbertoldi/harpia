@@ -13,31 +13,34 @@ import (
 	artifactsv1 "github.com/harpia/control-plane/gen/harpia/artifacts/v1"
 )
 
-const defaultBaseURL = "https://api.linkedin.com"
+const (
+	defaultBaseURL         = "https://api.linkedin.com"
+	defaultLinkedInVersion = "202501"
+)
 
 type PublishRequest struct {
 	OAuthCredentialID string
-	Draft             *artifactsv1.LinkedInPostDraft
+	AuthorURN         string
+	Post              *artifactsv1.LinkedInPost
+	CarouselPDF       []byte
 }
 
 type PublishResult struct {
-	PostID      string
-	Permalink   string
-	PublishedAt time.Time
+	PostID, Permalink string
+	PublishedAt       time.Time
 }
-
 type LinkedInPublisher interface {
-	Publish(ctx context.Context, req PublishRequest) (PublishResult, error)
+	Publish(context.Context, PublishRequest) (PublishResult, error)
 }
-
 type OAuthTokenResolver interface {
-	ResolveAccessToken(ctx context.Context, oauthCredentialID string) (string, error)
+	ResolveAccessToken(context.Context, string) (string, error)
 }
 
 type HTTPPublisher struct {
-	client        *http.Client
-	baseURL       string
-	tokenResolver OAuthTokenResolver
+	client          *http.Client
+	baseURL         string
+	linkedInVersion string
+	tokenResolver   OAuthTokenResolver
 }
 
 func NewHTTPPublisher(client *http.Client, tokenResolver OAuthTokenResolver) *HTTPPublisher {
@@ -47,45 +50,49 @@ func NewHTTPPublisher(client *http.Client, tokenResolver OAuthTokenResolver) *HT
 	if tokenResolver == nil {
 		tokenResolver = noopTokenResolver{}
 	}
-	return &HTTPPublisher{
-		client:        client,
-		baseURL:       defaultBaseURL,
-		tokenResolver: tokenResolver,
-	}
+	return &HTTPPublisher{client: client, baseURL: defaultBaseURL, linkedInVersion: defaultLinkedInVersion, tokenResolver: tokenResolver}
 }
 
+// Publish uses LinkedIn's Posts API. A carousel uses exactly initializeUpload,
+// upload, then a document media post; a text-only post calls only /rest/posts.
 func (p *HTTPPublisher) Publish(ctx context.Context, req PublishRequest) (PublishResult, error) {
-	oauthCredentialID, err := p.validateRequest(req)
+	if err := p.validateRequest(req); err != nil {
+		return PublishResult{}, err
+	}
+	token, err := p.resolveAccessToken(ctx, req.OAuthCredentialID)
 	if err != nil {
 		return PublishResult{}, err
 	}
-	token, err := p.resolveAccessToken(ctx, oauthCredentialID)
+	if req.Post.GetCarousel() == nil {
+		return p.createPost(ctx, token, req.AuthorURN, buildPostText(req.Post.GetText()), "")
+	}
+	documentURN, uploadURL, err := p.initializeDocumentUpload(ctx, token, req.AuthorURN)
 	if err != nil {
 		return PublishResult{}, err
 	}
-	body, err := buildPublishRequestBody(req.Draft)
-	if err != nil {
+	if err := p.uploadDocument(ctx, token, uploadURL, req.CarouselPDF); err != nil {
 		return PublishResult{}, err
 	}
-	resp, bodyBytes, err := p.executePublishRequest(ctx, token, body)
-	if err != nil {
-		return PublishResult{}, err
-	}
-	return parsePublishResponse(resp, bodyBytes)
+	return p.createPost(ctx, token, req.AuthorURN, buildPostText(req.Post.GetText()), documentURN)
 }
 
-func (p *HTTPPublisher) validateRequest(req PublishRequest) (string, error) {
+func (p *HTTPPublisher) validateRequest(req PublishRequest) error {
 	if p == nil || p.client == nil {
-		return "", fmt.Errorf("%w: linkedin publisher is not configured", ErrInvalidInput)
+		return fmt.Errorf("%w: linkedin publisher is not configured", ErrInvalidInput)
 	}
-	oauthCredentialID := strings.TrimSpace(req.OAuthCredentialID)
-	if oauthCredentialID == "" {
-		return "", fmt.Errorf("%w: oauth_credential_id is required", ErrInvalidInput)
+	if strings.TrimSpace(req.OAuthCredentialID) == "" {
+		return fmt.Errorf("%w: oauth_credential_id is required", ErrInvalidInput)
 	}
-	if req.Draft == nil {
-		return "", fmt.Errorf("%w: linkedin post draft is required", ErrInvalidInput)
+	if strings.TrimSpace(req.AuthorURN) == "" {
+		return fmt.Errorf("%w: author_urn is required", ErrInvalidInput)
 	}
-	return oauthCredentialID, nil
+	if req.Post == nil || req.Post.Text == nil || strings.TrimSpace(req.Post.Text.Text) == "" {
+		return fmt.Errorf("%w: version-pinned LinkedIn post text is required", ErrInvalidInput)
+	}
+	if req.Post.Carousel != nil && len(req.CarouselPDF) == 0 {
+		return fmt.Errorf("%w: carousel PDF bytes are required", ErrInvalidInput)
+	}
+	return nil
 }
 
 func (p *HTTPPublisher) resolveAccessToken(ctx context.Context, oauthCredentialID string) (string, error) {
@@ -99,126 +106,129 @@ func (p *HTTPPublisher) resolveAccessToken(ctx context.Context, oauthCredentialI
 	return "", NewPublishTransientError(0, fmt.Errorf("resolve oauth token: %w", err))
 }
 
-func buildPublishRequestBody(draft *artifactsv1.LinkedInPostDraft) ([]byte, error) {
-	postPayload := map[string]any{
-		"author":         "urn:li:person:me",
-		"lifecycleState": "PUBLISHED",
-		"specificContent": map[string]any{
-			"com.linkedin.ugc.ShareContent": map[string]any{
-				"shareCommentary": map[string]any{
-					"text": buildPostText(draft),
-				},
-				"shareMediaCategory": "NONE",
-			},
-		},
-		"visibility": map[string]any{
-			"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC",
-		},
-	}
-
-	body, err := json.Marshal(postPayload)
+func (p *HTTPPublisher) initializeDocumentUpload(ctx context.Context, token, authorURN string) (string, string, error) {
+	body, _ := json.Marshal(map[string]any{"initializeUploadRequest": map[string]any{"owner": authorURN}})
+	resp, response, err := p.request(ctx, token, http.MethodPost, strings.TrimRight(p.baseURL, "/")+"/rest/documents?action=initializeUpload", body, "application/json")
 	if err != nil {
-		return nil, fmt.Errorf("marshal linkedin publish request: %w", err)
+		return "", "", err
 	}
-	return body, nil
+	if err := classifyHTTPStatus(resp.StatusCode, response); err != nil {
+		return "", "", err
+	}
+	var payload struct {
+		Value struct {
+			Document  string `json:"document"`
+			UploadURL string `json:"uploadUrl"`
+		} `json:"value"`
+	}
+	if err := json.Unmarshal(response, &payload); err != nil {
+		return "", "", fmt.Errorf("parse LinkedIn document initialization: %w", err)
+	}
+	if strings.TrimSpace(payload.Value.Document) == "" || strings.TrimSpace(payload.Value.UploadURL) == "" {
+		return "", "", fmt.Errorf("%w: LinkedIn document initialization response missing document or upload URL", ErrInvalidInput)
+	}
+	return payload.Value.Document, payload.Value.UploadURL, nil
 }
 
-func (p *HTTPPublisher) executePublishRequest(ctx context.Context, token string, body []byte) (*http.Response, []byte, error) {
-	endpoint := strings.TrimRight(p.baseURL, "/") + "/v2/ugcPosts"
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
+func (p *HTTPPublisher) uploadDocument(ctx context.Context, token, uploadURL string, pdf []byte) error {
+	resp, body, err := p.request(ctx, token, http.MethodPut, uploadURL, pdf, "application/pdf")
 	if err != nil {
-		return nil, nil, fmt.Errorf("build linkedin publish request: %w", err)
+		return err
 	}
-	httpReq.Header.Set("Authorization", "Bearer "+token)
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("X-Restli-Protocol-Version", "2.0.0")
-
-	resp, err := p.client.Do(httpReq)
-	if err != nil {
-		return nil, nil, NewPublishTransientError(0, fmt.Errorf("execute linkedin publish request: %w", err))
-	}
-	defer resp.Body.Close()
-	bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
-	return resp, bodyBytes, nil
+	return classifyHTTPStatus(resp.StatusCode, body)
 }
 
-func parsePublishResponse(resp *http.Response, bodyBytes []byte) (PublishResult, error) {
-	if err := classifyHTTPStatus(resp.StatusCode, bodyBytes); err != nil {
+func (p *HTTPPublisher) createPost(ctx context.Context, token, authorURN, text, documentURN string) (PublishResult, error) {
+	content := map[string]any{"shareMediaCategory": "NONE"}
+	if documentURN != "" {
+		content = map[string]any{"media": map[string]any{"id": documentURN}}
+	}
+	body, err := json.Marshal(map[string]any{
+		"author": authorURN, "commentary": text, "visibility": "PUBLIC", "lifecycleState": "PUBLISHED",
+		"distribution": map[string]any{"feedDistribution": "MAIN_FEED", "targetEntities": []string{}, "thirdPartyDistributionChannels": []string{}},
+		"content":      content,
+	})
+	if err != nil {
+		return PublishResult{}, fmt.Errorf("marshal LinkedIn post request: %w", err)
+	}
+	resp, response, err := p.request(ctx, token, http.MethodPost, strings.TrimRight(p.baseURL, "/")+"/rest/posts", body, "application/json")
+	if err != nil {
 		return PublishResult{}, err
 	}
-	postID, permalink := parsePublishIdentifiers(resp, bodyBytes)
-	return PublishResult{
-		PostID:      postID,
-		Permalink:   permalink,
-		PublishedAt: time.Now().UTC(),
-	}, nil
+	if err := classifyHTTPStatus(resp.StatusCode, response); err != nil {
+		return PublishResult{}, err
+	}
+	postID, permalink := parsePublishIdentifiers(resp, response)
+	return PublishResult{PostID: postID, Permalink: permalink, PublishedAt: time.Now().UTC()}, nil
 }
 
-func classifyHTTPStatus(statusCode int, bodyBytes []byte) error {
+func (p *HTTPPublisher) request(ctx context.Context, token, method, endpoint string, body []byte, contentType string) (*http.Response, []byte, error) {
+	httpReq, err := http.NewRequestWithContext(ctx, method, endpoint, bytes.NewReader(body))
+	if err != nil {
+		return nil, nil, fmt.Errorf("build LinkedIn request: %w", err)
+	}
+	httpReq.Header.Set("Authorization", "Bearer "+token)
+	httpReq.Header.Set("Content-Type", contentType)
+	httpReq.Header.Set("X-Restli-Protocol-Version", "2.0.0")
+	httpReq.Header.Set("Linkedin-Version", p.linkedInVersion)
+	resp, err := p.client.Do(httpReq)
+	if err != nil {
+		return nil, nil, NewPublishTransientError(0, fmt.Errorf("execute LinkedIn request: %w", err))
+	}
+	defer resp.Body.Close()
+	response, _ := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
+	return resp, response, nil
+}
+
+func classifyHTTPStatus(statusCode int, body []byte) error {
 	switch {
 	case statusCode == http.StatusUnauthorized || statusCode == http.StatusForbidden:
-		return NewOAuthReconnectError(
-			"linkedin oauth credential is expired or invalid; reconnect required",
-			fmt.Errorf("linkedin response status %d", statusCode),
-		)
+		return NewOAuthReconnectError("linkedin oauth credential is expired or invalid; reconnect required", fmt.Errorf("linkedin response status %d", statusCode))
 	case statusCode == http.StatusTooManyRequests || statusCode >= http.StatusInternalServerError:
-		return NewPublishTransientError(
-			statusCode,
-			fmt.Errorf("linkedin response status %d: %s", statusCode, strings.TrimSpace(string(bodyBytes))),
-		)
+		return NewPublishTransientError(statusCode, fmt.Errorf("linkedin response status %d: %s", statusCode, strings.TrimSpace(string(body))))
 	case statusCode < http.StatusOK || statusCode >= http.StatusMultipleChoices:
-		return fmt.Errorf(
-			"%w: linkedin publish failed with status %d: %s",
-			ErrInvalidInput,
-			statusCode,
-			strings.TrimSpace(string(bodyBytes)),
-		)
+		return fmt.Errorf("%w: LinkedIn publish failed with status %d: %s", ErrInvalidInput, statusCode, strings.TrimSpace(string(body)))
 	}
 	return nil
 }
 
-func parsePublishIdentifiers(resp *http.Response, bodyBytes []byte) (string, string) {
-	postID := strings.TrimSpace(resp.Header.Get("X-RestLi-Id"))
-	permalink := ""
-	if len(bodyBytes) > 0 {
-		var payload struct {
-			ID        string `json:"id"`
-			URN       string `json:"urn"`
-			Permalink string `json:"permalink"`
+func parsePublishIdentifiers(resp *http.Response, body []byte) (string, string) {
+	postID, permalink := strings.TrimSpace(resp.Header.Get("X-RestLi-Id")), ""
+	var payload struct {
+		ID        string `json:"id"`
+		URN       string `json:"urn"`
+		Permalink string `json:"permalink"`
+	}
+	if json.Unmarshal(body, &payload) == nil {
+		if postID == "" {
+			postID = firstNonEmpty(payload.ID, payload.URN)
 		}
-		if err := json.Unmarshal(bodyBytes, &payload); err == nil {
-			if postID == "" {
-				postID = strings.TrimSpace(payload.ID)
-			}
-			if postID == "" {
-				postID = strings.TrimSpace(payload.URN)
-			}
-			permalink = strings.TrimSpace(payload.Permalink)
-		}
+		permalink = strings.TrimSpace(payload.Permalink)
 	}
 	return postID, permalink
+}
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if value = strings.TrimSpace(value); value != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 type noopTokenResolver struct{}
 
-func (noopTokenResolver) ResolveAccessToken(_ context.Context, _ string) (string, error) {
+func (noopTokenResolver) ResolveAccessToken(context.Context, string) (string, error) {
 	return "", NewOAuthReconnectError("linkedin oauth credential is missing or disconnected; reconnect required", nil)
 }
 
 type noopPublisher struct{}
 
-func NewNoopPublisher() LinkedInPublisher {
-	return noopPublisher{}
+func NewNoopPublisher() LinkedInPublisher { return noopPublisher{} }
+func (noopPublisher) Publish(context.Context, PublishRequest) (PublishResult, error) {
+	return PublishResult{}, NewOAuthReconnectError("linkedin publishing is not configured; reconnect required", nil)
 }
 
-func (noopPublisher) Publish(_ context.Context, _ PublishRequest) (PublishResult, error) {
-	return PublishResult{}, NewOAuthReconnectError(
-		"linkedin publishing is not configured; reconnect required",
-		nil,
-	)
-}
-
-// FakePublisher is a deterministic test double for handler tests.
 type FakePublisher struct {
 	Result      PublishResult
 	Err         error
@@ -234,35 +244,29 @@ func (p *FakePublisher) Publish(_ context.Context, req PublishRequest) (PublishR
 	}
 	return p.Result, nil
 }
-
 func buildPostText(draft *artifactsv1.LinkedInPostDraft) string {
 	if draft == nil {
 		return ""
 	}
-
 	parts := make([]string, 0, 3)
-	if hook := strings.TrimSpace(draft.GetHook()); hook != "" {
+	if hook := strings.TrimSpace(draft.Hook); hook != "" {
 		parts = append(parts, hook)
 	}
-	if text := strings.TrimSpace(draft.GetText()); text != "" {
+	if text := strings.TrimSpace(draft.Text); text != "" {
 		parts = append(parts, text)
 	}
-	if len(draft.GetHashtags()) > 0 {
-		tags := make([]string, 0, len(draft.GetHashtags()))
-		for _, hashtag := range draft.GetHashtags() {
-			tag := strings.TrimSpace(hashtag)
-			if tag == "" {
-				continue
-			}
+	tags := make([]string, 0, len(draft.Hashtags))
+	for _, tag := range draft.Hashtags {
+		tag = strings.TrimSpace(tag)
+		if tag != "" {
 			if !strings.HasPrefix(tag, "#") {
 				tag = "#" + tag
 			}
 			tags = append(tags, tag)
 		}
-		if len(tags) > 0 {
-			parts = append(parts, strings.Join(tags, " "))
-		}
 	}
-
-	return strings.TrimSpace(strings.Join(parts, "\n\n"))
+	if len(tags) > 0 {
+		parts = append(parts, strings.Join(tags, " "))
+	}
+	return strings.Join(parts, "\n\n")
 }

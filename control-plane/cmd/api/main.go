@@ -122,6 +122,7 @@ func runWorker(ctx context.Context, cfg *config.Config) {
 	planActivities := &workflow.PlanActivities{
 		Runtime:      plans.NewRuntimeRepository(planRepo, executorRepo, chatStore, artifactRepo),
 		Integrations: executorRuntime.Integrations,
+		ArtifactStore: executorRuntime.ArtifactStore,
 		Audit:        workflowAuditRecorder{recorder: workerAuditRecorder},
 	}
 

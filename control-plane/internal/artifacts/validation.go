@@ -1,6 +1,7 @@
 package artifacts
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,6 +29,12 @@ const (
 func ValidatePayload(typeKey string, payload []byte) error {
 	if len(payload) == 0 {
 		return fmt.Errorf("%w: payload is required", ErrInvalidPayload)
+	}
+	if strings.TrimSpace(typeKey) == TypeKeyLinkedInCarouselDocument {
+		if !bytes.HasPrefix(payload, []byte("%PDF-")) {
+			return fmt.Errorf("%w: LinkedIn carousel document must be PDF bytes", ErrInvalidPayload)
+		}
+		return nil
 	}
 	if !json.Valid(payload) {
 		return fmt.Errorf("%w: payload must be valid JSON", ErrInvalidPayload)
@@ -107,15 +114,7 @@ func ValidatePayload(typeKey string, payload []byte) error {
 		}
 		return nil
 	case TypeKeyLinkedInCarouselDocument:
-		return validateProtoJSON(payload, &artifactsv1.LinkedInCarouselDocument{}, func(msg *artifactsv1.LinkedInCarouselDocument) error {
-			if strings.TrimSpace(msg.MimeType) != "application/pdf" {
-				return fmt.Errorf("%w: mime_type must be application/pdf", ErrInvalidPayload)
-			}
-			if strings.TrimSpace(msg.FileName) == "" {
-				return fmt.Errorf("%w: file_name is required", ErrInvalidPayload)
-			}
-			return nil
-		})
+		return nil
 	case TypeKeyLinkedInPost:
 		return validateProtoJSON(payload, &artifactsv1.LinkedInPost{}, func(msg *artifactsv1.LinkedInPost) error {
 			if msg.Text == nil || strings.TrimSpace(msg.Text.Text) == "" {

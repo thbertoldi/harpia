@@ -6,7 +6,7 @@ import (
 )
 
 func TestParseInstallationConfigSuccess(t *testing.T) {
-	config, err := ParseInstallationConfig(json.RawMessage(`{"oauth_credential_id":"cred-123"}`))
+	config, err := ParseInstallationConfig(json.RawMessage(`{"oauth_credential_id":"cred-123","author_urn":"urn:li:person:me"}`))
 	if err != nil {
 		t.Fatalf("ParseInstallationConfig() error = %v", err)
 	}

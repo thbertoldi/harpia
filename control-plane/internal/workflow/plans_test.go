@@ -1114,6 +1114,7 @@ func newPlanWorkflowTestEnv(t *testing.T) *testsuite.TestWorkflowEnvironment {
 	env.RegisterActivity(TimeoutElicitationStepExecutionActivity)
 	env.RegisterActivity(CreateApprovalRequestActivity)
 	env.RegisterActivity(ResolveApprovalRequestActivity)
+	env.RegisterActivity(EnsureCarouselDocumentActivity)
 	env.RegisterActivity(CompletePlanExecutionActivity)
 	env.RegisterActivity(FailPlanExecutionActivity)
 	env.RegisterActivity(RecordAuditActivity)
@@ -1142,6 +1143,10 @@ func RunIntegrationActivity(context.Context, ExecutorActivityInput) (ExecutorAct
 
 func RunAgentActivity(context.Context, ExecutorActivityInput) (ExecutorActivityResult, error) {
 	return ExecutorActivityResult{}, unexpectedActivityError("RunAgentActivity")
+}
+
+func EnsureCarouselDocumentActivity(context.Context, EnsureCarouselDocumentInput) (ArtifactRef, error) {
+	return ArtifactRef{}, unexpectedActivityError("EnsureCarouselDocumentActivity")
 }
 
 func ResumeStepExecutionActivity(context.Context, StepStatusUpdateInput) error {

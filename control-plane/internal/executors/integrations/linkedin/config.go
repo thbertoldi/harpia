@@ -14,6 +14,7 @@ const (
 type InstallationConfig struct {
 	Mode              string `json:"mode"`
 	OAuthCredentialID string `json:"oauth_credential_id"`
+	AuthorURN         string `json:"author_urn"`
 }
 
 func ParseInstallationConfig(raw json.RawMessage) (InstallationConfig, error) {
@@ -39,11 +40,16 @@ func ParseInstallationConfig(raw json.RawMessage) (InstallationConfig, error) {
 	}
 
 	config.OAuthCredentialID = strings.TrimSpace(config.OAuthCredentialID)
+	config.AuthorURN = strings.TrimSpace(config.AuthorURN)
 	if config.Mode == ModeOAuth && config.OAuthCredentialID == "" {
 		return InstallationConfig{}, fmt.Errorf("%w: oauth_credential_id is required", ErrInvalidConfig)
 	}
+	if config.Mode == ModeOAuth && config.AuthorURN == "" {
+		return InstallationConfig{}, fmt.Errorf("%w: author_urn is required", ErrInvalidConfig)
+	}
 	if config.Mode == ModeApprovalOnly {
 		config.OAuthCredentialID = ""
+		config.AuthorURN = ""
 	}
 
 	return config, nil

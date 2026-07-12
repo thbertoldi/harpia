@@ -148,7 +148,9 @@ func (r *Repository) CreateArtifact(ctx context.Context, artifact *Artifact) (*A
 
 	var created *Artifact
 	err := database.WithTenant(ctx, r.pool, artifact.TenantID, func(q database.Querier) error {
-		if _, err := q.Exec(ctx,
+		inserted := true
+		var insertedID uuid.UUID
+		err := q.QueryRow(ctx,
 			`INSERT INTO artifacts (
 				id,
 				tenant_id,
@@ -160,7 +162,9 @@ func (r *Repository) CreateArtifact(ctx context.Context, artifact *Artifact) (*A
 				step_execution_id,
 				status
 			)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			ON CONFLICT (tenant_id, artifact_type_id, content_hash) DO NOTHING
+			RETURNING id`,
 			artifact.ID,
 			artifact.TenantID,
 			artifact.ArtifactTypeID,
@@ -170,9 +174,22 @@ func (r *Repository) CreateArtifact(ctx context.Context, artifact *Artifact) (*A
 			nullUUIDValue(artifact.PlanExecutionID),
 			nullUUIDValue(artifact.StepExecutionID),
 			status.String(),
-		); err != nil {
-			return err
+		).Scan(&insertedID)
+		if err != nil {
+			if !errors.Is(err, pgx.ErrNoRows) {
+				return err
+			}
+			inserted = false
 		}
+		if !inserted {
+			loaded, err := selectArtifactByContentHash(ctx, q, artifact.TenantID, artifact.ArtifactTypeID, artifact.ContentHash)
+			if err != nil {
+				return err
+			}
+			created = loaded
+			return nil
+		}
+		artifact.ID = insertedID
 
 		versionID := uuid.New()
 		if _, err := q.Exec(ctx,
@@ -509,6 +526,13 @@ func selectArtifactByID(ctx context.Context, q database.Querier, tenantID, artif
 		query += " FOR UPDATE OF a"
 	}
 	return scanArtifact(q.QueryRow(ctx, query, artifactID, tenantID))
+}
+
+func selectArtifactByContentHash(ctx context.Context, q database.Querier, tenantID, artifactTypeID uuid.UUID, contentHash string) (*Artifact, error) {
+	return scanArtifact(q.QueryRow(ctx, artifactSelectColumns+`
+		FROM artifacts a
+		JOIN artifact_types t ON t.id = a.artifact_type_id
+		WHERE a.tenant_id = $1 AND a.artifact_type_id = $2 AND a.content_hash = $3`, tenantID, artifactTypeID, contentHash))
 }
 
 func scanArtifact(row rowScanner) (*Artifact, error) {
