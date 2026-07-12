@@ -1,0 +1,144 @@
+syntax = "proto3";
+
+package harpia.audit.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// AuditService exposes the tenant-scoped, append-only audit ledger.
+// It is intentionally read-only: there is no client-callable record
+// RPC. Events are written by the server-side audit recorder, not by
+// browser clients.
+service AuditService {
+  // ListAuditEvents returns a newest-first, keyset-paged slice of the
+  // caller's audit events filtered by the supplied predicates.
+  rpc ListAuditEvents(ListAuditEventsRequest) returns (ListAuditEventsResponse);
+}
+
+// ActorKind identifies who initiated the audited operation.
+enum ActorKind {
+  ACTOR_KIND_UNSPECIFIED = 0;
+  ACTOR_KIND_HUMAN = 1;
+  ACTOR_KIND_AGENT = 2;
+  ACTOR_KIND_WORKFLOW_ENGINE = 3;
+}
+
+// BoundedContext follows the Constitution's bounded contexts.
+enum BoundedContext {
+  BOUNDED_CONTEXT_UNSPECIFIED = 0;
+  BOUNDED_CONTEXT_PLAN_MANAGEMENT = 1;
+  BOUNDED_CONTEXT_HUMAN_INTERACTION = 2;
+  BOUNDED_CONTEXT_IDENTITY_TENANTS = 3;
+  BOUNDED_CONTEXT_WORKFLOW_ENGINE = 4;
+  BOUNDED_CONTEXT_EXECUTOR_CATALOG = 5;
+}
+
+// AuditSubjectType identifies the typed subject of an event.
+// Authentication events legitimately omit the subject.
+enum AuditSubjectType {
+  AUDIT_SUBJECT_TYPE_UNSPECIFIED = 0;
+  AUDIT_SUBJECT_TYPE_PLAN_CONFIGURATION = 1;
+  AUDIT_SUBJECT_TYPE_PLAN_EXECUTION = 2;
+  AUDIT_SUBJECT_TYPE_STEP_EXECUTION = 3;
+  AUDIT_SUBJECT_TYPE_EXECUTOR_INSTALLATION = 4;
+  AUDIT_SUBJECT_TYPE_APPROVAL_REQUEST = 5;
+}
+
+// FeedbackDecision records a human's decision on an approval /
+// elicitation-style event.
+enum FeedbackDecision {
+  FEEDBACK_DECISION_UNSPECIFIED = 0;
+  FEEDBACK_DECISION_APPROVE = 1;
+  FEEDBACK_DECISION_REJECT = 2;
+  FEEDBACK_DECISION_MODIFY = 3;
+  FEEDBACK_DECISION_ESCALATE = 4;
+}
+
+// AuditEventType is the validated application vocabulary of audited
+// operations. It is a proto enum (not a free string) so the contract
+// is explicit, while the DB stores event_type as TEXT so the ledger
+// does not require a migration for every future operation.
+enum AuditEventType {
+  AUDIT_EVENT_TYPE_UNSPECIFIED = 0;
+  AUDIT_EVENT_TYPE_PLAN_CONFIGURATION_CREATED = 1;
+  AUDIT_EVENT_TYPE_PLAN_CONFIGURATION_UPDATED = 2;
+  AUDIT_EVENT_TYPE_PLAN_CONFIGURATION_STATUS_CHANGED = 3;
+  AUDIT_EVENT_TYPE_PLAN_EXECUTION_CREATED = 4;
+  AUDIT_EVENT_TYPE_PLAN_EXECUTION_STARTED = 5;
+  AUDIT_EVENT_TYPE_PLAN_EXECUTION_COMPLETED = 6;
+  AUDIT_EVENT_TYPE_PLAN_EXECUTION_FAILED = 7;
+  AUDIT_EVENT_TYPE_STEP_EXECUTION_STARTED = 8;
+  AUDIT_EVENT_TYPE_STEP_EXECUTION_COMPLETED = 9;
+  AUDIT_EVENT_TYPE_STEP_EXECUTION_FAILED = 10;
+  AUDIT_EVENT_TYPE_STEP_EXECUTION_SKIPPED = 11;
+  AUDIT_EVENT_TYPE_APPROVAL_CREATED = 12;
+  AUDIT_EVENT_TYPE_APPROVAL_DECIDED = 13;
+  AUDIT_EVENT_TYPE_WORKFLOW_SIGNAL_RECEIVED = 14;
+  AUDIT_EVENT_TYPE_AUTHENTICATION_DEV_AUTH = 15;
+  AUDIT_EVENT_TYPE_EXECUTOR_INSTALLATION_CREATED = 16;
+  AUDIT_EVENT_TYPE_EXECUTOR_INSTALLATION_UPDATED = 17;
+  AUDIT_EVENT_TYPE_EXECUTOR_INSTALLATION_DELETED = 18;
+}
+
+// AuditActor is a snapshot of the operation's initiator.
+message AuditActor {
+  ActorKind kind = 1;
+  string actor_id = 2;
+  string display_name = 3;
+  // Present only when kind is AGENT.
+  optional string agent_type = 4;
+}
+
+// AuditSubject is the typed entity the event concerns.
+message AuditSubject {
+  AuditSubjectType subject_type = 1;
+  string subject_id = 2;
+}
+
+// PayloadDiffEntry captures one safe before/after field transition.
+// Secret-bearing fields are redacted before persistence.
+message PayloadDiffEntry {
+  string field = 1;
+  optional string before = 2;
+  optional string after = 3;
+}
+
+message AuditEvent {
+  // Stable event identifier (UUID) used for keyset pagination.
+  string event_id = 1;
+  string tenant_id = 2;
+  AuditEventType event_type = 3;
+  BoundedContext bounded_context = 4;
+  AuditActor actor = 5;
+  // Optional typed subject; absent for authentication events.
+  optional AuditSubject subject = 6;
+  repeated PayloadDiffEntry payload_diff = 7;
+  google.protobuf.Timestamp occurred_at = 8;
+  optional string trace_id = 9;
+  optional FeedbackDecision decision = 10;
+}
+
+// AuditActorFilter narrows a listing to one actor.
+message AuditActorFilter {
+  ActorKind kind = 1;
+  string actor_id = 2;
+  optional string agent_type = 3;
+}
+
+message ListAuditEventsRequest {
+  string tenant_id = 1;
+  repeated AuditEventType event_types = 2;
+  optional AuditActorFilter actor = 3;
+  // Inclusive ISO-8601 date bounds.
+  optional string date_from = 4;
+  optional string date_to = 5;
+  optional string subject_id = 6;
+  optional FeedbackDecision decision = 7;
+  int32 page_size = 8;
+  // Opaque keyset page token returned by a prior response.
+  optional string page_token = 9;
+}
+
+message ListAuditEventsResponse {
+  repeated AuditEvent events = 1;
+  optional string next_page_token = 2;
+}
