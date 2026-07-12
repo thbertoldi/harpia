@@ -10,10 +10,11 @@ import (
 
 // Dependencies wires infrastructure ports required by the executor runtime.
 type Dependencies struct {
-	ArtifactRepo      runtime.ArtifactRepository
-	PayloadStore      artifacts.PayloadStore
-	FeedFetcher       rss.FeedFetcher
-	LinkedInPublisher linkedin.LinkedInPublisher
+	ArtifactRepo            runtime.ArtifactRepository
+	PayloadStore            artifacts.PayloadStore
+	FeedFetcher             rss.FeedFetcher
+	LinkedInPublisher       linkedin.LinkedInPublisher
+	ImageProviderAPIKeyEnvs map[string]string
 }
 
 // Runtime owns integration execution wiring for the control-plane worker.
@@ -33,7 +34,7 @@ func NewRuntime(deps Dependencies) *Runtime {
 		deps.LinkedInPublisher = linkedin.NewNoopPublisher()
 	}
 
-	imageResolver := image.DefaultProviderResolver
+	imageResolver := image.NewProviderResolver(deps.ImageProviderAPIKeyEnvs)
 
 	configValidators := runtime.NewConfigValidatorRegistry(
 		rss.NewConfigValidator(),
