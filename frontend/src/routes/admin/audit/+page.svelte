@@ -11,14 +11,21 @@
   import Skeleton from "$lib/components/Skeleton.svelte";
   import {
     AGENT_TYPES,
+    AUDIT_EVENT_TYPES,
     FEEDBACK_DECISIONS,
+    auditActorKindName,
+    auditBoundedContextName,
     auditEventsToCsv,
     auditEventsToJson,
+    auditEventTypeName,
+    auditSubjectTypeName,
     downloadTextFile,
     getAllFilteredAuditEvents,
     getAuditEvents,
+    AuditEventType,
     type AuditEvent,
     type AuditEventFilters,
+    type AuditFeedbackDecision,
   } from "$lib/audit/audit-store";
   import { locale, translate } from "$lib/i18n";
   import { chipFlash, hoverCardLift } from "$lib/motion/transitions";
@@ -31,10 +38,11 @@
   let loading = $state(true);
   let exporting = $state(false);
 
-  let taskId = $state("");
-  let userId = $state("");
+  let subjectId = $state("");
+  let actorId = $state("");
   let agentType = $state("");
-  let decision = $state<AuditEventFilters["decision"] | "">("");
+  let eventType = $state<AuditEventType | "">("");
+  let decision = $state<AuditFeedbackDecision | "">("");
   let dateFrom = $state("");
   let dateTo = $state("");
 
@@ -55,12 +63,7 @@
   ) {
     loading = true;
     try {
-      const page = await getAuditEvents(
-        $locale,
-        activeFilters,
-        token,
-        PAGE_SIZE,
-      );
+      const page = await getAuditEvents(activeFilters, token, PAGE_SIZE);
       events = page.events;
       nextPageToken = page.nextPageToken;
     } finally {
@@ -70,9 +73,10 @@
 
   function buildFilters(): AuditEventFilters {
     return {
-      taskId: taskId || undefined,
-      userId: userId || undefined,
+      subjectId: subjectId || undefined,
+      actorId: actorId || undefined,
       agentType: agentType || undefined,
+      eventTypes: eventType ? [eventType] : undefined,
       decision: decision || undefined,
       dateFrom: dateFrom || undefined,
       dateTo: dateTo || undefined,
@@ -85,9 +89,10 @@
   }
 
   function clearFilters() {
-    taskId = "";
-    userId = "";
+    subjectId = "";
+    actorId = "";
     agentType = "";
+    eventType = "";
     decision = "";
     dateFrom = "";
     dateTo = "";
@@ -108,7 +113,7 @@
   async function exportCsv() {
     exporting = true;
     try {
-      const all = await getAllFilteredAuditEvents($locale, appliedFilters);
+      const all = await getAllFilteredAuditEvents(appliedFilters);
       const csv = auditEventsToCsv(all);
       downloadTextFile(
         csv,
@@ -123,7 +128,7 @@
   async function exportJson() {
     exporting = true;
     try {
-      const all = await getAllFilteredAuditEvents($locale, appliedFilters);
+      const all = await getAllFilteredAuditEvents(appliedFilters);
       const json = auditEventsToJson(all);
       downloadTextFile(
         json,
@@ -147,11 +152,26 @@
   }
 
   function contextLabel(ctx: AuditEvent["boundedContext"]): string {
-    return ctx.replace(/_/g, " ");
+    return translate(`audit.context.${auditBoundedContextName(ctx)}`, $locale);
   }
 
   function eventTypeLabel(type: AuditEvent["eventType"]): string {
-    return type.replace(/\./g, " · ");
+    return translate(`audit.eventType.${auditEventTypeName(type)}`, $locale);
+  }
+
+  function actorKindLabel(kind: AuditEvent["actor"]["kind"]): string {
+    return translate(`audit.actorKind.${auditActorKindName(kind)}`, $locale);
+  }
+
+  function subjectLabel(event: AuditEvent): string {
+    if (!event.subject) {
+      return translate("audit.noSubject", $locale);
+    }
+    const typeLabel = translate(
+      `audit.subjectType.${auditSubjectTypeName(event.subject.type)}`,
+      $locale,
+    );
+    return `${typeLabel}: ${shortId(event.subject.id)}`;
   }
 </script>
 
@@ -206,13 +226,13 @@
         <label class="block">
           <span
             class="mb-1 block font-mono text-[10px] tracking-wider text-text-muted-dark uppercase"
-            >{translate("audit.field.taskId", $locale)}</span
+            >{translate("audit.field.subjectId", $locale)}</span
           >
           <input
             type="text"
-            bind:value={taskId}
-            data-testid="audit-filter-task-id"
-            placeholder="task-a1b2…"
+            bind:value={subjectId}
+            data-testid="audit-filter-subject-id"
+            placeholder="plan-cfg-…"
             class="w-full rounded-md border border-border bg-surface px-3 py-2 font-mono text-xs text-text placeholder:text-text-muted-dark focus:border-primary focus:outline-none"
           />
         </label>
@@ -224,7 +244,8 @@
           >
           <input
             type="text"
-            bind:value={userId}
+            bind:value={actorId}
+            data-testid="audit-filter-actor-id"
             placeholder="dev-overseer"
             class="w-full rounded-md border border-border bg-surface px-3 py-2 font-mono text-xs text-text placeholder:text-text-muted-dark focus:border-primary focus:outline-none"
           />
@@ -237,7 +258,8 @@
           >
           <select
             bind:value={agentType}
-            class="w-full rounded-md border border-plumage bg-obsidian px-3 py-2 font-mono text-xs text-cream focus:border-talon-gold focus:outline-none"
+            data-testid="audit-filter-agent-type"
+            class="w-full rounded-md border border-border bg-surface px-3 py-2 font-mono text-xs text-text focus:border-primary focus:outline-none"
           >
             <option value="">{translate("common.all", $locale)}</option>
             {#each AGENT_TYPES as type (type)}
@@ -249,15 +271,40 @@
         <label class="block">
           <span
             class="mb-1 block font-mono text-[10px] tracking-wider text-text-muted-dark uppercase"
+            >{translate("audit.field.eventType", $locale)}</span
+          >
+          <select
+            bind:value={eventType}
+            data-testid="audit-filter-event-type"
+            class="w-full rounded-md border border-border bg-surface px-3 py-2 font-mono text-xs text-text focus:border-primary focus:outline-none"
+          >
+            <option value="">{translate("common.all", $locale)}</option>
+            {#each AUDIT_EVENT_TYPES as type (type)}
+              <option value={type}>
+                {translate(
+                  `audit.eventType.${auditEventTypeName(type)}`,
+                  $locale,
+                )}
+              </option>
+            {/each}
+          </select>
+        </label>
+
+        <label class="block">
+          <span
+            class="mb-1 block font-mono text-[10px] tracking-wider text-text-muted-dark uppercase"
             >{translate("audit.field.decision", $locale)}</span
           >
           <select
             bind:value={decision}
-            class="w-full rounded-md border border-plumage bg-obsidian px-3 py-2 font-mono text-xs text-cream focus:border-talon-gold focus:outline-none"
+            data-testid="audit-filter-decision"
+            class="w-full rounded-md border border-border bg-surface px-3 py-2 font-mono text-xs text-text focus:border-primary focus:outline-none"
           >
             <option value="">{translate("common.all", $locale)}</option>
             {#each FEEDBACK_DECISIONS as d (d)}
-              <option value={d}>{d}</option>
+              <option value={d}>
+                {translate(`audit.decision.${d}`, $locale)}
+              </option>
             {/each}
           </select>
         </label>
@@ -270,7 +317,7 @@
           <input
             type="date"
             bind:value={dateFrom}
-            class="w-full rounded-md border border-plumage bg-obsidian px-3 py-2 font-mono text-xs text-cream focus:border-talon-gold focus:outline-none"
+            class="w-full rounded-md border border-border bg-surface px-3 py-2 font-mono text-xs text-text focus:border-primary focus:outline-none"
           />
         </label>
 
@@ -282,7 +329,7 @@
           <input
             type="date"
             bind:value={dateTo}
-            class="w-full rounded-md border border-plumage bg-obsidian px-3 py-2 font-mono text-xs text-cream focus:border-talon-gold focus:outline-none"
+            class="w-full rounded-md border border-border bg-surface px-3 py-2 font-mono text-xs text-text focus:border-primary focus:outline-none"
           />
         </label>
       </div>
@@ -330,8 +377,8 @@
             use:hoverCardLift
             class="rounded-lg border border-border bg-surface-elevated transition-colors hover:bg-surface-hover"
             data-testid={`audit-event-${event.eventId}`}
-            data-event-type={event.eventType}
-            data-task-id={event.taskId}
+            data-event-type={auditEventTypeName(event.eventType)}
+            data-subject-id={event.subject?.id ?? ""}
           >
             <div class="border-b border-border/50 px-4 py-3">
               <div class="flex flex-wrap items-center gap-2">
@@ -349,7 +396,7 @@
                   <span
                     class="rounded-full bg-green-500/10 px-2 py-0.5 font-mono text-[10px] text-green-400 uppercase"
                   >
-                    {event.decision}
+                    {translate(`audit.decision.${event.decision}`, $locale)}
                   </span>
                 {/if}
               </div>
@@ -359,15 +406,16 @@
               >
                 <span>{formatTimestamp(event.timestamp)}</span>
                 <span
-                  >{translate("common.task", $locale)}: {shortId(
-                    event.taskId,
-                  )}</span
+                  >{translate("audit.subject", $locale)}:
+                  {subjectLabel(event)}</span
                 >
-                <span
-                  >{translate("audit.trace", $locale)}: {shortId(
-                    event.traceId,
-                  )}</span
-                >
+                {#if event.traceId}
+                  <span
+                    >{translate("audit.trace", $locale)}: {shortId(
+                      event.traceId,
+                    )}</span
+                  >
+                {/if}
                 <span
                   >{translate("audit.event", $locale)}: {shortId(
                     event.eventId,
@@ -389,7 +437,7 @@
                   {event.actor.displayName}
                 </p>
                 <p class="font-mono text-[10px] text-text-muted">
-                  {event.actor.kind}
+                  {actorKindLabel(event.actor.kind)}
                   {#if event.actor.agentType}
                     · {event.actor.agentType}
                   {/if}

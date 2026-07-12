@@ -12,8 +12,6 @@ import {
   type AgentCatalogEntry,
   type BoundTool,
 } from "$lib/mocks/agent-catalog";
-import type { AuditEvent } from "$lib/mocks/audit-events";
-import { appendMockAuditEvent } from "$lib/audit/audit-store";
 import { allowsMockFallback } from "$lib/dev-mocks";
 import { agentClient } from "$lib/rpc";
 
@@ -154,31 +152,6 @@ export async function runTestInvocationForAgent(
   if (!entry) {
     throw new Error("Agent catalog entry not found.");
   }
-
-  const event: AuditEvent = {
-    eventId: `evt-${Math.random().toString(36).slice(2, 10)}`,
-    tenantId: "dev",
-    eventType: "agent.execution_completed",
-    actor: {
-      kind: "agent",
-      id: `agent-inst-${agentId}`,
-      displayName: entry.agentType.displayName || entry.agentType.name,
-      agentType: entry.agentType.name || agentId,
-    },
-    boundedContext: "agent_orchestration",
-    taskId,
-    payloadDiff: [
-      { field: "status", before: "running", after: "completed" },
-      {
-        field: "agent_type",
-        before: null,
-        after: entry.agentType.name || agentId,
-      },
-    ],
-    timestamp: new Date().toISOString(),
-    traceId: `trace-${Math.random().toString(16).slice(2, 18)}`,
-  };
-  appendMockAuditEvent(event);
 
   return { entry, source, taskId };
 }
