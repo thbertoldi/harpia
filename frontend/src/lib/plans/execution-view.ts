@@ -16,13 +16,32 @@ export interface ExecutionStepView {
   detail?: string;
   status: StepStatus;
   outputArtifactId: string | null;
+  outputArtifactVersionId?: string | null;
+  outputArtifactTypeKey?: string | null;
+  outputContentHash?: string | null;
+}
+
+export interface ArtifactReferenceView {
+  artifactId: string;
+  artifactVersionId: string;
+  artifactTypeKey: string;
+  contentHash: string;
 }
 
 export interface ExecutionApprovalView {
   approvalRequestId: string;
   inputArtifactId: string;
+  subjectArtifactRef: ArtifactReferenceView | null;
   planStepKey: string;
   status: "pending" | "approved" | "rejected";
+  message: ChatMessage;
+}
+
+export interface ExecutionReviewView {
+  reviewRequestId: string;
+  planStepKey: string;
+  subjectArtifactRef: ArtifactReferenceView | null;
+  status: "pending" | "accepted" | "revision_requested";
   message: ChatMessage;
 }
 
@@ -44,6 +63,55 @@ export interface ExecutionViewModel {
   messages: ChatMessage[];
   approvals: ExecutionApprovalView[];
   pendingApproval: ExecutionApprovalView | null;
+  reviews: ExecutionReviewView[];
+  pendingReview: ExecutionReviewView | null;
+}
+
+function parsedRecord(payloadJson: string): Record<string, unknown> | null {
+  if (!payloadJson) return null;
+  try {
+    const parsed = JSON.parse(payloadJson) as unknown;
+    return parsed && typeof parsed === "object"
+      ? (parsed as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+export function parseArtifactReference(
+  raw: unknown,
+): ArtifactReferenceView | null {
+  if (!raw || typeof raw !== "object") return null;
+  const value = raw as Record<string, unknown>;
+  const field = (snake: string, camel: string) => value[snake] ?? value[camel];
+  const artifactId = field("artifact_id", "artifactId");
+  const artifactVersionId = field("artifact_version_id", "artifactVersionId");
+  const artifactTypeKey = field("artifact_type_key", "artifactTypeKey");
+  const contentHash = field("content_hash", "contentHash");
+  return typeof artifactId === "string" &&
+    typeof artifactVersionId === "string" &&
+    typeof artifactTypeKey === "string" &&
+    typeof contentHash === "string" &&
+    artifactId &&
+    artifactVersionId &&
+    artifactTypeKey &&
+    contentHash
+    ? { artifactId, artifactVersionId, artifactTypeKey, contentHash }
+    : null;
+}
+
+export function parseStepBoundArtifactRef(
+  payloadJson: string,
+): ArtifactReferenceView | null {
+  const raw = parsedRecord(payloadJson);
+  if (!raw) return null;
+  return parseArtifactReference({
+    artifact_id: raw.output_artifact_id,
+    artifact_version_id: raw.output_artifact_version_id,
+    artifact_type_key: raw.output_artifact_type_key,
+    content_hash: raw.output_content_hash,
+  });
 }
 
 /**
@@ -70,21 +138,16 @@ export function parseStepKey(payloadJson: string): string | null {
  * rendering.
  */
 export function parseOutputArtifactId(payloadJson: string): string | null {
-  if (!payloadJson) return null;
-  try {
-    const parsed = JSON.parse(payloadJson) as unknown;
-    if (
-      parsed &&
-      typeof parsed === "object" &&
-      "output_artifact_id" in parsed
-    ) {
-      const id = (parsed as Record<string, unknown>).output_artifact_id;
-      return typeof id === "string" && id.length > 0 ? id : null;
-    }
-  } catch {
-    // malformed payload — degrade gracefully
-  }
-  return null;
+  return (
+    parseStepBoundArtifactRef(payloadJson)?.artifactId ??
+    (() => {
+      const raw = parsedRecord(payloadJson);
+      return typeof raw?.output_artifact_id === "string" &&
+        raw.output_artifact_id
+        ? raw.output_artifact_id
+        : null;
+    })()
+  );
 }
 
 export function parseApprovalPayload(payloadJson: string): {
@@ -92,6 +155,7 @@ export function parseApprovalPayload(payloadJson: string): {
   approved: boolean | null;
   inputArtifactId: string;
   planStepKey: string;
+  subjectArtifactRef: ArtifactReferenceView | null;
 } | null {
   if (!payloadJson) return null;
   try {
@@ -115,6 +179,7 @@ export function parseApprovalPayload(payloadJson: string): {
             : "",
         planStepKey:
           typeof raw.plan_step_key === "string" ? raw.plan_step_key : "",
+        subjectArtifactRef: parseArtifactReference(raw.subject_artifact_ref),
       };
     }
   } catch {
@@ -143,9 +208,13 @@ export function buildExecutionViewModel(
     detail: s.detail,
     status: "pending",
     outputArtifactId: null,
+    outputArtifactVersionId: null,
+    outputArtifactTypeKey: null,
+    outputContentHash: null,
   }));
   const byKey = new Map(steps.map((s) => [s.key, s]));
   const approvalsById = new Map<string, ExecutionApprovalView>();
+  const reviewsById = new Map<string, ExecutionReviewView>();
   let state: ExecutionState = "idle";
   let runningKey: string | null = null;
 
@@ -179,10 +248,16 @@ export function buildExecutionViewModel(
       case "STEP_BOUND": {
         const key = parseStepKey(m.payloadJson);
         const outputArtifactId = parseOutputArtifactId(m.payloadJson);
+        const outputArtifactRef = parseStepBoundArtifactRef(m.payloadJson);
         if (key && byKey.has(key)) {
           const step = byKey.get(key)!;
           step.status = "done";
           step.outputArtifactId = outputArtifactId;
+          step.outputArtifactVersionId =
+            outputArtifactRef?.artifactVersionId ?? null;
+          step.outputArtifactTypeKey =
+            outputArtifactRef?.artifactTypeKey ?? null;
+          step.outputContentHash = outputArtifactRef?.contentHash ?? null;
         }
         if (key && runningKey === key) runningKey = null;
         else if (!key && runningKey) {
@@ -190,6 +265,12 @@ export function buildExecutionViewModel(
           settle(runningKey);
           if (outputArtifactId && byKey.has(runningKey)) {
             byKey.get(runningKey)!.outputArtifactId = outputArtifactId;
+            byKey.get(runningKey)!.outputArtifactVersionId =
+              outputArtifactRef?.artifactVersionId ?? null;
+            byKey.get(runningKey)!.outputArtifactTypeKey =
+              outputArtifactRef?.artifactTypeKey ?? null;
+            byKey.get(runningKey)!.outputContentHash =
+              outputArtifactRef?.contentHash ?? null;
           }
           runningKey = null;
         }
@@ -213,6 +294,7 @@ export function buildExecutionViewModel(
         approvalsById.set(parsed.approvalRequestId, {
           approvalRequestId: parsed.approvalRequestId,
           inputArtifactId: parsed.inputArtifactId,
+          subjectArtifactRef: parsed.subjectArtifactRef,
           planStepKey: parsed.planStepKey,
           status: "pending",
           message: m,
@@ -227,9 +309,43 @@ export function buildExecutionViewModel(
           approvalRequestId: parsed.approvalRequestId,
           inputArtifactId:
             parsed.inputArtifactId || existing?.inputArtifactId || "",
+          subjectArtifactRef:
+            parsed.subjectArtifactRef ?? existing?.subjectArtifactRef ?? null,
           planStepKey: parsed.planStepKey || existing?.planStepKey || "",
           status: parsed.approved === false ? "rejected" : "approved",
           message: existing?.message ?? m,
+        });
+        break;
+      }
+      case "REVIEW_RAISED": {
+        const raw = parsedRecord(m.payloadJson);
+        const reviewRequestId =
+          typeof raw?.review_request_id === "string"
+            ? raw.review_request_id
+            : "";
+        if (!reviewRequestId) break;
+        reviewsById.set(reviewRequestId, {
+          reviewRequestId,
+          planStepKey:
+            typeof raw?.plan_step_key === "string" ? raw.plan_step_key : "",
+          subjectArtifactRef: parseArtifactReference(raw?.subject_artifact_ref),
+          status: "pending",
+          message: m,
+        });
+        break;
+      }
+      case "REVIEW_DECIDED": {
+        const raw = parsedRecord(m.payloadJson);
+        const reviewRequestId =
+          typeof raw?.review_request_id === "string"
+            ? raw.review_request_id
+            : "";
+        const existing = reviewsById.get(reviewRequestId);
+        if (!reviewRequestId || !existing) break;
+        reviewsById.set(reviewRequestId, {
+          ...existing,
+          status:
+            raw?.decision === "revise" ? "revision_requested" : "accepted",
         });
         break;
       }
@@ -245,6 +361,9 @@ export function buildExecutionViewModel(
   const approvals = [...approvalsById.values()];
   const pendingApproval =
     approvals.find((approval) => approval.status === "pending") ?? null;
+  const reviews = [...reviewsById.values()];
+  const pendingReview =
+    reviews.find((review) => review.status === "pending") ?? null;
   const runningFrac = runningStep ? 0.5 : 0;
   const progress = total > 0 ? (doneCount + runningFrac) / total : 0;
   const currentStep =
@@ -267,6 +386,8 @@ export function buildExecutionViewModel(
     messages: ordered,
     approvals,
     pendingApproval,
+    reviews,
+    pendingReview,
   };
 }
 

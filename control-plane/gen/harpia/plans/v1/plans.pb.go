@@ -2015,8 +2015,10 @@ type PlanExecution struct {
 	CompletedAt               string                 `protobuf:"bytes,8,opt,name=completed_at,json=completedAt,proto3" json:"completed_at,omitempty"`
 	CreatedAt                 string                 `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt                 string                 `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields             protoimpl.UnknownFields
-	sizeCache                 protoimpl.SizeCache
+	// Immutable active graph selected when this execution was created.
+	ActiveStepKeys []string `protobuf:"bytes,11,rep,name=active_step_keys,json=activeStepKeys,proto3" json:"active_step_keys,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *PlanExecution) Reset() {
@@ -2117,6 +2119,13 @@ func (x *PlanExecution) GetUpdatedAt() string {
 		return x.UpdatedAt
 	}
 	return ""
+}
+
+func (x *PlanExecution) GetActiveStepKeys() []string {
+	if x != nil {
+		return x.ActiveStepKeys
+	}
+	return nil
 }
 
 type StepExecution struct {
@@ -6220,7 +6229,7 @@ const file_harpia_plans_v1_plans_proto_rawDesc = "" +
 	"\x15content_output_format\x18\x04 \x01(\x0e2$.harpia.plans.v1.ContentOutputFormatR\x13contentOutputFormat\"S\n" +
 	"\fPlanSchedule\x12'\n" +
 	"\x0fcron_expression\x18\x01 \x01(\tR\x0ecronExpression\x12\x1a\n" +
-	"\btimezone\x18\x02 \x01(\tR\btimezone\"\xdf\x03\n" +
+	"\btimezone\x18\x02 \x01(\tR\btimezone\"\x89\x04\n" +
 	"\rPlanExecution\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x122\n" +
@@ -6234,7 +6243,8 @@ const file_harpia_plans_v1_plans_proto_rawDesc = "" +
 	"created_at\x18\t \x01(\tR\tcreatedAt\x12\x1d\n" +
 	"\n" +
 	"updated_at\x18\n" +
-	" \x01(\tR\tupdatedAt\"\xab\x05\n" +
+	" \x01(\tR\tupdatedAt\x12(\n" +
+	"\x10active_step_keys\x18\v \x03(\tR\x0eactiveStepKeys\"\xab\x05\n" +
 	"\rStepExecution\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12*\n" +
 	"\x11plan_execution_id\x18\x02 \x01(\tR\x0fplanExecutionId\x12\"\n" +

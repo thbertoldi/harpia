@@ -27,7 +27,7 @@
      */
     messages?: ChatMessage[];
     inputArtifactId?: string;
-    onOpenArtifact?: (artifactId: string) => void;
+    onOpenArtifact?: (artifactId: string, artifactVersionId?: string) => void;
     onDecided?: () => void;
     /**
      * Resolves a step_key to its localized template title so the approval
@@ -57,6 +57,7 @@
   let rejectReason = $state("");
   let errorMessage = $state<string | null>(null);
   let loadedInputArtifactId = $state("");
+  let loadedArtifactVersionId = $state("");
 
   const effectiveInputArtifactId = $derived(
     inputArtifactId || parsed?.inputArtifactId || loadedInputArtifactId,
@@ -75,6 +76,8 @@
         const approval = await loadApproval(tenantId, parsed.approvalRequestId);
         if (!controller.signal.aborted) {
           loadedInputArtifactId = approval.inputArtifactId;
+          loadedArtifactVersionId =
+            approval.subjectArtifactRef?.artifactVersionId ?? "";
         }
       } catch {
         // The approve/reject controls still work with only approval_request_id.
@@ -221,7 +224,11 @@
       {#if effectiveInputArtifactId && onOpenArtifact}
         <button
           type="button"
-          onclick={() => onOpenArtifact(effectiveInputArtifactId)}
+          onclick={() =>
+            onOpenArtifact(
+              effectiveInputArtifactId,
+              loadedArtifactVersionId || undefined,
+            )}
           class="cursor-pointer rounded-md border border-plumage bg-transparent px-3 py-2 text-[12px] font-medium text-crown-ash hover:border-talon-gold hover:text-talon-gold disabled:cursor-not-allowed disabled:opacity-50"
         >
           <span class="inline-flex items-center gap-1.5">

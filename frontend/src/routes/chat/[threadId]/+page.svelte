@@ -172,6 +172,7 @@
   // artifacts are never auto-promoted here (spec: artifact-side-preview) —
   // only opened explicitly by the user.
   let activeArtifactId = $state<string | null>(null);
+  let activeArtifactVersionId = $state("");
   let previewOpen = $state(false);
   let previewArtifactLoading = $state(false);
   // Populated on demand when the id isn't in workspaceArtifacts (e.g. an
@@ -207,8 +208,9 @@
 
   // The one callback threaded down through ConversationalWorkspace to inline
   // STEP_BOUND artifact cards.
-  function openArtifact(artifactId: string) {
+  function openArtifact(artifactId: string, artifactVersionId = "") {
     activeArtifactId = artifactId;
+    activeArtifactVersionId = artifactVersionId;
     previewOpen = true;
     previewFallbackArtifact = null;
     previewArtifactLoading = false;
@@ -255,6 +257,7 @@
       shouldAutoOpenFinalArtifact(artifactId, previewDismissedFinalArtifactId)
     ) {
       activeArtifactId = artifactId;
+      activeArtifactVersionId = "";
       previewFallbackArtifact = null;
       previewArtifactLoading = false;
       previewOpen = true;
@@ -390,6 +393,7 @@
     workspaceLoadError = false;
     previewOpen = false;
     activeArtifactId = null;
+    activeArtifactVersionId = "";
     previewFallbackArtifact = null;
     previewArtifactLoading = false;
     previewDismissedFinalArtifactId = null;
@@ -645,9 +649,42 @@
       section.kind === "execution" ? [section.group] : [],
     ),
   );
+  // The execution API exposes the immutable active graph captured at run
+  // creation. Never derive optional participation from today's configuration.
+  let activeStepKeysByExecution = $state<Map<string, string[]>>(new Map());
+  $effect(() => {
+    if (!tenantId || executionGroups.length === 0) return;
+    const controller = new AbortController();
+    void Promise.all(
+      executionGroups.map(async (group) => {
+        const response = await planClient.getPlanExecution(
+          { tenantId, planExecutionId: group.executionId },
+          { signal: controller.signal },
+        );
+        return [
+          group.executionId,
+          response.planExecution?.activeStepKeys ?? [],
+        ] as const;
+      }),
+    )
+      .then((entries) => {
+        if (!controller.signal.aborted)
+          activeStepKeysByExecution = new Map(entries);
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  });
   const executionViewModels = $derived(
     executionGroups.map((group) =>
-      buildExecutionViewModel(group, orderedSteps),
+      buildExecutionViewModel(
+        group,
+        (() => {
+          const active = activeStepKeysByExecution.get(group.executionId);
+          return active && active.length > 0
+            ? orderedSteps.filter((step) => active.includes(step.key))
+            : orderedSteps;
+        })(),
+      ),
     ),
   );
   const anyExecutionRunning = $derived(
@@ -1074,6 +1111,7 @@
       <ArtifactPreviewSheet
         open={previewOpen}
         artifact={previewArtifact}
+        artifactVersionId={activeArtifactVersionId}
         artifactLoading={previewArtifactLoading}
         generating={previewGenerating}
         executionOrdinal={previewArtifact

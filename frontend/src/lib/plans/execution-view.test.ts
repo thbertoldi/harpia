@@ -5,6 +5,7 @@ import {
   parseApprovalPayload,
   parseStepKey,
   parseOutputArtifactId,
+  parseStepBoundArtifactRef,
 } from "$lib/plans/execution-view";
 import type { OrderedStep } from "$lib/plans/execution-view";
 
@@ -103,6 +104,7 @@ describe("parseApprovalPayload", () => {
       approved: null,
       inputArtifactId: "artifact-linkedin-draft",
       planStepKey: "publish-linkedin",
+      subjectArtifactRef: null,
     });
   });
 
@@ -204,6 +206,32 @@ describe("buildExecutionViewModel", () => {
 
     expect(vm.steps[0].status).toBe("done");
     expect(vm.steps[0].outputArtifactId).toBe("artifact-news-list");
+  });
+
+  it("keeps the complete immutable STEP_BOUND artifact ref", () => {
+    const payload = JSON.stringify({
+      step_key: "draft",
+      output_artifact_id: "post",
+      output_artifact_version_id: "v1",
+      output_artifact_type_key: "harpia.artifacts.v1.LinkedInPost",
+      output_content_hash: "hash-v1",
+    });
+    expect(parseStepBoundArtifactRef(payload)).toEqual({
+      artifactId: "post",
+      artifactVersionId: "v1",
+      artifactTypeKey: "harpia.artifacts.v1.LinkedInPost",
+      contentHash: "hash-v1",
+    });
+    const vm = buildExecutionViewModel(
+      {
+        executionId: "exec-1",
+        runNumber: 1,
+        messages: [msg("STEP_BOUND", { payload })],
+      },
+      STEPS,
+    );
+    expect(vm.steps[1]?.outputArtifactVersionId).toBe("v1");
+    expect(vm.steps[1]?.outputContentHash).toBe("hash-v1");
   });
 
   it("RUN_COMPLETED settles any still-running step to done", () => {
@@ -430,5 +458,35 @@ describe("buildExecutionViewModel", () => {
 
     expect(vm.pendingApproval).toBeNull();
     expect(vm.approvals[0]?.status).toBe("approved");
+  });
+
+  it("preserves a pinned approval subject ref", () => {
+    reset();
+    const vm = buildExecutionViewModel(
+      {
+        executionId: "exec-1",
+        runNumber: 1,
+        messages: [
+          msg("APPROVAL_RAISED", {
+            payload: JSON.stringify({
+              approval_request_id: "a",
+              subject_artifact_ref: {
+                artifact_id: "post",
+                artifact_version_id: "historic",
+                artifact_type_key: "harpia.artifacts.v1.LinkedInPost",
+                content_hash: "old-hash",
+              },
+            }),
+          }),
+        ],
+      },
+      STEPS,
+    );
+    expect(vm.pendingApproval?.subjectArtifactRef?.artifactVersionId).toBe(
+      "historic",
+    );
+    expect(vm.pendingApproval?.subjectArtifactRef?.contentHash).toBe(
+      "old-hash",
+    );
   });
 });

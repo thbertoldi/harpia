@@ -37,6 +37,7 @@
     onClose,
     tenantId,
     artifact,
+    artifactVersionId = "",
     artifactLoading = false,
     generating = false,
     executionOrdinal = null,
@@ -45,6 +46,7 @@
     onClose: () => void;
     tenantId: string;
     artifact: Artifact | null;
+    artifactVersionId?: string;
     artifactLoading?: boolean;
     /** True while the artifact doesn't exist yet and is being produced. */
     generating?: boolean;
@@ -283,6 +285,7 @@
           <ArtifactPreview
             {tenantId}
             artifactId={artifact.id}
+            {artifactVersionId}
             constrained={false}
             bind:preview
             bind:loading

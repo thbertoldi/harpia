@@ -13,12 +13,13 @@
     ExecutionStepView,
   } from "$lib/plans/execution-view";
   import ApprovalRefCard from "./ApprovalRefCard.svelte";
+  import ReviewRefCard from "./ReviewRefCard.svelte";
 
   interface Props {
     vm: ExecutionViewModel;
     initiallyCollapsed?: boolean;
     tenantId?: string;
-    onOpenArtifact?: (artifactId: string) => void;
+    onOpenArtifact?: (artifactId: string, artifactVersionId?: string) => void;
     onApprovalDecided?: () => void;
     /** Id of the artifact currently shown in the preview panel, if open. */
     activeArtifactId?: string | null;
@@ -195,6 +196,17 @@
     </div>
   {/if}
 
+  {#if vm.pendingReview}
+    <div class="mt-2">
+      <ReviewRefCard
+        message={vm.pendingReview.message}
+        {tenantId}
+        {onOpenArtifact}
+        onDecided={onApprovalDecided}
+      />
+    </div>
+  {/if}
+
   {#if !collapsed && vm.total > 0}
     <ol
       use:keepActiveStepVisible={vm.steps}
@@ -252,7 +264,11 @@
                 : 'border-plumage text-crown-ash hover:border-talon-gold hover:text-talon-gold'}"
               aria-label={translate(artifactCardOpenActionKey(active), $locale)}
               title={translate(artifactCardOpenActionKey(active), $locale)}
-              onclick={() => onOpenArtifact(step.outputArtifactId!)}
+              onclick={() =>
+                onOpenArtifact(
+                  step.outputArtifactId!,
+                  step.outputArtifactVersionId ?? undefined,
+                )}
             >
               <Eye class="size-3.5" />
             </button>

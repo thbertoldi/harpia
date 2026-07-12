@@ -9,6 +9,7 @@
   import SystemEventCard from "./SystemEventCard.svelte";
   import ElicitationRefCard from "./ElicitationRefCard.svelte";
   import ApprovalRefCard from "./ApprovalRefCard.svelte";
+  import ReviewRefCard from "./ReviewRefCard.svelte";
   import AssistantPromptCard from "./AssistantPromptCard.svelte";
   import BindingMatrixCard from "./BindingMatrixCard.svelte";
   import ConversationalBindingCard from "./ConversationalBindingCard.svelte";
@@ -22,7 +23,7 @@
     configurationId?: string;
     tenantId?: string;
     artifacts?: Artifact[];
-    onOpenArtifact?: (artifactId: string) => void;
+    onOpenArtifact?: (artifactId: string, artifactVersionId?: string) => void;
     isLive?: boolean;
     isAnswered?: boolean;
     /**
@@ -190,6 +191,13 @@
     {messages}
     {onOpenArtifact}
     {stepTitleFor}
+    onDecided={onApprovalDecided}
+  />
+{:else if message.kind === "REVIEW_RAISED" || message.kind === "REVIEW_DECIDED"}
+  <ReviewRefCard
+    {message}
+    {tenantId}
+    {onOpenArtifact}
     onDecided={onApprovalDecided}
   />
 {:else}

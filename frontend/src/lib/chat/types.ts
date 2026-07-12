@@ -25,6 +25,8 @@ export type ChatMessageKind =
   | "ELICITATION_ANSWERED"
   | "APPROVAL_RAISED"
   | "APPROVAL_DECIDED"
+  | "REVIEW_RAISED"
+  | "REVIEW_DECIDED"
   | "PLAN_PROPOSED"
   | "PLAN_ATTACHED"
   | "PLAN_UPDATED"
@@ -73,6 +75,8 @@ const KIND_FROM_PROTO: Record<number, ChatMessageKind> = {
   [ProtoThreadMessageKind.ELICITATION_ANSWERED]: "ELICITATION_ANSWERED",
   [ProtoThreadMessageKind.APPROVAL_RAISED]: "APPROVAL_RAISED",
   [ProtoThreadMessageKind.APPROVAL_DECIDED]: "APPROVAL_DECIDED",
+  [ProtoThreadMessageKind.REVIEW_RAISED]: "REVIEW_RAISED",
+  [ProtoThreadMessageKind.REVIEW_DECIDED]: "REVIEW_DECIDED",
   [ProtoThreadMessageKind.PLAN_PROPOSED]: "PLAN_PROPOSED",
   [ProtoThreadMessageKind.PLAN_ATTACHED]: "PLAN_ATTACHED",
   [ProtoThreadMessageKind.PLAN_UPDATED]: "PLAN_UPDATED",
@@ -108,6 +112,8 @@ const KIND_TO_PROTO: Record<ChatMessageKind, ProtoThreadMessageKind> = {
   ELICITATION_ANSWERED: ProtoThreadMessageKind.ELICITATION_ANSWERED,
   APPROVAL_RAISED: ProtoThreadMessageKind.APPROVAL_RAISED,
   APPROVAL_DECIDED: ProtoThreadMessageKind.APPROVAL_DECIDED,
+  REVIEW_RAISED: ProtoThreadMessageKind.REVIEW_RAISED,
+  REVIEW_DECIDED: ProtoThreadMessageKind.REVIEW_DECIDED,
   PLAN_PROPOSED: ProtoThreadMessageKind.PLAN_PROPOSED,
   PLAN_ATTACHED: ProtoThreadMessageKind.PLAN_ATTACHED,
   PLAN_UPDATED: ProtoThreadMessageKind.PLAN_UPDATED,

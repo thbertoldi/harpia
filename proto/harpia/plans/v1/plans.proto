@@ -264,6 +264,8 @@ message PlanExecution {
   string completed_at = 8;
   string created_at = 9;
   string updated_at = 10;
+  // Immutable active graph selected when this execution was created.
+  repeated string active_step_keys = 11;
 }
 
 enum PlanExecutionStatus {

@@ -14,6 +14,7 @@ export type ArtifactPreviewKind =
   | "html"
   | "markdown"
   | "image"
+  | "linkedin_post"
   | "empty";
 
 export type FormattedArtifactPreview = {
@@ -32,6 +33,11 @@ export type FormattedArtifactPreview = {
     url?: string;
     inlineData?: Uint8Array;
     altText?: string;
+  };
+  linkedInPost?: {
+    text: string;
+    carouselTitle?: string;
+    slides: { heading: string; body: string }[];
   };
 };
 
@@ -84,6 +90,11 @@ export function formatArtifactPreview(
       };
     }
     case "jsonPreview":
+      {
+        const post = parseLinkedInPost(response.preview.value);
+        if (post)
+          return { kind: "linkedin_post", text: post.text, linkedInPost: post };
+      }
       return {
         kind: "json",
         text: response.preview.value,
@@ -118,6 +129,31 @@ export function formatArtifactPreview(
         kind: "empty",
         text: "",
       };
+  }
+}
+
+function parseLinkedInPost(
+  value: string,
+): FormattedArtifactPreview["linkedInPost"] | null {
+  try {
+    const raw = JSON.parse(value) as {
+      text?: { text?: string };
+      carousel?: {
+        title?: string;
+        slides?: { heading?: string; body?: string }[];
+      };
+    };
+    if (!raw.text?.text) return null;
+    return {
+      text: raw.text.text,
+      carouselTitle: raw.carousel?.title,
+      slides: (raw.carousel?.slides ?? []).map((slide) => ({
+        heading: slide.heading ?? "",
+        body: slide.body ?? "",
+      })),
+    };
+  } catch {
+    return null;
   }
 }
 

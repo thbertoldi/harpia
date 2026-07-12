@@ -110,6 +110,30 @@
           </p>
         {/if}
       </div>
+    {:else if preview.kind === "linkedin_post" && preview.linkedInPost}
+      <article class="artifact-preview artifact-preview--linkedin-post">
+        <p>{preview.linkedInPost.text}</p>
+        {#if preview.linkedInPost.slides.length > 0}
+          <section class="mt-5 border-t border-plumage pt-4">
+            {#if preview.linkedInPost.carouselTitle}<h3>
+                {preview.linkedInPost.carouselTitle}
+              </h3>{/if}
+            <ol class="mt-3 grid gap-3">
+              {#each preview.linkedInPost.slides as slide, index (index)}
+                <li
+                  class="rounded-md border border-plumage/70 bg-obsidian-light px-3 py-2"
+                >
+                  <strong>{slide.heading}</strong>{#if slide.body}<p
+                      class="mt-1"
+                    >
+                      {slide.body}
+                    </p>{/if}
+                </li>
+              {/each}
+            </ol>
+          </section>
+        {/if}
+      </article>
     {:else if preview.kind === "list" && preview.listSummary}
       <div class="artifact-preview artifact-preview--list">
         <p>

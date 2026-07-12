@@ -1394,6 +1394,7 @@ func executionToProto(e *PlanExecution) *plansv1.PlanExecution {
 		var runtimeSnapshot workflow.PlanExecutionSnapshot
 		if err := json.Unmarshal(e.PlanConfigurationSnapshot, &runtimeSnapshot); err == nil && runtimeSnapshot.Configuration != nil {
 			execution.PlanConfigurationSnapshot = runtimeSnapshot.Configuration
+			execution.ActiveStepKeys = runtimeSnapshot.ActiveStepKeys
 		} else {
 			var snapshot plansv1.PlanConfiguration
 			if err := json.Unmarshal(e.PlanConfigurationSnapshot, &snapshot); err == nil {
