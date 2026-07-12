@@ -1,4 +1,5 @@
 import { createClient } from "@connectrpc/connect";
+import { AuditService } from "$lib/gen/harpia/audit/v1/audit_pb";
 import { AgentService } from "$lib/gen/harpia/agents/v1/agents_pb";
 import { ArtifactService } from "$lib/gen/harpia/artifacts/v1/artifacts_pb";
 import { ThreadService } from "$lib/gen/harpia/chat/v1/chat_pb";
@@ -15,6 +16,7 @@ export const planClient = createClient(PlanService, transport);
 export const executorClient = createClient(ExecutorService, transport);
 export const llmConfigClient = createClient(LLMConfigService, transport);
 export const threadClient = createClient(ThreadService, transport);
+export const auditClient = createClient(AuditService, transport);
 
 export type { Tenant, User } from "$lib/gen/harpia/identity/v1/identity_pb";
 export type {

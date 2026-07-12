@@ -1,208 +1,313 @@
+/**
+ * Audit log data adapter.
+ *
+ * Thin adapter over the generated `harpia.audit.v1.AuditService.ListAuditEvents`
+ * RPC. It maps proto events/filters to the canonical UI model, resolves the
+ * selected tenant, sends every filter to the server, and preserves the
+ * server's keyset page order. The browser never filters, sorts, or paginates
+ * locally — export follows the server's `next_page_token` chain so every
+ * matching event appears exactly once.
+ */
+import { timestampDate } from "@bufbuild/protobuf/wkt";
+import { requireTenantId } from "$lib/auth";
+import { auditClient } from "$lib/rpc";
 import {
-  mockAuditEvents,
-  type AuditEvent,
-  type AuditEventFilters,
-  type AuditEventsPage,
-  type AuditPageToken,
-  type FeedbackDecision,
-} from "$lib/mocks/audit-events";
-import type { Locale } from "$lib/i18n";
+  ActorKind,
+  AuditEventType,
+  AuditSubjectType,
+  BoundedContext,
+  FeedbackDecision,
+  type AuditActor as ProtoAuditActor,
+  type AuditEvent as ProtoAuditEvent,
+  type AuditSubject as ProtoAuditSubject,
+  type PayloadDiffEntry as ProtoPayloadDiffEntry,
+} from "$lib/gen/harpia/audit/v1/audit_pb";
 
-export type { AuditEvent, AuditEventFilters, AuditEventsPage, AuditPageToken };
+// Re-export the proto enums so pages/tests compare against stable values
+// without reaching into the generated package directly.
+export { ActorKind, AuditEventType, AuditSubjectType, BoundedContext };
 
-const DEFAULT_PAGE_SIZE = 10;
-const STORAGE_KEY = "harpia_mock_audit_events";
+// ---------------------------------------------------------------------------
+// Canonical UI model (plan-centric taxonomy — no legacy task vocabulary)
+// ---------------------------------------------------------------------------
 
-function canUseStorage(): boolean {
-  return (
-    typeof window !== "undefined" && typeof window.localStorage !== "undefined"
-  );
-}
+export type AuditActorKind = "human" | "agent" | "workflow_engine";
 
-function loadPersistedAuditEvents(): AuditEvent[] | null {
-  if (!canUseStorage()) {
-    return null;
-  }
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      return null;
-    }
-    const parsed = JSON.parse(raw) as AuditEvent[];
-    return Array.isArray(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
-}
+export type AuditFeedbackDecision =
+  | "approve"
+  | "reject"
+  | "modify"
+  | "escalate";
 
-function persistAuditEvents(events: AuditEvent[]): void {
-  if (!canUseStorage()) {
-    return;
-  }
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
-}
+export type AuditActor = {
+  kind: AuditActorKind;
+  id: string;
+  displayName: string;
+  /** Present when actor.kind === "agent". */
+  agentType?: string;
+};
 
-const persistedAuditEvents = loadPersistedAuditEvents();
-let seededLocale: Locale = "en";
-const runtimeAuditEvents: AuditEvent[] = persistedAuditEvents ?? [
-  ...mockAuditEvents(seededLocale),
-];
+export type AuditSubject = {
+  /** Proto `AuditSubjectType` enum; absent subjects (auth events) are omitted. */
+  type: AuditSubjectType;
+  id: string;
+};
 
-function ensureSeedLocale(locale: Locale): void {
-  if (persistedAuditEvents || locale === seededLocale) {
-    return;
-  }
-  seededLocale = locale;
-  runtimeAuditEvents.length = 0;
-  runtimeAuditEvents.push(...mockAuditEvents(locale));
-}
+export type PayloadDiffEntry = {
+  field: string;
+  before: string | null;
+  after: string | null;
+};
 
-type KeysetCursor = { ts: string; eventId: string };
+export type AuditEvent = {
+  /** Stable event identifier (UUID) used as the keyset tiebreaker. */
+  eventId: string;
+  tenantId: string;
+  eventType: AuditEventType;
+  boundedContext: BoundedContext;
+  actor: AuditActor;
+  /** Optional typed subject; absent for authentication events. */
+  subject?: AuditSubject;
+  payloadDiff: PayloadDiffEntry[];
+  /** ISO-8601, derived from the proto `occurred_at` Timestamp. */
+  timestamp: string;
+  traceId?: string;
+  decision?: AuditFeedbackDecision;
+};
 
-export function encodePageToken(cursor: KeysetCursor): string {
-  return btoa(JSON.stringify(cursor));
-}
+export type AuditEventFilters = {
+  /** Repeated proto event types; sent verbatim to the server. */
+  eventTypes?: AuditEventType[];
+  /** Human actor id; becomes `actor.actor_id` with kind HUMAN. */
+  actorId?: string;
+  /** Agent actor type; becomes `actor.agent_type` with kind AGENT. */
+  agentType?: string;
+  /** Typed related-subject id; becomes `subject_id`. */
+  subjectId?: string;
+  decision?: AuditFeedbackDecision;
+  /** Inclusive ISO-8601 date bounds, sent verbatim. */
+  dateFrom?: string;
+  dateTo?: string;
+};
 
-export function decodePageToken(token: AuditPageToken): KeysetCursor | null {
-  if (!token) return null;
-  try {
-    const parsed = JSON.parse(atob(token)) as KeysetCursor;
-    if (typeof parsed.ts === "string" && typeof parsed.eventId === "string") {
-      return parsed;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
+export type AuditPageToken = string | null;
 
-/** Compare events for keyset order: (ts DESC, eventId DESC) */
-export function compareAuditEvents(a: AuditEvent, b: AuditEvent): number {
-  const tsDiff = b.timestamp.localeCompare(a.timestamp);
-  if (tsDiff !== 0) return tsDiff;
-  return b.eventId.localeCompare(a.eventId);
-}
+export type AuditEventsPage = {
+  events: AuditEvent[];
+  nextPageToken: string | null;
+};
 
-export function sortAuditEvents(events: AuditEvent[]): AuditEvent[] {
-  return [...events].sort(compareAuditEvents);
-}
+// ---------------------------------------------------------------------------
+// Proto → UI mapping
+// ---------------------------------------------------------------------------
 
-export function filterAuditEvents(
-  events: AuditEvent[],
-  filters: AuditEventFilters,
-): AuditEvent[] {
-  const taskId = filters.taskId?.trim().toLowerCase();
-  const userId = filters.userId?.trim().toLowerCase();
-  const agentType = filters.agentType?.trim().toLowerCase();
-  const dateFrom = filters.dateFrom ? startOfDay(filters.dateFrom) : null;
-  const dateTo = filters.dateTo ? endOfDay(filters.dateTo) : null;
+const ACTOR_KIND_FROM_PROTO: Record<number, AuditActorKind> = {
+  [ActorKind.HUMAN]: "human",
+  [ActorKind.AGENT]: "agent",
+  [ActorKind.WORKFLOW_ENGINE]: "workflow_engine",
+};
 
-  return events.filter((event) => {
-    if (taskId && !event.taskId.toLowerCase().includes(taskId)) return false;
+const ACTOR_KIND_NAME: Record<AuditActorKind, string> = {
+  human: "HUMAN",
+  agent: "AGENT",
+  workflow_engine: "WORKFLOW_ENGINE",
+};
 
-    if (userId) {
-      const isHumanMatch =
-        event.actor.kind === "human" &&
-        (event.actor.id.toLowerCase().includes(userId) ||
-          event.actor.displayName.toLowerCase().includes(userId));
-      if (!isHumanMatch) return false;
-    }
+const DECISION_FROM_PROTO: Record<number, AuditFeedbackDecision> = {
+  [FeedbackDecision.APPROVE]: "approve",
+  [FeedbackDecision.REJECT]: "reject",
+  [FeedbackDecision.MODIFY]: "modify",
+  [FeedbackDecision.ESCALATE]: "escalate",
+};
 
-    if (agentType) {
-      const agentMatch =
-        event.actor.kind === "agent" &&
-        event.actor.agentType?.toLowerCase().includes(agentType);
-      if (!agentMatch) return false;
-    }
+const DECISION_TO_PROTO: Record<AuditFeedbackDecision, FeedbackDecision> = {
+  approve: FeedbackDecision.APPROVE,
+  reject: FeedbackDecision.REJECT,
+  modify: FeedbackDecision.MODIFY,
+  escalate: FeedbackDecision.ESCALATE,
+};
 
-    if (filters.decision && event.decision !== filters.decision) return false;
-
-    const ts = new Date(event.timestamp).getTime();
-    if (dateFrom && ts < dateFrom.getTime()) return false;
-    if (dateTo && ts > dateTo.getTime()) return false;
-
-    return true;
-  });
-}
-
-function startOfDay(dateStr: string): Date {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0));
-}
-
-function endOfDay(dateStr: string): Date {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999));
-}
-
-function isBeforeCursor(event: AuditEvent, cursor: KeysetCursor): boolean {
-  if (event.timestamp < cursor.ts) return true;
-  if (event.timestamp > cursor.ts) return false;
-  return event.eventId < cursor.eventId;
-}
-
-export function paginateAuditEvents(
-  events: AuditEvent[],
-  pageToken: AuditPageToken,
-  pageSize = DEFAULT_PAGE_SIZE,
-): AuditEventsPage {
-  const sorted = sortAuditEvents(events);
-  const cursor = decodePageToken(pageToken);
-
-  let startIndex = 0;
-  if (cursor) {
-    startIndex = sorted.findIndex((event) => isBeforeCursor(event, cursor));
-    if (startIndex === -1) {
-      return { events: [], nextPageToken: null };
-    }
-  }
-
-  const page = sorted.slice(startIndex, startIndex + pageSize);
-  const last = page[page.length - 1];
-  const hasMore = startIndex + pageSize < sorted.length;
-
+function mapActor(actor: ProtoAuditActor | undefined): AuditActor {
+  const protoKind = actor?.kind ?? ActorKind.UNSPECIFIED;
   return {
-    events: page,
-    nextPageToken:
-      hasMore && last
-        ? encodePageToken({ ts: last.timestamp, eventId: last.eventId })
-        : null,
+    kind: ACTOR_KIND_FROM_PROTO[protoKind] ?? "human",
+    id: actor?.actorId ?? "",
+    displayName: actor?.displayName ?? "",
+    agentType: actor?.agentType,
   };
 }
 
+function mapDiff(entries: ProtoPayloadDiffEntry[]): PayloadDiffEntry[] {
+  return entries.map((entry) => ({
+    field: entry.field,
+    before: entry.before ?? null,
+    after: entry.after ?? null,
+  }));
+}
+
+function mapSubject(
+  subject: ProtoAuditSubject | undefined,
+): AuditSubject | undefined {
+  if (!subject || subject.subjectType === AuditSubjectType.UNSPECIFIED) {
+    return undefined;
+  }
+  return { type: subject.subjectType, id: subject.subjectId };
+}
+
+function mapAuditEvent(event: ProtoAuditEvent): AuditEvent {
+  const decision = event.decision
+    ? DECISION_FROM_PROTO[event.decision]
+    : undefined;
+  return {
+    eventId: event.eventId,
+    tenantId: event.tenantId,
+    eventType: event.eventType,
+    boundedContext: event.boundedContext,
+    actor: mapActor(event.actor),
+    subject: mapSubject(event.subject),
+    payloadDiff: mapDiff(event.payloadDiff),
+    timestamp: event.occurredAt
+      ? timestampDate(event.occurredAt).toISOString()
+      : "",
+    traceId: event.traceId,
+    decision,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// UI filters → proto request
+// ---------------------------------------------------------------------------
+
 /**
- * Primary data access — swap this implementation when audit APIs land.
+ * Builds the single server-side actor filter. The proto contract narrows to
+ * one actor, so when both an agent type and a human actor id are supplied the
+ * agent type wins (it is the more specific select). Human-only and
+ * agent-only cases map to their respective actor kinds.
+ */
+function buildActorFilter(
+  filters: AuditEventFilters,
+): { kind: ActorKind; actorId: string; agentType?: string } | undefined {
+  if (filters.agentType) {
+    return {
+      kind: ActorKind.AGENT,
+      actorId: "",
+      agentType: filters.agentType,
+    };
+  }
+  if (filters.actorId) {
+    return { kind: ActorKind.HUMAN, actorId: filters.actorId };
+  }
+  return undefined;
+}
+
+type ListRequest = {
+  tenantId: string;
+  eventTypes: AuditEventType[];
+  actor: ReturnType<typeof buildActorFilter>;
+  dateFrom?: string;
+  dateTo?: string;
+  subjectId?: string;
+  decision?: FeedbackDecision;
+  pageSize: number;
+  pageToken?: string;
+};
+
+function toListRequest(
+  tenantId: string,
+  filters: AuditEventFilters,
+  pageToken: AuditPageToken,
+  pageSize: number,
+): ListRequest {
+  return {
+    tenantId,
+    eventTypes: filters.eventTypes ?? [],
+    actor: buildActorFilter(filters),
+    dateFrom: filters.dateFrom,
+    dateTo: filters.dateTo,
+    subjectId: filters.subjectId,
+    decision: filters.decision
+      ? DECISION_TO_PROTO[filters.decision]
+      : undefined,
+    pageSize,
+    pageToken: pageToken ?? undefined,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Data access — server-authoritative paging, no client filtering/sorting
+// ---------------------------------------------------------------------------
+
+const DEFAULT_PAGE_SIZE = 10;
+/** Page size used while walking the full filtered set for CSV/JSON export. */
+const EXPORT_PAGE_SIZE = 100;
+
+/**
+ * Loads one filtered, newest-first keyset page from the server. The returned
+ * `nextPageToken` is the opaque server cursor; pass it back as `pageToken`
+ * for the next page. No client-side filtering or pagination is performed.
  */
 export async function getAuditEvents(
-  locale: Locale = "en",
   filters: AuditEventFilters = {},
   pageToken: AuditPageToken = null,
   pageSize = DEFAULT_PAGE_SIZE,
 ): Promise<AuditEventsPage> {
-  ensureSeedLocale(locale);
-  const filtered = filterAuditEvents(runtimeAuditEvents, filters);
-  return paginateAuditEvents(filtered, pageToken, pageSize);
+  const tenantId = requireTenantId();
+  const response = await auditClient.listAuditEvents(
+    toListRequest(tenantId, filters, pageToken, pageSize),
+  );
+  return {
+    events: response.events.map(mapAuditEvent),
+    nextPageToken: response.nextPageToken ?? null,
+  };
 }
 
+/**
+ * Walks every server page for the active filters so CSV/JSON exports contain
+ * the complete matching set. Each returned event appears exactly once because
+ * the loop terminates only when the server stops returning a next token, and
+ * the server guarantees non-overlapping keyset pages.
+ */
 export async function getAllFilteredAuditEvents(
-  locale: Locale = "en",
   filters: AuditEventFilters = {},
 ): Promise<AuditEvent[]> {
-  ensureSeedLocale(locale);
-  return sortAuditEvents(filterAuditEvents(runtimeAuditEvents, filters));
+  const tenantId = requireTenantId();
+  const all: AuditEvent[] = [];
+  let pageToken: AuditPageToken = null;
+  do {
+    const response = await auditClient.listAuditEvents(
+      toListRequest(tenantId, filters, pageToken, EXPORT_PAGE_SIZE),
+    );
+    for (const event of response.events) {
+      all.push(mapAuditEvent(event));
+    }
+    pageToken = response.nextPageToken ?? null;
+  } while (pageToken);
+  return all;
 }
 
-export function appendMockAuditEvent(event: AuditEvent): void {
-  runtimeAuditEvents.unshift(event);
-  persistAuditEvents(runtimeAuditEvents);
+// ---------------------------------------------------------------------------
+// Display helpers — stable proto-enum names used to build translate() keys
+// ---------------------------------------------------------------------------
+
+export function auditEventTypeName(type: AuditEventType): string {
+  return AuditEventType[type] ?? "UNSPECIFIED";
 }
 
-export function resetMockAuditEvents(locale: Locale = "en"): void {
-  seededLocale = locale;
-  runtimeAuditEvents.length = 0;
-  runtimeAuditEvents.push(...mockAuditEvents(locale));
-  persistAuditEvents(runtimeAuditEvents);
+export function auditBoundedContextName(context: BoundedContext): string {
+  return BoundedContext[context] ?? "UNSPECIFIED";
 }
+
+export function auditSubjectTypeName(type: AuditSubjectType): string {
+  return AuditSubjectType[type] ?? "UNSPECIFIED";
+}
+
+export function auditActorKindName(kind: AuditActorKind): string {
+  return ACTOR_KIND_NAME[kind];
+}
+
+// ---------------------------------------------------------------------------
+// Exports — CSV / JSON
+// ---------------------------------------------------------------------------
 
 export function auditEventsToCsv(events: AuditEvent[]): string {
   const headers = [
@@ -214,7 +319,8 @@ export function auditEventsToCsv(events: AuditEvent[]): string {
     "actor_id",
     "actor_name",
     "agent_type",
-    "task_id",
+    "subject_type",
+    "subject_id",
     "decision",
     "trace_id",
     "payload_diff",
@@ -224,15 +330,16 @@ export function auditEventsToCsv(events: AuditEvent[]): string {
     [
       e.eventId,
       e.timestamp,
-      e.eventType,
-      e.boundedContext,
-      e.actor.kind,
+      auditEventTypeName(e.eventType),
+      auditBoundedContextName(e.boundedContext),
+      auditActorKindName(e.actor.kind),
       e.actor.id,
       e.actor.displayName,
       e.actor.agentType ?? "",
-      e.taskId,
+      e.subject ? auditSubjectTypeName(e.subject.type) : "",
+      e.subject?.id ?? "",
       e.decision ?? "",
-      e.traceId,
+      e.traceId ?? "",
       JSON.stringify(e.payloadDiff),
     ]
       .map(csvEscape)
@@ -250,7 +357,32 @@ function csvEscape(value: string): string {
 }
 
 export function auditEventsToJson(events: AuditEvent[]): string {
-  return JSON.stringify(events, null, 2);
+  return JSON.stringify(
+    events.map((e) => ({
+      event_id: e.eventId,
+      tenant_id: e.tenantId,
+      timestamp: e.timestamp,
+      event_type: auditEventTypeName(e.eventType),
+      bounded_context: auditBoundedContextName(e.boundedContext),
+      actor: {
+        kind: auditActorKindName(e.actor.kind),
+        id: e.actor.id,
+        display_name: e.actor.displayName,
+        agent_type: e.actor.agentType ?? null,
+      },
+      subject: e.subject
+        ? {
+            type: auditSubjectTypeName(e.subject.type),
+            id: e.subject.id,
+          }
+        : null,
+      payload_diff: e.payloadDiff,
+      trace_id: e.traceId ?? null,
+      decision: e.decision ?? null,
+    })),
+    null,
+    2,
+  );
 }
 
 export function downloadTextFile(
@@ -267,7 +399,11 @@ export function downloadTextFile(
   URL.revokeObjectURL(url);
 }
 
-export const FEEDBACK_DECISIONS: FeedbackDecision[] = [
+// ---------------------------------------------------------------------------
+// Filter option lists (UI dropdowns)
+// ---------------------------------------------------------------------------
+
+export const FEEDBACK_DECISIONS: AuditFeedbackDecision[] = [
   "approve",
   "reject",
   "modify",
@@ -281,3 +417,25 @@ export const AGENT_TYPES = [
   "deep_research",
   "workflow",
 ] as const;
+
+/** Every audited event type except UNSPECIFIED, for the event-type filter. */
+export const AUDIT_EVENT_TYPES: AuditEventType[] = [
+  AuditEventType.PLAN_CONFIGURATION_CREATED,
+  AuditEventType.PLAN_CONFIGURATION_UPDATED,
+  AuditEventType.PLAN_CONFIGURATION_STATUS_CHANGED,
+  AuditEventType.PLAN_EXECUTION_CREATED,
+  AuditEventType.PLAN_EXECUTION_STARTED,
+  AuditEventType.PLAN_EXECUTION_COMPLETED,
+  AuditEventType.PLAN_EXECUTION_FAILED,
+  AuditEventType.STEP_EXECUTION_STARTED,
+  AuditEventType.STEP_EXECUTION_COMPLETED,
+  AuditEventType.STEP_EXECUTION_FAILED,
+  AuditEventType.STEP_EXECUTION_SKIPPED,
+  AuditEventType.APPROVAL_CREATED,
+  AuditEventType.APPROVAL_DECIDED,
+  AuditEventType.WORKFLOW_SIGNAL_RECEIVED,
+  AuditEventType.AUTHENTICATION_DEV_AUTH,
+  AuditEventType.EXECUTOR_INSTALLATION_CREATED,
+  AuditEventType.EXECUTOR_INSTALLATION_UPDATED,
+  AuditEventType.EXECUTOR_INSTALLATION_DELETED,
+];
