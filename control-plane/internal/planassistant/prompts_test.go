@@ -9,8 +9,10 @@ import (
 	"github.com/harpia/control-plane/internal/planassistant"
 )
 
-func TestBuildPrompt_BindingMatrix_RendersAllRows(t *testing.T) {
-	tpl := mkTemplate("draft", "publish")
+func TestBuildPrompt_BindingMatrix_RendersParticipatingRows(t *testing.T) {
+	tpl := mkTemplate("draft", "generate-image", "draft-carousel", "publish")
+	markStepOptionalCapabilities(tpl, "generate-image", "image-generation")
+	markStepOptionalCapabilities(tpl, "draft-carousel", "carousel-authoring")
 	tpl.Steps[0].Title = "Draft post"
 	tpl.Steps[0].InputArtifactTypeId = "Brief"
 	tpl.Steps[0].OutputArtifactTypeId = "Text"
@@ -19,11 +21,16 @@ func TestBuildPrompt_BindingMatrix_RendersAllRows(t *testing.T) {
 		Template: tpl,
 		Config: &plansv1.PlanConfiguration{
 			PlanTemplateId: "tpl-1",
-			SlotBindings:   []*plansv1.SlotBinding{{StepKey: "draft", ExecutorInstallationId: "inst-1"}},
+			SlotBindings: []*plansv1.SlotBinding{
+				{StepKey: "draft", ExecutorInstallationId: "inst-1"},
+				{StepKey: "publish", ExecutorInstallationId: "inst-2"},
+			},
 		},
 		CandidatesByStep: map[string][]planassistant.ExecutorOption{
 			"draft":   {{StepKey: "draft", InstallationID: "inst-1", DisplayName: "Junior Writer", SkuKey: "writer-junior", Tier: "junior", PriceBrl: &price}},
-			"publish": {{StepKey: "publish", InstallationID: "inst-2", DisplayName: "Mailchimp", SkuKey: "mailchimp"}},
+			"generate-image": {{StepKey: "generate-image", InstallationID: "inst-image", DisplayName: "Image generator", SkuKey: "image-generator"}},
+			"draft-carousel":  {{StepKey: "draft-carousel", InstallationID: "inst-carousel", DisplayName: "Carousel author", SkuKey: "carousel-author"}},
+			"publish":         {{StepKey: "publish", InstallationID: "inst-2", DisplayName: "Mailchimp", SkuKey: "mailchimp"}},
 		},
 		CurrentUserLabel: "Ana",
 	}
@@ -56,7 +63,7 @@ func TestBuildPrompt_BindingMatrix_RendersAllRows(t *testing.T) {
 		t.Fatalf("want state BINDING_MATRIX, got %q", parsed.State)
 	}
 	if len(parsed.Rows) != 2 {
-		t.Fatalf("want 2 rows, got %d", len(parsed.Rows))
+		t.Fatalf("want 2 participating rows, got %d", len(parsed.Rows))
 	}
 	if parsed.Rows[0].StepTitle != "Draft post" {
 		t.Fatalf("row 0 title: %q", parsed.Rows[0].StepTitle)
@@ -67,13 +74,41 @@ func TestBuildPrompt_BindingMatrix_RendersAllRows(t *testing.T) {
 	if parsed.Rows[0].CurrentExecutorID != "inst-1" {
 		t.Fatalf("row 0 should reflect existing binding, got %q", parsed.Rows[0].CurrentExecutorID)
 	}
-	if parsed.Rows[1].CurrentExecutorID != "" {
-		t.Fatalf("row 1 should be unbound, got %q", parsed.Rows[1].CurrentExecutorID)
+	if parsed.Rows[1].StepKey != "publish" || parsed.Rows[1].CurrentExecutorID != "inst-2" {
+		t.Fatalf("row 1 should be the bound publish step, got %+v", parsed.Rows[1])
 	}
 	for _, r := range parsed.Rows {
+		if r.StepKey == "generate-image" || r.StepKey == "draft-carousel" {
+			t.Fatalf("opted-out step %q must not appear in the matrix", r.StepKey)
+		}
 		if r.CurrentOverseerLb != "Ana" {
 			t.Fatalf("overseer label should default to current user 'Ana', got %q", r.CurrentOverseerLb)
 		}
+	}
+}
+
+func TestBuildPrompt_BindingMatrix_RendersOptedInRows(t *testing.T) {
+	tpl := mkTemplate("draft", "generate-image", "draft-carousel")
+	markStepOptionalCapabilities(tpl, "generate-image", "image-generation")
+	markStepOptionalCapabilities(tpl, "draft-carousel", "carousel-authoring")
+
+	_, payload := planassistant.BuildPrompt(planassistant.AssistantState{Kind: planassistant.StateBindingMatrix}, planassistant.PromptInput{
+		Template: tpl,
+		Config: &plansv1.PlanConfiguration{
+			IncludedOptionalCapabilities: []string{"image-generation", "carousel-authoring"},
+		},
+	})
+
+	var parsed struct {
+		Rows []struct {
+			StepKey string `json:"step_key"`
+		} `json:"rows"`
+	}
+	if err := json.Unmarshal([]byte(payload), &parsed); err != nil {
+		t.Fatalf("payload not valid JSON: %v\n%s", err, payload)
+	}
+	if got, want := len(parsed.Rows), 3; got != want {
+		t.Fatalf("want %d rows when optional capabilities are included, got %d", want, got)
 	}
 }
 

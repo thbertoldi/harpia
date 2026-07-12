@@ -28,6 +28,7 @@ import {
   savePlanConfigurationRecord,
 } from "$lib/plans/plan-configuration";
 import { loadPlanTemplate } from "$lib/plans/plan-template";
+import { stepWillRun } from "$lib/plans/step-participation";
 
 export type SlotBindingSource = "api" | "mock";
 
@@ -310,6 +311,7 @@ export function validateSlotBindings(
   template: PlanTemplate,
   bindings: SlotBinding[],
   context: ExecutorContext,
+  includedOptionalCapabilities: readonly string[] = [],
 ): ConfigurationValidation {
   const bindingByStep = new Map(
     bindings.map((binding) => [binding.stepKey, binding]),
@@ -318,6 +320,7 @@ export function validateSlotBindings(
   const draftWarnings: string[] = [];
 
   for (const step of template.steps) {
+    if (!stepWillRun(step, includedOptionalCapabilities)) continue;
     const binding = bindingByStep.get(step.key);
     const warnings: string[] = [];
     const errors: string[] = [];
@@ -392,9 +395,9 @@ export function validateSlotBindings(
     draftWarnings.push(...step.warnings);
   }
 
-  const canPromoteToRunnable =
-    steps.length === template.steps.length &&
-    steps.every((step) => step.bound && step.compatible && step.ready);
+  const canPromoteToRunnable = steps.every(
+    (step) => step.bound && step.compatible && step.ready,
+  );
 
   return {
     steps,
@@ -468,7 +471,12 @@ export async function savePlanConfiguration(
   existingConfiguration?: PlanConfiguration | null,
 ): Promise<SaveConfigurationResult> {
   const slotBindings = selectionsToSlotBindings(template, selections, context);
-  const validation = validateSlotBindings(template, slotBindings, context);
+  const validation = validateSlotBindings(
+    template,
+    slotBindings,
+    context,
+    existingConfiguration?.includedOptionalCapabilities,
+  );
 
   if (
     status === PlanConfigurationStatus.RUNNABLE &&

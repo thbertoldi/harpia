@@ -318,6 +318,22 @@ func TestDeriveState_BindingMatrix_WhenOptionalCapabilityStepOptedOut(t *testing
 	}
 }
 
+func TestDeriveState_BindingMatrix_WhenImageAndCarouselAreOptedOut(t *testing.T) {
+	tpl := mkTemplate("write-draft", "generate-image", "draft-carousel")
+	markStepOptionalCapabilities(tpl, "generate-image", "image-generation")
+	markStepOptionalCapabilities(tpl, "draft-carousel", "carousel-authoring")
+	cfg := &plansv1.PlanConfiguration{
+		PlanTemplateId: "tpl-1",
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+		SlotBindings:   []*plansv1.SlotBinding{{StepKey: "write-draft", ExecutorInstallationId: "inst-write"}},
+		BehaviorPolicies: validPolicies(),
+	}
+
+	if got := planassistant.DeriveState(tpl, cfg, nil); got.Kind != planassistant.StateBindingMatrix {
+		t.Fatalf("got %+v, want BINDING_MATRIX with both optional steps opted out", got)
+	}
+}
+
 // When the optional capability IS included, the step runs and still requires a
 // binding, so the assistant must prompt for it (BINDING_STEP).
 func TestDeriveState_BindingStep_WhenOptionalCapabilityIncluded(t *testing.T) {

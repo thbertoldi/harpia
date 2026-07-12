@@ -87,6 +87,16 @@
         );
         if (controller.signal.aborted) return;
         template = tplRes.planTemplate ?? null;
+        if (tplRes.planTemplate && payload) {
+          payload = hydrateMatrixPayload(payload, {
+            slotBindings: cfgRes.planConfiguration.slotBindings,
+            overseerBindings: cfgRes.planConfiguration.overseerBindings,
+            policiesSet: policiesComplete(cfgRes.planConfiguration),
+            steps: tplRes.planTemplate.steps,
+            includedOptionalCapabilities:
+              cfgRes.planConfiguration.includedOptionalCapabilities,
+          });
+        }
       } catch {
         saveError = true;
       }

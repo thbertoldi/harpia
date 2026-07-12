@@ -1,4 +1,9 @@
+import { create } from "@bufbuild/protobuf";
 import { describe, expect, it } from "vitest";
+import {
+  ExecutorRequirementSchema,
+  PlanStepSchema,
+} from "$lib/gen/harpia/plans/v1/plans_pb";
 import {
   computeRunCostBRL,
   hydrateMatrixPayload,
@@ -10,6 +15,7 @@ import {
   parsePoliciesStepPayload,
   policyFieldChipsShown,
   policyChipsShown,
+  matrixRowsThatWillRun,
   type BindingStepPayload,
   type MatrixPayload,
   type MatrixRow,
@@ -513,6 +519,46 @@ describe("isMatrixComplete", () => {
       ),
     ).toBe(true);
   });
+
+  it("ignores unbound opted-out rows", () => {
+    const imageStep = create(PlanStepSchema, {
+      key: "generate-image",
+      executorRequirement: create(ExecutorRequirementSchema, {
+        optionalCapabilities: ["image-generation"],
+      }),
+    });
+    const rows = [
+      row({ step_key: "draft", current_executor_id: "writer" }),
+      row({ step_key: "generate-image", current_executor_id: "" }),
+    ];
+    const participation = {
+      steps: [create(PlanStepSchema, { key: "draft" }), imageStep],
+      includedOptionalCapabilities: [],
+    };
+
+    expect(isMatrixComplete(payload({ rows }), participation)).toBe(true);
+    expect(matrixRowsThatWillRun(rows, participation)).toHaveLength(1);
+  });
+
+  it("requires opted-in rows to be bound", () => {
+    const imageStep = create(PlanStepSchema, {
+      key: "generate-image",
+      executorRequirement: create(ExecutorRequirementSchema, {
+        optionalCapabilities: ["image-generation"],
+      }),
+    });
+    const participation = {
+      steps: [imageStep],
+      includedOptionalCapabilities: ["image-generation"],
+    };
+
+    expect(
+      isMatrixComplete(
+        payload({ rows: [row({ step_key: "generate-image" })] }),
+        participation,
+      ),
+    ).toBe(false);
+  });
 });
 
 describe("hydrateMatrixPayload", () => {
@@ -549,5 +595,30 @@ describe("hydrateMatrixPayload", () => {
       "writer",
     ]);
     expect(hydrated.rows[1].current_overseer_id).toBe("user-ana");
+  });
+
+  it("drops opted-out rows from a stale payload using the fresh configuration", () => {
+    const imageStep = create(PlanStepSchema, {
+      key: "generate-image",
+      executorRequirement: create(ExecutorRequirementSchema, {
+        optionalCapabilities: ["image-generation"],
+      }),
+    });
+    const hydrated = hydrateMatrixPayload(
+      payload({
+        rows: [
+          row({ step_key: "draft", current_executor_id: "writer" }),
+          row({ step_key: "generate-image", current_executor_id: "" }),
+        ],
+      }),
+      {
+        slotBindings: [],
+        policiesSet: true,
+        steps: [create(PlanStepSchema, { key: "draft" }), imageStep],
+        includedOptionalCapabilities: [],
+      },
+    );
+
+    expect(hydrated.rows.map((row) => row.step_key)).toEqual(["draft"]);
   });
 });

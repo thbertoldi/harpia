@@ -361,6 +361,26 @@ func TestValidateSlotBindingsRunnableSkipsOptedOutStep(t *testing.T) {
 	}
 }
 
+func TestValidateSlotBindingsRunnableSkipsAllOptedOutOptionalSteps(t *testing.T) {
+	tenantID := uuid.New()
+	validator, fetchBinding := optionalStepValidator(t, tenantID)
+	template := optionalStepTestTemplate()
+	template.Steps = append(template.Steps, PlanStep{
+		Key:                 "draft-carousel",
+		ExecutorRequirement: json.RawMessage(`{"optional_capabilities":["carousel-authoring"]}`),
+	})
+
+	err := validator.ValidateSlotBindings(
+		context.Background(), tenantID, template,
+		plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
+		[]*plansv1.SlotBinding{fetchBinding},
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("expected runnable validation to skip all opted-out optional steps: %v", err)
+	}
+}
+
 func TestValidateSlotBindingsRunnableRequiresOptedInStep(t *testing.T) {
 	tenantID := uuid.New()
 	validator, fetchBinding := optionalStepValidator(t, tenantID)

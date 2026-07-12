@@ -11,6 +11,7 @@ import {
   ExecutorKind as PlanExecutorKind,
   ExecutorRequirementSchema,
   PlanStepSchema,
+  PlanTemplateSchema,
   SlotBindingSchema,
 } from "$lib/gen/harpia/plans/v1/plans_pb";
 import {
@@ -251,6 +252,38 @@ describe("slot binding validation and lock state", () => {
     expect(publishStep?.warnings.some((warning) => warning.length > 0)).toBe(
       true,
     );
+  });
+
+  it("ignores opted-out steps when deciding whether a configuration is runnable", () => {
+    const context = mockExecutorContext();
+    const optionalImageStep = create(PlanStepSchema, {
+      key: "generate-image",
+      defaultExecutorSkuKey: "rss-news-feed",
+      executorRequirement: create(ExecutorRequirementSchema, {
+        executorKind: PlanExecutorKind.INTEGRATION,
+        optionalCapabilities: ["image-generation"],
+      }),
+    });
+    const template = create(PlanTemplateSchema, {
+      steps: [RSS_STEP, optionalImageStep],
+    });
+    const bindings = selectionsToSlotBindings(
+      template,
+      { "fetch-news": "inst-rss" },
+      context,
+    );
+
+    const optedOutValidation = validateSlotBindings(
+      template,
+      bindings,
+      context,
+      [],
+    );
+    expect(optedOutValidation.canPromoteToRunnable).toBe(true);
+    expect(
+      validateSlotBindings(template, bindings, context, ["image-generation"])
+        .canPromoteToRunnable,
+    ).toBe(false);
   });
 
   it("rejects incompatible step requirements at validation time", () => {

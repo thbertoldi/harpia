@@ -66,11 +66,19 @@
         );
         if (controller.signal.aborted || !cfgRes.planConfiguration) return;
         configuration = cfgRes.planConfiguration;
-        if (payload) {
+        const tplRes = await planClient.getPlanTemplate(
+          { planTemplateId: cfgRes.planConfiguration.planTemplateId },
+          { signal: controller.signal },
+        );
+        if (controller.signal.aborted) return;
+        if (payload && tplRes.planTemplate) {
           payload = hydrateMatrixPayload(payload, {
             slotBindings: cfgRes.planConfiguration.slotBindings,
             overseerBindings: cfgRes.planConfiguration.overseerBindings,
             policiesSet: policiesComplete(cfgRes.planConfiguration),
+            steps: tplRes.planTemplate.steps,
+            includedOptionalCapabilities:
+              cfgRes.planConfiguration.includedOptionalCapabilities,
           });
         }
       } catch {

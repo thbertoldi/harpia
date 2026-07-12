@@ -16,7 +16,9 @@
     computeRunCostBRL,
     hydrateMatrixPayload,
     isMatrixComplete,
+    matrixRowsThatWillRun,
     type MatrixPayload,
+    type MatrixParticipationInput,
     type MatrixRow,
   } from "$lib/plans/matrix";
   import { cardLift, chipFlash } from "$lib/motion/transitions";
@@ -88,6 +90,16 @@
         if (controller.signal.aborted) return;
         template = tplRes.planTemplate ?? null;
         if (tplRes.planTemplate) {
+          if (payload) {
+            payload = hydrateMatrixPayload(payload, {
+              slotBindings: cfgRes.planConfiguration.slotBindings,
+              overseerBindings: cfgRes.planConfiguration.overseerBindings,
+              policiesSet: !!cfgRes.planConfiguration.behaviorPolicies,
+              steps: tplRes.planTemplate.steps,
+              includedOptionalCapabilities:
+                cfgRes.planConfiguration.includedOptionalCapabilities,
+            });
+          }
           inputValues = genericInputInitialValues(
             tplRes.planTemplate.inputParameters,
             parseParameterValuesJson(
@@ -102,12 +114,25 @@
     return () => controller.abort();
   });
 
-  const rows = $derived(payload?.rows ?? []);
+  const participation = $derived<MatrixParticipationInput | undefined>(
+    template && configuration
+      ? {
+          steps: template.steps,
+          includedOptionalCapabilities:
+            configuration.includedOptionalCapabilities,
+        }
+      : undefined,
+  );
+  const rows = $derived(
+    matrixRowsThatWillRun(payload?.rows ?? [], participation),
+  );
   const boundCount = $derived(
     rows.filter((r) => r.current_executor_id !== "").length,
   );
   const cost = $derived(computeRunCostBRL(rows));
-  const complete = $derived(payload ? isMatrixComplete(payload) : false);
+  const complete = $derived(
+    payload ? isMatrixComplete(payload, participation) : false,
+  );
 
   let savingRowKey = $state<string | null>(null);
   let saving = $state(false);
@@ -182,6 +207,8 @@
           slotBindings: next.slotBindings,
           overseerBindings: next.overseerBindings,
           policiesSet: !!next.behaviorPolicies,
+          steps: template.steps,
+          includedOptionalCapabilities: next.includedOptionalCapabilities,
         });
       }
       suggestOpen = false;

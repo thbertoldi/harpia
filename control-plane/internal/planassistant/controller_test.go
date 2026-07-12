@@ -42,10 +42,14 @@ func (f *fakeConfigs) GetConfiguration(_ context.Context, _, _ uuid.UUID) (*plan
 }
 
 type fakeCatalog struct {
-	byStep map[string][]planassistant.ExecutorOption
+	byStep    map[string][]planassistant.ExecutorOption
+	requested *[]string
 }
 
 func (f fakeCatalog) CandidatesForStep(_ context.Context, _ uuid.UUID, _ *plansv1.PlanTemplate, stepKey string) ([]planassistant.ExecutorOption, error) {
+	if f.requested != nil {
+		*f.requested = append(*f.requested, stepKey)
+	}
 	return f.byStep[stepKey], nil
 }
 
@@ -105,6 +109,29 @@ func TestSeedThread_EmitsConfigurationStartedThenBindingStep(t *testing.T) {
 		if m.ThreadID != testThreadUUID || m.ThreadID == cfg.Id {
 			t.Fatalf("appended[%d] ThreadID = %q, want owning thread %q (not config id %q)", i, m.ThreadID, testThreadUUID, cfg.Id)
 		}
+	}
+}
+
+func TestNextTurn_DoesNotLoadCandidatesForOptedOutSteps(t *testing.T) {
+	chatStore := &fakeChat{}
+	tpl := mkTemplate("draft", "generate-image")
+	tpl.Id = testTemplateUUID
+	markStepOptionalCapabilities(tpl, "generate-image", "image-generation")
+	cfg := &plansv1.PlanConfiguration{
+		Id:             uuid.NewString(),
+		OriginThreadId: testThreadUUID,
+		PlanTemplateId: testTemplateUUID,
+		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
+		SlotBindings:   []*plansv1.SlotBinding{{StepKey: "draft", ExecutorInstallationId: "inst-draft"}},
+	}
+	var requested []string
+	c := newControllerWithCatalog(chatStore, cfg, tpl, fakeCatalog{requested: &requested})
+
+	if err := c.NextTurn(context.Background(), uuid.New(), uuid.New()); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := requested, []string{"draft"}; len(got) != len(want) || got[0] != want[0] {
+		t.Fatalf("candidate requests = %v, want %v", got, want)
 	}
 }
 

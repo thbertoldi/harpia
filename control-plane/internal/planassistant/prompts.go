@@ -5,6 +5,7 @@ import (
 
 	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
 	"github.com/harpia/control-plane/internal/chat"
+	"github.com/harpia/control-plane/internal/planrules"
 )
 
 // ExecutorOption is one available executor installation for a step, loaded by
@@ -258,6 +259,9 @@ func matrixRows(in PromptInput) []chat.AssistantMatrixRow {
 
 	rows := make([]chat.AssistantMatrixRow, 0, len(in.Template.GetSteps()))
 	for _, step := range in.Template.GetSteps() {
+		if !planrules.StepWillRun(step, in.Config.GetIncludedOptionalCapabilities()) {
+			continue
+		}
 		overseerID := overseers[step.GetKey()]
 		overseerLabel := user
 		if overseerID != "" && overseerID != "self" && overseerID != userID {

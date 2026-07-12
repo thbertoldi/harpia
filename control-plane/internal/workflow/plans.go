@@ -14,6 +14,7 @@ import (
 	"go.temporal.io/sdk/workflow"
 
 	"github.com/harpia/control-plane/internal/executors"
+	"github.com/harpia/control-plane/internal/planrules"
 )
 
 const PlanScheduledExecutionWorkflowName = "PlanScheduledExecution"
@@ -1020,23 +1021,7 @@ func shouldSkipStepForFormat(step *plansv1.PlanStep, policies *plansv1.PlanBehav
 // the run did not include. Such steps run no executor and need no binding
 // (ADR-018 D4) — they are excluded from the run and recorded as SKIPPED.
 func shouldSkipStepForOptOut(step *plansv1.PlanStep, config *plansv1.PlanConfiguration) bool {
-	if config == nil {
-		return false
-	}
-	optional := step.GetExecutorRequirement().GetOptionalCapabilities()
-	if len(optional) == 0 {
-		return false
-	}
-	included := make(map[string]struct{}, len(config.GetIncludedOptionalCapabilities()))
-	for _, c := range config.GetIncludedOptionalCapabilities() {
-		included[c] = struct{}{}
-	}
-	for _, c := range optional {
-		if _, ok := included[c]; !ok {
-			return true
-		}
-	}
-	return false
+	return !planrules.StepWillRun(step, config.GetIncludedOptionalCapabilities())
 }
 
 func publishApprovalMode(policies *plansv1.PlanBehaviorPolicies) plansv1.PublishApprovalMode {

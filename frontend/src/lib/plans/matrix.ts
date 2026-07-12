@@ -1,3 +1,6 @@
+import type { PlanStep } from "$lib/gen/harpia/plans/v1/plans_pb";
+import { stepWillRun } from "$lib/plans/step-participation";
+
 /**
  * Pure helpers for the binding-matrix card (M6 §2.1).
  *
@@ -80,6 +83,15 @@ export interface MatrixHydrationInput {
     overseerUserId: string;
   }>;
   policiesSet: boolean;
+  /** Fresh template steps used to reconcile cached prompt rows. */
+  steps?: readonly PlanStep[];
+  /** Server-derived opt-in projection from the current configuration. */
+  includedOptionalCapabilities?: readonly string[];
+}
+
+export interface MatrixParticipationInput {
+  steps: readonly PlanStep[];
+  includedOptionalCapabilities: readonly string[];
 }
 
 /**
@@ -311,10 +323,13 @@ export interface RunCostSummary {
  * per-option prices inline, so this avoids the extra catalog lookup at the
  * card layer.
  */
-export function computeRunCostBRL(rows: MatrixRow[]): RunCostSummary {
+export function computeRunCostBRL(
+  rows: MatrixRow[],
+  participation?: MatrixParticipationInput,
+): RunCostSummary {
   let totalBrl = 0;
   let unboundCount = 0;
-  for (const row of rows) {
+  for (const row of matrixRowsThatWillRun(rows, participation)) {
     if (!row.current_executor_id) {
       unboundCount += 1;
       continue;
@@ -334,10 +349,36 @@ export function computeRunCostBRL(rows: MatrixRow[]): RunCostSummary {
  * action may enable) when every row has an executor bound and the behavior
  * policies have been set.
  */
-export function isMatrixComplete(payload: MatrixPayload): boolean {
+export function isMatrixComplete(
+  payload: MatrixPayload,
+  participation?: MatrixParticipationInput,
+): boolean {
   if (!payload.policies_set) return false;
-  if (payload.rows.length === 0) return false;
-  return payload.rows.every((row) => row.current_executor_id !== "");
+  const rows = matrixRowsThatWillRun(payload.rows, participation);
+  if (rows.length === 0) return false;
+  return rows.every((row) => row.current_executor_id !== "");
+}
+
+/**
+ * Filters rows to the steps that participate in the current configuration.
+ * Missing template metadata is deliberately conservative for older callers:
+ * unknown rows remain visible until fresh template data is available.
+ */
+export function matrixRowsThatWillRun(
+  rows: MatrixRow[],
+  participation?: MatrixParticipationInput,
+): MatrixRow[] {
+  if (!participation) return rows;
+  const stepsByKey = new Map(
+    participation.steps.map((step) => [step.key, step]),
+  );
+  return rows.filter((row) => {
+    const step = stepsByKey.get(row.step_key);
+    return (
+      step === undefined ||
+      stepWillRun(step, participation.includedOptionalCapabilities)
+    );
+  });
 }
 
 export function hydrateMatrixPayload<
@@ -355,10 +396,18 @@ export function hydrateMatrixPayload<
       binding.overseerUserId,
     ]),
   );
+  const participation =
+    input.steps === undefined
+      ? undefined
+      : {
+          steps: input.steps,
+          includedOptionalCapabilities:
+            input.includedOptionalCapabilities ?? [],
+        };
   return {
     ...payload,
     policies_set: input.policiesSet,
-    rows: payload.rows.map((row) => ({
+    rows: matrixRowsThatWillRun(payload.rows, participation).map((row) => ({
       ...row,
       current_executor_id:
         bindings.get(row.step_key) ?? row.current_executor_id,

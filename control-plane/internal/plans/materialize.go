@@ -12,6 +12,7 @@ import (
 
 	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
 	"github.com/harpia/control-plane/internal/executors"
+	"github.com/harpia/control-plane/internal/planrules"
 )
 
 type seedTarget struct {
@@ -357,27 +358,9 @@ func defaultBindingForStep(ctx context.Context, executorRepo ExecutorLookup, ten
 	return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("step %q requires enabled executor installation for default sku %q", stepKey, defaultSKUKey))
 }
 
-// stepOptedOut reports whether the step declares an optional capability the run
-// did not include (ADR-018 D4). Such steps run no executor and need no binding,
-// so configuration validation and default-binding resolution skip them. This
-// mirrors workflow.shouldSkipStepForOptOut and planassistant.stepOptedOut (the
-// rule is duplicated across packages pre-v1; a shared helper is a later cleanup).
+// stepOptedOut reports whether the step does not participate in the run. Such
+// steps run no executor and need no binding, so configuration validation and
+// default-binding resolution skip them.
 func stepOptedOut(step *plansv1.PlanStep, includedOptionalCapabilities []string) bool {
-	if step == nil {
-		return false
-	}
-	optional := step.GetExecutorRequirement().GetOptionalCapabilities()
-	if len(optional) == 0 {
-		return false
-	}
-	included := make(map[string]struct{}, len(includedOptionalCapabilities))
-	for _, c := range includedOptionalCapabilities {
-		included[c] = struct{}{}
-	}
-	for _, c := range optional {
-		if _, ok := included[c]; !ok {
-			return true
-		}
-	}
-	return false
+	return !planrules.StepWillRun(step, includedOptionalCapabilities)
 }

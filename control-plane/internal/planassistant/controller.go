@@ -12,6 +12,7 @@ import (
 	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
 	"github.com/harpia/control-plane/internal/chat"
 	"github.com/harpia/control-plane/internal/identity"
+	"github.com/harpia/control-plane/internal/planrules"
 )
 
 // ExecutorCatalog returns the candidate executors for a step.
@@ -122,6 +123,9 @@ func (c *Controller) emitCurrentPrompt(ctx context.Context, tenantID uuid.UUID, 
 	if state.Kind == StateBindingStep || state.Kind == StateOverseerStep || state.Kind == StateBindingMatrix {
 		byStep := make(map[string][]ExecutorOption, len(tpl.GetSteps()))
 		for _, step := range tpl.GetSteps() {
+			if !planrules.StepWillRun(step, cfg.GetIncludedOptionalCapabilities()) {
+				continue
+			}
 			cands, err := c.Catalog.CandidatesForStep(ctx, tenantID, tpl, step.GetKey())
 			if err != nil {
 				return fmt.Errorf("planassistant: load candidates for %s: %w", step.GetKey(), err)
