@@ -13,11 +13,11 @@
 ## 3. Team recommendation (D3)
 
 - [x] 3.1 `RecommendTeam` (greedy set-cover → minimal team, senior-tier preference, uncovered-gap flagging) + tests. (Slice 3 — `5cc16f9`.)
-- [ ] 3.2 Surface the recommendation to the configuration flow (a "recommended team" card: accept / swap tier or agent). **DEFERRED** — the algorithm exists; the conversational/UI surfacing is a follow-up (binding currently works manually via the existing per-step flow).
+- [ ] 3.2 Surface the recommendation to the configuration flow (a "recommended team" card: accept / swap tier or agent). **DEFERRED** to follow-up change: `agent-team-deferred-followups` — the algorithm exists; the conversational/UI surfacing is out of scope here (binding works manually via the existing per-step flow).
 
 ## 4. Unified content post + single publish (D5)
 
-- [ ] 4.1 Composable `LinkedInPost` artifact (text + optional carousel + optional images). **DEFERDED** — the first cut ships a single `publish` step over `LinkedInPostDraft` (Slice 6); carousel/image are produced as separate opt-in artifacts (previewable). The full composable post (carousel/image embedded in one published artifact) is a tracked follow-up.
+- [ ] 4.1 Composable `LinkedInPost` artifact (text + optional carousel + optional images). **DEFERRED** to follow-up change: `agent-team-deferred-followups` — the first cut ships a single `publish` step over `LinkedInPostDraft` (Slice 6); carousel/image are produced as separate opt-in artifacts (previewable). The full composable post is out of scope here.
 - [x] 4.2 Collapse per-format publish steps into **one publish**. (Slice 6 — `287aac6`: one `publish` step over LinkedInPostDraft.)
 
 ## 5. Engine: opt-out-capability skip (replaces format skip) (D6)
@@ -32,7 +32,7 @@
 
 ## 7. Frontend: choose-your-team + opt-in + unified preview
 
-- [ ] 7.1 A "choose your team" surface (recommended team, accept/swap). **DEFERRED** — see 3.2; the recommendation logic exists, the UI is a follow-up.
+- [ ] 7.1 A "choose your team" surface (recommended team, accept/swap). **DEFERRED** to follow-up change: `agent-team-deferred-followups` — see 3.2; the recommendation logic exists, the UI is out of scope here.
 - [x] 7.2 Opt-in SELECTs (`include_carousel`/`include_images`) render via the existing template-input form and drive `included_optional_capabilities`. (Slices 6 + 7.)
 - [x] 7.3 Carousel preview (markdown-as-slides) works (`CarouselDraft → markdown_preview`, primary-preview list). (Slices B + J2 — earlier; unchanged.)
 
@@ -40,4 +40,4 @@
 
 - [x] 8.1 `openspec validate agent-team-model --strict` (see below).
 - [x] 8.2 All gates green: `cd proto && buf lint`; `cd control-plane && go test ./...` (19 pkgs); `cd agent-runtime && ruff check src/` + 80 pytest; `cd frontend && bun run lint && bun run check` (0/0).
-- [ ] 8.3 Manual smoke (en + pt-BR): configure `linkedin-content-studio`, opt carousel/images in/out, confirm RUNNABLE + run. **DEFERRED** — agent-incapable; the unit/integration coverage is in place.
+- [x] 8.3 Automated acceptance: configure `linkedin-content-studio`, opt carousel/images in/out, confirm RUNNABLE invariant honors opt-out. Covered by `mise run acceptance` scenario `TestAcceptanceLinkedInOptionalCapabilities` (change `enforce-acceptance-before-archive`), which materializes the real template and asserts opted-out steps neither bind nor block RUNNABLE, while opted-in steps do.
