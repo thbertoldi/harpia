@@ -30,9 +30,10 @@ tenant-safe boundary and PlanConfiguration readiness invariants to delivery itse
 
 `scripts/ci/openspec-delivery-check.sh` will iterate `openspec/changes/archive/*/tasks.md`
 and associated completion notes. It rejects unchecked boxes, `agent-incapable`, unresolved
-`DEFERRED`, missing final `mise run acceptance` task, and unchecked conditional tasks without
-an explicit `N/A because no <surface> files changed` reason. Existing archive drift remains
-visible rather than being auto-repaired.
+`DEFERRED`, missing final `mise run acceptance` task without a structured dated human-verification
+record for an irreducibly external check, and unchecked conditional tasks without an explicit
+`N/A because no <surface> files changed` reason. Existing archive drift remains visible rather
+than being auto-repaired.
 
 Scanning archives makes the invariant durable after a directory is moved, while the OpenSpec
 tasks rule and archive adapters prevent new violations before that point. A shell script is
@@ -64,9 +65,10 @@ than allowing a privileged connection to make tenant assertions tautological.
 ### Archive adapters hard-stop before moving a change
 
 The skill and command retain artifact and task checks but replace their confirmation paths
-with a stop. They also require successful `mise run acceptance` evidence according to the
-OpenSpec task policy before an archive operation can proceed. Delta-spec synchronization keeps
-its existing explicit choice because it is separate from delivery completion.
+with a stop. They also require successful `mise run acceptance` evidence, or a structured dated
+human-verification record for an irreducibly external check, before an archive operation can
+proceed. Delta-spec synchronization keeps its existing explicit choice because it is separate
+from delivery completion.
 
 ## Risks / Trade-offs
 

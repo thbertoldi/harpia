@@ -44,9 +44,11 @@ Archive a completed change in the experimental workflow.
 
     **If no tasks file exists:** Stop the archive workflow; a completed task list is required.
 
-    Run `mise run acceptance` after task completion. If it fails, or the final checked
-    task does not carry the exact `mise run acceptance` command, stop the archive workflow.
-    Do not offer a confirmation override for unverified acceptance.
+    Verify delivery evidence after task completion: run `mise run acceptance` when the final
+    checked task carries that exact command, or validate a structured record in the form
+    `Human verification: YYYY-MM-DD | irreducibly external: <check> | verified by: <person>`.
+    If neither evidence path verifies, stop the archive workflow. Do not offer a confirmation
+    override for unverified acceptance.
 
 4. **Assess delta spec sync state**
 

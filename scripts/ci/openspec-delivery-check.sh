@@ -34,7 +34,8 @@ for change_dir in "$archive_dir"/*; do
     continue
   fi
 
-  last_task=''
+	last_task=''
+	human_verification=0
   line_no=0
   while IFS= read -r line || [[ -n "$line" ]]; do
     ((line_no += 1))
@@ -50,11 +51,7 @@ for change_dir in "$archive_dir"/*; do
     fi
   done < "$tasks_file"
 
-  if [[ -z "$last_task" || "$last_task" != *"mise run acceptance"* ]]; then
-    fail "$change_name/tasks.md must end with a checked acceptance task carrying exact command: mise run acceptance"
-  fi
-
-  for note in "$change_dir"/*.md; do
+	for note in "$change_dir"/*.md; do
     [[ -f "$note" ]] || continue
     note_line=0
     while IFS= read -r line || [[ -n "$line" ]]; do
@@ -63,11 +60,18 @@ for change_dir in "$archive_dir"/*; do
       if [[ "$lower_line" == *"agent-incapable"* ]]; then
         fail "$change_name/${note##*/}:$note_line contains prohibited agent-incapable completion note"
       fi
-      if contains_unresolved_deferred "$line"; then
-        fail "$change_name/${note##*/}:$note_line contains unresolved DEFERRED work; move it to a linked follow-up change"
-      fi
-    done < "$note"
-  done
+		if contains_unresolved_deferred "$line"; then
+			fail "$change_name/${note##*/}:$note_line contains unresolved DEFERRED work; move it to a linked follow-up change"
+		fi
+		if [[ "$line" =~ ^[[:space:]]*Human[[:space:]]verification:[[:space:]][0-9]{4}-[0-9]{2}-[0-9]{2}[[:space:]]\|[[:space:]]irreducibly[[:space:]]external:[[:space:]].+\|[[:space:]]verified[[:space:]]by:[[:space:]].+ ]]; then
+			human_verification=1
+		fi
+		done < "$note"
+	done
+
+	if [[ -z "$last_task" || "$last_task" != *"mise run acceptance"* ]] && [[ "$human_verification" -ne 1 ]]; then
+		fail "$change_name must end with a checked acceptance task carrying exact command: mise run acceptance, or include 'Human verification: YYYY-MM-DD | irreducibly external: <check> | verified by: <person>'"
+	fi
 done
 
 exit "$failures"

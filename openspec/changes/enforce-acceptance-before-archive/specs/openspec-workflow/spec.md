@@ -48,7 +48,7 @@ CI SHALL install the pinned OpenSpec 1.5.0 release and run exactly `openspec val
 ## ADDED Requirements
 
 ### Requirement: Archived delivery evidence is enforceable
-The repository SHALL provide `mise run openspec-delivery-check`, which exits non-zero for an archived change whose `tasks.md` contains an unchecked task, whose completion notes contain `agent-incapable` or unresolved `DEFERRED`, whose final acceptance task lacks the exact `mise run acceptance` command, or whose conditional/N-A task lacks checked explicit evidence in the form `N/A because no <surface> files changed`. A deferred requirement MUST be moved to a linked follow-up change before archive.
+The repository SHALL provide `mise run openspec-delivery-check`, which exits non-zero for an archived change whose `tasks.md` contains an unchecked task, whose completion notes contain `agent-incapable` or unresolved `DEFERRED`, whose final acceptance task lacks the exact `mise run acceptance` command and no structured `Human verification: YYYY-MM-DD | irreducibly external: <check> | verified by: <person>` record exists, or whose conditional/N-A task lacks checked explicit evidence in the form `N/A because no <surface> files changed`. A deferred requirement MUST be moved to a linked follow-up change before archive.
 
 #### Scenario: Archived change retains incomplete work
 - **WHEN** an archived `tasks.md` contains `- [ ]`
