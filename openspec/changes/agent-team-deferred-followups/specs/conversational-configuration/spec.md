@@ -1,5 +1,9 @@
 # conversational-configuration
 
+> **Superseded LinkedIn scenario (2026-07-12):** The separate unified-post scenario below is
+> superseded by [`composable-linkedin-execution`](../../composable-linkedin-execution/). Retain
+> it as historical context; implement composable LinkedIn execution only in that change.
+
 ## ADDED Requirements
 
 ### Requirement: Recommended team surface

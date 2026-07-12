@@ -94,9 +94,11 @@ and the accepted ADRs, reconciled.
 5. **Ephemeral agents, explicit memory.** Agents are stateless executors. All memory is
    platform-owned, versioned, permissioned, and auditable — never hidden agent state.
    ([§8](#8-the-resource-layer-the-shared-layer))
-6. **Human-in-the-loop by contract.** Two distinct human gates: **Elicitation** (agent
-   asks for missing context) and **Approval** (human authorizes a risky transition such as
-   publishing). They are different events with different meaning. ([§7.4](#74-human-interaction))
+6. **Human-in-the-loop by contract.** Three distinct human interactions: **Elicitation**
+   (agent asks for missing context before work), **Review/Revision** (human evaluates a
+   generated candidate and may request a revised version), and **Approval** (human authorizes a
+   risky, irreversible transition such as publishing). They are different events with different
+   meaning. ([§7.4](#74-human-interaction))
 7. **Tenant-safe by construction.** Tenant isolation is enforced at the boundary (RLS,
    tenant-prefixed cache/object keys) and callers cannot bypass the wrappers.
    ([§6](#6-architecture-layers))
@@ -181,9 +183,10 @@ superseded one noted.
 
 | Term | Definition |
 |---|---|
-| **Overseer** | The human who receives elicitation/approval for agent-backed steps. **OverseerBinding** is per-step. MVP: a human tenant user; no re-delegation. |
-| **ElicitationRequest** | An agent-authored question for missing context. |
-| **ApprovalRequest** | A human gate authorizing a risky transition (e.g. publishing). Distinct from elicitation even if it reuses the same transport. |
+| **Overseer** | The human who receives declared interaction checkpoints for agent-backed steps. **OverseerBinding** is per-step. MVP: a human tenant user; no re-delegation. |
+| **ElicitationRequest** | An agent-authored question for missing context before the agent can produce a candidate. |
+| **ReviewRequest / ReviewDecision** | A human checkpoint over a generated candidate ArtifactVersion. The overseer accepts the exact candidate or requests a revision with feedback; the revised candidate receives a new review. Distinct from elicitation and approval. |
+| **ApprovalRequest** | A human gate authorizing a risky, irreversible transition (e.g. publishing) over its exact final ArtifactVersion. Distinct from elicitation and review even if they reuse the same transport. |
 
 ### Organization & access
 
@@ -329,10 +332,17 @@ failures. Do not bundle adaptation into publishers or into writer agents.
 
 ### 7.4 Human interaction
 
-Two gates, distinct by meaning: **ElicitationRequest** adds missing context; **ApprovalRequest**
-authorizes a risky transition (publishing). Both ride Temporal signals scoped to the
-StepExecution/gate. MVP: one human overseer per agent-backed step; publish-approval mode is
-per configuration.
+Three interactions are distinct by meaning and lifecycle: **ElicitationRequest** adds missing
+context before work can produce a candidate; **ReviewRequest / ReviewDecision** lets an overseer
+accept a generated candidate ArtifactVersion or request a revised version with feedback; and
+**ApprovalRequest** authorizes a risky, irreversible transition such as publishing. Review is
+not approval: accepting content does not authorize an external action, and approving an external
+action does not replace candidate feedback.
+
+Each interaction rides a Temporal signal scoped to its StepExecution/checkpoint, so the workflow
+waits durably rather than occupying a worker. Declared checkpoints surface automatically in the
+owning Conversation. MVP: one human overseer per agent-backed step; publish-approval mode is per
+configuration.
 
 ### 7.5 Two planning modes — do not conflate
 
@@ -454,7 +464,7 @@ Four destinations, each with one job (thread-first):
 | **Home / Conversations** | Start a chat; resume recent threads. |
 | **Gallery** (`/plans`) | Discover PlanTemplates (the catalog). No configuration here. |
 | **Runs** | Recurring plans + all executions (in-progress/scheduled/past), grouped by plan, each linking back to its origin conversation. Recurring plans edited inline. |
-| **Conversation** (`/chat/[threadId]`) | The single work surface: configure, run, review, preview artifacts for the plan(s) it spawns. |
+| **Conversation** (`/chat/[threadId]`) | The single lifecycle work surface: configure, run, review, approve, and preview artifacts for the PlanConfigurations and PlanExecutions it owns. |
 | **Artifact Library** (`/artifacts`) | Browse/search the artifact stream; promote artifacts to Resources ([§8](#8-the-resource-layer-the-shared-layer)). |
 
 Rules:
@@ -463,15 +473,19 @@ Rules:
   1:1 `Thread.active_plan_configuration_id`.)
 - **Every plan traces to its origin thread** (`origin_thread_id` always set).
 - **Configuration is hybrid conversational**, ending in a **structured approval card**:
-  the assistant fills smart defaults from free text, asks ≤2 clarifying questions, and
-  presents everything pre-filled for the user to adjust; the plan runs only after explicit
-  approval.
+  the assistant fills smart defaults from free text, asks ≤2 clarifying questions during
+  configuration, and presents everything pre-filled for the user to adjust; the plan runs only
+  after explicit approval. This configuration limit does not constrain execution interaction:
+  declared elicitation, review/revision, and approval checkpoints surface automatically in the
+  owning Conversation for the relevant PlanExecution.
 - **The canvas is a read-only in-thread toggle**, not a destination.
-- **Execution surfaces the final artifact** in a side preview; intermediates stay
-  queryable but do not clutter the thread.
+- **Execution surfaces its active artifacts and declared checkpoints** in the owning Conversation,
+  including the final preview and any candidate requiring review or approval; other
+  intermediates stay queryable without cluttering the thread.
 
-> **Naming resolved (C2):** "the chat interface is a PlanConfiguration assistant" is now
-> *"a **conversation** is a PlanConfiguration assistant that may produce **several** plans."*
+> **Naming resolved (C2):** a **Conversation** is lifecycle assistance over the
+> **PlanConfigurations** it may produce and their **PlanExecutions**; it may produce several
+> plans and surfaces their declared execution checkpoints in the same durable thread.
 
 ---
 

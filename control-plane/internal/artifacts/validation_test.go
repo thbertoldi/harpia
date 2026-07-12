@@ -93,6 +93,57 @@ func TestValidatePayloadImageAsset(t *testing.T) {
 	}
 }
 
+func TestValidatePayloadLinkedInCarouselDocument(t *testing.T) {
+	if err := ValidatePayload(TypeKeyLinkedInCarouselDocument, []byte(`{"mimeType":"application/pdf","fileName":"carousel.pdf"}`)); err != nil {
+		t.Fatalf("valid carousel document rejected: %v", err)
+	}
+
+	if err := ValidatePayload(TypeKeyLinkedInCarouselDocument, []byte(`{"mimeType":"image/png","fileName":"carousel.png"}`)); err == nil {
+		t.Fatal("expected non-PDF carousel document to fail")
+	}
+}
+
+func TestValidatePayloadLinkedInPost(t *testing.T) {
+	valid := []byte(`{
+        "text":{"text":"Launch day!"},
+        "carousel":{
+          "title":"Launch carousel",
+          "slides":[{"heading":"One","body":"First slide"}],
+          "documentArtifact":{
+            "artifactId":"document-artifact",
+            "artifactVersionId":"document-version",
+            "artifactTypeKey":"harpia.artifacts.v1.LinkedInCarouselDocument",
+            "contentHash":"sha256:document"
+          }
+        },
+        "images":[{
+          "artifactId":"image-artifact",
+          "artifactVersionId":"image-version",
+          "artifactTypeKey":"harpia.artifacts.v1.ImageAsset",
+          "contentHash":"sha256:image"
+        }]
+    }`)
+	if err := ValidatePayload(TypeKeyLinkedInPost, valid); err != nil {
+		t.Fatalf("valid LinkedIn post rejected: %v", err)
+	}
+
+	cases := []struct {
+		name    string
+		payload []byte
+	}{
+		{"missing text", []byte(`{}`)},
+		{"incomplete image ref", []byte(`{"text":{"text":"Launch day!"},"images":[{"artifactId":"image-artifact"}]}`)},
+		{"incomplete document ref", []byte(`{"text":{"text":"Launch day!"},"carousel":{"title":"Carousel","slides":[{"heading":"One"}],"documentArtifact":{"artifactId":"document-artifact"}}}`)},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := ValidatePayload(TypeKeyLinkedInPost, tc.payload); err == nil {
+				t.Fatal("expected validation error")
+			}
+		})
+	}
+}
+
 func TestValidatePayloadUnsupportedType(t *testing.T) {
 	if err := ValidatePayload("unknown.type", []byte(`{}`)); err == nil {
 		t.Fatal("expected unsupported type error")

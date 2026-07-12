@@ -2,6 +2,12 @@
 
 ## Summary
 
+> **Superseded LinkedIn scope (2026-07-12):** Item 2's separate composable-post/publish design is
+> superseded by [`composable-linkedin-execution`](../composable-linkedin-execution/), which owns
+> the complete linear execution, Review/Revision, version-pinned approval, and real LinkedIn
+> document publishing behavior. The team-selection scope remains here; this document retains the
+> deferred-item history.
+
 Hold the three scope items deferred out of `agent-team-model` so that change
 can archive with a clean delivery record. Each item is already partly built
 in `agent-team-model`; this change completes the user-facing surfaces.

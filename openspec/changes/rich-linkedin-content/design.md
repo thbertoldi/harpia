@@ -1,5 +1,11 @@
 ## Context
 
+> **Superseded execution scope (2026-07-12):** The unresolved branching, per-format publish,
+> and text-only publish assumptions in this document are superseded by
+> [`composable-linkedin-execution`](../composable-linkedin-execution/). Retain this document as
+> evidence for completed artifact/catalog work; implement the new change for any unfinished
+> execution behavior.
+
 This design answers the deferred `stabilize-chat-plan-journey` tasks 7.1 (a richer LinkedIn content plan) and **7.2** (whether new artifact fields/types, `ExecutorSKU`s, or agent manifests are required). It is grounded in what exists today:
 
 - The template `control-plane/internal/plans/templates/news-to-social-post.yaml` is a fixed four-step DAG (`fetch-news → write-draft → adapt-for-linkedin → publish-linkedin`) with `input_parameters` mapped via `runtimeMappings` onto `SEED_ARTIFACT`, `SLOT_BINDING`, and `BEHAVIOR_POLICY` targets.

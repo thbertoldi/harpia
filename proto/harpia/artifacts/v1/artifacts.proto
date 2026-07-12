@@ -102,6 +102,16 @@ message LinkedInPostDraft {
   repeated string hashtags = 3;
 }
 
+// ArtifactRef identifies one immutable ArtifactVersion. Its content hash is
+// carried with the identity so downstream reviewers and publishers can verify
+// they are operating on the exact version selected by the workflow.
+message ArtifactRef {
+  string artifact_id = 1;
+  string artifact_version_id = 2;
+  string artifact_type_key = 3;
+  string content_hash = 4;
+}
+
 message PublishConfirmation {
   string platform = 1;
   string external_id = 2;
@@ -122,6 +132,9 @@ message CarouselDraft {
   repeated CarouselSlide slides = 3;
   string caption = 4; // accompanying post caption
   repeated string hashtags = 5;
+  // Immutable PDF derivative uploaded for a LinkedIn document/carousel post.
+  // The referenced Artifact is tenant-scoped; its ref carries the byte hash.
+  ArtifactRef document_artifact = 6;
 }
 
 message ImageAsset {
@@ -133,6 +146,22 @@ message ImageAsset {
   string caption = 6;
   // Bytes live in Garage; the Artifact.storage_uri/content_hash address the payload,
   // consistent with every other ArtifactType. No inline bytes on the artifact.
+}
+
+// LinkedInCarouselDocument describes the immutable PDF derivative of a
+// CarouselDraft. The PDF bytes live in the referenced Artifact's payload
+// storage; this typed payload records only safe, inspectable metadata.
+message LinkedInCarouselDocument {
+  string mime_type = 1;
+  string file_name = 2;
+}
+
+// LinkedInPost is the single composable publish subject. Enrichment steps
+// produce new versions of this Artifact while preserving its identity.
+message LinkedInPost {
+  LinkedInPostDraft text = 1;
+  optional CarouselDraft carousel = 2;
+  repeated ArtifactRef images = 3;
 }
 
 message RegisterArtifactTypeRequest {

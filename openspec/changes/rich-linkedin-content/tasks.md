@@ -1,5 +1,11 @@
 ## 1. Artifact Types (Proto + Schemas)
 
+> **Superseded execution scope (2026-07-12):** Do not continue unfinished tasks under this
+> change that rely on its branching DAG, separate format publish paths, or text-only publisher.
+> [`composable-linkedin-execution`](../composable-linkedin-execution/) owns the linear
+> composable-post execution, review/revision, version-pinned approval, and real document upload.
+> Completed checkmarked tasks below remain historical evidence.
+
 - [x] 1.1 Add `CarouselSlide`, `CarouselDraft`, and `ImageAsset` messages to `proto/harpia/artifacts/v1/artifacts.proto` (no new `PreviewArtifactResponse` oneof variant). Verify: `cd proto && buf lint`.
 - [x] 1.2 Regenerate proto stubs for Go and TS consumers. Verify: generated files under `control-plane/internal/.../gen` and `frontend/src/lib/gen/harpia/artifacts/v1/artifacts_pb.ts` include the new messages; `cd frontend && bun run check` introduces no new baseline errors.
 - [x] 1.3 Add type-key constants (`harpia.artifacts.v1.CarouselDraft`, `harpia.artifacts.v1.ImageAsset`) and JSON Schemas + registration in `control-plane/internal/artifacts/validation.go`. Verify: `cd control-plane && go test ./internal/artifacts/...`. (Note: the codebase uses proto-unmarshal validation, not a JSON-Schema registry — followed the existing `validateProtoJSON` pattern; finding F8.)

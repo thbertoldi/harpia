@@ -14,13 +14,15 @@ import (
 var ErrInvalidPayload = errors.New("invalid artifact payload")
 
 const (
-	TypeKeyDateRange           = "harpia.artifacts.v1.DateRange"
-	TypeKeyNewsList            = "harpia.artifacts.v1.NewsList"
-	TypeKeyTextDraft           = "harpia.artifacts.v1.TextDraft"
-	TypeKeyLinkedInPostDraft   = "harpia.artifacts.v1.LinkedInPostDraft"
-	TypeKeyPublishConfirmation = "harpia.artifacts.v1.PublishConfirmation"
-	TypeKeyCarouselDraft       = "harpia.artifacts.v1.CarouselDraft"
-	TypeKeyImageAsset          = "harpia.artifacts.v1.ImageAsset"
+	TypeKeyDateRange                = "harpia.artifacts.v1.DateRange"
+	TypeKeyNewsList                 = "harpia.artifacts.v1.NewsList"
+	TypeKeyTextDraft                = "harpia.artifacts.v1.TextDraft"
+	TypeKeyLinkedInPostDraft        = "harpia.artifacts.v1.LinkedInPostDraft"
+	TypeKeyPublishConfirmation      = "harpia.artifacts.v1.PublishConfirmation"
+	TypeKeyCarouselDraft            = "harpia.artifacts.v1.CarouselDraft"
+	TypeKeyImageAsset               = "harpia.artifacts.v1.ImageAsset"
+	TypeKeyLinkedInPost             = "harpia.artifacts.v1.LinkedInPost"
+	TypeKeyLinkedInCarouselDocument = "harpia.artifacts.v1.LinkedInCarouselDocument"
 )
 
 func ValidatePayload(typeKey string, payload []byte) error {
@@ -85,6 +87,9 @@ func ValidatePayload(typeKey string, payload []byte) error {
 					return fmt.Errorf("%w: slides[%d] requires heading or body", ErrInvalidPayload, i)
 				}
 			}
+			if msg.DocumentArtifact != nil {
+				return validateArtifactRef(msg.DocumentArtifact, "document_artifact")
+			}
 			return nil
 		})
 	case TypeKeyImageAsset:
@@ -101,6 +106,33 @@ func ValidatePayload(typeKey string, payload []byte) error {
 			return fmt.Errorf("%w: mime_type is required", ErrInvalidPayload)
 		}
 		return nil
+	case TypeKeyLinkedInCarouselDocument:
+		return validateProtoJSON(payload, &artifactsv1.LinkedInCarouselDocument{}, func(msg *artifactsv1.LinkedInCarouselDocument) error {
+			if strings.TrimSpace(msg.MimeType) != "application/pdf" {
+				return fmt.Errorf("%w: mime_type must be application/pdf", ErrInvalidPayload)
+			}
+			if strings.TrimSpace(msg.FileName) == "" {
+				return fmt.Errorf("%w: file_name is required", ErrInvalidPayload)
+			}
+			return nil
+		})
+	case TypeKeyLinkedInPost:
+		return validateProtoJSON(payload, &artifactsv1.LinkedInPost{}, func(msg *artifactsv1.LinkedInPost) error {
+			if msg.Text == nil || strings.TrimSpace(msg.Text.Text) == "" {
+				return fmt.Errorf("%w: text is required", ErrInvalidPayload)
+			}
+			if msg.Carousel != nil && msg.Carousel.DocumentArtifact != nil {
+				if err := validateArtifactRef(msg.Carousel.DocumentArtifact, "carousel.document_artifact"); err != nil {
+					return err
+				}
+			}
+			for i, image := range msg.Images {
+				if err := validateArtifactRef(image, fmt.Sprintf("images[%d]", i)); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
 	default:
 		return fmt.Errorf("%w: unsupported artifact type %q", ErrInvalidPayload, typeKey)
 	}
@@ -111,4 +143,17 @@ func validateProtoJSON[T proto.Message](payload []byte, msg T, check func(T) err
 		return fmt.Errorf("%w: %v", ErrInvalidPayload, err)
 	}
 	return check(msg)
+}
+
+func validateArtifactRef(ref *artifactsv1.ArtifactRef, field string) error {
+	if ref == nil {
+		return fmt.Errorf("%w: %s is required", ErrInvalidPayload, field)
+	}
+	if strings.TrimSpace(ref.ArtifactId) == "" ||
+		strings.TrimSpace(ref.ArtifactVersionId) == "" ||
+		strings.TrimSpace(ref.ArtifactTypeKey) == "" ||
+		strings.TrimSpace(ref.ContentHash) == "" {
+		return fmt.Errorf("%w: %s requires artifact_id, artifact_version_id, artifact_type_key, and content_hash", ErrInvalidPayload, field)
+	}
+	return nil
 }

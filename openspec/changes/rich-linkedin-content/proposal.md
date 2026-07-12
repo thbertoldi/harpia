@@ -1,5 +1,12 @@
 ## Why
 
+> **Superseded execution scope (2026-07-12):** The unfinished branching-DAG, format-selected
+> publish, and text-only LinkedIn execution described by this change are superseded by
+> [`composable-linkedin-execution`](../composable-linkedin-execution/). That change owns the
+> linear composable `LinkedInPost`, Review/Revision, version-pinned approval, and real document
+> publish path. Completed work recorded below remains historical evidence; do not extend the
+> superseded execution design.
+
 The current LinkedIn journey (`news-to-social-post`) is a single, fixed shape: fetch news → write a neutral draft → adapt to one text post → publish. It cannot express the outputs creators actually ask for — a stronger-hook text post, a carousel outline, or an image-backed post — and it cannot ask, in conversation, which of those the user wants. The `stabilize-chat-plan-journey` change deliberately deferred this richer content work (its tasks 7.1/7.2) so the stabilization pass stayed a UI/localization layer.
 
 This change is that deferred exploration. It designs a richer LinkedIn content capability where the output **format** is a first-class configuration axis (constitution §7: *format is a configuration choice — post / carousel / image-backed*), voice quality is governed (stronger hook, anti-AI-jargon rules), and the chosen format is previewed in the thread before publish, with in-thread approval when `PlanBehaviorPolicies` require it. It also settles task 7.2: which new `ArtifactType`s, `ExecutorSKU`s, and agent manifests the build needs.

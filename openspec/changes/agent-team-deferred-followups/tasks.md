@@ -7,7 +7,7 @@
 
 ## 2. Composable LinkedInPost artifact
 
-- [ ] 2.1 Introduce a composable `LinkedInPost` artifact (text + optional carousel + optional images) and re-author the `publish` step over it. **Depends on:** none. **Acceptance:** Given an opted-in carousel and image, when the plan publishes, then a single `LinkedInPost` artifact carries all three and previews correctly. **Focused verification:** `cd control-plane && go test ./internal/plans ./internal/artifacts`; `cd frontend && bun run check`.
+- [ ] 2.1 **SUPERSEDED (2026-07-12):** The separate unified-post/publish design is owned by [`composable-linkedin-execution`](../composable-linkedin-execution/). Do not implement this task here; that change defines the linear composable execution, review/revision, version-pinned approval, and real document upload. This unchecked entry is retained as historical deferred-scope evidence.
 
 ## 3. Verification
 
