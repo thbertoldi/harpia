@@ -6,8 +6,8 @@
 
 # Odoo is a separately deployable downstream system. It is intentionally not
 # part of the default `mise run dev` graph; enable it with `tilt up -- --odoo`.
-config.define_bool('odoo', default=False)
-config.parse()
+config.define_bool('odoo')
+cfg = config.parse()
 
 local('./scripts/ensure-dev-kind-secrets.sh')
 
@@ -129,7 +129,7 @@ k8s_resource(
 )
 
 # ---- Optional Odoo downstream stack ----
-if config.get('odoo', False):
+if cfg.get('odoo', False):
     # This creates only Odoo-namespace, local-only Secrets and requires an
     # operator-provided Odoo-scoped Zitadel management credential.
     local('./scripts/ensure-dev-kind-secrets.sh --odoo')
