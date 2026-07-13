@@ -3,7 +3,6 @@
 package planassistant
 
 import (
-	chatv1 "github.com/harpia/control-plane/gen/harpia/chat/v1"
 	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
 	"github.com/harpia/control-plane/internal/planrules"
 )
@@ -22,46 +21,40 @@ const (
 	StateOverseerStep StateKind = "OVERSEER_STEP"
 	// StatePoliciesStep asks for required PlanBehaviorPolicies before review.
 	StatePoliciesStep StateKind = "POLICIES_STEP"
-	// StateSaved is returned once status leaves DRAFT (the matrix card's
-	// Save button promoted it). The controller emits the LandingCard.
-	StateSaved StateKind = "SAVED"
 )
 
-// AssistantState is the derived state for a single PlanConfiguration.
-type AssistantState struct {
+// ConfigurationState is the derived state for a DRAFT PlanConfiguration.
+type ConfigurationState struct {
 	Kind      StateKind
 	StepKey   string
 	PolicyKey string
 }
 
-// DeriveState is a pure function over (template, configuration, messages)
-// returning the assistant's current state. Messages are accepted for future
-// use (e.g., detecting in-progress rewind) but are unused in v1 derivation —
-// the configuration alone is authoritative.
-func DeriveState(template *plansv1.PlanTemplate, config *plansv1.PlanConfiguration, messages []*chatv1.ThreadMessage) AssistantState {
-	_ = messages
-	if config == nil || config.GetPlanTemplateId() == "" {
-		return AssistantState{Kind: StateAwaitingTemplate}
+// DeriveConfigurationState is a pure reducer for a DRAFT PlanConfiguration.
+// Configuration lifecycle states after DRAFT are conversation-level concerns;
+// the zero state signals that this reducer has no configuration prompt to emit.
+func DeriveConfigurationState(template *plansv1.PlanTemplate, config *plansv1.PlanConfiguration) ConfigurationState {
+	if config == nil {
+		return ConfigurationState{}
+	}
+	if config.GetStatus() != plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT &&
+		config.GetStatus() != plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_UNSPECIFIED {
+		return ConfigurationState{}
+	}
+	if config.GetPlanTemplateId() == "" {
+		return ConfigurationState{Kind: StateAwaitingTemplate}
 	}
 
-	switch config.GetStatus() {
-	case plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_DRAFT,
-		plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_UNSPECIFIED:
-		if stepKey := firstUnboundStepKey(template, config); stepKey != "" {
-			return AssistantState{Kind: StateBindingStep, StepKey: stepKey}
-		}
-		if stepKey := firstUnboundOverseerStepKey(template, config); stepKey != "" {
-			return AssistantState{Kind: StateOverseerStep, StepKey: stepKey}
-		}
-		if policyKey := firstUnsetPolicyKey(template, config.GetBehaviorPolicies()); policyKey != "" {
-			return AssistantState{Kind: StatePoliciesStep, PolicyKey: policyKey}
-		}
-		return AssistantState{Kind: StateBindingMatrix}
-	default:
-		// RUNNABLE / SCHEDULED / DISABLED / ARCHIVED — the Save button fired
-		// and promoted the configuration. Next assistant turn is the landing.
-		return AssistantState{Kind: StateSaved}
+	if stepKey := firstUnboundStepKey(template, config); stepKey != "" {
+		return ConfigurationState{Kind: StateBindingStep, StepKey: stepKey}
 	}
+	if stepKey := firstUnboundOverseerStepKey(template, config); stepKey != "" {
+		return ConfigurationState{Kind: StateOverseerStep, StepKey: stepKey}
+	}
+	if policyKey := firstUnsetPolicyKey(template, config.GetBehaviorPolicies()); policyKey != "" {
+		return ConfigurationState{Kind: StatePoliciesStep, PolicyKey: policyKey}
+	}
+	return ConfigurationState{Kind: StateBindingMatrix}
 }
 
 // orderedPolicyKeys is the stable order behavior policies are prompted in.

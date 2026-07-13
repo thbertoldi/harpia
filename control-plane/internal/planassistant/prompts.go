@@ -20,7 +20,7 @@ type ExecutorOption struct {
 }
 
 // PromptInput carries everything BuildPrompt needs that isn't already in
-// AssistantState. The controller assembles it once per turn.
+// ConfigurationState. The controller assembles it once per turn.
 //
 // M6: BINDING_MATRIX renders every step at once, so candidates are supplied
 // for all steps keyed by step key (was a single-step slice in M5).
@@ -37,7 +37,7 @@ type PromptInput struct {
 
 // BuildPrompt returns the assistant's prose text and the JSON payload for the
 // given state. Pure.
-func BuildPrompt(state AssistantState, in PromptInput) (text, payload string) {
+func BuildPrompt(state ConfigurationState, in PromptInput) (text, payload string) {
 	switch state.Kind {
 	case StateAwaitingTemplate:
 		// Unreachable in v1 (the template is always bound at creation), but
@@ -57,8 +57,6 @@ func BuildPrompt(state AssistantState, in PromptInput) (text, payload string) {
 	case StateBindingMatrix:
 		return buildMatrixPrompt(in)
 
-	case StateSaved:
-		return buildLandingPrompt()
 	}
 	return "", chat.BuildAssistantPromptPayload(string(state.Kind), "", nil)
 }
@@ -71,7 +69,7 @@ func buildMatrixPrompt(in PromptInput) (string, string) {
 	return text, payload
 }
 
-func buildBindingStepPrompt(state AssistantState, in PromptInput) (string, string) {
+func buildBindingStepPrompt(state ConfigurationState, in PromptInput) (string, string) {
 	rows := matrixRows(in)
 	var focusedTitle string
 	var focusedOptions []chat.AssistantOption
@@ -95,7 +93,7 @@ func buildBindingStepPrompt(state AssistantState, in PromptInput) (string, strin
 	return text, payload
 }
 
-func buildOverseerStepPrompt(state AssistantState, in PromptInput) (string, string) {
+func buildOverseerStepPrompt(state ConfigurationState, in PromptInput) (string, string) {
 	rows := matrixRows(in)
 	focusedTitle := state.StepKey
 	for _, row := range rows {
@@ -114,7 +112,7 @@ func buildOverseerStepPrompt(state AssistantState, in PromptInput) (string, stri
 	return text, payload
 }
 
-func buildPoliciesStepPrompt(state AssistantState, in PromptInput) (string, string) {
+func buildPoliciesStepPrompt(state ConfigurationState, in PromptInput) (string, string) {
 	allFields := []chat.AssistantPolicyField{
 		{
 			Key:          "content_output_format",
@@ -290,16 +288,6 @@ func overseerOptions(in PromptInput) []chat.AssistantOption {
 		Label: currentUserLabel(in),
 		Value: userID,
 	}}
-}
-
-func buildLandingPrompt() (string, string) {
-	text := "Saved. Run it now, schedule a recurring run, or walk away — it'll be here when you come back."
-	payload := chat.BuildAssistantLandingPayload([]chat.AssistantAction{
-		{ID: "run-now", Label: "Run now"},
-		{ID: "schedule", Label: "Schedule…"},
-		{ID: "walk-away", Label: "Save and walk away"},
-	})
-	return text, payload
 }
 
 func executorOptions(cands []ExecutorOption) []chat.AssistantOption {

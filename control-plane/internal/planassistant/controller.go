@@ -71,8 +71,7 @@ func (c *Controller) SeedThread(ctx context.Context, tenantID, configID uuid.UUI
 // NextTurn is called after the configuration changes. It re-derives the state
 // from the current configuration and emits the matching prompt.
 //
-// Idempotent: emitting the same matrix payload twice is suppressed, and the
-// LandingCard is emitted at most once per configuration.
+// Idempotent: emitting the same configuration prompt twice is suppressed.
 func (c *Controller) NextTurn(ctx context.Context, tenantID, configID uuid.UUID) error {
 	cfg, err := c.Configs.GetConfiguration(ctx, tenantID, configID)
 	if err != nil {
@@ -98,18 +97,10 @@ func (c *Controller) emitCurrentPrompt(ctx context.Context, tenantID uuid.UUID, 
 		return fmt.Errorf("planassistant: load template: %w", err)
 	}
 
-	state := DeriveState(tpl, cfg, nil)
-
-	if state.Kind == StateSaved {
-		// Landing idempotency is per-configuration: a landing for config A in
-		// a shared thread must not suppress config B's landing.
-		emitted, err := c.landingAlreadyEmitted(ctx, tenantID, threadID, cfg.GetId())
-		if err != nil {
-			return err
-		}
-		if emitted {
-			return nil
-		}
+	state := DeriveConfigurationState(tpl, cfg)
+	if state.Kind == "" {
+		// Non-DRAFT lifecycle phases are projected by the conversation driver.
+		return nil
 	}
 
 	in := PromptInput{Template: tpl, Config: cfg}
@@ -164,30 +155,6 @@ func (c *Controller) emitCurrentPrompt(ctx context.Context, tenantID uuid.UUID, 
 		return fmt.Errorf("planassistant: emit prompt: %w", err)
 	}
 	return nil
-}
-
-// landingAlreadyEmitted reports whether an ASSISTANT_PROMPT whose payload
-// carries the given configuration_id and state "landing" has already been
-// written to the thread. Landing idempotency is per-configuration so two
-// configurations sharing a thread do not suppress each other's landing.
-func (c *Controller) landingAlreadyEmitted(ctx context.Context, tenantID uuid.UUID, threadID, configurationID string) (bool, error) {
-	msgs, err := c.Chat.ListMessages(ctx, tenantID, threadID, 0, 0)
-	if err != nil {
-		return false, fmt.Errorf("planassistant: list messages: %w", err)
-	}
-	for _, m := range msgs {
-		if m.GetKind() != chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_ASSISTANT_PROMPT {
-			continue
-		}
-		cid, st, _, ok := promptFingerprint(m.GetPayloadJson())
-		if !ok {
-			continue
-		}
-		if cid == configurationID && st == "landing" {
-			return true, nil
-		}
-	}
-	return false, nil
 }
 
 // isDuplicateAssistantPrompt reports whether any stored ASSISTANT_PROMPT

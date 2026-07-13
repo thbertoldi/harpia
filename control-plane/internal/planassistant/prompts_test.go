@@ -27,14 +27,14 @@ func TestBuildPrompt_BindingMatrix_RendersParticipatingRows(t *testing.T) {
 			},
 		},
 		CandidatesByStep: map[string][]planassistant.ExecutorOption{
-			"draft":   {{StepKey: "draft", InstallationID: "inst-1", DisplayName: "Junior Writer", SkuKey: "writer-junior", Tier: "junior", PriceBrl: &price}},
+			"draft":          {{StepKey: "draft", InstallationID: "inst-1", DisplayName: "Junior Writer", SkuKey: "writer-junior", Tier: "junior", PriceBrl: &price}},
 			"generate-image": {{StepKey: "generate-image", InstallationID: "inst-image", DisplayName: "Image generator", SkuKey: "image-generator"}},
-			"draft-carousel":  {{StepKey: "draft-carousel", InstallationID: "inst-carousel", DisplayName: "Carousel author", SkuKey: "carousel-author"}},
-			"publish":         {{StepKey: "publish", InstallationID: "inst-2", DisplayName: "Mailchimp", SkuKey: "mailchimp"}},
+			"draft-carousel": {{StepKey: "draft-carousel", InstallationID: "inst-carousel", DisplayName: "Carousel author", SkuKey: "carousel-author"}},
+			"publish":        {{StepKey: "publish", InstallationID: "inst-2", DisplayName: "Mailchimp", SkuKey: "mailchimp"}},
 		},
 		CurrentUserLabel: "Ana",
 	}
-	state := planassistant.AssistantState{Kind: planassistant.StateBindingMatrix}
+	state := planassistant.ConfigurationState{Kind: planassistant.StateBindingMatrix}
 	text, payload := planassistant.BuildPrompt(state, in)
 	if !strings.Contains(text, "Ana") {
 		t.Fatalf("intro should mention overseer default user: %q", text)
@@ -92,7 +92,7 @@ func TestBuildPrompt_BindingMatrix_RendersOptedInRows(t *testing.T) {
 	markStepOptionalCapabilities(tpl, "generate-image", "image-generation")
 	markStepOptionalCapabilities(tpl, "draft-carousel", "carousel-authoring")
 
-	_, payload := planassistant.BuildPrompt(planassistant.AssistantState{Kind: planassistant.StateBindingMatrix}, planassistant.PromptInput{
+	_, payload := planassistant.BuildPrompt(planassistant.ConfigurationState{Kind: planassistant.StateBindingMatrix}, planassistant.PromptInput{
 		Template: tpl,
 		Config: &plansv1.PlanConfiguration{
 			IncludedOptionalCapabilities: []string{"image-generation", "carousel-authoring"},
@@ -133,7 +133,7 @@ func TestBuildPrompt_BindingStep_RendersFocusedOptionsAndAllRows(t *testing.T) {
 		},
 		CurrentUserLabel: "Ana",
 	}
-	state := planassistant.AssistantState{Kind: planassistant.StateBindingStep, StepKey: "fetch-news"}
+	state := planassistant.ConfigurationState{Kind: planassistant.StateBindingStep, StepKey: "fetch-news"}
 	text, payload := planassistant.BuildPrompt(state, in)
 	if !strings.Contains(text, "fetch-news") && !strings.Contains(text, "Fetch news") {
 		t.Fatalf("text should mention the focused step, got %q", text)
@@ -203,7 +203,7 @@ func TestBuildPrompt_OverseerStep_RendersCurrentUserOptionAndRows(t *testing.T) 
 		CurrentUserID:    "user-ana",
 		CurrentUserLabel: "Ana Operator",
 	}
-	state := planassistant.AssistantState{Kind: planassistant.StateKind("OVERSEER_STEP"), StepKey: "write-draft"}
+	state := planassistant.ConfigurationState{Kind: planassistant.StateKind("OVERSEER_STEP"), StepKey: "write-draft"}
 	text, payload := planassistant.BuildPrompt(state, in)
 	if !strings.Contains(text, "Write draft") {
 		t.Fatalf("text should mention the focused step, got %q", text)
@@ -278,7 +278,7 @@ func TestBuildPrompt_PoliciesStep_RendersPolicyFields(t *testing.T) {
 			},
 		},
 	}
-	state := planassistant.AssistantState{Kind: planassistant.StatePoliciesStep}
+	state := planassistant.ConfigurationState{Kind: planassistant.StatePoliciesStep}
 	text, payload := planassistant.BuildPrompt(state, in)
 	if !strings.Contains(strings.ToLower(text), "runtime") {
 		t.Fatalf("text should mention runtime behavior, got %q", text)
@@ -366,7 +366,7 @@ func TestBuildPrompt_PoliciesStep_RendersContentOutputFormat(t *testing.T) {
 			BehaviorPolicies: &plansv1.PlanBehaviorPolicies{}, // content_output_format unset
 		},
 	}
-	state := planassistant.AssistantState{Kind: planassistant.StatePoliciesStep}
+	state := planassistant.ConfigurationState{Kind: planassistant.StatePoliciesStep}
 	_, payload := planassistant.BuildPrompt(state, in)
 
 	var parsed struct {
@@ -455,7 +455,7 @@ func TestBuildPrompt_PoliciesStep_ContentOutputFormat_ReflectsCurrentValue(t *te
 			},
 		},
 	}
-	state := planassistant.AssistantState{Kind: planassistant.StatePoliciesStep, PolicyKey: "content_output_format"}
+	state := planassistant.ConfigurationState{Kind: planassistant.StatePoliciesStep, PolicyKey: "content_output_format"}
 	_, payload := planassistant.BuildPrompt(state, in)
 
 	var parsed struct {
@@ -472,39 +472,5 @@ func TestBuildPrompt_PoliciesStep_ContentOutputFormat_ReflectsCurrentValue(t *te
 	}
 	if parsed.Fields[0].CurrentValue != "carousel" {
 		t.Fatalf("current_value = %q, want carousel", parsed.Fields[0].CurrentValue)
-	}
-}
-
-func TestBuildPrompt_Landing_HasThreeActions(t *testing.T) {
-	state := planassistant.AssistantState{Kind: planassistant.StateSaved}
-	in := planassistant.PromptInput{Config: &plansv1.PlanConfiguration{
-		Status: plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
-	}}
-	text, payload := planassistant.BuildPrompt(state, in)
-	if !strings.Contains(strings.ToLower(text), "saved") {
-		t.Fatalf("landing text should narrate save, got %q", text)
-	}
-	var parsed struct {
-		State   string `json:"state"`
-		Actions []struct {
-			ID string `json:"id"`
-		} `json:"actions"`
-	}
-	if err := json.Unmarshal([]byte(payload), &parsed); err != nil {
-		t.Fatalf("payload not valid JSON: %v\n%s", err, payload)
-	}
-	if parsed.State != "landing" {
-		t.Fatalf("want state landing, got %q", parsed.State)
-	}
-	want := map[string]bool{"run-now": false, "schedule": false, "walk-away": false}
-	for _, a := range parsed.Actions {
-		if _, ok := want[a.ID]; ok {
-			want[a.ID] = true
-		}
-	}
-	for id, found := range want {
-		if !found {
-			t.Fatalf("missing landing action %q in %s", id, payload)
-		}
 	}
 }

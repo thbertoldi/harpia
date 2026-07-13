@@ -221,7 +221,7 @@ func (h *PlanHandler) appendNextAssistantPromptTx(ctx context.Context, q databas
 	}
 	tpl := templateToProto(template)
 	cfg := configurationToProto(config, template)
-	state := planassistant.DeriveState(tpl, cfg, nil)
+	state := planassistant.DeriveConfigurationState(tpl, cfg)
 	in := planassistant.PromptInput{Template: tpl, Config: cfg}
 	if rc, ok := identity.RequestContextFrom(ctx); ok {
 		in.CurrentUserID = rc.UserID

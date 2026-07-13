@@ -322,7 +322,7 @@ func TestNextTurn_DedupsIdenticalMatrix(t *testing.T) {
 	}
 }
 
-func TestNextTurn_EmitsLandingOnPromotion(t *testing.T) {
+func TestNextTurn_DoesNotEmitConfigurationPromptAfterPromotion(t *testing.T) {
 	chatStore := &fakeChat{}
 	tpl := mkTemplate("draft")
 	tpl.Id = testTemplateUUID
@@ -336,15 +336,12 @@ func TestNextTurn_EmitsLandingOnPromotion(t *testing.T) {
 	if err := c.NextTurn(context.Background(), uuid.New(), uuid.New()); err != nil {
 		t.Fatal(err)
 	}
-	if len(chatStore.appended) != 1 {
-		t.Fatalf("expected 1 landing prompt, got %d", len(chatStore.appended))
-	}
-	if !strings.Contains(chatStore.appended[0].PayloadJSON, `"state":"landing"`) {
-		t.Fatalf("expected landing payload, got %s", chatStore.appended[0].PayloadJSON)
+	if len(chatStore.appended) != 0 {
+		t.Fatalf("non-DRAFT configuration must not emit a configuration prompt, got %d", len(chatStore.appended))
 	}
 }
 
-func TestNextTurn_LandingIsIdempotent(t *testing.T) {
+func TestNextTurn_NonDraftRemainsSilent(t *testing.T) {
 	chatStore := &fakeChat{}
 	tpl := mkTemplate("draft")
 	tpl.Id = testTemplateUUID
@@ -361,8 +358,8 @@ func TestNextTurn_LandingIsIdempotent(t *testing.T) {
 	if err := c.NextTurn(context.Background(), uuid.New(), uuid.New()); err != nil {
 		t.Fatal(err)
 	}
-	if len(chatStore.appended) != 1 {
-		t.Fatalf("landing should be emitted at most once, got %d", len(chatStore.appended))
+	if len(chatStore.appended) != 0 {
+		t.Fatalf("non-DRAFT configuration must remain silent, got %d", len(chatStore.appended))
 	}
 }
 
@@ -476,42 +473,8 @@ func TestNextTurn_DedupIsStepScoped(t *testing.T) {
 	}
 }
 
-// TestNextTurn_LandingIsConfigScoped guards the multi-plan thread case for
-// landings: a landing for config A in a shared thread must not block config
-// B's landing.
-func TestNextTurn_LandingIsConfigScoped(t *testing.T) {
-	chatStore := &fakeChat{}
-	tpl := mkTemplate("draft")
-	tpl.Id = testTemplateUUID
-	cfgID := uuid.NewString()
-	cfg := &plansv1.PlanConfiguration{
-		Id:             cfgID,
-		OriginThreadId: testThreadUUID,
-		PlanTemplateId: testTemplateUUID,
-		Status:         plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
-	}
-	// A landing for a DIFFERENT config in the same thread — old thread-global
-	// check suppressed us; the config-scoped check must not.
-	chatStore.stored = []*chatv1.ThreadMessage{
-		storedAssistantPrompt(uuid.NewString(), "landing", "", "other-config"),
-	}
-	c := newController(chatStore, cfg, tpl)
-	if err := c.NextTurn(context.Background(), uuid.New(), uuid.New()); err != nil {
-		t.Fatal(err)
-	}
-	if len(chatStore.appended) != 1 {
-		t.Fatalf("landing for another config must not suppress; appended %d", len(chatStore.appended))
-	}
-	if !strings.Contains(chatStore.appended[0].PayloadJSON, `"state":"landing"`) {
-		t.Fatalf("expected landing payload, got %s", chatStore.appended[0].PayloadJSON)
-	}
-	if !strings.Contains(chatStore.appended[0].PayloadJSON, fmt.Sprintf(`"configuration_id":%q`, cfgID)) {
-		t.Fatalf("emitted landing must stamp configuration_id=%s, got %s", cfgID, chatStore.appended[0].PayloadJSON)
-	}
-}
-
 // TestNextTurn_ProgressionEmitsExactlyOnePromptPerStep walks the full happy
-// path (binding1 → binding2 → overseer → policies → matrix → landing) and
+// path (binding1 → binding2 → overseer → policies → matrix) and
 // re-fires NextTurn after every step to confirm each emits exactly once.
 func TestNextTurn_ProgressionEmitsExactlyOnePromptPerStep(t *testing.T) {
 	chatStore := &fakeChat{}
@@ -621,7 +584,8 @@ func TestNextTurn_ProgressionEmitsExactlyOnePromptPerStep(t *testing.T) {
 		t.Fatalf("step 5: expected 5 appends, got %d", len(chatStore.appended))
 	}
 
-	// Step 6: landing on promotion to RUNNABLE. Re-fire to confirm idempotency.
+	// Promotion to RUNNABLE leaves configuration prompting; the conversation
+	// driver will project the ready turn in Slice 2.
 	configs.cur = &plansv1.PlanConfiguration{
 		Id: cfgID, OriginThreadId: testThreadUUID, PlanTemplateId: testTemplateUUID,
 		Status: plansv1.PlanConfigurationStatus_PLAN_CONFIGURATION_STATUS_RUNNABLE,
@@ -636,11 +600,8 @@ func TestNextTurn_ProgressionEmitsExactlyOnePromptPerStep(t *testing.T) {
 	}
 	mustNextTurn(t, c, ctx, tenant)
 	mustNextTurn(t, c, ctx, tenant)
-	if !strings.Contains(chatStore.appended[5].PayloadJSON, `"state":"landing"`) {
-		t.Fatalf("step 6: expected landing, got %s", chatStore.appended[5].PayloadJSON)
-	}
-	if got := len(chatStore.appended); got != 6 {
-		t.Fatalf("step 6: expected exactly 6 appends (one per step), got %d", got)
+	if got := len(chatStore.appended); got != 5 {
+		t.Fatalf("promotion must not append a configuration prompt, got %d", got)
 	}
 }
 
