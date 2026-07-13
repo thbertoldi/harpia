@@ -36,10 +36,11 @@ type TemplateStore interface {
 // Controller orchestrates the assistant: it derives state, builds the next
 // prompt, and writes chat messages via the injected chat.Store.
 type Controller struct {
-	Chat      chat.Store
-	Catalog   ExecutorCatalog
-	Configs   ConfigurationStore
-	Templates TemplateStore
+	Chat       chat.Store
+	Catalog    ExecutorCatalog
+	Configs    ConfigurationStore
+	Templates  TemplateStore
+	Executions ExecutionStore
 }
 
 // SeedThread is called once when a PlanConfiguration is first created. It
@@ -79,6 +80,15 @@ func (c *Controller) NextTurn(ctx context.Context, tenantID, configID uuid.UUID)
 	}
 	if cfg == nil {
 		return errors.New("planassistant: configuration not found")
+	}
+	if c.Executions != nil {
+		projection, executionErr := c.Executions.LoadLatestNonTerminalExecution(ctx, tenantID, configID)
+		if executionErr != nil {
+			return fmt.Errorf("planassistant: load latest non-terminal execution: %w", executionErr)
+		}
+		if projection != nil && projection.Execution != nil {
+			return c.emitExecutionTurn(ctx, tenantID, cfg, projection, "")
+		}
 	}
 	return c.emitCurrentPrompt(ctx, tenantID, cfg)
 }

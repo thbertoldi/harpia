@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 
 	chatv1 "github.com/harpia/control-plane/gen/harpia/chat/v1"
 	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
@@ -120,10 +121,66 @@ func TestFailStepExecutionEmitsStepFailedChatMessage(t *testing.T) {
 	}
 }
 
+func TestResolveReviewRequestIsSoleTerminalWriterAndEmitsOnce(t *testing.T) {
+	tenantID, executionID, stepID := uuid.New(), uuid.New(), uuid.New()
+	reviewID := uuid.New()
+	store := &fakeRuntimePlanStore{
+		configuration: &PlanConfiguration{ID: uuid.New(), TenantID: tenantID, OriginThreadID: uuid.New()},
+		execution:     &PlanExecution{ID: executionID, TenantID: tenantID},
+		stepID:        stepID,
+	}
+	messages := &fakeRuntimeChat{}
+	runtime := &RuntimeRepository{plans: store, chat: messages}
+	input := workflow.ResolveReviewRequestInput{TenantID: tenantID.String(), StepExecutionID: stepID.String(), ReviewRequestID: reviewID.String(), Decision: "accept"}
+
+	if err := runtime.ResolveReviewRequest(context.Background(), input); err != nil {
+		t.Fatalf("first ResolveReviewRequest: %v", err)
+	}
+	if err := runtime.ResolveReviewRequest(context.Background(), input); err != nil {
+		t.Fatalf("duplicate ResolveReviewRequest: %v", err)
+	}
+	if got := store.reviewTerminalWrites; got != 1 {
+		t.Fatalf("terminal review writes = %d, want exactly 1", got)
+	}
+	decided := 0
+	for _, message := range messages.appended {
+		if message.Kind == chatv1.ThreadMessageKind_THREAD_MESSAGE_KIND_REVIEW_DECIDED {
+			decided++
+		}
+	}
+	if decided != 1 {
+		t.Fatalf("REVIEW_DECIDED events = %d, want exactly 1", decided)
+	}
+}
+
+type failingExecutionConversationSink struct{ calls int }
+
+func (s *failingExecutionConversationSink) OnExecutionEvent(context.Context, uuid.UUID, uuid.UUID, string) error {
+	s.calls++
+	return context.DeadlineExceeded
+}
+
+func TestExecutionConversationSinkFailureDoesNotFailTransition(t *testing.T) {
+	tenantID, executionID := uuid.New(), uuid.New()
+	store := &fakeRuntimePlanStore{
+		configuration: &PlanConfiguration{ID: uuid.New(), TenantID: tenantID, OriginThreadID: uuid.New()},
+		execution:     &PlanExecution{ID: executionID, TenantID: tenantID},
+	}
+	sink := &failingExecutionConversationSink{}
+	runtime := (&RuntimeRepository{plans: store}).WithExecutionConversationSink(sink)
+	if err := runtime.StartPlanExecution(context.Background(), tenantID, executionID); err != nil {
+		t.Fatalf("StartPlanExecution must ignore passive execution prompt failure: %v", err)
+	}
+	if sink.calls != 1 {
+		t.Fatalf("sink calls = %d, want 1", sink.calls)
+	}
+}
+
 type fakeRuntimePlanStore struct {
-	configuration *PlanConfiguration
-	execution     *PlanExecution
-	stepID        uuid.UUID
+	configuration        *PlanConfiguration
+	execution            *PlanExecution
+	stepID               uuid.UUID
+	reviewTerminalWrites int
 }
 
 func (f *fakeRuntimePlanStore) GetConfiguration(_ context.Context, _, _ uuid.UUID) (*PlanConfiguration, error) {
@@ -165,9 +222,13 @@ func (f *fakeRuntimePlanStore) CreatePlanReviewRequest(_ context.Context, reques
 	return request, nil
 }
 func (f *fakeRuntimePlanStore) GetPlanReviewRequest(_ context.Context, _ uuid.UUID, reviewID uuid.UUID) (*PlanReviewRequest, error) {
-	return &PlanReviewRequest{ID: reviewID, PlanExecutionID: f.execution.ID}, nil
+	return &PlanReviewRequest{ID: reviewID, PlanExecutionID: f.execution.ID, StepExecutionID: f.stepID}, nil
 }
 func (f *fakeRuntimePlanStore) MarkReviewDecided(_ context.Context, _ uuid.UUID, reviewID uuid.UUID, decision, feedback string, _ uuid.NullUUID) (*PlanReviewRequest, error) {
+	if f.reviewTerminalWrites > 0 {
+		return nil, pgx.ErrNoRows
+	}
+	f.reviewTerminalWrites++
 	return &PlanReviewRequest{ID: reviewID, Decision: decision, RevisionFeedback: feedback}, nil
 }
 func (f *fakeRuntimePlanStore) GetPlanApprovalRequest(_ context.Context, _ uuid.UUID, approvalID string) (*PlanApprovalRequest, error) {

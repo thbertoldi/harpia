@@ -18,7 +18,6 @@ import (
 type ReviewStore interface {
 	GetPlanReviewRequest(context.Context, uuid.UUID, uuid.UUID) (*PlanReviewRequest, error)
 	ListPlanReviewRequests(context.Context, uuid.UUID, ReviewFilters) ([]*PlanReviewRequest, error)
-	MarkReviewDecided(context.Context, uuid.UUID, uuid.UUID, string, string, uuid.NullUUID) (*PlanReviewRequest, error)
 }
 
 type PlanReviewSignaler interface {
@@ -93,18 +92,17 @@ func (h *PlanHandler) RespondToReviewRequest(ctx context.Context, req *connect.R
 	} else if decision.GetKind() != plansv1.ReviewDecisionKind_REVIEW_DECISION_KIND_ACCEPT {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("unsupported review decision"))
 	}
-	updated, err := h.reviews.MarkReviewDecided(ctx, tenantID, id, kind, strings.TrimSpace(decision.GetFeedback()), nullableUserID(rc.UserID))
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
-	}
 	if h.reviewSignaler == nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("workflow engine is unavailable"))
 	}
-	err = h.reviewSignaler.SignalPlanReviewDecision(ctx, workflow.PlanWorkflowID(updated.PlanExecutionID.String()), "", workflow.ReviewDecisionSignal{StepExecutionID: updated.StepExecutionID.String(), ReviewRequestID: updated.ID.String(), Decision: kind, Feedback: updated.RevisionFeedback})
+	err = h.reviewSignaler.SignalPlanReviewDecision(ctx, workflow.PlanWorkflowID(row.PlanExecutionID.String()), "", workflow.ReviewDecisionSignal{StepExecutionID: row.StepExecutionID.String(), ReviewRequestID: row.ID.String(), Decision: kind, Feedback: strings.TrimSpace(decision.GetFeedback())})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeUnavailable, err)
 	}
-	return connect.NewResponse(&plansv1.RespondToReviewRequestResponse{ReviewRequest: reviewToProto(updated)}), nil
+	// Temporal's ResolveReviewRequestActivity is the sole terminal persistence
+	// owner. The command response intentionally remains the still-pending row
+	// until that exact workflow has accepted and resolved the signal.
+	return connect.NewResponse(&plansv1.RespondToReviewRequestResponse{ReviewRequest: reviewToProto(row)}), nil
 }
 
 func (h *PlanHandler) WatchReviewRequests(ctx context.Context, req *connect.Request[plansv1.WatchReviewRequestsRequest], stream *connect.ServerStream[plansv1.WatchReviewRequestsResponse]) error {

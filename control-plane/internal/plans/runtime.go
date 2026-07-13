@@ -3,7 +3,9 @@ package plans
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log/slog"
 	"sort"
 	"strings"
 	"time"
@@ -11,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	chatv1 "github.com/harpia/control-plane/gen/harpia/chat/v1"
 	plansv1 "github.com/harpia/control-plane/gen/harpia/plans/v1"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/harpia/control-plane/internal/artifacts"
 	"github.com/harpia/control-plane/internal/chat"
@@ -18,10 +21,18 @@ import (
 )
 
 type RuntimeRepository struct {
-	chat      chat.Store
-	plans     runtimePlanStore
-	executors ExecutorLookup
-	artifacts ArtifactVersionVerifier
+	chat                      chat.Store
+	plans                     runtimePlanStore
+	executors                 ExecutorLookup
+	artifacts                 ArtifactVersionVerifier
+	executionConversationSink ExecutionConversationSink
+}
+
+// ExecutionConversationSink receives a notification after durable execution
+// state changes. It is deliberately best effort; its projection can always be
+// rebuilt from PlanExecution and pending interaction rows.
+type ExecutionConversationSink interface {
+	OnExecutionEvent(ctx context.Context, tenantID, executionID uuid.UUID, causeKind string) error
 }
 
 type ArtifactVersionVerifier interface {
@@ -59,6 +70,25 @@ func NewRuntimeRepository(planRepo *Repository, executors ExecutorLookup, chatSt
 		plans:     planRepo,
 		executors: executors,
 		artifacts: verifier,
+	}
+}
+
+// WithExecutionConversationSink injects the passive execution conversation
+// driver at composition time without coupling the runtime package to its
+// planassistant adapter.
+func (r *RuntimeRepository) WithExecutionConversationSink(sink ExecutionConversationSink) *RuntimeRepository {
+	if r != nil {
+		r.executionConversationSink = sink
+	}
+	return r
+}
+
+func (r *RuntimeRepository) notifyExecutionConversation(ctx context.Context, tenantID, executionID uuid.UUID, causeKind string) {
+	if r == nil || r.executionConversationSink == nil {
+		return
+	}
+	if err := r.executionConversationSink.OnExecutionEvent(ctx, tenantID, executionID, causeKind); err != nil {
+		slog.Warn("execution conversation projection failed", "tenant_id", tenantID, "execution_id", executionID, "cause_kind", causeKind, "error", err)
 	}
 }
 
@@ -157,6 +187,7 @@ func (r *RuntimeRepository) StartPlanExecution(ctx context.Context, tenantID, ex
 			PayloadJSON: chat.BuildRunStartedPayload(),
 		})
 	}
+	r.notifyExecutionConversation(ctx, tenantID, executionID, "RUN_STARTED")
 	return nil
 }
 
@@ -293,6 +324,9 @@ func (r *RuntimeRepository) CompleteStepExecution(ctx context.Context, input wor
 			})
 		}
 	}
+	if executionID, parseErr := uuid.Parse(strings.TrimSpace(input.PlanExecutionID)); parseErr == nil {
+		r.notifyExecutionConversation(ctx, tenantID, executionID, "STEP_BOUND")
+	}
 	return nil
 }
 
@@ -326,6 +360,7 @@ func (r *RuntimeRepository) CreateReviewRequest(ctx context.Context, input workf
 			}
 		}
 	}
+	r.notifyExecutionConversation(ctx, tenantID, executionID, "REVIEW_RAISED")
 	return review.ID.String(), nil
 }
 
@@ -342,8 +377,20 @@ func (r *RuntimeRepository) ResolveReviewRequest(ctx context.Context, input work
 	if err != nil {
 		return err
 	}
-	_, err = r.plans.MarkReviewDecided(ctx, tenantID, reviewID, input.Decision, input.Feedback, uuid.NullUUID{})
+	stepID, err := uuid.Parse(input.StepExecutionID)
 	if err != nil {
+		return err
+	}
+	if review.StepExecutionID != stepID {
+		return fmt.Errorf("review request does not belong to step execution")
+	}
+	updated, err := r.plans.MarkReviewDecided(ctx, tenantID, reviewID, input.Decision, input.Feedback, uuid.NullUUID{})
+	if err != nil {
+		// A replay or duplicate Temporal signal sees the already-terminal row.
+		// It is safe to return without a second REVIEW_DECIDED event.
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
 		return err
 	}
 	if r.chat != nil {
@@ -354,6 +401,8 @@ func (r *RuntimeRepository) ResolveReviewRequest(ctx context.Context, input work
 			}
 		}
 	}
+	_ = updated // terminal write is intentionally owned by this activity path.
+	r.notifyExecutionConversation(ctx, tenantID, review.PlanExecutionID, "REVIEW_DECIDED")
 	return nil
 }
 
@@ -401,6 +450,9 @@ func (r *RuntimeRepository) FailStepExecution(ctx context.Context, input workflo
 			PayloadJSON: chat.BuildStepFailedPayload(step.PlanStepKey, step.ID.String(), ""),
 		})
 	}
+	if step, lookupErr := r.plans.GetStepExecution(ctx, tenantID, stepID); lookupErr == nil {
+		r.notifyExecutionConversation(ctx, tenantID, step.PlanExecutionID, "STEP_FAILED")
+	}
 	return nil
 }
 
@@ -412,7 +464,13 @@ func (r *RuntimeRepository) AwaitElicitationStepExecution(ctx context.Context, i
 	if err := r.plans.UpdateStepExecutionStatus(ctx, tenantID, stepID, StepStatusAwaitingElicitation, "", input.ElicitationThreadID, ""); err != nil {
 		return err
 	}
-	return r.persistElicitation(ctx, tenantID, stepID, input)
+	if err := r.persistElicitation(ctx, tenantID, stepID, input); err != nil {
+		return err
+	}
+	if executionID, parseErr := uuid.Parse(strings.TrimSpace(input.PlanExecutionID)); parseErr == nil {
+		r.notifyExecutionConversation(ctx, tenantID, executionID, "ELICITATION_RAISED")
+	}
+	return nil
 }
 
 func (r *RuntimeRepository) persistElicitation(ctx context.Context, tenantID, stepID uuid.UUID, input workflow.StepStatusUpdateInput) error {
@@ -569,7 +627,11 @@ func (r *RuntimeRepository) CreateApprovalRequest(ctx context.Context, input wor
 			}),
 		})
 	}
-	return r.plans.UpdateStepExecutionStatus(ctx, tenantID, stepID, StepStatusAwaitingApproval, "", "", input.ApprovalRequestID)
+	if err := r.plans.UpdateStepExecutionStatus(ctx, tenantID, stepID, StepStatusAwaitingApproval, "", "", input.ApprovalRequestID); err != nil {
+		return err
+	}
+	r.notifyExecutionConversation(ctx, tenantID, executionID, "APPROVAL_RAISED")
+	return nil
 }
 
 func (r *RuntimeRepository) ResolveApprovalRequest(ctx context.Context, input workflow.ResolveApprovalRequestInput) error {
@@ -596,7 +658,11 @@ func (r *RuntimeRepository) ResolveApprovalRequest(ctx context.Context, input wo
 			return fmt.Errorf("pinned approval subject content hash mismatch")
 		}
 	}
-	return r.plans.ResolvePlanApprovalRequest(ctx, tenantID, input.ApprovalRequestID, stepID, input.Approved, input.Reason)
+	if err := r.plans.ResolvePlanApprovalRequest(ctx, tenantID, input.ApprovalRequestID, stepID, input.Approved, input.Reason); err != nil {
+		return err
+	}
+	r.notifyExecutionConversation(ctx, tenantID, request.PlanExecutionID, "APPROVAL_DECIDED")
+	return nil
 }
 
 func (r *RuntimeRepository) CompletePlanExecution(ctx context.Context, tenantID, executionID uuid.UUID) error {
@@ -604,7 +670,11 @@ func (r *RuntimeRepository) CompletePlanExecution(ctx context.Context, tenantID,
 	if err := r.plans.UpdateExecutionStatus(ctx, tenantID, executionID, ExecutionStatusCompleted, &now); err != nil {
 		return err
 	}
-	return r.appendRunFinishedChatMessage(ctx, tenantID, executionID)
+	if err := r.appendRunFinishedChatMessage(ctx, tenantID, executionID); err != nil {
+		return err
+	}
+	r.notifyExecutionConversation(ctx, tenantID, executionID, "RUN_COMPLETED")
+	return nil
 }
 
 func (r *RuntimeRepository) FailPlanExecution(ctx context.Context, tenantID, executionID uuid.UUID, reason string) error {
@@ -612,7 +682,11 @@ func (r *RuntimeRepository) FailPlanExecution(ctx context.Context, tenantID, exe
 	if err := r.plans.UpdateExecutionStatus(ctx, tenantID, executionID, ExecutionStatusFailed, &now); err != nil {
 		return err
 	}
-	return r.appendRunFinishedChatMessage(ctx, tenantID, executionID, reason)
+	if err := r.appendRunFinishedChatMessage(ctx, tenantID, executionID, reason); err != nil {
+		return err
+	}
+	r.notifyExecutionConversation(ctx, tenantID, executionID, "RUN_FAILED")
+	return nil
 }
 
 func (r *RuntimeRepository) appendRunFinishedChatMessage(ctx context.Context, tenantID, executionID uuid.UUID, failureReasonOverride ...string) error {

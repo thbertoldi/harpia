@@ -6,7 +6,40 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+
+	artifactsv1 "github.com/harpia/control-plane/gen/harpia/artifacts/v1"
+	chatv1 "github.com/harpia/control-plane/gen/harpia/chat/v1"
 )
+
+func TestBuildExecutionPromptPayloadRoundTripsStableIdentity(t *testing.T) {
+	payload := &chatv1.ExecutionPromptPayload{
+		ConfigurationId:    "configuration-1",
+		PlanExecutionId:    "execution-1",
+		State:              chatv1.ExecutionPromptState_EXECUTION_PROMPT_STATE_EXECUTION_AWAITING_REVIEW,
+		StepExecutionId:    "step-1",
+		PlanStepKey:        "publish",
+		CompletedStepCount: 2,
+		ActiveStepCount:    3,
+		PendingInteraction: &chatv1.ExecutionInteractionPointer{
+			Kind:            chatv1.ExecutionInteractionKind_EXECUTION_INTERACTION_KIND_REVIEW,
+			RequestId:       "review-1",
+			StepExecutionId: "step-1",
+			PlanStepKey:     "publish",
+			SubjectArtifactRef: &artifactsv1.ArtifactRef{
+				ArtifactId: "artifact-1", ArtifactVersionId: "version-1", ArtifactTypeKey: "harpia.artifacts.v1.LinkedInPost", ContentHash: "hash-1",
+			},
+		},
+		Actions: []*chatv1.ExecutionPromptAction{{ActionId: "review.accept", LabelKey: "execution.review.accept"}},
+	}
+	encoded := BuildExecutionPromptPayload(payload)
+	if !strings.Contains(encoded, `"plan_execution_id":"execution-1"`) || strings.Contains(encoded, `"label":`) {
+		t.Fatalf("execution prompt payload must use stable proto identities only: %s", encoded)
+	}
+	decoded, ok := ParseExecutionPromptPayload(encoded)
+	if !ok || decoded.GetPendingInteraction().GetSubjectArtifactRef().GetArtifactVersionId() != "version-1" {
+		t.Fatalf("execution prompt payload did not round trip: %+v", decoded)
+	}
+}
 
 func TestBuildElicitationRaisedPayload(t *testing.T) {
 	id := uuid.New()

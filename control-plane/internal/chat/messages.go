@@ -10,7 +10,34 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"google.golang.org/protobuf/encoding/protojson"
+
+	chatv1 "github.com/harpia/control-plane/gen/harpia/chat/v1"
 )
+
+// BuildExecutionPromptPayload serializes the stable typed payload for an
+// EXECUTION_PROMPT. Proto names keep the persisted JSON aligned with the
+// contract's snake_case field names rather than Go implementation details.
+func BuildExecutionPromptPayload(payload *chatv1.ExecutionPromptPayload) string {
+	if payload == nil {
+		return "{}"
+	}
+	encoded, err := (protojson.MarshalOptions{UseProtoNames: true}).Marshal(payload)
+	if err != nil {
+		panic(err)
+	}
+	return string(encoded)
+}
+
+// ParseExecutionPromptPayload parses a persisted typed EXECUTION_PROMPT
+// payload. It returns false for malformed payloads so dedup callers fail open.
+func ParseExecutionPromptPayload(payload string) (*chatv1.ExecutionPromptPayload, bool) {
+	parsed := &chatv1.ExecutionPromptPayload{}
+	if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal([]byte(payload), parsed); err != nil {
+		return nil, false
+	}
+	return parsed, true
+}
 
 // BuildConfigurationSavedPayload returns the JSON payload for a
 // CONFIGURATION_SAVED message. Currently carries no structured fields —

@@ -122,6 +122,29 @@ type PlanApprovalRequest struct {
 	UpdatedAt           time.Time
 }
 
+type PendingInteractionKind string
+
+const (
+	PendingInteractionElicitation PendingInteractionKind = "elicitation"
+	PendingInteractionReview      PendingInteractionKind = "review"
+	PendingInteractionApproval    PendingInteractionKind = "approval"
+)
+
+// PendingExecutionInteraction is the minimal durable projection of a pending
+// human checkpoint. It is intentionally request and StepExecution scoped;
+// PlanStep keys are not unique across concurrent executions.
+type PendingExecutionInteraction struct {
+	Kind                     PendingInteractionKind
+	RequestID                string
+	PlanExecutionID          uuid.UUID
+	StepExecutionID          uuid.UUID
+	PlanStepKey              string
+	SubjectArtifactID        uuid.NullUUID
+	SubjectArtifactVersionID uuid.NullUUID
+	SubjectArtifactTypeKey   string
+	SubjectContentHash       string
+}
+
 type Repository struct {
 	pool *pgxpool.Pool
 }
@@ -584,6 +607,90 @@ func (r *Repository) GetExecution(ctx context.Context, tenantID, executionID uui
 		return nil, fmt.Errorf("get plan execution: %w", err)
 	}
 	return &execution, nil
+}
+
+// GetLatestNonTerminalExecutionForConfiguration returns the display-only
+// execution fallback for one tenant/configuration. Command handlers must load
+// request identity directly and never use this result for authorization.
+func (r *Repository) GetLatestNonTerminalExecutionForConfiguration(ctx context.Context, tenantID, configurationID uuid.UUID) (*PlanExecution, error) {
+	var execution PlanExecution
+	err := database.WithTenant(ctx, r.pool, tenantID, func(q database.Querier) error {
+		row := q.QueryRow(ctx, `SELECT id, tenant_id, plan_configuration_id, plan_configuration_snapshot, status,
+			triggered_at, completed_at, created_at, updated_at
+			FROM plan_executions
+			WHERE tenant_id = $1 AND plan_configuration_id = $2 AND status IN ('pending', 'running')
+			ORDER BY created_at DESC, id DESC
+			LIMIT 1`, tenantID, configurationID)
+		if err := scanExecution(row, &execution); err != nil {
+			if err == pgx.ErrNoRows {
+				return nil
+			}
+			return err
+		}
+		steps, err := r.listStepExecutions(ctx, q, tenantID, execution.ID, 1000, 0)
+		if err != nil {
+			return err
+		}
+		execution.StepExecutions = steps
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("get latest non-terminal plan execution: %w", err)
+	}
+	if execution.ID == uuid.Nil {
+		return nil, nil
+	}
+	return &execution, nil
+}
+
+// GetPendingExecutionInteractions returns only pending elicitation, review,
+// and approval rows for one exact execution. Every branch joins the request's
+// StepExecution back to the same execution so corrupted/cross-run rows cannot
+// become actionable conversation state.
+func (r *Repository) GetPendingExecutionInteractions(ctx context.Context, tenantID, executionID uuid.UUID) ([]PendingExecutionInteraction, error) {
+	interactions := make([]PendingExecutionInteraction, 0)
+	err := database.WithTenant(ctx, r.pool, tenantID, func(q database.Querier) error {
+		rows, err := q.Query(ctx, `
+			SELECT kind, request_id, plan_execution_id, step_execution_id, plan_step_key,
+			       subject_artifact_id, subject_artifact_version_id, subject_artifact_type_key, subject_content_hash
+			FROM (
+				SELECT 'elicitation'::text AS kind, e.id::text AS request_id, e.plan_execution_id, e.step_execution_id, e.plan_step_key,
+				       NULL::uuid AS subject_artifact_id, NULL::uuid AS subject_artifact_version_id, ''::text AS subject_artifact_type_key, ''::text AS subject_content_hash
+				FROM plan_elicitations e
+				JOIN step_executions se ON se.id = e.step_execution_id AND se.tenant_id = e.tenant_id AND se.plan_execution_id = e.plan_execution_id
+				WHERE e.tenant_id = $1 AND e.plan_execution_id = $2 AND e.status = 'pending'
+				UNION ALL
+				SELECT 'review'::text, pr.id::text, pr.plan_execution_id, pr.step_execution_id, pr.plan_step_key,
+				       pr.subject_artifact_id, pr.subject_artifact_version_id, pr.subject_artifact_type_key, pr.subject_content_hash
+				FROM plan_review_requests pr
+				JOIN step_executions se ON se.id = pr.step_execution_id AND se.tenant_id = pr.tenant_id AND se.plan_execution_id = pr.plan_execution_id
+				WHERE pr.tenant_id = $1 AND pr.plan_execution_id = $2 AND pr.status = 'pending'
+				UNION ALL
+				SELECT 'approval'::text, par.id, par.plan_execution_id, par.step_execution_id, par.plan_step_key,
+				       par.subject_artifact_id, par.subject_artifact_version_id, COALESCE(par.subject_artifact_type_key, ''), COALESCE(par.subject_content_hash, '')
+				FROM plan_approval_requests par
+				JOIN step_executions se ON se.id = par.step_execution_id AND se.tenant_id = par.tenant_id AND se.plan_execution_id = par.plan_execution_id
+				WHERE par.tenant_id = $1 AND par.plan_execution_id = $2 AND par.status = 'pending'
+			) pending
+			ORDER BY request_id ASC`, tenantID, executionID)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var row PendingExecutionInteraction
+			if err := rows.Scan(&row.Kind, &row.RequestID, &row.PlanExecutionID, &row.StepExecutionID, &row.PlanStepKey,
+				&row.SubjectArtifactID, &row.SubjectArtifactVersionID, &row.SubjectArtifactTypeKey, &row.SubjectContentHash); err != nil {
+				return err
+			}
+			interactions = append(interactions, row)
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		return nil, fmt.Errorf("get pending execution interactions: %w", err)
+	}
+	return interactions, nil
 }
 
 // GetPlanConfigurationIDForExecution returns the plan_configuration_id for a given plan_execution_id.

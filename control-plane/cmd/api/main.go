@@ -119,11 +119,17 @@ func runWorker(ctx context.Context, cfg *config.Config) {
 		ImageProviderAPIKeyEnvs: cfg.ImageProviderAPIKeyEnvs,
 	})
 
+	assistantController := &planassistant.Controller{
+		Chat:       chatStore,
+		Configs:    &plans.AssistantConfigurationStore{Repo: planRepo, Executors: executorRepo},
+		Templates:  &plans.AssistantTemplates{Repo: planRepo},
+		Executions: &plans.AssistantExecutionStore{Repo: planRepo},
+	}
 	planActivities := &workflow.PlanActivities{
-		Runtime:      plans.NewRuntimeRepository(planRepo, executorRepo, chatStore, artifactRepo),
-		Integrations: executorRuntime.Integrations,
+		Runtime:       plans.NewRuntimeRepository(planRepo, executorRepo, chatStore, artifactRepo).WithExecutionConversationSink(assistantController),
+		Integrations:  executorRuntime.Integrations,
 		ArtifactStore: executorRuntime.ArtifactStore,
-		Audit:        workflowAuditRecorder{recorder: workerAuditRecorder},
+		Audit:         workflowAuditRecorder{recorder: workerAuditRecorder},
 	}
 
 	c, err := client.Dial(client.Options{HostPort: cfg.TemporalHost})
@@ -274,10 +280,11 @@ func runAPI(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 
 	scheduleManager := plans.NewScheduleManager(temporalClient, logger)
 	assistantController := &planassistant.Controller{
-		Chat:      chatStore,
-		Catalog:   &plans.AssistantCatalog{Executors: executorRepo},
-		Configs:   &plans.AssistantConfigurationStore{Repo: planRepo, Executors: executorRepo},
-		Templates: &plans.AssistantTemplates{Repo: planRepo},
+		Chat:       chatStore,
+		Catalog:    &plans.AssistantCatalog{Executors: executorRepo},
+		Configs:    &plans.AssistantConfigurationStore{Repo: planRepo, Executors: executorRepo},
+		Templates:  &plans.AssistantTemplates{Repo: planRepo},
+		Executions: &plans.AssistantExecutionStore{Repo: planRepo},
 	}
 	var planHandler *plans.PlanHandler
 	if temporalClient != nil {
