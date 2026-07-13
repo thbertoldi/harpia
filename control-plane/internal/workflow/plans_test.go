@@ -1025,6 +1025,80 @@ func TestPlanWorkflowRequiresApprovalBeforePublishStep(t *testing.T) {
 	}
 }
 
+// TestPlanWorkflowReviewSignalRequiresItsExactRequest is the Temporal half of
+// the execution-conversation concurrency proof. The acceptance package routes
+// request IDs to their owning workflow; this contract-faithful agent activity
+// verifies that a workflow then ignores a same-step signal for another
+// execution/request before resolving its own version-pinned review.
+func TestPlanWorkflowReviewSignalRequiresItsExactRequest(t *testing.T) {
+	env := newPlanWorkflowTestEnv(t)
+	input := PlanWorkflowInput{
+		TenantID:        "22222222-2222-2222-2222-222222222222",
+		PlanExecutionID: "11111111-1111-1111-1111-111111111111",
+	}
+	snapshot := singleStepSnapshot("author-content", ExecutorKindAgent)
+	snapshot.Template.Steps[0].HumanInteractionPolicy = &plansv1.HumanInteractionPolicy{
+		ReviewMode: plansv1.ReviewMode_REVIEW_MODE_REQUIRED,
+	}
+
+	const (
+		stepID   = "step-author-content"
+		reviewID = "review-for-this-execution"
+	)
+	resolved := false
+	env.OnActivity(LoadPlanExecutionActivityName, mock.Anything, input).Return(LoadedPlanExecution{
+		PlanExecutionID: input.PlanExecutionID,
+		Status:          "pending",
+		Snapshot:        snapshot,
+	}, nil)
+	env.OnActivity(StartPlanExecutionActivityName, mock.Anything, input).Return(nil)
+	env.OnActivity(CreateStepExecutionActivityName, mock.Anything, mock.Anything).Return(StepExecutionRecord{
+		ID: stepID, PlanStepKey: "author-content", Attempt: 1,
+	}, nil)
+	env.OnActivity(RunAgentActivityName, mock.Anything, mock.Anything).Return(ExecutorActivityResult{
+		Status:                  ExecutorResultStatusCompleted,
+		OutputArtifactID:        "artifact-a",
+		OutputArtifactVersionID: "version-a",
+		OutputArtifactTypeKey:   "harpia.artifacts.v1.TextDraft",
+		OutputContentHash:       "hash-a",
+	}, nil)
+	env.OnActivity(CreateReviewRequestActivityName, mock.Anything, mock.Anything).Return(
+		func(_ context.Context, review CreateReviewRequestInput) (string, error) {
+			if review.PlanExecutionID != input.PlanExecutionID || review.StepExecutionID != stepID || review.SubjectArtifactRef.ArtifactVersionID != "version-a" {
+				t.Fatalf("review request was not scoped/pinned: %#v", review)
+			}
+			return reviewID, nil
+		},
+	)
+	env.OnActivity(ResolveReviewRequestActivityName, mock.Anything, mock.Anything).Return(
+		func(_ context.Context, decision ResolveReviewRequestInput) error {
+			if decision.StepExecutionID != stepID || decision.ReviewRequestID != reviewID || decision.Decision != "accept" {
+				t.Fatalf("resolved wrong review signal: %#v", decision)
+			}
+			resolved = true
+			return nil
+		},
+	)
+	env.OnActivity(CompleteStepExecutionActivityName, mock.Anything, mock.Anything).Return(nil)
+	env.OnActivity(CompletePlanExecutionActivityName, mock.Anything, input).Return(nil)
+	env.RegisterDelayedCallback(func() {
+		env.SignalWorkflow(PlanReviewDecisionSignalName, ReviewDecisionSignal{
+			StepExecutionID: "same-step-key-on-other-execution", ReviewRequestID: "review-on-other-execution", Decision: "accept",
+		})
+		env.SignalWorkflow(PlanReviewDecisionSignalName, ReviewDecisionSignal{
+			StepExecutionID: stepID, ReviewRequestID: reviewID, Decision: "accept",
+		})
+	}, time.Hour)
+
+	env.ExecuteWorkflow(PlanWorkflow, input)
+	if err := env.GetWorkflowError(); err != nil {
+		t.Fatalf("workflow failed: %v", err)
+	}
+	if !resolved {
+		t.Fatal("exact review signal did not resolve the review")
+	}
+}
+
 func TestPlanWorkflowAutoPublishSkipsApprovalGate(t *testing.T) {
 	env := newPlanWorkflowTestEnv(t)
 
@@ -1105,6 +1179,8 @@ func newPlanWorkflowTestEnv(t *testing.T) *testsuite.TestWorkflowEnvironment {
 	env.RegisterActivity(StartPlanExecutionActivity)
 	env.RegisterActivity(CreateStepExecutionActivity)
 	env.RegisterActivity(CreateSkippedStepExecutionActivity)
+	env.RegisterActivity(CreateReviewRequestActivity)
+	env.RegisterActivity(ResolveReviewRequestActivity)
 	env.RegisterActivity(RunIntegrationActivity)
 	env.RegisterActivity(RunAgentActivity)
 	env.RegisterActivity(ResumeStepExecutionActivity)
@@ -1135,6 +1211,14 @@ func CreateStepExecutionActivity(context.Context, CreateStepExecutionInput) (Ste
 
 func CreateSkippedStepExecutionActivity(context.Context, CreateSkippedStepInput) (StepExecutionRecord, error) {
 	return StepExecutionRecord{}, unexpectedActivityError("CreateSkippedStepExecutionActivity")
+}
+
+func CreateReviewRequestActivity(context.Context, CreateReviewRequestInput) (string, error) {
+	return "", unexpectedActivityError("CreateReviewRequestActivity")
+}
+
+func ResolveReviewRequestActivity(context.Context, ResolveReviewRequestInput) error {
+	return unexpectedActivityError("ResolveReviewRequestActivity")
 }
 
 func RunIntegrationActivity(context.Context, ExecutorActivityInput) (ExecutorActivityResult, error) {
