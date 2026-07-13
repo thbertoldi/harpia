@@ -482,6 +482,10 @@ Rules:
 - **Execution surfaces its active artifacts and declared checkpoints** in the owning Conversation,
   including the final preview and any candidate requiring review or approval; other
   intermediates stay queryable without cluttering the thread.
+- **Execution “active” is conversational focus, not Thread state.** A Conversation focuses an
+  exact PlanExecution for its selected PlanConfiguration when an event/action targets it; it does
+  not store a singleton active execution on the Thread. A latest non-terminal execution may be a
+  display fallback for that selected configuration, never action resolution.
 
 > **Naming resolved (C2):** a **Conversation** is lifecycle assistance over the
 > **PlanConfigurations** it may produce and their **PlanExecutions**; it may produce several
