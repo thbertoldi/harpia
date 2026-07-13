@@ -339,7 +339,7 @@ async def _run_agent_activity(input_payload: dict) -> dict:
             "output_content_hash": content_hash,
         }
 
-    artifact_id = await artifact_client.create_payload(
+    artifact_id, artifact_version_id, content_hash = await artifact_client.create_payload(
         tenant_id=tenant_id,
         artifact_type_key=output_key,
         payload=payload,
@@ -349,4 +349,6 @@ async def _run_agent_activity(input_payload: dict) -> dict:
     return {
         "status": "completed",
         "output_artifact_id": artifact_id,
+        "output_artifact_version_id": artifact_version_id,
+        "output_content_hash": content_hash,
     }

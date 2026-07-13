@@ -58,6 +58,16 @@ func (m *mockRepository) CreateArtifact(_ context.Context, artifact *Artifact) (
 	if created.CreatedAt.IsZero() {
 		created.CreatedAt = time.Now().UTC()
 	}
+	if m.versions == nil {
+		m.versions = make(map[uuid.UUID][]*ArtifactVersion)
+	}
+	versionID := uuid.New()
+	created.CurrentVersionID = uuid.NullUUID{UUID: versionID, Valid: true}
+	m.versions[created.ID] = append(m.versions[created.ID], &ArtifactVersion{
+		ID: versionID, ArtifactID: created.ID, TenantID: created.TenantID,
+		VersionNumber: 1, StorageURI: created.StorageURI, ContentHash: created.ContentHash,
+		SourcePlanExecutionID: created.PlanExecutionID, SourceStepExecutionID: created.StepExecutionID,
+	})
 	m.artifacts[created.ID] = &created
 	return &created, nil
 }

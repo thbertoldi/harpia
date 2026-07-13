@@ -16,7 +16,13 @@ class FakeArtifactClient:
     payloads: dict[str, dict[str, object]]
     created: list[dict[str, object]] = field(default_factory=list)
 
-    async def get_payload(self, *, tenant_id: str, artifact_id: str) -> dict[str, object]:
+    async def get_payload(
+        self,
+        *,
+        tenant_id: str,
+        artifact_id: str,
+        artifact_version_id: str = "",
+    ) -> dict[str, object]:
         return self.payloads[artifact_id]
 
     async def create_payload(
@@ -27,7 +33,7 @@ class FakeArtifactClient:
         payload: dict[str, object],
         step_execution_id: str,
         plan_execution_id: str,
-    ) -> str:
+    ) -> tuple[str, str, str]:
         self.created.append(
             {
                 "tenant_id": tenant_id,
@@ -37,7 +43,8 @@ class FakeArtifactClient:
                 "plan_execution_id": plan_execution_id,
             }
         )
-        return f"artifact-{len(self.created)}"
+        artifact_id = f"artifact-{len(self.created)}"
+        return artifact_id, f"{artifact_id}-version-1", f"{artifact_id}-hash"
 
 
 @pytest.mark.asyncio
@@ -105,7 +112,12 @@ async def test_run_newsletter_agent_loads_news_artifact_and_persists_text_draft(
         }
     )
 
-    assert result == {"status": "completed", "output_artifact_id": "artifact-1"}
+    assert result == {
+        "status": "completed",
+        "output_artifact_id": "artifact-1",
+        "output_artifact_version_id": "artifact-1-version-1",
+        "output_content_hash": "artifact-1-hash",
+    }
     assert fake.created[0]["artifact_type_key"] == "harpia.artifacts.v1.TextDraft"
     assert fake.created[0]["payload"] == {"title": "Newsletter", "body": "Draft body"}
     assert fake.created[0]["plan_execution_id"] == "plan-execution-write"
@@ -150,7 +162,12 @@ async def test_run_linkedin_agent_loads_text_draft_and_persists_linkedin_draft(
         }
     )
 
-    assert result == {"status": "completed", "output_artifact_id": "artifact-1"}
+    assert result == {
+        "status": "completed",
+        "output_artifact_id": "artifact-1",
+        "output_artifact_version_id": "artifact-1-version-1",
+        "output_content_hash": "artifact-1-hash",
+    }
     assert fake.created[0]["payload"] == {
         "text": "LinkedIn text",
         "hook": "Newsletter",

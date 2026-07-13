@@ -95,7 +95,7 @@ class ArtifactPayloadClient:
         payload: dict[str, object],
         step_execution_id: str,
         plan_execution_id: str,
-    ) -> str:
+    ) -> tuple[str, str, str]:
         response = await self._client.create_artifact_with_payload(
             CreateArtifactWithPayloadRequest(
                 tenant_id=tenant_id,
@@ -107,9 +107,13 @@ class ArtifactPayloadClient:
             headers=self._headers(tenant_id),
             timeout_ms=self._timeout_ms,
         )
-        if not response.HasField("artifact"):
-            raise ConnectError("create artifact response missing artifact")
-        return response.artifact.id
+        if not response.HasField("artifact") or not response.HasField("artifact_version"):
+            raise ConnectError("create artifact response missing artifact or version")
+        return (
+            response.artifact.id,
+            response.artifact_version.id,
+            response.artifact_version.content_hash,
+        )
 
     async def create_version_payload(
         self,

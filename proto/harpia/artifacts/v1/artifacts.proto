@@ -209,6 +209,7 @@ message CreateArtifactWithPayloadRequest {
 
 message CreateArtifactWithPayloadResponse {
   Artifact artifact = 1;
+  ArtifactVersion artifact_version = 2;
 }
 
 message GetArtifactRequest {

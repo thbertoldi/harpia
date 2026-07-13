@@ -1676,10 +1676,11 @@ func (x *CreateArtifactWithPayloadRequest) GetPlanExecutionId() string {
 }
 
 type CreateArtifactWithPayloadResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Artifact      *Artifact              `protobuf:"bytes,1,opt,name=artifact,proto3" json:"artifact,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Artifact        *Artifact              `protobuf:"bytes,1,opt,name=artifact,proto3" json:"artifact,omitempty"`
+	ArtifactVersion *ArtifactVersion       `protobuf:"bytes,2,opt,name=artifact_version,json=artifactVersion,proto3" json:"artifact_version,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *CreateArtifactWithPayloadResponse) Reset() {
@@ -1715,6 +1716,13 @@ func (*CreateArtifactWithPayloadResponse) Descriptor() ([]byte, []int) {
 func (x *CreateArtifactWithPayloadResponse) GetArtifact() *Artifact {
 	if x != nil {
 		return x.Artifact
+	}
+	return nil
+}
+
+func (x *CreateArtifactWithPayloadResponse) GetArtifactVersion() *ArtifactVersion {
+	if x != nil {
+		return x.ArtifactVersion
 	}
 	return nil
 }
@@ -3089,9 +3097,10 @@ const file_harpia_artifacts_v1_artifacts_proto_rawDesc = "" +
 	"\x11plan_execution_id\x18\a \x01(\tH\x02R\x0fplanExecutionId\x88\x01\x01B\x14\n" +
 	"\x12_step_execution_idB\x18\n" +
 	"\x16_plan_configuration_idB\x14\n" +
-	"\x12_plan_execution_id\"^\n" +
+	"\x12_plan_execution_id\"\xaf\x01\n" +
 	"!CreateArtifactWithPayloadResponse\x129\n" +
-	"\bartifact\x18\x01 \x01(\v2\x1d.harpia.artifacts.v1.ArtifactR\bartifact\"R\n" +
+	"\bartifact\x18\x01 \x01(\v2\x1d.harpia.artifacts.v1.ArtifactR\bartifact\x12O\n" +
+	"\x10artifact_version\x18\x02 \x01(\v2$.harpia.artifacts.v1.ArtifactVersionR\x0fartifactVersion\"R\n" +
 	"\x12GetArtifactRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1f\n" +
 	"\vartifact_id\x18\x02 \x01(\tR\n" +
@@ -3289,49 +3298,50 @@ var file_harpia_artifacts_v1_artifacts_proto_depIdxs = []int32{
 	2,  // 9: harpia.artifacts.v1.GetArtifactTypeResponse.artifact_type:type_name -> harpia.artifacts.v1.ArtifactType
 	3,  // 10: harpia.artifacts.v1.CreateArtifactResponse.artifact:type_name -> harpia.artifacts.v1.Artifact
 	3,  // 11: harpia.artifacts.v1.CreateArtifactWithPayloadResponse.artifact:type_name -> harpia.artifacts.v1.Artifact
-	3,  // 12: harpia.artifacts.v1.GetArtifactResponse.artifact:type_name -> harpia.artifacts.v1.Artifact
-	3,  // 13: harpia.artifacts.v1.ListArtifactsResponse.artifacts:type_name -> harpia.artifacts.v1.Artifact
-	4,  // 14: harpia.artifacts.v1.ListArtifactVersionsResponse.versions:type_name -> harpia.artifacts.v1.ArtifactVersion
-	4,  // 15: harpia.artifacts.v1.GetArtifactVersionResponse.artifact_version:type_name -> harpia.artifacts.v1.ArtifactVersion
-	3,  // 16: harpia.artifacts.v1.CreateArtifactVersionWithPayloadResponse.artifact:type_name -> harpia.artifacts.v1.Artifact
-	4,  // 17: harpia.artifacts.v1.CreateArtifactVersionWithPayloadResponse.artifact_version:type_name -> harpia.artifacts.v1.ArtifactVersion
-	3,  // 18: harpia.artifacts.v1.SaveTextArtifactVersionResponse.artifact:type_name -> harpia.artifacts.v1.Artifact
-	4,  // 19: harpia.artifacts.v1.SaveTextArtifactVersionResponse.version:type_name -> harpia.artifacts.v1.ArtifactVersion
-	9,  // 20: harpia.artifacts.v1.LinkedInPostPreview.text:type_name -> harpia.artifacts.v1.LinkedInPostDraft
-	13, // 21: harpia.artifacts.v1.LinkedInPostPreview.carousel:type_name -> harpia.artifacts.v1.CarouselDraft
-	10, // 22: harpia.artifacts.v1.LinkedInPostPreview.images:type_name -> harpia.artifacts.v1.ArtifactRef
-	39, // 23: harpia.artifacts.v1.PreviewArtifactResponse.list_summary:type_name -> harpia.artifacts.v1.ArtifactListSummary
-	40, // 24: harpia.artifacts.v1.PreviewArtifactResponse.image_preview:type_name -> harpia.artifacts.v1.ImagePreview
-	41, // 25: harpia.artifacts.v1.PreviewArtifactResponse.linkedin_post_preview:type_name -> harpia.artifacts.v1.LinkedInPostPreview
-	17, // 26: harpia.artifacts.v1.ArtifactService.RegisterArtifactType:input_type -> harpia.artifacts.v1.RegisterArtifactTypeRequest
-	19, // 27: harpia.artifacts.v1.ArtifactService.GetArtifactType:input_type -> harpia.artifacts.v1.GetArtifactTypeRequest
-	21, // 28: harpia.artifacts.v1.ArtifactService.CreateArtifact:input_type -> harpia.artifacts.v1.CreateArtifactRequest
-	23, // 29: harpia.artifacts.v1.ArtifactService.CreateArtifactWithPayload:input_type -> harpia.artifacts.v1.CreateArtifactWithPayloadRequest
-	25, // 30: harpia.artifacts.v1.ArtifactService.GetArtifact:input_type -> harpia.artifacts.v1.GetArtifactRequest
-	27, // 31: harpia.artifacts.v1.ArtifactService.ListArtifacts:input_type -> harpia.artifacts.v1.ListArtifactsRequest
-	29, // 32: harpia.artifacts.v1.ArtifactService.ListArtifactVersions:input_type -> harpia.artifacts.v1.ListArtifactVersionsRequest
-	31, // 33: harpia.artifacts.v1.ArtifactService.GetArtifactVersion:input_type -> harpia.artifacts.v1.GetArtifactVersionRequest
-	33, // 34: harpia.artifacts.v1.ArtifactService.CreateArtifactVersionWithPayload:input_type -> harpia.artifacts.v1.CreateArtifactVersionWithPayloadRequest
-	35, // 35: harpia.artifacts.v1.ArtifactService.SaveTextArtifactVersion:input_type -> harpia.artifacts.v1.SaveTextArtifactVersionRequest
-	37, // 36: harpia.artifacts.v1.ArtifactService.GetArtifactPayload:input_type -> harpia.artifacts.v1.GetArtifactPayloadRequest
-	42, // 37: harpia.artifacts.v1.ArtifactService.PreviewArtifact:input_type -> harpia.artifacts.v1.PreviewArtifactRequest
-	18, // 38: harpia.artifacts.v1.ArtifactService.RegisterArtifactType:output_type -> harpia.artifacts.v1.RegisterArtifactTypeResponse
-	20, // 39: harpia.artifacts.v1.ArtifactService.GetArtifactType:output_type -> harpia.artifacts.v1.GetArtifactTypeResponse
-	22, // 40: harpia.artifacts.v1.ArtifactService.CreateArtifact:output_type -> harpia.artifacts.v1.CreateArtifactResponse
-	24, // 41: harpia.artifacts.v1.ArtifactService.CreateArtifactWithPayload:output_type -> harpia.artifacts.v1.CreateArtifactWithPayloadResponse
-	26, // 42: harpia.artifacts.v1.ArtifactService.GetArtifact:output_type -> harpia.artifacts.v1.GetArtifactResponse
-	28, // 43: harpia.artifacts.v1.ArtifactService.ListArtifacts:output_type -> harpia.artifacts.v1.ListArtifactsResponse
-	30, // 44: harpia.artifacts.v1.ArtifactService.ListArtifactVersions:output_type -> harpia.artifacts.v1.ListArtifactVersionsResponse
-	32, // 45: harpia.artifacts.v1.ArtifactService.GetArtifactVersion:output_type -> harpia.artifacts.v1.GetArtifactVersionResponse
-	34, // 46: harpia.artifacts.v1.ArtifactService.CreateArtifactVersionWithPayload:output_type -> harpia.artifacts.v1.CreateArtifactVersionWithPayloadResponse
-	36, // 47: harpia.artifacts.v1.ArtifactService.SaveTextArtifactVersion:output_type -> harpia.artifacts.v1.SaveTextArtifactVersionResponse
-	38, // 48: harpia.artifacts.v1.ArtifactService.GetArtifactPayload:output_type -> harpia.artifacts.v1.GetArtifactPayloadResponse
-	43, // 49: harpia.artifacts.v1.ArtifactService.PreviewArtifact:output_type -> harpia.artifacts.v1.PreviewArtifactResponse
-	38, // [38:50] is the sub-list for method output_type
-	26, // [26:38] is the sub-list for method input_type
-	26, // [26:26] is the sub-list for extension type_name
-	26, // [26:26] is the sub-list for extension extendee
-	0,  // [0:26] is the sub-list for field type_name
+	4,  // 12: harpia.artifacts.v1.CreateArtifactWithPayloadResponse.artifact_version:type_name -> harpia.artifacts.v1.ArtifactVersion
+	3,  // 13: harpia.artifacts.v1.GetArtifactResponse.artifact:type_name -> harpia.artifacts.v1.Artifact
+	3,  // 14: harpia.artifacts.v1.ListArtifactsResponse.artifacts:type_name -> harpia.artifacts.v1.Artifact
+	4,  // 15: harpia.artifacts.v1.ListArtifactVersionsResponse.versions:type_name -> harpia.artifacts.v1.ArtifactVersion
+	4,  // 16: harpia.artifacts.v1.GetArtifactVersionResponse.artifact_version:type_name -> harpia.artifacts.v1.ArtifactVersion
+	3,  // 17: harpia.artifacts.v1.CreateArtifactVersionWithPayloadResponse.artifact:type_name -> harpia.artifacts.v1.Artifact
+	4,  // 18: harpia.artifacts.v1.CreateArtifactVersionWithPayloadResponse.artifact_version:type_name -> harpia.artifacts.v1.ArtifactVersion
+	3,  // 19: harpia.artifacts.v1.SaveTextArtifactVersionResponse.artifact:type_name -> harpia.artifacts.v1.Artifact
+	4,  // 20: harpia.artifacts.v1.SaveTextArtifactVersionResponse.version:type_name -> harpia.artifacts.v1.ArtifactVersion
+	9,  // 21: harpia.artifacts.v1.LinkedInPostPreview.text:type_name -> harpia.artifacts.v1.LinkedInPostDraft
+	13, // 22: harpia.artifacts.v1.LinkedInPostPreview.carousel:type_name -> harpia.artifacts.v1.CarouselDraft
+	10, // 23: harpia.artifacts.v1.LinkedInPostPreview.images:type_name -> harpia.artifacts.v1.ArtifactRef
+	39, // 24: harpia.artifacts.v1.PreviewArtifactResponse.list_summary:type_name -> harpia.artifacts.v1.ArtifactListSummary
+	40, // 25: harpia.artifacts.v1.PreviewArtifactResponse.image_preview:type_name -> harpia.artifacts.v1.ImagePreview
+	41, // 26: harpia.artifacts.v1.PreviewArtifactResponse.linkedin_post_preview:type_name -> harpia.artifacts.v1.LinkedInPostPreview
+	17, // 27: harpia.artifacts.v1.ArtifactService.RegisterArtifactType:input_type -> harpia.artifacts.v1.RegisterArtifactTypeRequest
+	19, // 28: harpia.artifacts.v1.ArtifactService.GetArtifactType:input_type -> harpia.artifacts.v1.GetArtifactTypeRequest
+	21, // 29: harpia.artifacts.v1.ArtifactService.CreateArtifact:input_type -> harpia.artifacts.v1.CreateArtifactRequest
+	23, // 30: harpia.artifacts.v1.ArtifactService.CreateArtifactWithPayload:input_type -> harpia.artifacts.v1.CreateArtifactWithPayloadRequest
+	25, // 31: harpia.artifacts.v1.ArtifactService.GetArtifact:input_type -> harpia.artifacts.v1.GetArtifactRequest
+	27, // 32: harpia.artifacts.v1.ArtifactService.ListArtifacts:input_type -> harpia.artifacts.v1.ListArtifactsRequest
+	29, // 33: harpia.artifacts.v1.ArtifactService.ListArtifactVersions:input_type -> harpia.artifacts.v1.ListArtifactVersionsRequest
+	31, // 34: harpia.artifacts.v1.ArtifactService.GetArtifactVersion:input_type -> harpia.artifacts.v1.GetArtifactVersionRequest
+	33, // 35: harpia.artifacts.v1.ArtifactService.CreateArtifactVersionWithPayload:input_type -> harpia.artifacts.v1.CreateArtifactVersionWithPayloadRequest
+	35, // 36: harpia.artifacts.v1.ArtifactService.SaveTextArtifactVersion:input_type -> harpia.artifacts.v1.SaveTextArtifactVersionRequest
+	37, // 37: harpia.artifacts.v1.ArtifactService.GetArtifactPayload:input_type -> harpia.artifacts.v1.GetArtifactPayloadRequest
+	42, // 38: harpia.artifacts.v1.ArtifactService.PreviewArtifact:input_type -> harpia.artifacts.v1.PreviewArtifactRequest
+	18, // 39: harpia.artifacts.v1.ArtifactService.RegisterArtifactType:output_type -> harpia.artifacts.v1.RegisterArtifactTypeResponse
+	20, // 40: harpia.artifacts.v1.ArtifactService.GetArtifactType:output_type -> harpia.artifacts.v1.GetArtifactTypeResponse
+	22, // 41: harpia.artifacts.v1.ArtifactService.CreateArtifact:output_type -> harpia.artifacts.v1.CreateArtifactResponse
+	24, // 42: harpia.artifacts.v1.ArtifactService.CreateArtifactWithPayload:output_type -> harpia.artifacts.v1.CreateArtifactWithPayloadResponse
+	26, // 43: harpia.artifacts.v1.ArtifactService.GetArtifact:output_type -> harpia.artifacts.v1.GetArtifactResponse
+	28, // 44: harpia.artifacts.v1.ArtifactService.ListArtifacts:output_type -> harpia.artifacts.v1.ListArtifactsResponse
+	30, // 45: harpia.artifacts.v1.ArtifactService.ListArtifactVersions:output_type -> harpia.artifacts.v1.ListArtifactVersionsResponse
+	32, // 46: harpia.artifacts.v1.ArtifactService.GetArtifactVersion:output_type -> harpia.artifacts.v1.GetArtifactVersionResponse
+	34, // 47: harpia.artifacts.v1.ArtifactService.CreateArtifactVersionWithPayload:output_type -> harpia.artifacts.v1.CreateArtifactVersionWithPayloadResponse
+	36, // 48: harpia.artifacts.v1.ArtifactService.SaveTextArtifactVersion:output_type -> harpia.artifacts.v1.SaveTextArtifactVersionResponse
+	38, // 49: harpia.artifacts.v1.ArtifactService.GetArtifactPayload:output_type -> harpia.artifacts.v1.GetArtifactPayloadResponse
+	43, // 50: harpia.artifacts.v1.ArtifactService.PreviewArtifact:output_type -> harpia.artifacts.v1.PreviewArtifactResponse
+	39, // [39:51] is the sub-list for method output_type
+	27, // [27:39] is the sub-list for method input_type
+	27, // [27:27] is the sub-list for extension type_name
+	27, // [27:27] is the sub-list for extension extendee
+	0,  // [0:27] is the sub-list for field type_name
 }
 
 func init() { file_harpia_artifacts_v1_artifacts_proto_init() }

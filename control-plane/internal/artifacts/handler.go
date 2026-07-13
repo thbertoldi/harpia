@@ -191,9 +191,17 @@ func (h *Handler) CreateArtifactWithPayload(ctx context.Context, req *connect.Re
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
+	if !created.CurrentVersionID.Valid {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("created artifact is missing its initial version"))
+	}
+	createdVersion, err := h.repo.GetArtifactVersion(ctx, tenantID, created.ID, created.CurrentVersionID.UUID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("load created artifact version: %w", err))
+	}
 
 	return connect.NewResponse(&artifactsv1.CreateArtifactWithPayloadResponse{
-		Artifact: artifactToProto(created),
+		Artifact:        artifactToProto(created),
+		ArtifactVersion: artifactVersionToProto(createdVersion),
 	}), nil
 }
 

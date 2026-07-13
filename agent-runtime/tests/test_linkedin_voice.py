@@ -2,7 +2,7 @@ import json
 
 import pytest
 from google.protobuf.json_format import MessageToDict, ParseDict
-from harpia.artifacts.v1.artifacts_pb2 import LinkedInPostDraft, TextDraft
+from harpia.artifacts.v1.artifacts_pb2 import LinkedInPost, LinkedInPostDraft, TextDraft
 
 from harpia_agents.agents.linkedin_voice import (
     MANIFEST,
@@ -49,37 +49,33 @@ def _text_draft() -> TextDraft:
     )
 
 
-def _validate_linkedin_post_draft_payload(payload: dict[str, object]) -> None:
-    required_fields = tuple(MANIFEST.to_dict()["output_schema"].get("required", []))
+def _validate_linkedin_post_payload(payload: dict[str, object]) -> None:
     max_length = MANIFEST.to_dict()["output_schema"]["properties"]["text"]["maxLength"]
 
-    for field_name in required_fields:
-        value = payload.get(field_name)
-        assert isinstance(value, str) and value.strip(), f"{field_name} must be non-empty"
-
     text = payload["text"]
-    assert isinstance(text, str)
-    assert len(text) <= max_length
+    assert isinstance(text, dict)
+    assert isinstance(text["text"], str)
+    assert len(text["text"]) <= max_length
 
-    parsed = LinkedInPostDraft()
+    parsed = LinkedInPost()
     ParseDict(payload, parsed)
     roundtrip = MessageToDict(parsed, preserving_proto_field_name=True)
     assert roundtrip["text"] == payload["text"]
 
 
 @pytest.mark.asyncio
-async def test_run_returns_linkedin_post_draft_from_text_draft() -> None:
+async def test_run_returns_linkedin_post_from_text_draft() -> None:
     result = await run(
         _text_draft(),
         llm_registry=_registry("LinkedIn-ready: Weekly AI Governance Brief\n\nShort body"),
     )
 
-    assert isinstance(result, LinkedInPostDraft)
-    assert result.text
-    assert "Weekly AI Governance Brief" in result.text
-    assert result.hook == "Weekly AI Governance Brief"
-    assert result.hashtags
-    assert len(result.text) <= 3000
+    assert isinstance(result, LinkedInPost)
+    assert result.text.text
+    assert "Weekly AI Governance Brief" in result.text.text
+    assert result.text.hook == "Weekly AI Governance Brief"
+    assert result.text.hashtags
+    assert len(result.text.text) <= 3000
 
 
 @pytest.mark.asyncio
@@ -94,7 +90,7 @@ async def test_run_prompt_preserves_source_language() -> None:
         ),
     )
 
-    assert isinstance(result, LinkedInPostDraft)
+    assert isinstance(result, LinkedInPost)
     system_message = next(message for message in captured if message.role == "system")
     user_message = next(message for message in captured if message.role == "user")
     assert "requested output language" in system_message.content
@@ -109,5 +105,5 @@ async def test_run_output_passes_artifact_schema_validation() -> None:
     )
     payload = linkedin_post_draft_to_mapping(result)
 
-    _validate_linkedin_post_draft_payload(payload)
+    _validate_linkedin_post_payload(payload)
     assert json.dumps(payload)
