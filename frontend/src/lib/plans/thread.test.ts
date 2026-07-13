@@ -88,6 +88,26 @@ describe("buildThreadSections", () => {
     }
   });
 
+  it("keeps an execution prompt in its exact execution group", () => {
+    const sections = buildThreadSections([
+      msg("m1", "exec-A", "RUN_STARTED", 1),
+      msg("m2", "exec-A", "EXECUTION_PROMPT", 2),
+      msg("m3", "exec-B", "EXECUTION_PROMPT", 3),
+    ]);
+    expect(sections).toHaveLength(2);
+    if (
+      sections[0]?.kind === "execution" &&
+      sections[1]?.kind === "execution"
+    ) {
+      expect(
+        sections[0].group.messages.map((message) => message.executionId),
+      ).toEqual(["exec-A", "exec-A"]);
+      expect(
+        sections[1].group.messages.map((message) => message.executionId),
+      ).toEqual(["exec-B"]);
+    }
+  });
+
   it("re-groups when execution_id changes back (e.g. inter-execution plan-scope message)", () => {
     const messages = [
       msg("m1", "exec-A", "RUN_STARTED", 1),

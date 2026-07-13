@@ -1,8 +1,24 @@
-import type { ChatMessage } from "$lib/chat/types";
+import {
+  ExecutionInteractionKind,
+  ExecutionPromptState,
+  type ChatMessage,
+} from "$lib/chat/types";
 import type { ExecutionGroup } from "$lib/plans/thread";
+import type {
+  PlanExecution,
+  PlanTemplate,
+} from "$lib/gen/harpia/plans/v1/plans_pb";
 
 export type StepStatus = "pending" | "running" | "done" | "failed";
-export type ExecutionState = "idle" | "running" | "completed" | "failed";
+export type ExecutionState =
+  | "idle"
+  | "queued"
+  | "running"
+  | "failing"
+  | "completed"
+  | "failed"
+  | "cancelled"
+  | "needs-attention";
 
 export interface OrderedStep {
   key: string;
@@ -45,6 +61,39 @@ export interface ExecutionReviewView {
   message: ChatMessage;
 }
 
+export type ExecutionInteractionKindView =
+  | "elicitation"
+  | "review"
+  | "approval";
+
+export interface ExecutionInteractionView {
+  kind: ExecutionInteractionKindView;
+  requestId: string;
+  stepExecutionId: string;
+  planStepKey: string;
+  subjectArtifactRef: ArtifactReferenceView | null;
+}
+
+export interface ExecutionPromptActionView {
+  actionId: string;
+  labelKey: string;
+}
+
+/** Exact assistant turn emitted for this execution, never inferred from another run. */
+export interface ExecutionAssistantTurn {
+  configurationId: string;
+  executionId: string;
+  state: ExecutionPromptState;
+  stepExecutionId: string;
+  planStepKey: string;
+  completedStepCount: number;
+  activeStepCount: number;
+  pendingInteraction: ExecutionInteractionView | null;
+  latestArtifactRef: ArtifactReferenceView | null;
+  actions: ExecutionPromptActionView[];
+  message: ChatMessage;
+}
+
 export interface ExecutionViewModel {
   executionId: string;
   runNumber: number;
@@ -65,6 +114,7 @@ export interface ExecutionViewModel {
   pendingApproval: ExecutionApprovalView | null;
   reviews: ExecutionReviewView[];
   pendingReview: ExecutionReviewView | null;
+  assistantTurn: ExecutionAssistantTurn | null;
 }
 
 function parsedRecord(payloadJson: string): Record<string, unknown> | null {
@@ -77,6 +127,164 @@ function parsedRecord(payloadJson: string): Record<string, unknown> | null {
   } catch {
     return null;
   }
+}
+
+function stringField(
+  value: Record<string, unknown>,
+  snake: string,
+  camel: string,
+): string {
+  const field = value[snake] ?? value[camel];
+  return typeof field === "string" ? field : "";
+}
+
+function numberField(
+  value: Record<string, unknown>,
+  snake: string,
+  camel: string,
+): number {
+  const field = value[snake] ?? value[camel];
+  return typeof field === "number" && Number.isFinite(field) ? field : 0;
+}
+
+function promptState(value: unknown): ExecutionPromptState | null {
+  const states: Record<string, ExecutionPromptState> = {
+    EXECUTION_PROMPT_STATE_CONFIGURING: ExecutionPromptState.CONFIGURING,
+    EXECUTION_PROMPT_STATE_READY_TO_RUN: ExecutionPromptState.READY_TO_RUN,
+    EXECUTION_PROMPT_STATE_WAITING_FOR_SCHEDULE:
+      ExecutionPromptState.WAITING_FOR_SCHEDULE,
+    EXECUTION_PROMPT_STATE_CONFIGURATION_DISABLED:
+      ExecutionPromptState.CONFIGURATION_DISABLED,
+    EXECUTION_PROMPT_STATE_CONFIGURATION_ARCHIVED:
+      ExecutionPromptState.CONFIGURATION_ARCHIVED,
+    EXECUTION_PROMPT_STATE_EXECUTION_QUEUED:
+      ExecutionPromptState.EXECUTION_QUEUED,
+    EXECUTION_PROMPT_STATE_EXECUTION_RUNNING:
+      ExecutionPromptState.EXECUTION_RUNNING,
+    EXECUTION_PROMPT_STATE_EXECUTION_AWAITING_ELICITATION:
+      ExecutionPromptState.EXECUTION_AWAITING_ELICITATION,
+    EXECUTION_PROMPT_STATE_EXECUTION_AWAITING_REVIEW:
+      ExecutionPromptState.EXECUTION_AWAITING_REVIEW,
+    EXECUTION_PROMPT_STATE_EXECUTION_AWAITING_APPROVAL:
+      ExecutionPromptState.EXECUTION_AWAITING_APPROVAL,
+    EXECUTION_PROMPT_STATE_EXECUTION_FAILING:
+      ExecutionPromptState.EXECUTION_FAILING,
+    EXECUTION_PROMPT_STATE_EXECUTION_FAILED:
+      ExecutionPromptState.EXECUTION_FAILED,
+    EXECUTION_PROMPT_STATE_EXECUTION_COMPLETED:
+      ExecutionPromptState.EXECUTION_COMPLETED,
+    EXECUTION_PROMPT_STATE_EXECUTION_CANCELLED:
+      ExecutionPromptState.EXECUTION_CANCELLED,
+    EXECUTION_PROMPT_STATE_EXECUTION_NEEDS_ATTENTION:
+      ExecutionPromptState.EXECUTION_NEEDS_ATTENTION,
+  };
+  if (typeof value === "number" && value in ExecutionPromptState) return value;
+  return typeof value === "string" ? (states[value] ?? null) : null;
+}
+
+function interactionKind(value: unknown): ExecutionInteractionKindView | null {
+  switch (value) {
+    case "EXECUTION_INTERACTION_KIND_ELICITATION":
+    case ExecutionInteractionKind.ELICITATION:
+      return "elicitation";
+    case "EXECUTION_INTERACTION_KIND_REVIEW":
+    case ExecutionInteractionKind.REVIEW:
+      return "review";
+    case "EXECUTION_INTERACTION_KIND_APPROVAL":
+    case ExecutionInteractionKind.APPROVAL:
+      return "approval";
+    default:
+      return null;
+  }
+}
+
+/** Parses a server-authored proto JSON prompt, rejecting incomplete identities. */
+export function parseExecutionPrompt(
+  message: ChatMessage,
+): ExecutionAssistantTurn | null {
+  if (message.kind !== "EXECUTION_PROMPT") return null;
+  const raw = parsedRecord(message.payloadJson);
+  if (!raw) return null;
+  const executionId = stringField(raw, "plan_execution_id", "planExecutionId");
+  const configurationId = stringField(
+    raw,
+    "configuration_id",
+    "configurationId",
+  );
+  const state = promptState(raw.state);
+  if (
+    !executionId ||
+    !configurationId ||
+    !state ||
+    executionId !== message.executionId
+  )
+    return null;
+  const pendingRaw = raw.pending_interaction ?? raw.pendingInteraction;
+  let pendingInteraction: ExecutionInteractionView | null = null;
+  if (pendingRaw && typeof pendingRaw === "object") {
+    const pointer = pendingRaw as Record<string, unknown>;
+    const kind = interactionKind(pointer.kind);
+    const requestId = stringField(pointer, "request_id", "requestId");
+    const stepExecutionId = stringField(
+      pointer,
+      "step_execution_id",
+      "stepExecutionId",
+    );
+    const planStepKey = stringField(pointer, "plan_step_key", "planStepKey");
+    if (!kind || !requestId || !stepExecutionId || !planStepKey) return null;
+    pendingInteraction = {
+      kind,
+      requestId,
+      stepExecutionId,
+      planStepKey,
+      subjectArtifactRef: parseArtifactReference(
+        pointer.subject_artifact_ref ?? pointer.subjectArtifactRef,
+      ),
+    };
+  }
+  const actions = Array.isArray(raw.actions)
+    ? raw.actions.flatMap((action): ExecutionPromptActionView[] => {
+        if (!action || typeof action !== "object") return [];
+        const value = action as Record<string, unknown>;
+        const actionId = stringField(value, "action_id", "actionId");
+        const labelKey = stringField(value, "label_key", "labelKey");
+        return actionId && labelKey ? [{ actionId, labelKey }] : [];
+      })
+    : [];
+  return {
+    configurationId,
+    executionId,
+    state,
+    stepExecutionId: stringField(raw, "step_execution_id", "stepExecutionId"),
+    planStepKey: stringField(raw, "plan_step_key", "planStepKey"),
+    completedStepCount: numberField(
+      raw,
+      "completed_step_count",
+      "completedStepCount",
+    ),
+    activeStepCount: numberField(raw, "active_step_count", "activeStepCount"),
+    pendingInteraction,
+    latestArtifactRef: parseArtifactReference(
+      raw.latest_artifact_ref ?? raw.latestArtifactRef,
+    ),
+    actions,
+    message,
+  };
+}
+
+export function orderedStepsFromFrozenExecution(
+  execution: PlanExecution | undefined,
+): OrderedStep[] {
+  const template: PlanTemplate | undefined = execution?.planTemplateSnapshot;
+  if (!template) return [];
+  const active = new Set(execution?.activeStepKeys ?? []);
+  return template.steps
+    .filter((step) => active.has(step.key))
+    .map((step) => ({
+      key: step.key,
+      title: step.title || step.key,
+      detail: step.description || undefined,
+    }));
 }
 
 export function parseArtifactReference(
@@ -217,6 +425,7 @@ export function buildExecutionViewModel(
   const reviewsById = new Map<string, ExecutionReviewView>();
   let state: ExecutionState = "idle";
   let runningKey: string | null = null;
+  let assistantTurn: ExecutionAssistantTurn | null = null;
 
   const ordered = [...group.messages].sort((a, b) =>
     Number(a.sequenceNumber - b.sequenceNumber),
@@ -230,6 +439,38 @@ export function buildExecutionViewModel(
 
   for (const m of ordered) {
     switch (m.kind) {
+      case "EXECUTION_PROMPT": {
+        const turn = parseExecutionPrompt(m);
+        if (!turn || turn.executionId !== group.executionId) break;
+        assistantTurn = turn;
+        switch (turn.state) {
+          case ExecutionPromptState.EXECUTION_QUEUED:
+            state = "queued";
+            break;
+          case ExecutionPromptState.EXECUTION_RUNNING:
+          case ExecutionPromptState.EXECUTION_AWAITING_ELICITATION:
+          case ExecutionPromptState.EXECUTION_AWAITING_REVIEW:
+          case ExecutionPromptState.EXECUTION_AWAITING_APPROVAL:
+            state = "running";
+            break;
+          case ExecutionPromptState.EXECUTION_FAILING:
+            state = "failing";
+            break;
+          case ExecutionPromptState.EXECUTION_FAILED:
+            state = "failed";
+            break;
+          case ExecutionPromptState.EXECUTION_COMPLETED:
+            state = "completed";
+            break;
+          case ExecutionPromptState.EXECUTION_CANCELLED:
+            state = "cancelled";
+            break;
+          case ExecutionPromptState.EXECUTION_NEEDS_ATTENTION:
+            state = "needs-attention";
+            break;
+        }
+        break;
+      }
       case "RUN_STARTED":
         if (state === "idle") state = "running";
         break;
@@ -388,6 +629,7 @@ export function buildExecutionViewModel(
     pendingApproval,
     reviews,
     pendingReview,
+    assistantTurn,
   };
 }
 

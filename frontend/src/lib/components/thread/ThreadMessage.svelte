@@ -183,7 +183,7 @@
     {isLive}
   />
 {:else if message.kind === "ELICITATION_RAISED" || message.kind === "ELICITATION_ANSWERED"}
-  <ElicitationRefCard {message} />
+  <ElicitationRefCard {message} {tenantId} onDecided={onApprovalDecided} />
 {:else if message.kind === "APPROVAL_RAISED" || message.kind === "APPROVAL_DECIDED"}
   <ApprovalRefCard
     {message}

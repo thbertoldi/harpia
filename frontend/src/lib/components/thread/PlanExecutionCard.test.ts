@@ -10,5 +10,8 @@ describe("PlanExecutionCard class contract", () => {
 
     expect(source).toContain('class="w-full rounded-md');
     expect(source).not.toContain("max-w-[85%] rounded-md");
+    expect(source).toContain("ExecutionTurnCard");
+    expect(source).not.toContain("ApprovalRefCard");
+    expect(source).not.toContain("ReviewRefCard");
   });
 });

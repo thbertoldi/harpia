@@ -1,7 +1,14 @@
 import { timestampDate } from "@bufbuild/protobuf/wkt";
 import {
+  ExecutionInteractionKind,
+  ExecutionPromptState,
   ThreadMessageKind as ProtoThreadMessageKind,
   ThreadMessageRole as ProtoThreadMessageRole,
+} from "$lib/gen/harpia/chat/v1/chat_pb";
+import type {
+  ExecutionInteractionPointer,
+  ExecutionPromptAction,
+  ExecutionPromptPayload,
 } from "$lib/gen/harpia/chat/v1/chat_pb";
 import type { ThreadMessage as ProtoThreadMessage } from "$lib/rpc";
 
@@ -34,7 +41,17 @@ export type ChatMessageKind =
   | "ARTIFACT_CREATED"
   | "ARTIFACT_UPDATED"
   | "ERROR_RAISED"
-  | "ERROR_RECOVERED";
+  | "ERROR_RECOVERED"
+  | "EXECUTION_PROMPT";
+
+// Execution prompts are persisted as proto JSON. Re-export the generated
+// contract types so projection code does not invent a second wire shape.
+export type {
+  ExecutionInteractionPointer,
+  ExecutionPromptAction,
+  ExecutionPromptPayload,
+};
+export { ExecutionInteractionKind, ExecutionPromptState };
 
 export interface ChatMessage {
   id: string;
@@ -85,6 +102,7 @@ const KIND_FROM_PROTO: Record<number, ChatMessageKind> = {
   [ProtoThreadMessageKind.ARTIFACT_UPDATED]: "ARTIFACT_UPDATED",
   [ProtoThreadMessageKind.ERROR_RAISED]: "ERROR_RAISED",
   [ProtoThreadMessageKind.ERROR_RECOVERED]: "ERROR_RECOVERED",
+  [ProtoThreadMessageKind.EXECUTION_PROMPT]: "EXECUTION_PROMPT",
 };
 
 const ROLE_TO_PROTO: Record<ChatMessageRole, ProtoThreadMessageRole> = {
@@ -122,6 +140,7 @@ const KIND_TO_PROTO: Record<ChatMessageKind, ProtoThreadMessageKind> = {
   ARTIFACT_UPDATED: ProtoThreadMessageKind.ARTIFACT_UPDATED,
   ERROR_RAISED: ProtoThreadMessageKind.ERROR_RAISED,
   ERROR_RECOVERED: ProtoThreadMessageKind.ERROR_RECOVERED,
+  EXECUTION_PROMPT: ProtoThreadMessageKind.EXECUTION_PROMPT,
 };
 
 export function chatMessageFromProto(p: ProtoThreadMessage): ChatMessage {

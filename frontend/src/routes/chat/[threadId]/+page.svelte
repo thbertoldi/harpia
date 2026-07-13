@@ -21,7 +21,10 @@
   import { watchThreadMessages } from "$lib/chat/watch";
   import type { ChatMessage } from "$lib/chat/types";
   import { buildThreadSections } from "$lib/plans/thread";
-  import { buildExecutionViewModel } from "$lib/plans/execution-view";
+  import {
+    buildExecutionViewModel,
+    orderedStepsFromFrozenExecution,
+  } from "$lib/plans/execution-view";
   import { finalArtifactTypeKeys } from "$lib/plans/artifact-flow";
   import { PanelRightOpen } from "lucide-svelte";
   import PlanDagMiniMap from "$lib/components/PlanDagMiniMap.svelte";
@@ -40,13 +43,13 @@
   import {
     PlanConfigurationStatus,
     type PlanConfiguration,
+    type PlanExecution,
     type PlanTemplate,
   } from "$lib/gen/harpia/plans/v1/plans_pb";
   import type { Artifact } from "$lib/gen/harpia/artifacts/v1/artifacts_pb";
   import { buildPlanSummary } from "$lib/plans/config-summary";
   import {
     localizedPlanName,
-    localizedStepDescription,
     localizedStepTitle,
   } from "$lib/plans/catalog-i18n";
   import { planClient, threadClient } from "$lib/rpc";
@@ -99,6 +102,9 @@
     }
     return data.configurationId;
   });
+  const targetedExecutionId = $derived(
+    $page.url.searchParams.get("execution") ?? "",
+  );
 
   let messages = $state<ChatMessage[]>([]);
   let proposing = $state(false);
@@ -400,7 +406,7 @@
     previewDismissedGeneratingExecutionId = null;
   }
 
-  function selectConfiguration(configurationId: string) {
+  function selectConfiguration(configurationId: string, executionId = "") {
     selectedConfigurationId = configurationId;
     liveConfigurationOverride = undefined;
     liveTemplateOverride = undefined;
@@ -411,7 +417,7 @@
     if (browser) {
       replaceState(
         resolve(
-          `/chat/${encodeURIComponent(routeThreadId)}?plan=${encodeURIComponent(configurationId)}`,
+          `/chat/${encodeURIComponent(routeThreadId)}?plan=${encodeURIComponent(configurationId)}${executionId ? `&execution=${encodeURIComponent(executionId)}` : ""}`,
         ),
         {},
       );
@@ -456,6 +462,21 @@
       } else {
         runError = raw;
       }
+    }
+  }
+
+  async function retryExecution(executionId: string, stepExecutionId: string) {
+    if (!tenantId || !executionId || !stepExecutionId) return;
+    runError = null;
+    try {
+      await planClient.retryPlanExecution({
+        tenantId,
+        planExecutionId: executionId,
+        stepExecutionId,
+      });
+      await invalidateAll();
+    } catch (cause) {
+      runError = cause instanceof Error ? cause.message : String(cause);
     }
   }
 
@@ -631,27 +652,15 @@
 
   const sections = $derived(buildThreadSections(messages));
 
-  // ADR-016 / live-execution-chat — ordered template steps feed the execution
-  // view model; execution sections render as live progress cards. Step titles
-  // are resolved through the catalog content keys so the timeline renders in
-  // the active locale.
-  const orderedSteps = $derived(
-    focusedTemplate
-      ? focusedTemplate.steps.map((s) => ({
-          key: s.key,
-          title: localizedStepTitle(focusedTemplate, s.key, $locale),
-          detail: localizedStepDescription(focusedTemplate, s.key, $locale),
-        }))
-      : [],
-  );
   const executionGroups = $derived(
     sections.flatMap((section) =>
       section.kind === "execution" ? [section.group] : [],
     ),
   );
-  // The execution API exposes the immutable active graph captured at run
-  // creation. Never derive optional participation from today's configuration.
-  let activeStepKeysByExecution = $state<Map<string, string[]>>(new Map());
+  // Keep complete execution responses. Their frozen template snapshots own
+  // execution titles/order; the focused current template must never rewrite a
+  // historical or in-flight run.
+  let executionsById = $state<Map<string, PlanExecution>>(new Map());
   $effect(() => {
     if (!tenantId || executionGroups.length === 0) return;
     const controller = new AbortController();
@@ -661,59 +670,84 @@
           { tenantId, planExecutionId: group.executionId },
           { signal: controller.signal },
         );
-        return [
-          group.executionId,
-          response.planExecution?.activeStepKeys ?? [],
-        ] as const;
+        return [group.executionId, response.planExecution] as const;
       }),
     )
       .then((entries) => {
         if (!controller.signal.aborted)
-          activeStepKeysByExecution = new Map(entries);
+          executionsById = new Map(
+            entries.flatMap(([id, execution]) =>
+              execution ? [[id, execution] as const] : [],
+            ),
+          );
       })
       .catch(() => undefined);
     return () => controller.abort();
   });
-  const executionViewModels = $derived(
+  const allExecutionViewModels = $derived(
     executionGroups.map((group) =>
       buildExecutionViewModel(
         group,
-        (() => {
-          const active = activeStepKeysByExecution.get(group.executionId);
-          return active && active.length > 0
-            ? orderedSteps.filter((step) => active.includes(step.key))
-            : orderedSteps;
-        })(),
+        orderedStepsFromFrozenExecution(executionsById.get(group.executionId)),
       ),
     ),
   );
+  const executionViewModels = $derived(
+    allExecutionViewModels.filter(
+      (vm) =>
+        executionsById.get(vm.executionId)?.planConfigurationId ===
+        activeConfigurationId,
+    ),
+  );
+  const primaryExecutionId = $derived.by(() => {
+    if (
+      targetedExecutionId &&
+      executionsById.get(targetedExecutionId)?.planConfigurationId ===
+        activeConfigurationId
+    )
+      return targetedExecutionId;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const message = messages[i];
+      if (message.kind !== "EXECUTION_PROMPT") continue;
+      const vm = executionViewModels.find(
+        (candidate) => candidate.executionId === message.executionId,
+      );
+      if (vm?.assistantTurn?.configurationId === activeConfigurationId)
+        return vm.executionId;
+    }
+    return executionViewModels.at(-1)?.executionId ?? null;
+  });
+  const primaryExecutionViewModel = $derived(
+    executionViewModels.find((vm) => vm.executionId === primaryExecutionId) ??
+      null,
+  );
+  const offFocusExecutionViewModels = $derived(
+    allExecutionViewModels.filter(
+      (vm) => vm.executionId !== primaryExecutionId,
+    ),
+  );
   const anyExecutionRunning = $derived(
-    executionViewModels.some((vm) => vm.state === "running"),
+    executionViewModels.some(
+      (vm) => vm.state === "running" || vm.state === "queued",
+    ),
   );
 
-  const mostRecentExecutionId = $derived.by(() => {
-    for (let i = sections.length - 1; i >= 0; i--) {
-      const s = sections[i];
-      if (s.kind === "execution") return s.group.executionId;
-    }
-    return null;
-  });
+  const mostRecentExecutionId = $derived(primaryExecutionId);
 
   // Drives the early generating-state open (spec: artifact-side-preview) and
   // the generating affordance on the producing step's row (spec:
   // artifact-preview-panel). Scoped to the most recent execution only — an
   // older, already-settled execution never has a running step.
-  const focusedExecutionViewModel = $derived(
-    executionViewModels.find(
-      (vm) => vm.executionId === mostRecentExecutionId,
-    ) ?? null,
-  );
+  const focusedExecutionViewModel = $derived(primaryExecutionViewModel);
   const runningStepOutputTypeKey = $derived.by(() => {
     const runningKey = focusedExecutionViewModel?.runningStep?.key;
-    if (!runningKey || !focusedTemplate) return null;
+    const snapshot = mostRecentExecutionId
+      ? executionsById.get(mostRecentExecutionId)?.planTemplateSnapshot
+      : undefined;
+    if (!runningKey || !snapshot) return null;
     return (
-      focusedTemplate.steps.find((s) => s.key === runningKey)
-        ?.outputArtifactTypeId ?? null
+      snapshot.steps.find((s) => s.key === runningKey)?.outputArtifactTypeId ??
+      null
     );
   });
   const producingFinalArtifact = $derived(
@@ -1078,27 +1112,62 @@
           />
         {/if}
 
-        {#if executionViewModels.length > 0}
+        {#if primaryExecutionViewModel}
           <div class="flex flex-col gap-2">
-            {#each executionViewModels as vm (vm.executionId)}
-              <div
-                id={executionAnchorId(vm.executionId)}
-                in:chatEnterStaggered={{ delay: 0 }}
-              >
-                <PlanExecutionCard
-                  {vm}
-                  initiallyCollapsed
-                  {tenantId}
-                  activeArtifactId={previewOpen ? activeArtifactId : null}
-                  generatingStepKey={vm.executionId === mostRecentExecutionId
-                    ? generatingStepKey
-                    : null}
-                  onOpenArtifact={openArtifact}
-                  onApprovalDecided={() => void invalidateAll()}
-                />
-              </div>
-            {/each}
+            <div
+              id={executionAnchorId(primaryExecutionViewModel.executionId)}
+              in:chatEnterStaggered={{ delay: 0 }}
+            >
+              <PlanExecutionCard
+                vm={primaryExecutionViewModel}
+                initiallyCollapsed
+                {tenantId}
+                activeArtifactId={previewOpen ? activeArtifactId : null}
+                {generatingStepKey}
+                onOpenArtifact={openArtifact}
+                onApprovalDecided={() => void invalidateAll()}
+                onRetry={retryExecution}
+                onRunAgain={startRun}
+              />
+            </div>
           </div>
+        {/if}
+
+        {#if offFocusExecutionViewModels.length > 0}
+          <aside
+            class="rounded border border-plumage/60 bg-obsidian-light/30 px-3 py-2"
+            aria-label={translate("thread.execution.offFocus.label", $locale)}
+          >
+            <p class="text-[11px] font-medium text-crown-ash">
+              {translate("thread.execution.offFocus.heading", $locale)}
+            </p>
+            <div class="mt-1.5 flex flex-col gap-1">
+              {#each offFocusExecutionViewModels as vm (vm.executionId)}
+                {@const execution = executionsById.get(vm.executionId)}
+                <button
+                  type="button"
+                  class="flex items-center justify-between gap-2 rounded border border-plumage/50 px-2 py-1.5 text-left text-[11px] text-crown-ash hover:border-talon-gold hover:text-cream"
+                  onclick={() =>
+                    selectConfiguration(
+                      execution?.planConfigurationId ?? "",
+                      vm.executionId,
+                    )}
+                >
+                  <span
+                    >{translate("thread.execution.runLabel", $locale, {
+                      n: vm.runNumber,
+                    })}</span
+                  >
+                  <span
+                    >{translate(
+                      "thread.execution.offFocus.status",
+                      $locale,
+                    )}</span
+                  >
+                </button>
+              {/each}
+            </div>
+          </aside>
         {/if}
 
         <ThreadComposer

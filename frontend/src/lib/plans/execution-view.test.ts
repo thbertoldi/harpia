@@ -6,6 +6,8 @@ import {
   parseStepKey,
   parseOutputArtifactId,
   parseStepBoundArtifactRef,
+  orderedStepsFromFrozenExecution,
+  parseExecutionPrompt,
 } from "$lib/plans/execution-view";
 import type { OrderedStep } from "$lib/plans/execution-view";
 
@@ -488,5 +490,116 @@ describe("buildExecutionViewModel", () => {
     expect(vm.pendingApproval?.subjectArtifactRef?.contentHash).toBe(
       "old-hash",
     );
+  });
+
+  it("folds the exact EXECUTION_PROMPT turn in sequence order", () => {
+    const first = msg("EXECUTION_PROMPT", {
+      payload: JSON.stringify({
+        configuration_id: "config-1",
+        plan_execution_id: "exec-1",
+        state: "EXECUTION_PROMPT_STATE_EXECUTION_RUNNING",
+      }),
+      seq: 1,
+    });
+    const latest = msg("EXECUTION_PROMPT", {
+      payload: JSON.stringify({
+        configuration_id: "config-1",
+        plan_execution_id: "exec-1",
+        state: "EXECUTION_PROMPT_STATE_EXECUTION_AWAITING_REVIEW",
+        step_execution_id: "step-1",
+        plan_step_key: "draft",
+        pending_interaction: {
+          kind: "EXECUTION_INTERACTION_KIND_REVIEW",
+          request_id: "review-1",
+          step_execution_id: "step-1",
+          plan_step_key: "draft",
+          subject_artifact_ref: {
+            artifact_id: "post",
+            artifact_version_id: "version-1",
+            artifact_type_key: "post",
+            content_hash: "hash-1",
+          },
+        },
+        actions: [
+          { action_id: "review.accept", label_key: "execution.review.accept" },
+        ],
+      }),
+      seq: 2,
+    });
+    const vm = buildExecutionViewModel(
+      { executionId: "exec-1", runNumber: 1, messages: [latest, first] },
+      STEPS,
+    );
+    expect(vm.state).toBe("running");
+    expect(vm.assistantTurn?.pendingInteraction).toMatchObject({
+      kind: "review",
+      requestId: "review-1",
+      subjectArtifactRef: {
+        artifactVersionId: "version-1",
+        contentHash: "hash-1",
+      },
+    });
+  });
+
+  it("rejects a prompt whose payload targets a different execution", () => {
+    const message = msg("EXECUTION_PROMPT", {
+      payload: JSON.stringify({
+        configuration_id: "config-1",
+        plan_execution_id: "exec-2",
+        state: "EXECUTION_PROMPT_STATE_EXECUTION_RUNNING",
+      }),
+    });
+    expect(parseExecutionPrompt(message)).toBeNull();
+  });
+
+  it("projects queued, failing, cancelled, and needs-attention prompt states", () => {
+    for (const [wireState, expected] of [
+      ["EXECUTION_PROMPT_STATE_EXECUTION_QUEUED", "queued"],
+      ["EXECUTION_PROMPT_STATE_EXECUTION_FAILING", "failing"],
+      ["EXECUTION_PROMPT_STATE_EXECUTION_CANCELLED", "cancelled"],
+      ["EXECUTION_PROMPT_STATE_EXECUTION_NEEDS_ATTENTION", "needs-attention"],
+    ] as const) {
+      const vm = buildExecutionViewModel(
+        {
+          executionId: "exec-1",
+          runNumber: 1,
+          messages: [
+            msg("EXECUTION_PROMPT", {
+              payload: JSON.stringify({
+                configuration_id: "config-1",
+                plan_execution_id: "exec-1",
+                state: wireState,
+              }),
+            }),
+          ],
+        },
+        STEPS,
+      );
+      expect(vm.state).toBe(expected);
+    }
+  });
+
+  it("derives active row order and titles from the frozen execution template", () => {
+    const steps = orderedStepsFromFrozenExecution({
+      activeStepKeys: ["publish", "draft"],
+      planTemplateSnapshot: {
+        steps: [
+          { key: "draft", title: "Frozen draft", description: "Frozen detail" },
+          {
+            key: "publish",
+            title: "Frozen publish",
+            description: "Frozen publish detail",
+          },
+        ],
+      },
+    } as never);
+    expect(steps).toEqual([
+      { key: "draft", title: "Frozen draft", detail: "Frozen detail" },
+      {
+        key: "publish",
+        title: "Frozen publish",
+        detail: "Frozen publish detail",
+      },
+    ]);
   });
 });

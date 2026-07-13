@@ -4,7 +4,13 @@ export interface ExecutionGroup {
   executionId: string;
   runNumber: number;
   messages: ChatMessage[];
-  status: "running" | "completed" | "failed" | "unknown";
+  status:
+    | "queued"
+    | "running"
+    | "completed"
+    | "failed"
+    | "cancelled"
+    | "unknown";
 }
 
 export type ThreadSection =
@@ -16,6 +22,7 @@ const TERMINAL_KIND_STATUS: Partial<
 > = {
   RUN_COMPLETED: "completed",
   RUN_FAILED: "failed",
+  EXECUTION_PROMPT: "running",
 };
 
 export function buildThreadSections(messages: ChatMessage[]): ThreadSection[] {

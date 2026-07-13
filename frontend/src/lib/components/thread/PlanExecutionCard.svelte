@@ -12,8 +12,7 @@
     ExecutionViewModel,
     ExecutionStepView,
   } from "$lib/plans/execution-view";
-  import ApprovalRefCard from "./ApprovalRefCard.svelte";
-  import ReviewRefCard from "./ReviewRefCard.svelte";
+  import ExecutionTurnCard from "./ExecutionTurnCard.svelte";
 
   interface Props {
     vm: ExecutionViewModel;
@@ -21,6 +20,8 @@
     tenantId?: string;
     onOpenArtifact?: (artifactId: string, artifactVersionId?: string) => void;
     onApprovalDecided?: () => void;
+    onRetry?: (executionId: string, stepExecutionId: string) => void;
+    onRunAgain?: () => void;
     /** Id of the artifact currently shown in the preview panel, if open. */
     activeArtifactId?: string | null;
     /**
@@ -36,6 +37,8 @@
     tenantId = "",
     onOpenArtifact,
     onApprovalDecided,
+    onRetry,
+    onRunAgain,
     activeArtifactId = null,
     generatingStepKey = null,
   }: Props = $props();
@@ -55,7 +58,14 @@
       case "completed":
         return translate("thread.execution.completed", $locale);
       case "failed":
+      case "failing":
         return translate("thread.execution.failed", $locale);
+      case "cancelled":
+        return translate("thread.execution.turn.cancelled", $locale);
+      case "needs-attention":
+        return translate("thread.execution.turn.needsAttention", $locale);
+      case "queued":
+        return translate("thread.execution.turn.queued", $locale);
       default:
         return translate("thread.execution.waiting", $locale);
     }
@@ -127,15 +137,17 @@
         ? 'text-energy'
         : vm.state === 'completed'
           ? 'text-status-done'
-          : vm.state === 'failed'
+          : vm.state === 'failed' ||
+              vm.state === 'failing' ||
+              vm.state === 'needs-attention'
             ? 'text-danger'
             : 'text-crown-ash-dark'}"
     >
-      {#if vm.state === "running"}
+      {#if vm.state === "running" || vm.state === "queued"}
         <Loader2 class="size-3.5 animate-spin" />
       {:else if vm.state === "completed"}
         <Check class="size-3.5" />
-      {:else if vm.state === "failed"}
+      {:else if vm.state === "failed" || vm.state === "failing" || vm.state === "needs-attention"}
         <AlertTriangle class="size-3.5" />
       {:else}
         <Loader2 class="size-3.5 opacity-0" />
@@ -183,26 +195,19 @@
     </div>
   {/if}
 
-  {#if vm.pendingApproval}
+  {#if vm.assistantTurn}
     <div class="mt-2">
-      <ApprovalRefCard
-        message={vm.pendingApproval.message}
-        {tenantId}
-        messages={vm.messages}
-        inputArtifactId={vm.pendingApproval.inputArtifactId}
-        {onOpenArtifact}
-        onDecided={onApprovalDecided}
-      />
-    </div>
-  {/if}
-
-  {#if vm.pendingReview}
-    <div class="mt-2">
-      <ReviewRefCard
-        message={vm.pendingReview.message}
+      <ExecutionTurnCard
+        turn={vm.assistantTurn}
+        currentStep={vm.steps.find(
+          (step) => step.key === vm.assistantTurn?.planStepKey,
+        ) ?? vm.runningStep}
         {tenantId}
         {onOpenArtifact}
         onDecided={onApprovalDecided}
+        onRetry={(stepExecutionId) =>
+          onRetry?.(vm.executionId, stepExecutionId)}
+        {onRunAgain}
       />
     </div>
   {/if}

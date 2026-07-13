@@ -17,15 +17,26 @@
     contentHash: string;
   }
   interface Props {
-    message: ChatMessage;
+    message?: ChatMessage;
+    /** Exact request identity from the execution prompt projection. */
+    reviewRequestId?: string;
+    subjectArtifactRef?: ArtifactRef | null;
     tenantId?: string;
     onOpenArtifact?: (artifactId: string, artifactVersionId?: string) => void;
     onDecided?: () => void;
   }
-  let { message, tenantId = "", onOpenArtifact, onDecided }: Props = $props();
+  let {
+    message,
+    reviewRequestId = "",
+    subjectArtifactRef = null,
+    tenantId = "",
+    onOpenArtifact,
+    onDecided,
+  }: Props = $props();
   const reviewId = $derived.by(() => {
+    if (reviewRequestId) return reviewRequestId;
     try {
-      const raw = JSON.parse(message.payloadJson) as {
+      const raw = JSON.parse(message?.payloadJson || "{}") as {
         review_request_id?: string;
       };
       return raw.review_request_id ?? "";
@@ -34,6 +45,7 @@
     }
   });
   let subject = $state<ArtifactRef | null>(null);
+  const resolvedSubject = $derived(subjectArtifactRef ?? subject);
   let decision = $state<ReviewResponse | null>(null);
   let feedback = $state("");
   let reviseMode = $state(false);
@@ -46,7 +58,7 @@
     void loadReview(tenantId, reviewId)
       .then((review) => {
         if (controller.signal.aborted) return;
-        const ref = review.subjectArtifactRef;
+        const ref = subjectArtifactRef ?? review.subjectArtifactRef;
         subject = ref
           ? {
               artifactId: ref.artifactId,
@@ -83,7 +95,7 @@
 </script>
 
 <div
-  id={`m-${message.id}`}
+  id={message ? `m-${message.id}` : undefined}
   class="w-full rounded-lg border border-talon-gold/40 bg-talon-gold/10 px-4 py-3"
 >
   <div class="flex items-center gap-3">
@@ -96,20 +108,23 @@
           : translate("thread.review.raised", $locale)}
     </p>
   </div>
-  {#if subject}
+  {#if resolvedSubject}
     <p class="mt-1 text-[10px] text-crown-ash-dark">
       {translate("thread.review.context.version", $locale, {
-        value: subject.artifactVersionId.slice(0, 8),
+        value: resolvedSubject.artifactVersionId.slice(0, 8),
       })}
     </p>
   {/if}
   {#if !decision && tenantId && reviewId}
     <div class="mt-3 flex flex-wrap gap-2">
-      {#if subject && onOpenArtifact}
+      {#if resolvedSubject && onOpenArtifact}
         <button
           type="button"
           onclick={() =>
-            onOpenArtifact?.(subject!.artifactId, subject!.artifactVersionId)}
+            onOpenArtifact?.(
+              resolvedSubject.artifactId,
+              resolvedSubject.artifactVersionId,
+            )}
           class="inline-flex items-center gap-1 rounded-md border border-plumage px-3 py-2 text-[12px] text-crown-ash hover:border-talon-gold hover:text-talon-gold"
           ><Eye class="size-3.5" />{translate(
             "thread.review.previewArtifact",

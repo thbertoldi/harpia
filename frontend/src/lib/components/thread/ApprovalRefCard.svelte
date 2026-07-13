@@ -17,7 +17,15 @@
   import { chipFlash } from "$lib/motion/transitions";
 
   interface Props {
-    message: ChatMessage;
+    message?: ChatMessage;
+    /** Exact request identity from the execution prompt projection. */
+    approvalRequestId?: string;
+    subjectArtifactRef?: {
+      artifactId: string;
+      artifactVersionId: string;
+      artifactTypeKey: string;
+      contentHash: string;
+    } | null;
     /** Required to call the decision RPC. Hidden when absent. */
     tenantId?: string;
     /**
@@ -39,6 +47,8 @@
 
   let {
     message,
+    approvalRequestId = "",
+    subjectArtifactRef = null,
     tenantId = "",
     messages = [],
     inputArtifactId = "",
@@ -47,7 +57,12 @@
     stepTitleFor,
   }: Props = $props();
 
-  const parsed = $derived(parseApprovalPayloadContext(message.payloadJson));
+  const parsed = $derived(
+    parseApprovalPayloadContext(message?.payloadJson || ""),
+  );
+  const exactApprovalId = $derived(
+    approvalRequestId || parsed?.approvalRequestId || "",
+  );
 
   // Local optimistic decision after a successful RPC, before the
   // APPROVAL_DECIDED message streams in.
@@ -60,24 +75,32 @@
   let loadedArtifactVersionId = $state("");
 
   const effectiveInputArtifactId = $derived(
-    inputArtifactId || parsed?.inputArtifactId || loadedInputArtifactId,
+    subjectArtifactRef?.artifactId ||
+      inputArtifactId ||
+      parsed?.inputArtifactId ||
+      loadedInputArtifactId,
   );
   const effectivePlanExecutionId = $derived(
-    parsed?.planExecutionId || message.executionId,
+    parsed?.planExecutionId || message?.executionId || "",
   );
 
   $effect(() => {
-    if (!tenantId || !parsed?.approvalRequestId || effectiveInputArtifactId) {
+    if (
+      !tenantId ||
+      !exactApprovalId ||
+      (effectiveInputArtifactId && subjectArtifactRef?.artifactVersionId)
+    ) {
       return;
     }
     const controller = new AbortController();
     void (async () => {
       try {
-        const approval = await loadApproval(tenantId, parsed.approvalRequestId);
+        const approval = await loadApproval(tenantId, exactApprovalId);
         if (!controller.signal.aborted) {
           loadedInputArtifactId = approval.inputArtifactId;
-          loadedArtifactVersionId =
-            approval.subjectArtifactRef?.artifactVersionId ?? "";
+          // The projected subjectArtifactRef is authoritative for preview.
+          // Older pointer cards may not carry one, so they retain artifact-id
+          // only rather than selecting a mutable current version here.
         }
       } catch {
         // The approve/reject controls still work with only approval_request_id.
@@ -89,16 +112,18 @@
   // Effective terminal decision, if any: a real APPROVAL_DECIDED payload
   // wins, then a streamed later message, then the local optimistic state.
   const effectiveDecision = $derived(
-    effectiveApprovalDecision(message, parsed, messages, localDecision),
+    message
+      ? effectiveApprovalDecision(message, parsed, messages, localDecision)
+      : localDecision,
   );
 
   // The card is actionable only while the approval is still pending: a
   // RAISED pointer, no decision yet (local or streamed), and we have the
   // inputs the RPC needs.
   const isActionable = $derived(
-    message.kind !== "APPROVAL_DECIDED" &&
+    message?.kind !== "APPROVAL_DECIDED" &&
       effectiveDecision === null &&
-      !!parsed?.approvalRequestId &&
+      !!exactApprovalId &&
       !!tenantId,
   );
 
@@ -145,11 +170,11 @@
           }),
         });
       }
-      if (parsed?.approvalRequestId) {
+      if (exactApprovalId) {
         items.push({
           key: "request",
           label: translate("thread.approval.context.request", $locale, {
-            value: shortApprovalContextId(parsed.approvalRequestId),
+            value: shortApprovalContextId(exactApprovalId),
           }),
         });
       }
@@ -158,7 +183,7 @@
   );
 
   async function submit(approved: boolean) {
-    if (!tenantId || !parsed?.approvalRequestId || submitting) return;
+    if (!tenantId || !exactApprovalId || submitting) return;
     // Reject requires a reason (validated server-side). Reveal the reason
     // field on the first reject click, mirroring CanvasApprovalForm.
     if (!approved && rejectReason.trim().length === 0) {
@@ -170,7 +195,7 @@
     try {
       await respondToApprovalRequest(
         tenantId,
-        parsed.approvalRequestId,
+        exactApprovalId,
         approved,
         approved ? "" : rejectReason.trim(),
       );
@@ -186,15 +211,14 @@
 </script>
 
 <div
-  id={`m-${message.id}`}
+  id={message ? `m-${message.id}` : undefined}
   class="w-full rounded-lg border px-4 py-3 {effectiveDecision === 'rejected'
     ? 'border-danger/40 bg-danger/10'
     : 'border-talon-gold/40 bg-talon-gold/10'}"
 >
-  {#if parsed?.approvalRequestId}
+  {#if exactApprovalId}
     <!-- Deep-link target for inbox/runs approval links (#m-approval-<id>). -->
-    <span id={approvalAnchorId(parsed.approvalRequestId)} aria-hidden="true"
-    ></span>
+    <span id={approvalAnchorId(exactApprovalId)} aria-hidden="true"></span>
   {/if}
   <div class="flex items-center gap-3">
     <Icon
@@ -214,9 +238,11 @@
         </div>
       {/if}
     </div>
-    <span class="text-[10px] text-crown-ash-dark">
-      {formatRelativeTime(message.createdAt, $locale)}
-    </span>
+    {#if message}
+      <span class="text-[10px] text-crown-ash-dark">
+        {formatRelativeTime(message.createdAt, $locale)}
+      </span>
+    {/if}
   </div>
 
   {#if isActionable}
@@ -227,7 +253,9 @@
           onclick={() =>
             onOpenArtifact(
               effectiveInputArtifactId,
-              loadedArtifactVersionId || undefined,
+              subjectArtifactRef?.artifactVersionId ||
+                loadedArtifactVersionId ||
+                undefined,
             )}
           class="cursor-pointer rounded-md border border-plumage bg-transparent px-3 py-2 text-[12px] font-medium text-crown-ash hover:border-talon-gold hover:text-talon-gold disabled:cursor-not-allowed disabled:opacity-50"
         >
