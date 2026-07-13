@@ -14,6 +14,7 @@ import (
 	"github.com/harpia/control-plane/internal/executors"
 	"github.com/harpia/control-plane/internal/identity"
 	"github.com/harpia/control-plane/internal/planassistant"
+	"github.com/harpia/control-plane/internal/workflow"
 )
 
 // TestCreatePlanConfiguration_RequiresThreadID guards the Path B contract: a
@@ -39,6 +40,39 @@ func TestCreatePlanConfiguration_RequiresThreadID(t *testing.T) {
 	}
 	if got := connect.CodeOf(err); got != connect.CodeInvalidArgument {
 		t.Fatalf("error code = %v, want InvalidArgument", got)
+	}
+}
+
+func TestExecutionToProtoRetainsFrozenPlanTemplateSnapshot(t *testing.T) {
+	snapshot := workflow.PlanExecutionSnapshot{
+		Configuration: &plansv1.PlanConfiguration{Id: "configuration-frozen"},
+		Template: &plansv1.PlanTemplate{
+			Id:      "template-frozen",
+			Key:     "frozen-template",
+			Version: 7,
+			Steps:   []*plansv1.PlanStep{{Key: "draft", Title: "Frozen draft"}},
+		},
+		ActiveStepKeys: []string{"draft"},
+	}
+	rawSnapshot, err := marshalPlanExecutionSnapshot(snapshot)
+	if err != nil {
+		t.Fatalf("marshalPlanExecutionSnapshot() error = %v", err)
+	}
+
+	got := executionToProto(&PlanExecution{
+		ID:                        uuid.New(),
+		TenantID:                  uuid.New(),
+		PlanConfigurationID:       uuid.New(),
+		PlanConfigurationSnapshot: rawSnapshot,
+	})
+	if got.GetPlanTemplateSnapshot().GetId() != "template-frozen" {
+		t.Fatalf("plan_template_snapshot.id = %q, want frozen template", got.GetPlanTemplateSnapshot().GetId())
+	}
+	if got.GetPlanTemplateSnapshot().GetVersion() != 7 {
+		t.Fatalf("plan_template_snapshot.version = %d, want 7", got.GetPlanTemplateSnapshot().GetVersion())
+	}
+	if got.GetActiveStepKeys()[0] != "draft" {
+		t.Fatalf("active_step_keys = %v, want frozen active graph", got.GetActiveStepKeys())
 	}
 }
 
@@ -305,7 +339,7 @@ func autoBindTestTemplate() *PlanTemplate {
 				ExecutorRequirement: json.RawMessage(`{"executor_kind":1}`), // AGENT
 			},
 		},
-		// Declares both behavior policies so DeriveState reaches POLICIES_STEP
+		// Declares both behavior policies so DeriveConfigurationState reaches POLICIES_STEP
 		// once bindings/overseers are resolved.
 		InputParameters: json.RawMessage(`[
 			{"key":"approval_mode","runtimeMappings":[{"target":"TEMPLATE_INPUT_RUNTIME_TARGET_BEHAVIOR_POLICY","policyKey":"publish_approval_mode"}]},
@@ -389,11 +423,11 @@ func TestAutoBindOverseers_NoUserReturnsCallerBindings(t *testing.T) {
 	}
 }
 
-// TestAutoBindOverseers_SkipsOverseerStepInDeriveState proves the end-to-end
+// TestAutoBindOverseers_SkipsOverseerStepInDeriveConfigurationState proves the end-to-end
 // effect: a configuration built with auto-bound overseers causes the assistant
 // state machine to skip OVERSEER_STEP, whereas the same configuration without
 // auto-binding would land on OVERSEER_STEP.
-func TestAutoBindOverseers_SkipsOverseerStepInDeriveState(t *testing.T) {
+func TestAutoBindOverseers_SkipsOverseerStepInDeriveConfigurationState(t *testing.T) {
 	currentUser := uuid.New().String()
 	ctx := identity.WithRequestContext(context.Background(), identity.RequestContext{
 		UserID:   currentUser,
@@ -403,7 +437,7 @@ func TestAutoBindOverseers_SkipsOverseerStepInDeriveState(t *testing.T) {
 	templateProto := templateToProto(template)
 	tenantID := uuid.New()
 
-	// Every step has a slot binding so DeriveState moves past BINDING_STEP.
+	// Every step has a slot binding so DeriveConfigurationState moves past BINDING_STEP.
 	slotBindings := []*plansv1.SlotBinding{
 		{StepKey: "fetch-news", ExecutorInstallationId: uuid.New().String()},
 		{StepKey: "write-draft", ExecutorInstallationId: uuid.New().String()},
@@ -412,7 +446,7 @@ func TestAutoBindOverseers_SkipsOverseerStepInDeriveState(t *testing.T) {
 
 	h := &PlanHandler{}
 
-	// With auto-binding: every agent step is overseer-bound → DeriveState must
+	// With auto-binding: every agent step is overseer-bound → DeriveConfigurationState must
 	// NOT return OVERSEER_STEP (it advances to POLICIES_STEP since policies are
 	// unset).
 	autoOverseers := autoBindOverseers(ctx, template, nil, nil)
@@ -425,16 +459,16 @@ func TestAutoBindOverseers_SkipsOverseerStepInDeriveState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("buildConfigurationFromRequest() error = %v", err)
 	}
-	autoState := planassistant.DeriveState(templateProto, configurationToProto(autoCfg), nil)
+	autoState := planassistant.DeriveConfigurationState(templateProto, configurationToProto(autoCfg))
 	if autoState.Kind == planassistant.StateOverseerStep {
-		t.Fatalf("DeriveState = OVERSEER_STEP, want it skipped when overseers are auto-bound")
+		t.Fatalf("DeriveConfigurationState = OVERSEER_STEP, want it skipped when overseers are auto-bound")
 	}
 	if autoState.Kind != planassistant.StatePoliciesStep {
-		t.Fatalf("DeriveState = %v, want POLICIES_STEP (policies unset, overseers bound)", autoState.Kind)
+		t.Fatalf("DeriveConfigurationState = %v, want POLICIES_STEP (policies unset, overseers bound)", autoState.Kind)
 	}
 
 	// Contrast: with no caller bindings and no user in context, the overseer
-	// step is unbound → DeriveState returns OVERSEER_STEP (the fallback path).
+	// step is unbound → DeriveConfigurationState returns OVERSEER_STEP (the fallback path).
 	plainOverseers := autoBindOverseers(context.Background(), template, nil, nil)
 	plainCfg, err := h.buildConfigurationFromRequest(
 		tenantID, template, "",
@@ -445,8 +479,8 @@ func TestAutoBindOverseers_SkipsOverseerStepInDeriveState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("buildConfigurationFromRequest() error = %v", err)
 	}
-	plainState := planassistant.DeriveState(templateProto, configurationToProto(plainCfg), nil)
+	plainState := planassistant.DeriveConfigurationState(templateProto, configurationToProto(plainCfg))
 	if plainState.Kind != planassistant.StateOverseerStep {
-		t.Fatalf("DeriveState = %v, want OVERSEER_STEP when no user is in context", plainState.Kind)
+		t.Fatalf("DeriveConfigurationState = %v, want OVERSEER_STEP when no user is in context", plainState.Kind)
 	}
 }

@@ -181,6 +181,71 @@ enum ThreadMessageKind {
   THREAD_MESSAGE_KIND_STEP_FAILED = 26;            // payload_json: { "step_key": "...", "step_execution_id": "...", "error": "..." }
   THREAD_MESSAGE_KIND_REVIEW_RAISED = 27;          // payload_json: ReviewRaisedPayload
   THREAD_MESSAGE_KIND_REVIEW_DECIDED = 28;         // payload_json: ReviewDecidedPayload
+  THREAD_MESSAGE_KIND_EXECUTION_PROMPT = 29;       // payload_json: ExecutionPromptPayload
+}
+
+// ExecutionPromptState is the stable conversation turn projected for a selected
+// PlanConfiguration and, when present, an exact PlanExecution.
+enum ExecutionPromptState {
+  EXECUTION_PROMPT_STATE_UNSPECIFIED = 0;
+  EXECUTION_PROMPT_STATE_CONFIGURING = 1;
+  EXECUTION_PROMPT_STATE_READY_TO_RUN = 2;
+  EXECUTION_PROMPT_STATE_WAITING_FOR_SCHEDULE = 3;
+  EXECUTION_PROMPT_STATE_CONFIGURATION_DISABLED = 4;
+  EXECUTION_PROMPT_STATE_CONFIGURATION_ARCHIVED = 5;
+  EXECUTION_PROMPT_STATE_EXECUTION_QUEUED = 6;
+  EXECUTION_PROMPT_STATE_EXECUTION_RUNNING = 7;
+  EXECUTION_PROMPT_STATE_EXECUTION_AWAITING_ELICITATION = 8;
+  EXECUTION_PROMPT_STATE_EXECUTION_AWAITING_REVIEW = 9;
+  EXECUTION_PROMPT_STATE_EXECUTION_AWAITING_APPROVAL = 10;
+  EXECUTION_PROMPT_STATE_EXECUTION_FAILING = 11;
+  EXECUTION_PROMPT_STATE_EXECUTION_FAILED = 12;
+  EXECUTION_PROMPT_STATE_EXECUTION_COMPLETED = 13;
+  EXECUTION_PROMPT_STATE_EXECUTION_CANCELLED = 14;
+  EXECUTION_PROMPT_STATE_EXECUTION_NEEDS_ATTENTION = 15;
+}
+
+// ExecutionInteractionKind identifies the declared human checkpoint that is
+// currently pending for an exact StepExecution.
+enum ExecutionInteractionKind {
+  EXECUTION_INTERACTION_KIND_UNSPECIFIED = 0;
+  EXECUTION_INTERACTION_KIND_ELICITATION = 1;
+  EXECUTION_INTERACTION_KIND_REVIEW = 2;
+  EXECUTION_INTERACTION_KIND_APPROVAL = 3;
+}
+
+// ExecutionInteractionPointer identifies a pending human checkpoint without
+// embedding mutable request contents. The ref pins review and approval previews
+// to the exact ArtifactVersion selected by the workflow.
+message ExecutionInteractionPointer {
+  ExecutionInteractionKind kind = 1;
+  string request_id = 2;
+  string step_execution_id = 3;
+  string plan_step_key = 4;
+  harpia.artifacts.v1.ArtifactRef subject_artifact_ref = 5;
+}
+
+// ExecutionPromptAction carries stable action and localization identities only.
+message ExecutionPromptAction {
+  string action_id = 1;
+  string label_key = 2;
+}
+
+// ExecutionPromptPayload is the typed JSON payload for EXECUTION_PROMPT thread
+// messages. It contains only stable projection identities and counters; clients
+// resolve presentation from localization keys and request-pinned references.
+message ExecutionPromptPayload {
+  string configuration_id = 1;
+  string plan_execution_id = 2;
+  ExecutionPromptState state = 3;
+  string step_execution_id = 4;
+  string plan_step_key = 5;
+  int32 completed_step_count = 6;
+  int32 active_step_count = 7;
+  ExecutionInteractionPointer pending_interaction = 8;
+  harpia.artifacts.v1.ArtifactRef latest_artifact_ref = 9;
+  repeated ExecutionPromptAction actions = 10;
+  int32 other_active_execution_count = 11;
 }
 
 // ReviewRaisedPayload is the typed JSON contract for REVIEW_RAISED thread

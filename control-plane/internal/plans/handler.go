@@ -339,7 +339,7 @@ func (h *PlanHandler) CreatePlanConfiguration(ctx context.Context, req *connect.
 	// Auto-assign the current user as overseer for every agent-backed step the
 	// caller did not explicitly bind. Validation has already run on the
 	// caller-supplied bindings, so this only fills gaps for well-formed input.
-	// With every agent step overseer-bound, DeriveState skips OVERSEER_STEP and
+	// With every agent step overseer-bound, DeriveConfigurationState skips OVERSEER_STEP and
 	// the conversational flow advances BINDING_STEP → POLICIES_STEP →
 	// BINDING_MATRIX without the pointless "who oversees this?" prompt.
 	overseerBindings := autoBindOverseers(ctx, template, req.Msg.OverseerBindings, included)
@@ -1394,6 +1394,7 @@ func executionToProto(e *PlanExecution) *plansv1.PlanExecution {
 		var runtimeSnapshot workflow.PlanExecutionSnapshot
 		if err := json.Unmarshal(e.PlanConfigurationSnapshot, &runtimeSnapshot); err == nil && runtimeSnapshot.Configuration != nil {
 			execution.PlanConfigurationSnapshot = runtimeSnapshot.Configuration
+			execution.PlanTemplateSnapshot = runtimeSnapshot.Template
 			execution.ActiveStepKeys = runtimeSnapshot.ActiveStepKeys
 		} else {
 			var snapshot plansv1.PlanConfiguration

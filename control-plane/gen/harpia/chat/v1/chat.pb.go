@@ -165,6 +165,7 @@ const (
 	ThreadMessageKind_THREAD_MESSAGE_KIND_STEP_FAILED           ThreadMessageKind = 26 // payload_json: { "step_key": "...", "step_execution_id": "...", "error": "..." }
 	ThreadMessageKind_THREAD_MESSAGE_KIND_REVIEW_RAISED         ThreadMessageKind = 27 // payload_json: ReviewRaisedPayload
 	ThreadMessageKind_THREAD_MESSAGE_KIND_REVIEW_DECIDED        ThreadMessageKind = 28 // payload_json: ReviewDecidedPayload
+	ThreadMessageKind_THREAD_MESSAGE_KIND_EXECUTION_PROMPT      ThreadMessageKind = 29 // payload_json: ExecutionPromptPayload
 )
 
 // Enum value maps for ThreadMessageKind.
@@ -199,6 +200,7 @@ var (
 		26: "THREAD_MESSAGE_KIND_STEP_FAILED",
 		27: "THREAD_MESSAGE_KIND_REVIEW_RAISED",
 		28: "THREAD_MESSAGE_KIND_REVIEW_DECIDED",
+		29: "THREAD_MESSAGE_KIND_EXECUTION_PROMPT",
 	}
 	ThreadMessageKind_value = map[string]int32{
 		"THREAD_MESSAGE_KIND_UNSPECIFIED":           0,
@@ -230,6 +232,7 @@ var (
 		"THREAD_MESSAGE_KIND_STEP_FAILED":           26,
 		"THREAD_MESSAGE_KIND_REVIEW_RAISED":         27,
 		"THREAD_MESSAGE_KIND_REVIEW_DECIDED":        28,
+		"THREAD_MESSAGE_KIND_EXECUTION_PROMPT":      29,
 	}
 )
 
@@ -258,6 +261,150 @@ func (x ThreadMessageKind) Number() protoreflect.EnumNumber {
 // Deprecated: Use ThreadMessageKind.Descriptor instead.
 func (ThreadMessageKind) EnumDescriptor() ([]byte, []int) {
 	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{2}
+}
+
+// ExecutionPromptState is the stable conversation turn projected for a selected
+// PlanConfiguration and, when present, an exact PlanExecution.
+type ExecutionPromptState int32
+
+const (
+	ExecutionPromptState_EXECUTION_PROMPT_STATE_UNSPECIFIED                    ExecutionPromptState = 0
+	ExecutionPromptState_EXECUTION_PROMPT_STATE_CONFIGURING                    ExecutionPromptState = 1
+	ExecutionPromptState_EXECUTION_PROMPT_STATE_READY_TO_RUN                   ExecutionPromptState = 2
+	ExecutionPromptState_EXECUTION_PROMPT_STATE_WAITING_FOR_SCHEDULE           ExecutionPromptState = 3
+	ExecutionPromptState_EXECUTION_PROMPT_STATE_CONFIGURATION_DISABLED         ExecutionPromptState = 4
+	ExecutionPromptState_EXECUTION_PROMPT_STATE_CONFIGURATION_ARCHIVED         ExecutionPromptState = 5
+	ExecutionPromptState_EXECUTION_PROMPT_STATE_EXECUTION_QUEUED               ExecutionPromptState = 6
+	ExecutionPromptState_EXECUTION_PROMPT_STATE_EXECUTION_RUNNING              ExecutionPromptState = 7
+	ExecutionPromptState_EXECUTION_PROMPT_STATE_EXECUTION_AWAITING_ELICITATION ExecutionPromptState = 8
+	ExecutionPromptState_EXECUTION_PROMPT_STATE_EXECUTION_AWAITING_REVIEW      ExecutionPromptState = 9
+	ExecutionPromptState_EXECUTION_PROMPT_STATE_EXECUTION_AWAITING_APPROVAL    ExecutionPromptState = 10
+	ExecutionPromptState_EXECUTION_PROMPT_STATE_EXECUTION_FAILING              ExecutionPromptState = 11
+	ExecutionPromptState_EXECUTION_PROMPT_STATE_EXECUTION_FAILED               ExecutionPromptState = 12
+	ExecutionPromptState_EXECUTION_PROMPT_STATE_EXECUTION_COMPLETED            ExecutionPromptState = 13
+	ExecutionPromptState_EXECUTION_PROMPT_STATE_EXECUTION_CANCELLED            ExecutionPromptState = 14
+	ExecutionPromptState_EXECUTION_PROMPT_STATE_EXECUTION_NEEDS_ATTENTION      ExecutionPromptState = 15
+)
+
+// Enum value maps for ExecutionPromptState.
+var (
+	ExecutionPromptState_name = map[int32]string{
+		0:  "EXECUTION_PROMPT_STATE_UNSPECIFIED",
+		1:  "EXECUTION_PROMPT_STATE_CONFIGURING",
+		2:  "EXECUTION_PROMPT_STATE_READY_TO_RUN",
+		3:  "EXECUTION_PROMPT_STATE_WAITING_FOR_SCHEDULE",
+		4:  "EXECUTION_PROMPT_STATE_CONFIGURATION_DISABLED",
+		5:  "EXECUTION_PROMPT_STATE_CONFIGURATION_ARCHIVED",
+		6:  "EXECUTION_PROMPT_STATE_EXECUTION_QUEUED",
+		7:  "EXECUTION_PROMPT_STATE_EXECUTION_RUNNING",
+		8:  "EXECUTION_PROMPT_STATE_EXECUTION_AWAITING_ELICITATION",
+		9:  "EXECUTION_PROMPT_STATE_EXECUTION_AWAITING_REVIEW",
+		10: "EXECUTION_PROMPT_STATE_EXECUTION_AWAITING_APPROVAL",
+		11: "EXECUTION_PROMPT_STATE_EXECUTION_FAILING",
+		12: "EXECUTION_PROMPT_STATE_EXECUTION_FAILED",
+		13: "EXECUTION_PROMPT_STATE_EXECUTION_COMPLETED",
+		14: "EXECUTION_PROMPT_STATE_EXECUTION_CANCELLED",
+		15: "EXECUTION_PROMPT_STATE_EXECUTION_NEEDS_ATTENTION",
+	}
+	ExecutionPromptState_value = map[string]int32{
+		"EXECUTION_PROMPT_STATE_UNSPECIFIED":                    0,
+		"EXECUTION_PROMPT_STATE_CONFIGURING":                    1,
+		"EXECUTION_PROMPT_STATE_READY_TO_RUN":                   2,
+		"EXECUTION_PROMPT_STATE_WAITING_FOR_SCHEDULE":           3,
+		"EXECUTION_PROMPT_STATE_CONFIGURATION_DISABLED":         4,
+		"EXECUTION_PROMPT_STATE_CONFIGURATION_ARCHIVED":         5,
+		"EXECUTION_PROMPT_STATE_EXECUTION_QUEUED":               6,
+		"EXECUTION_PROMPT_STATE_EXECUTION_RUNNING":              7,
+		"EXECUTION_PROMPT_STATE_EXECUTION_AWAITING_ELICITATION": 8,
+		"EXECUTION_PROMPT_STATE_EXECUTION_AWAITING_REVIEW":      9,
+		"EXECUTION_PROMPT_STATE_EXECUTION_AWAITING_APPROVAL":    10,
+		"EXECUTION_PROMPT_STATE_EXECUTION_FAILING":              11,
+		"EXECUTION_PROMPT_STATE_EXECUTION_FAILED":               12,
+		"EXECUTION_PROMPT_STATE_EXECUTION_COMPLETED":            13,
+		"EXECUTION_PROMPT_STATE_EXECUTION_CANCELLED":            14,
+		"EXECUTION_PROMPT_STATE_EXECUTION_NEEDS_ATTENTION":      15,
+	}
+)
+
+func (x ExecutionPromptState) Enum() *ExecutionPromptState {
+	p := new(ExecutionPromptState)
+	*p = x
+	return p
+}
+
+func (x ExecutionPromptState) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ExecutionPromptState) Descriptor() protoreflect.EnumDescriptor {
+	return file_harpia_chat_v1_chat_proto_enumTypes[3].Descriptor()
+}
+
+func (ExecutionPromptState) Type() protoreflect.EnumType {
+	return &file_harpia_chat_v1_chat_proto_enumTypes[3]
+}
+
+func (x ExecutionPromptState) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ExecutionPromptState.Descriptor instead.
+func (ExecutionPromptState) EnumDescriptor() ([]byte, []int) {
+	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{3}
+}
+
+// ExecutionInteractionKind identifies the declared human checkpoint that is
+// currently pending for an exact StepExecution.
+type ExecutionInteractionKind int32
+
+const (
+	ExecutionInteractionKind_EXECUTION_INTERACTION_KIND_UNSPECIFIED ExecutionInteractionKind = 0
+	ExecutionInteractionKind_EXECUTION_INTERACTION_KIND_ELICITATION ExecutionInteractionKind = 1
+	ExecutionInteractionKind_EXECUTION_INTERACTION_KIND_REVIEW      ExecutionInteractionKind = 2
+	ExecutionInteractionKind_EXECUTION_INTERACTION_KIND_APPROVAL    ExecutionInteractionKind = 3
+)
+
+// Enum value maps for ExecutionInteractionKind.
+var (
+	ExecutionInteractionKind_name = map[int32]string{
+		0: "EXECUTION_INTERACTION_KIND_UNSPECIFIED",
+		1: "EXECUTION_INTERACTION_KIND_ELICITATION",
+		2: "EXECUTION_INTERACTION_KIND_REVIEW",
+		3: "EXECUTION_INTERACTION_KIND_APPROVAL",
+	}
+	ExecutionInteractionKind_value = map[string]int32{
+		"EXECUTION_INTERACTION_KIND_UNSPECIFIED": 0,
+		"EXECUTION_INTERACTION_KIND_ELICITATION": 1,
+		"EXECUTION_INTERACTION_KIND_REVIEW":      2,
+		"EXECUTION_INTERACTION_KIND_APPROVAL":    3,
+	}
+)
+
+func (x ExecutionInteractionKind) Enum() *ExecutionInteractionKind {
+	p := new(ExecutionInteractionKind)
+	*p = x
+	return p
+}
+
+func (x ExecutionInteractionKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ExecutionInteractionKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_harpia_chat_v1_chat_proto_enumTypes[4].Descriptor()
+}
+
+func (ExecutionInteractionKind) Type() protoreflect.EnumType {
+	return &file_harpia_chat_v1_chat_proto_enumTypes[4]
+}
+
+func (x ExecutionInteractionKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ExecutionInteractionKind.Descriptor instead.
+func (ExecutionInteractionKind) EnumDescriptor() ([]byte, []int) {
+	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{4}
 }
 
 type Thread struct {
@@ -1377,6 +1524,265 @@ func (x *ProposePlanResponse) GetMessage() *ThreadMessage {
 	return nil
 }
 
+// ExecutionInteractionPointer identifies a pending human checkpoint without
+// embedding mutable request contents. The ref pins review and approval previews
+// to the exact ArtifactVersion selected by the workflow.
+type ExecutionInteractionPointer struct {
+	state              protoimpl.MessageState   `protogen:"open.v1"`
+	Kind               ExecutionInteractionKind `protobuf:"varint,1,opt,name=kind,proto3,enum=harpia.chat.v1.ExecutionInteractionKind" json:"kind,omitempty"`
+	RequestId          string                   `protobuf:"bytes,2,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	StepExecutionId    string                   `protobuf:"bytes,3,opt,name=step_execution_id,json=stepExecutionId,proto3" json:"step_execution_id,omitempty"`
+	PlanStepKey        string                   `protobuf:"bytes,4,opt,name=plan_step_key,json=planStepKey,proto3" json:"plan_step_key,omitempty"`
+	SubjectArtifactRef *v1.ArtifactRef          `protobuf:"bytes,5,opt,name=subject_artifact_ref,json=subjectArtifactRef,proto3" json:"subject_artifact_ref,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *ExecutionInteractionPointer) Reset() {
+	*x = ExecutionInteractionPointer{}
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExecutionInteractionPointer) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExecutionInteractionPointer) ProtoMessage() {}
+
+func (x *ExecutionInteractionPointer) ProtoReflect() protoreflect.Message {
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExecutionInteractionPointer.ProtoReflect.Descriptor instead.
+func (*ExecutionInteractionPointer) Descriptor() ([]byte, []int) {
+	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *ExecutionInteractionPointer) GetKind() ExecutionInteractionKind {
+	if x != nil {
+		return x.Kind
+	}
+	return ExecutionInteractionKind_EXECUTION_INTERACTION_KIND_UNSPECIFIED
+}
+
+func (x *ExecutionInteractionPointer) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *ExecutionInteractionPointer) GetStepExecutionId() string {
+	if x != nil {
+		return x.StepExecutionId
+	}
+	return ""
+}
+
+func (x *ExecutionInteractionPointer) GetPlanStepKey() string {
+	if x != nil {
+		return x.PlanStepKey
+	}
+	return ""
+}
+
+func (x *ExecutionInteractionPointer) GetSubjectArtifactRef() *v1.ArtifactRef {
+	if x != nil {
+		return x.SubjectArtifactRef
+	}
+	return nil
+}
+
+// ExecutionPromptAction carries stable action and localization identities only.
+type ExecutionPromptAction struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ActionId      string                 `protobuf:"bytes,1,opt,name=action_id,json=actionId,proto3" json:"action_id,omitempty"`
+	LabelKey      string                 `protobuf:"bytes,2,opt,name=label_key,json=labelKey,proto3" json:"label_key,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExecutionPromptAction) Reset() {
+	*x = ExecutionPromptAction{}
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExecutionPromptAction) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExecutionPromptAction) ProtoMessage() {}
+
+func (x *ExecutionPromptAction) ProtoReflect() protoreflect.Message {
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExecutionPromptAction.ProtoReflect.Descriptor instead.
+func (*ExecutionPromptAction) Descriptor() ([]byte, []int) {
+	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *ExecutionPromptAction) GetActionId() string {
+	if x != nil {
+		return x.ActionId
+	}
+	return ""
+}
+
+func (x *ExecutionPromptAction) GetLabelKey() string {
+	if x != nil {
+		return x.LabelKey
+	}
+	return ""
+}
+
+// ExecutionPromptPayload is the typed JSON payload for EXECUTION_PROMPT thread
+// messages. It contains only stable projection identities and counters; clients
+// resolve presentation from localization keys and request-pinned references.
+type ExecutionPromptPayload struct {
+	state                     protoimpl.MessageState       `protogen:"open.v1"`
+	ConfigurationId           string                       `protobuf:"bytes,1,opt,name=configuration_id,json=configurationId,proto3" json:"configuration_id,omitempty"`
+	PlanExecutionId           string                       `protobuf:"bytes,2,opt,name=plan_execution_id,json=planExecutionId,proto3" json:"plan_execution_id,omitempty"`
+	State                     ExecutionPromptState         `protobuf:"varint,3,opt,name=state,proto3,enum=harpia.chat.v1.ExecutionPromptState" json:"state,omitempty"`
+	StepExecutionId           string                       `protobuf:"bytes,4,opt,name=step_execution_id,json=stepExecutionId,proto3" json:"step_execution_id,omitempty"`
+	PlanStepKey               string                       `protobuf:"bytes,5,opt,name=plan_step_key,json=planStepKey,proto3" json:"plan_step_key,omitempty"`
+	CompletedStepCount        int32                        `protobuf:"varint,6,opt,name=completed_step_count,json=completedStepCount,proto3" json:"completed_step_count,omitempty"`
+	ActiveStepCount           int32                        `protobuf:"varint,7,opt,name=active_step_count,json=activeStepCount,proto3" json:"active_step_count,omitempty"`
+	PendingInteraction        *ExecutionInteractionPointer `protobuf:"bytes,8,opt,name=pending_interaction,json=pendingInteraction,proto3" json:"pending_interaction,omitempty"`
+	LatestArtifactRef         *v1.ArtifactRef              `protobuf:"bytes,9,opt,name=latest_artifact_ref,json=latestArtifactRef,proto3" json:"latest_artifact_ref,omitempty"`
+	Actions                   []*ExecutionPromptAction     `protobuf:"bytes,10,rep,name=actions,proto3" json:"actions,omitempty"`
+	OtherActiveExecutionCount int32                        `protobuf:"varint,11,opt,name=other_active_execution_count,json=otherActiveExecutionCount,proto3" json:"other_active_execution_count,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
+}
+
+func (x *ExecutionPromptPayload) Reset() {
+	*x = ExecutionPromptPayload{}
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExecutionPromptPayload) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExecutionPromptPayload) ProtoMessage() {}
+
+func (x *ExecutionPromptPayload) ProtoReflect() protoreflect.Message {
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExecutionPromptPayload.ProtoReflect.Descriptor instead.
+func (*ExecutionPromptPayload) Descriptor() ([]byte, []int) {
+	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *ExecutionPromptPayload) GetConfigurationId() string {
+	if x != nil {
+		return x.ConfigurationId
+	}
+	return ""
+}
+
+func (x *ExecutionPromptPayload) GetPlanExecutionId() string {
+	if x != nil {
+		return x.PlanExecutionId
+	}
+	return ""
+}
+
+func (x *ExecutionPromptPayload) GetState() ExecutionPromptState {
+	if x != nil {
+		return x.State
+	}
+	return ExecutionPromptState_EXECUTION_PROMPT_STATE_UNSPECIFIED
+}
+
+func (x *ExecutionPromptPayload) GetStepExecutionId() string {
+	if x != nil {
+		return x.StepExecutionId
+	}
+	return ""
+}
+
+func (x *ExecutionPromptPayload) GetPlanStepKey() string {
+	if x != nil {
+		return x.PlanStepKey
+	}
+	return ""
+}
+
+func (x *ExecutionPromptPayload) GetCompletedStepCount() int32 {
+	if x != nil {
+		return x.CompletedStepCount
+	}
+	return 0
+}
+
+func (x *ExecutionPromptPayload) GetActiveStepCount() int32 {
+	if x != nil {
+		return x.ActiveStepCount
+	}
+	return 0
+}
+
+func (x *ExecutionPromptPayload) GetPendingInteraction() *ExecutionInteractionPointer {
+	if x != nil {
+		return x.PendingInteraction
+	}
+	return nil
+}
+
+func (x *ExecutionPromptPayload) GetLatestArtifactRef() *v1.ArtifactRef {
+	if x != nil {
+		return x.LatestArtifactRef
+	}
+	return nil
+}
+
+func (x *ExecutionPromptPayload) GetActions() []*ExecutionPromptAction {
+	if x != nil {
+		return x.Actions
+	}
+	return nil
+}
+
+func (x *ExecutionPromptPayload) GetOtherActiveExecutionCount() int32 {
+	if x != nil {
+		return x.OtherActiveExecutionCount
+	}
+	return 0
+}
+
 // ReviewRaisedPayload is the typed JSON contract for REVIEW_RAISED thread
 // messages. It keeps the candidate's ArtifactVersion identity in the owning
 // Conversation without importing the plans package (which imports chat).
@@ -1392,7 +1798,7 @@ type ReviewRaisedPayload struct {
 
 func (x *ReviewRaisedPayload) Reset() {
 	*x = ReviewRaisedPayload{}
-	mi := &file_harpia_chat_v1_chat_proto_msgTypes[18]
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1404,7 +1810,7 @@ func (x *ReviewRaisedPayload) String() string {
 func (*ReviewRaisedPayload) ProtoMessage() {}
 
 func (x *ReviewRaisedPayload) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_chat_v1_chat_proto_msgTypes[18]
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1417,7 +1823,7 @@ func (x *ReviewRaisedPayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReviewRaisedPayload.ProtoReflect.Descriptor instead.
 func (*ReviewRaisedPayload) Descriptor() ([]byte, []int) {
-	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{18}
+	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ReviewRaisedPayload) GetReviewRequestId() string {
@@ -1462,7 +1868,7 @@ type ReviewDecidedPayload struct {
 
 func (x *ReviewDecidedPayload) Reset() {
 	*x = ReviewDecidedPayload{}
-	mi := &file_harpia_chat_v1_chat_proto_msgTypes[19]
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1474,7 +1880,7 @@ func (x *ReviewDecidedPayload) String() string {
 func (*ReviewDecidedPayload) ProtoMessage() {}
 
 func (x *ReviewDecidedPayload) ProtoReflect() protoreflect.Message {
-	mi := &file_harpia_chat_v1_chat_proto_msgTypes[19]
+	mi := &file_harpia_chat_v1_chat_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1487,7 +1893,7 @@ func (x *ReviewDecidedPayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReviewDecidedPayload.ProtoReflect.Descriptor instead.
 func (*ReviewDecidedPayload) Descriptor() ([]byte, []int) {
-	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{19}
+	return file_harpia_chat_v1_chat_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *ReviewDecidedPayload) GetReviewRequestId() string {
@@ -1599,7 +2005,30 @@ const file_harpia_chat_v1_chat_proto_rawDesc = "" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1b\n" +
 	"\tthread_id\x18\x02 \x01(\tR\bthreadId\"N\n" +
 	"\x13ProposePlanResponse\x127\n" +
-	"\amessage\x18\x01 \x01(\v2\x1d.harpia.chat.v1.ThreadMessageR\amessage\"\xe5\x01\n" +
+	"\amessage\x18\x01 \x01(\v2\x1d.harpia.chat.v1.ThreadMessageR\amessage\"\x9e\x02\n" +
+	"\x1bExecutionInteractionPointer\x12<\n" +
+	"\x04kind\x18\x01 \x01(\x0e2(.harpia.chat.v1.ExecutionInteractionKindR\x04kind\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x02 \x01(\tR\trequestId\x12*\n" +
+	"\x11step_execution_id\x18\x03 \x01(\tR\x0fstepExecutionId\x12\"\n" +
+	"\rplan_step_key\x18\x04 \x01(\tR\vplanStepKey\x12R\n" +
+	"\x14subject_artifact_ref\x18\x05 \x01(\v2 .harpia.artifacts.v1.ArtifactRefR\x12subjectArtifactRef\"Q\n" +
+	"\x15ExecutionPromptAction\x12\x1b\n" +
+	"\taction_id\x18\x01 \x01(\tR\bactionId\x12\x1b\n" +
+	"\tlabel_key\x18\x02 \x01(\tR\blabelKey\"\x8b\x05\n" +
+	"\x16ExecutionPromptPayload\x12)\n" +
+	"\x10configuration_id\x18\x01 \x01(\tR\x0fconfigurationId\x12*\n" +
+	"\x11plan_execution_id\x18\x02 \x01(\tR\x0fplanExecutionId\x12:\n" +
+	"\x05state\x18\x03 \x01(\x0e2$.harpia.chat.v1.ExecutionPromptStateR\x05state\x12*\n" +
+	"\x11step_execution_id\x18\x04 \x01(\tR\x0fstepExecutionId\x12\"\n" +
+	"\rplan_step_key\x18\x05 \x01(\tR\vplanStepKey\x120\n" +
+	"\x14completed_step_count\x18\x06 \x01(\x05R\x12completedStepCount\x12*\n" +
+	"\x11active_step_count\x18\a \x01(\x05R\x0factiveStepCount\x12\\\n" +
+	"\x13pending_interaction\x18\b \x01(\v2+.harpia.chat.v1.ExecutionInteractionPointerR\x12pendingInteraction\x12P\n" +
+	"\x13latest_artifact_ref\x18\t \x01(\v2 .harpia.artifacts.v1.ArtifactRefR\x11latestArtifactRef\x12?\n" +
+	"\aactions\x18\n" +
+	" \x03(\v2%.harpia.chat.v1.ExecutionPromptActionR\aactions\x12?\n" +
+	"\x1cother_active_execution_count\x18\v \x01(\x05R\x19otherActiveExecutionCount\"\xe5\x01\n" +
 	"\x13ReviewRaisedPayload\x12*\n" +
 	"\x11review_request_id\x18\x01 \x01(\tR\x0freviewRequestId\x12*\n" +
 	"\x11step_execution_id\x18\x02 \x01(\tR\x0fstepExecutionId\x12\"\n" +
@@ -1620,7 +2049,7 @@ const file_harpia_chat_v1_chat_proto_rawDesc = "" +
 	"\x1fTHREAD_MESSAGE_ROLE_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cTHREAD_MESSAGE_ROLE_OVERSEER\x10\x01\x12\x1d\n" +
 	"\x19THREAD_MESSAGE_ROLE_AGENT\x10\x02\x12\x1e\n" +
-	"\x1aTHREAD_MESSAGE_ROLE_SYSTEM\x10\x03*\x9b\t\n" +
+	"\x1aTHREAD_MESSAGE_ROLE_SYSTEM\x10\x03*\xc5\t\n" +
 	"\x11ThreadMessageKind\x12#\n" +
 	"\x1fTHREAD_MESSAGE_KIND_UNSPECIFIED\x10\x00\x12!\n" +
 	"\x1dTHREAD_MESSAGE_KIND_USER_TEXT\x10\x01\x12&\n" +
@@ -1651,7 +2080,31 @@ const file_harpia_chat_v1_chat_proto_rawDesc = "" +
 	"#THREAD_MESSAGE_KIND_ERROR_RECOVERED\x10\x19\x12#\n" +
 	"\x1fTHREAD_MESSAGE_KIND_STEP_FAILED\x10\x1a\x12%\n" +
 	"!THREAD_MESSAGE_KIND_REVIEW_RAISED\x10\x1b\x12&\n" +
-	"\"THREAD_MESSAGE_KIND_REVIEW_DECIDED\x10\x1c2\x9b\x06\n" +
+	"\"THREAD_MESSAGE_KIND_REVIEW_DECIDED\x10\x1c\x12(\n" +
+	"$THREAD_MESSAGE_KIND_EXECUTION_PROMPT\x10\x1d*\x9b\x06\n" +
+	"\x14ExecutionPromptState\x12&\n" +
+	"\"EXECUTION_PROMPT_STATE_UNSPECIFIED\x10\x00\x12&\n" +
+	"\"EXECUTION_PROMPT_STATE_CONFIGURING\x10\x01\x12'\n" +
+	"#EXECUTION_PROMPT_STATE_READY_TO_RUN\x10\x02\x12/\n" +
+	"+EXECUTION_PROMPT_STATE_WAITING_FOR_SCHEDULE\x10\x03\x121\n" +
+	"-EXECUTION_PROMPT_STATE_CONFIGURATION_DISABLED\x10\x04\x121\n" +
+	"-EXECUTION_PROMPT_STATE_CONFIGURATION_ARCHIVED\x10\x05\x12+\n" +
+	"'EXECUTION_PROMPT_STATE_EXECUTION_QUEUED\x10\x06\x12,\n" +
+	"(EXECUTION_PROMPT_STATE_EXECUTION_RUNNING\x10\a\x129\n" +
+	"5EXECUTION_PROMPT_STATE_EXECUTION_AWAITING_ELICITATION\x10\b\x124\n" +
+	"0EXECUTION_PROMPT_STATE_EXECUTION_AWAITING_REVIEW\x10\t\x126\n" +
+	"2EXECUTION_PROMPT_STATE_EXECUTION_AWAITING_APPROVAL\x10\n" +
+	"\x12,\n" +
+	"(EXECUTION_PROMPT_STATE_EXECUTION_FAILING\x10\v\x12+\n" +
+	"'EXECUTION_PROMPT_STATE_EXECUTION_FAILED\x10\f\x12.\n" +
+	"*EXECUTION_PROMPT_STATE_EXECUTION_COMPLETED\x10\r\x12.\n" +
+	"*EXECUTION_PROMPT_STATE_EXECUTION_CANCELLED\x10\x0e\x124\n" +
+	"0EXECUTION_PROMPT_STATE_EXECUTION_NEEDS_ATTENTION\x10\x0f*\xc2\x01\n" +
+	"\x18ExecutionInteractionKind\x12*\n" +
+	"&EXECUTION_INTERACTION_KIND_UNSPECIFIED\x10\x00\x12*\n" +
+	"&EXECUTION_INTERACTION_KIND_ELICITATION\x10\x01\x12%\n" +
+	"!EXECUTION_INTERACTION_KIND_REVIEW\x10\x02\x12'\n" +
+	"#EXECUTION_INTERACTION_KIND_APPROVAL\x10\x032\x9b\x06\n" +
 	"\rThreadService\x12Y\n" +
 	"\fCreateThread\x12#.harpia.chat.v1.CreateThreadRequest\x1a$.harpia.chat.v1.CreateThreadResponse\x12P\n" +
 	"\tGetThread\x12 .harpia.chat.v1.GetThreadRequest\x1a!.harpia.chat.v1.GetThreadResponse\x12X\n" +
@@ -1675,77 +2128,88 @@ func file_harpia_chat_v1_chat_proto_rawDescGZIP() []byte {
 	return file_harpia_chat_v1_chat_proto_rawDescData
 }
 
-var file_harpia_chat_v1_chat_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_harpia_chat_v1_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_harpia_chat_v1_chat_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
+var file_harpia_chat_v1_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
 var file_harpia_chat_v1_chat_proto_goTypes = []any{
 	(ThreadStatus)(0),                   // 0: harpia.chat.v1.ThreadStatus
 	(ThreadMessageRole)(0),              // 1: harpia.chat.v1.ThreadMessageRole
 	(ThreadMessageKind)(0),              // 2: harpia.chat.v1.ThreadMessageKind
-	(*Thread)(nil),                      // 3: harpia.chat.v1.Thread
-	(*ThreadMessage)(nil),               // 4: harpia.chat.v1.ThreadMessage
-	(*CreateThreadRequest)(nil),         // 5: harpia.chat.v1.CreateThreadRequest
-	(*CreateThreadResponse)(nil),        // 6: harpia.chat.v1.CreateThreadResponse
-	(*GetThreadRequest)(nil),            // 7: harpia.chat.v1.GetThreadRequest
-	(*GetThreadResponse)(nil),           // 8: harpia.chat.v1.GetThreadResponse
-	(*ListThreadsRequest)(nil),          // 9: harpia.chat.v1.ListThreadsRequest
-	(*ListThreadsResponse)(nil),         // 10: harpia.chat.v1.ListThreadsResponse
-	(*ArchiveThreadRequest)(nil),        // 11: harpia.chat.v1.ArchiveThreadRequest
-	(*ArchiveThreadResponse)(nil),       // 12: harpia.chat.v1.ArchiveThreadResponse
-	(*ListThreadMessagesRequest)(nil),   // 13: harpia.chat.v1.ListThreadMessagesRequest
-	(*ListThreadMessagesResponse)(nil),  // 14: harpia.chat.v1.ListThreadMessagesResponse
-	(*WatchThreadMessagesRequest)(nil),  // 15: harpia.chat.v1.WatchThreadMessagesRequest
-	(*WatchThreadMessagesResponse)(nil), // 16: harpia.chat.v1.WatchThreadMessagesResponse
-	(*AppendThreadMessageRequest)(nil),  // 17: harpia.chat.v1.AppendThreadMessageRequest
-	(*AppendThreadMessageResponse)(nil), // 18: harpia.chat.v1.AppendThreadMessageResponse
-	(*ProposePlanRequest)(nil),          // 19: harpia.chat.v1.ProposePlanRequest
-	(*ProposePlanResponse)(nil),         // 20: harpia.chat.v1.ProposePlanResponse
-	(*ReviewRaisedPayload)(nil),         // 21: harpia.chat.v1.ReviewRaisedPayload
-	(*ReviewDecidedPayload)(nil),        // 22: harpia.chat.v1.ReviewDecidedPayload
-	(*timestamppb.Timestamp)(nil),       // 23: google.protobuf.Timestamp
-	(*v1.ArtifactRef)(nil),              // 24: harpia.artifacts.v1.ArtifactRef
+	(ExecutionPromptState)(0),           // 3: harpia.chat.v1.ExecutionPromptState
+	(ExecutionInteractionKind)(0),       // 4: harpia.chat.v1.ExecutionInteractionKind
+	(*Thread)(nil),                      // 5: harpia.chat.v1.Thread
+	(*ThreadMessage)(nil),               // 6: harpia.chat.v1.ThreadMessage
+	(*CreateThreadRequest)(nil),         // 7: harpia.chat.v1.CreateThreadRequest
+	(*CreateThreadResponse)(nil),        // 8: harpia.chat.v1.CreateThreadResponse
+	(*GetThreadRequest)(nil),            // 9: harpia.chat.v1.GetThreadRequest
+	(*GetThreadResponse)(nil),           // 10: harpia.chat.v1.GetThreadResponse
+	(*ListThreadsRequest)(nil),          // 11: harpia.chat.v1.ListThreadsRequest
+	(*ListThreadsResponse)(nil),         // 12: harpia.chat.v1.ListThreadsResponse
+	(*ArchiveThreadRequest)(nil),        // 13: harpia.chat.v1.ArchiveThreadRequest
+	(*ArchiveThreadResponse)(nil),       // 14: harpia.chat.v1.ArchiveThreadResponse
+	(*ListThreadMessagesRequest)(nil),   // 15: harpia.chat.v1.ListThreadMessagesRequest
+	(*ListThreadMessagesResponse)(nil),  // 16: harpia.chat.v1.ListThreadMessagesResponse
+	(*WatchThreadMessagesRequest)(nil),  // 17: harpia.chat.v1.WatchThreadMessagesRequest
+	(*WatchThreadMessagesResponse)(nil), // 18: harpia.chat.v1.WatchThreadMessagesResponse
+	(*AppendThreadMessageRequest)(nil),  // 19: harpia.chat.v1.AppendThreadMessageRequest
+	(*AppendThreadMessageResponse)(nil), // 20: harpia.chat.v1.AppendThreadMessageResponse
+	(*ProposePlanRequest)(nil),          // 21: harpia.chat.v1.ProposePlanRequest
+	(*ProposePlanResponse)(nil),         // 22: harpia.chat.v1.ProposePlanResponse
+	(*ExecutionInteractionPointer)(nil), // 23: harpia.chat.v1.ExecutionInteractionPointer
+	(*ExecutionPromptAction)(nil),       // 24: harpia.chat.v1.ExecutionPromptAction
+	(*ExecutionPromptPayload)(nil),      // 25: harpia.chat.v1.ExecutionPromptPayload
+	(*ReviewRaisedPayload)(nil),         // 26: harpia.chat.v1.ReviewRaisedPayload
+	(*ReviewDecidedPayload)(nil),        // 27: harpia.chat.v1.ReviewDecidedPayload
+	(*timestamppb.Timestamp)(nil),       // 28: google.protobuf.Timestamp
+	(*v1.ArtifactRef)(nil),              // 29: harpia.artifacts.v1.ArtifactRef
 }
 var file_harpia_chat_v1_chat_proto_depIdxs = []int32{
 	0,  // 0: harpia.chat.v1.Thread.status:type_name -> harpia.chat.v1.ThreadStatus
-	23, // 1: harpia.chat.v1.Thread.archived_at:type_name -> google.protobuf.Timestamp
-	23, // 2: harpia.chat.v1.Thread.created_at:type_name -> google.protobuf.Timestamp
-	23, // 3: harpia.chat.v1.Thread.updated_at:type_name -> google.protobuf.Timestamp
+	28, // 1: harpia.chat.v1.Thread.archived_at:type_name -> google.protobuf.Timestamp
+	28, // 2: harpia.chat.v1.Thread.created_at:type_name -> google.protobuf.Timestamp
+	28, // 3: harpia.chat.v1.Thread.updated_at:type_name -> google.protobuf.Timestamp
 	1,  // 4: harpia.chat.v1.ThreadMessage.role:type_name -> harpia.chat.v1.ThreadMessageRole
 	2,  // 5: harpia.chat.v1.ThreadMessage.kind:type_name -> harpia.chat.v1.ThreadMessageKind
-	23, // 6: harpia.chat.v1.ThreadMessage.created_at:type_name -> google.protobuf.Timestamp
-	3,  // 7: harpia.chat.v1.CreateThreadResponse.thread:type_name -> harpia.chat.v1.Thread
-	4,  // 8: harpia.chat.v1.CreateThreadResponse.initial_message:type_name -> harpia.chat.v1.ThreadMessage
-	3,  // 9: harpia.chat.v1.GetThreadResponse.thread:type_name -> harpia.chat.v1.Thread
+	28, // 6: harpia.chat.v1.ThreadMessage.created_at:type_name -> google.protobuf.Timestamp
+	5,  // 7: harpia.chat.v1.CreateThreadResponse.thread:type_name -> harpia.chat.v1.Thread
+	6,  // 8: harpia.chat.v1.CreateThreadResponse.initial_message:type_name -> harpia.chat.v1.ThreadMessage
+	5,  // 9: harpia.chat.v1.GetThreadResponse.thread:type_name -> harpia.chat.v1.Thread
 	0,  // 10: harpia.chat.v1.ListThreadsRequest.status:type_name -> harpia.chat.v1.ThreadStatus
-	3,  // 11: harpia.chat.v1.ListThreadsResponse.threads:type_name -> harpia.chat.v1.Thread
-	3,  // 12: harpia.chat.v1.ArchiveThreadResponse.thread:type_name -> harpia.chat.v1.Thread
-	4,  // 13: harpia.chat.v1.ListThreadMessagesResponse.messages:type_name -> harpia.chat.v1.ThreadMessage
-	4,  // 14: harpia.chat.v1.WatchThreadMessagesResponse.messages:type_name -> harpia.chat.v1.ThreadMessage
+	5,  // 11: harpia.chat.v1.ListThreadsResponse.threads:type_name -> harpia.chat.v1.Thread
+	5,  // 12: harpia.chat.v1.ArchiveThreadResponse.thread:type_name -> harpia.chat.v1.Thread
+	6,  // 13: harpia.chat.v1.ListThreadMessagesResponse.messages:type_name -> harpia.chat.v1.ThreadMessage
+	6,  // 14: harpia.chat.v1.WatchThreadMessagesResponse.messages:type_name -> harpia.chat.v1.ThreadMessage
 	1,  // 15: harpia.chat.v1.AppendThreadMessageRequest.role:type_name -> harpia.chat.v1.ThreadMessageRole
 	2,  // 16: harpia.chat.v1.AppendThreadMessageRequest.kind:type_name -> harpia.chat.v1.ThreadMessageKind
-	4,  // 17: harpia.chat.v1.AppendThreadMessageResponse.message:type_name -> harpia.chat.v1.ThreadMessage
-	4,  // 18: harpia.chat.v1.ProposePlanResponse.message:type_name -> harpia.chat.v1.ThreadMessage
-	24, // 19: harpia.chat.v1.ReviewRaisedPayload.subject_artifact_ref:type_name -> harpia.artifacts.v1.ArtifactRef
-	5,  // 20: harpia.chat.v1.ThreadService.CreateThread:input_type -> harpia.chat.v1.CreateThreadRequest
-	7,  // 21: harpia.chat.v1.ThreadService.GetThread:input_type -> harpia.chat.v1.GetThreadRequest
-	9,  // 22: harpia.chat.v1.ThreadService.ListThreads:input_type -> harpia.chat.v1.ListThreadsRequest
-	11, // 23: harpia.chat.v1.ThreadService.ArchiveThread:input_type -> harpia.chat.v1.ArchiveThreadRequest
-	13, // 24: harpia.chat.v1.ThreadService.ListThreadMessages:input_type -> harpia.chat.v1.ListThreadMessagesRequest
-	15, // 25: harpia.chat.v1.ThreadService.WatchThreadMessages:input_type -> harpia.chat.v1.WatchThreadMessagesRequest
-	17, // 26: harpia.chat.v1.ThreadService.AppendThreadMessage:input_type -> harpia.chat.v1.AppendThreadMessageRequest
-	19, // 27: harpia.chat.v1.ThreadService.ProposePlan:input_type -> harpia.chat.v1.ProposePlanRequest
-	6,  // 28: harpia.chat.v1.ThreadService.CreateThread:output_type -> harpia.chat.v1.CreateThreadResponse
-	8,  // 29: harpia.chat.v1.ThreadService.GetThread:output_type -> harpia.chat.v1.GetThreadResponse
-	10, // 30: harpia.chat.v1.ThreadService.ListThreads:output_type -> harpia.chat.v1.ListThreadsResponse
-	12, // 31: harpia.chat.v1.ThreadService.ArchiveThread:output_type -> harpia.chat.v1.ArchiveThreadResponse
-	14, // 32: harpia.chat.v1.ThreadService.ListThreadMessages:output_type -> harpia.chat.v1.ListThreadMessagesResponse
-	16, // 33: harpia.chat.v1.ThreadService.WatchThreadMessages:output_type -> harpia.chat.v1.WatchThreadMessagesResponse
-	18, // 34: harpia.chat.v1.ThreadService.AppendThreadMessage:output_type -> harpia.chat.v1.AppendThreadMessageResponse
-	20, // 35: harpia.chat.v1.ThreadService.ProposePlan:output_type -> harpia.chat.v1.ProposePlanResponse
-	28, // [28:36] is the sub-list for method output_type
-	20, // [20:28] is the sub-list for method input_type
-	20, // [20:20] is the sub-list for extension type_name
-	20, // [20:20] is the sub-list for extension extendee
-	0,  // [0:20] is the sub-list for field type_name
+	6,  // 17: harpia.chat.v1.AppendThreadMessageResponse.message:type_name -> harpia.chat.v1.ThreadMessage
+	6,  // 18: harpia.chat.v1.ProposePlanResponse.message:type_name -> harpia.chat.v1.ThreadMessage
+	4,  // 19: harpia.chat.v1.ExecutionInteractionPointer.kind:type_name -> harpia.chat.v1.ExecutionInteractionKind
+	29, // 20: harpia.chat.v1.ExecutionInteractionPointer.subject_artifact_ref:type_name -> harpia.artifacts.v1.ArtifactRef
+	3,  // 21: harpia.chat.v1.ExecutionPromptPayload.state:type_name -> harpia.chat.v1.ExecutionPromptState
+	23, // 22: harpia.chat.v1.ExecutionPromptPayload.pending_interaction:type_name -> harpia.chat.v1.ExecutionInteractionPointer
+	29, // 23: harpia.chat.v1.ExecutionPromptPayload.latest_artifact_ref:type_name -> harpia.artifacts.v1.ArtifactRef
+	24, // 24: harpia.chat.v1.ExecutionPromptPayload.actions:type_name -> harpia.chat.v1.ExecutionPromptAction
+	29, // 25: harpia.chat.v1.ReviewRaisedPayload.subject_artifact_ref:type_name -> harpia.artifacts.v1.ArtifactRef
+	7,  // 26: harpia.chat.v1.ThreadService.CreateThread:input_type -> harpia.chat.v1.CreateThreadRequest
+	9,  // 27: harpia.chat.v1.ThreadService.GetThread:input_type -> harpia.chat.v1.GetThreadRequest
+	11, // 28: harpia.chat.v1.ThreadService.ListThreads:input_type -> harpia.chat.v1.ListThreadsRequest
+	13, // 29: harpia.chat.v1.ThreadService.ArchiveThread:input_type -> harpia.chat.v1.ArchiveThreadRequest
+	15, // 30: harpia.chat.v1.ThreadService.ListThreadMessages:input_type -> harpia.chat.v1.ListThreadMessagesRequest
+	17, // 31: harpia.chat.v1.ThreadService.WatchThreadMessages:input_type -> harpia.chat.v1.WatchThreadMessagesRequest
+	19, // 32: harpia.chat.v1.ThreadService.AppendThreadMessage:input_type -> harpia.chat.v1.AppendThreadMessageRequest
+	21, // 33: harpia.chat.v1.ThreadService.ProposePlan:input_type -> harpia.chat.v1.ProposePlanRequest
+	8,  // 34: harpia.chat.v1.ThreadService.CreateThread:output_type -> harpia.chat.v1.CreateThreadResponse
+	10, // 35: harpia.chat.v1.ThreadService.GetThread:output_type -> harpia.chat.v1.GetThreadResponse
+	12, // 36: harpia.chat.v1.ThreadService.ListThreads:output_type -> harpia.chat.v1.ListThreadsResponse
+	14, // 37: harpia.chat.v1.ThreadService.ArchiveThread:output_type -> harpia.chat.v1.ArchiveThreadResponse
+	16, // 38: harpia.chat.v1.ThreadService.ListThreadMessages:output_type -> harpia.chat.v1.ListThreadMessagesResponse
+	18, // 39: harpia.chat.v1.ThreadService.WatchThreadMessages:output_type -> harpia.chat.v1.WatchThreadMessagesResponse
+	20, // 40: harpia.chat.v1.ThreadService.AppendThreadMessage:output_type -> harpia.chat.v1.AppendThreadMessageResponse
+	22, // 41: harpia.chat.v1.ThreadService.ProposePlan:output_type -> harpia.chat.v1.ProposePlanResponse
+	34, // [34:42] is the sub-list for method output_type
+	26, // [26:34] is the sub-list for method input_type
+	26, // [26:26] is the sub-list for extension type_name
+	26, // [26:26] is the sub-list for extension extendee
+	0,  // [0:26] is the sub-list for field type_name
 }
 
 func init() { file_harpia_chat_v1_chat_proto_init() }
@@ -1759,8 +2223,8 @@ func file_harpia_chat_v1_chat_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_harpia_chat_v1_chat_proto_rawDesc), len(file_harpia_chat_v1_chat_proto_rawDesc)),
-			NumEnums:      3,
-			NumMessages:   20,
+			NumEnums:      5,
+			NumMessages:   23,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

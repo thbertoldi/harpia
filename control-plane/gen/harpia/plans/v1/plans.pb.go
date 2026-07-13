@@ -2017,8 +2017,12 @@ type PlanExecution struct {
 	UpdatedAt                 string                 `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	// Immutable active graph selected when this execution was created.
 	ActiveStepKeys []string `protobuf:"bytes,11,rep,name=active_step_keys,json=activeStepKeys,proto3" json:"active_step_keys,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Immutable template captured with the execution snapshot. Consumers must
+	// derive titles, order, and active rows from this snapshot, never the
+	// current catalog template.
+	PlanTemplateSnapshot *PlanTemplate `protobuf:"bytes,12,opt,name=plan_template_snapshot,json=planTemplateSnapshot,proto3" json:"plan_template_snapshot,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *PlanExecution) Reset() {
@@ -2124,6 +2128,13 @@ func (x *PlanExecution) GetUpdatedAt() string {
 func (x *PlanExecution) GetActiveStepKeys() []string {
 	if x != nil {
 		return x.ActiveStepKeys
+	}
+	return nil
+}
+
+func (x *PlanExecution) GetPlanTemplateSnapshot() *PlanTemplate {
+	if x != nil {
+		return x.PlanTemplateSnapshot
 	}
 	return nil
 }
@@ -6229,7 +6240,7 @@ const file_harpia_plans_v1_plans_proto_rawDesc = "" +
 	"\x15content_output_format\x18\x04 \x01(\x0e2$.harpia.plans.v1.ContentOutputFormatR\x13contentOutputFormat\"S\n" +
 	"\fPlanSchedule\x12'\n" +
 	"\x0fcron_expression\x18\x01 \x01(\tR\x0ecronExpression\x12\x1a\n" +
-	"\btimezone\x18\x02 \x01(\tR\btimezone\"\x89\x04\n" +
+	"\btimezone\x18\x02 \x01(\tR\btimezone\"\xde\x04\n" +
 	"\rPlanExecution\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x122\n" +
@@ -6244,7 +6255,8 @@ const file_harpia_plans_v1_plans_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\n" +
 	" \x01(\tR\tupdatedAt\x12(\n" +
-	"\x10active_step_keys\x18\v \x03(\tR\x0eactiveStepKeys\"\xab\x05\n" +
+	"\x10active_step_keys\x18\v \x03(\tR\x0eactiveStepKeys\x12S\n" +
+	"\x16plan_template_snapshot\x18\f \x01(\v2\x1d.harpia.plans.v1.PlanTemplateR\x14planTemplateSnapshot\"\xab\x05\n" +
 	"\rStepExecution\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12*\n" +
 	"\x11plan_execution_id\x18\x02 \x01(\tR\x0fplanExecutionId\x12\"\n" +
@@ -6829,126 +6841,127 @@ var file_harpia_plans_v1_plans_proto_depIdxs = []int32{
 	24,  // 22: harpia.plans.v1.PlanExecution.plan_configuration_snapshot:type_name -> harpia.plans.v1.PlanConfiguration
 	10,  // 23: harpia.plans.v1.PlanExecution.status:type_name -> harpia.plans.v1.PlanExecutionStatus
 	31,  // 24: harpia.plans.v1.PlanExecution.step_executions:type_name -> harpia.plans.v1.StepExecution
-	11,  // 25: harpia.plans.v1.StepExecution.status:type_name -> harpia.plans.v1.StepExecutionStatus
-	93,  // 26: harpia.plans.v1.StepExecution.input_artifact_ref:type_name -> harpia.artifacts.v1.ArtifactRef
-	93,  // 27: harpia.plans.v1.StepExecution.output_artifact_ref:type_name -> harpia.artifacts.v1.ArtifactRef
-	17,  // 28: harpia.plans.v1.GetPlanTemplateResponse.plan_template:type_name -> harpia.plans.v1.PlanTemplate
-	17,  // 29: harpia.plans.v1.GetPlanTemplateByKeyResponse.plan_template:type_name -> harpia.plans.v1.PlanTemplate
-	17,  // 30: harpia.plans.v1.ListPlanTemplatesResponse.plan_templates:type_name -> harpia.plans.v1.PlanTemplate
-	6,   // 31: harpia.plans.v1.CreatePlanConfigurationRequest.status:type_name -> harpia.plans.v1.PlanConfigurationStatus
-	25,  // 32: harpia.plans.v1.CreatePlanConfigurationRequest.seed_artifacts:type_name -> harpia.plans.v1.SeedArtifactBinding
-	26,  // 33: harpia.plans.v1.CreatePlanConfigurationRequest.slot_bindings:type_name -> harpia.plans.v1.SlotBinding
-	27,  // 34: harpia.plans.v1.CreatePlanConfigurationRequest.overseer_bindings:type_name -> harpia.plans.v1.OverseerBinding
-	28,  // 35: harpia.plans.v1.CreatePlanConfigurationRequest.behavior_policies:type_name -> harpia.plans.v1.PlanBehaviorPolicies
-	29,  // 36: harpia.plans.v1.CreatePlanConfigurationRequest.schedule:type_name -> harpia.plans.v1.PlanSchedule
-	5,   // 37: harpia.plans.v1.CreatePlanConfigurationRequest.kind:type_name -> harpia.plans.v1.PlanConfigurationKind
-	24,  // 38: harpia.plans.v1.CreatePlanConfigurationResponse.plan_configuration:type_name -> harpia.plans.v1.PlanConfiguration
-	24,  // 39: harpia.plans.v1.GetPlanConfigurationResponse.plan_configuration:type_name -> harpia.plans.v1.PlanConfiguration
-	6,   // 40: harpia.plans.v1.UpdatePlanConfigurationRequest.status:type_name -> harpia.plans.v1.PlanConfigurationStatus
-	25,  // 41: harpia.plans.v1.UpdatePlanConfigurationRequest.seed_artifacts:type_name -> harpia.plans.v1.SeedArtifactBinding
-	26,  // 42: harpia.plans.v1.UpdatePlanConfigurationRequest.slot_bindings:type_name -> harpia.plans.v1.SlotBinding
-	27,  // 43: harpia.plans.v1.UpdatePlanConfigurationRequest.overseer_bindings:type_name -> harpia.plans.v1.OverseerBinding
-	28,  // 44: harpia.plans.v1.UpdatePlanConfigurationRequest.behavior_policies:type_name -> harpia.plans.v1.PlanBehaviorPolicies
-	29,  // 45: harpia.plans.v1.UpdatePlanConfigurationRequest.schedule:type_name -> harpia.plans.v1.PlanSchedule
-	5,   // 46: harpia.plans.v1.UpdatePlanConfigurationRequest.kind:type_name -> harpia.plans.v1.PlanConfigurationKind
-	24,  // 47: harpia.plans.v1.UpdatePlanConfigurationResponse.plan_configuration:type_name -> harpia.plans.v1.PlanConfiguration
-	47,  // 48: harpia.plans.v1.SubmitConfigurationSelectionRequest.selection:type_name -> harpia.plans.v1.ConfigurationSelection
-	24,  // 49: harpia.plans.v1.SubmitConfigurationSelectionResponse.plan_configuration:type_name -> harpia.plans.v1.PlanConfiguration
-	94,  // 50: harpia.plans.v1.SubmitConfigurationSelectionResponse.messages:type_name -> harpia.chat.v1.ThreadMessage
-	6,   // 51: harpia.plans.v1.ListPlanConfigurationsRequest.status:type_name -> harpia.plans.v1.PlanConfigurationStatus
-	5,   // 52: harpia.plans.v1.ListPlanConfigurationsRequest.kind:type_name -> harpia.plans.v1.PlanConfigurationKind
-	24,  // 53: harpia.plans.v1.ListPlanConfigurationsResponse.plan_configurations:type_name -> harpia.plans.v1.PlanConfiguration
-	30,  // 54: harpia.plans.v1.CreatePlanExecutionResponse.plan_execution:type_name -> harpia.plans.v1.PlanExecution
-	30,  // 55: harpia.plans.v1.RetryPlanExecutionResponse.plan_execution:type_name -> harpia.plans.v1.PlanExecution
-	30,  // 56: harpia.plans.v1.GetPlanExecutionResponse.plan_execution:type_name -> harpia.plans.v1.PlanExecution
-	30,  // 57: harpia.plans.v1.ListPlanExecutionsResponse.plan_executions:type_name -> harpia.plans.v1.PlanExecution
-	31,  // 58: harpia.plans.v1.GetStepExecutionResponse.step_execution:type_name -> harpia.plans.v1.StepExecution
-	31,  // 59: harpia.plans.v1.ListStepExecutionsResponse.step_executions:type_name -> harpia.plans.v1.StepExecution
-	12,  // 60: harpia.plans.v1.ElicitationRequest.status:type_name -> harpia.plans.v1.ElicitationStatus
-	7,   // 61: harpia.plans.v1.ElicitationRequest.timeout_behavior:type_name -> harpia.plans.v1.ElicitationTimeoutBehavior
-	64,  // 62: harpia.plans.v1.ElicitationRequest.thread:type_name -> harpia.plans.v1.ThreadMessage
-	13,  // 63: harpia.plans.v1.ThreadMessage.role:type_name -> harpia.plans.v1.ThreadMessageRole
-	12,  // 64: harpia.plans.v1.ListElicitationsRequest.status:type_name -> harpia.plans.v1.ElicitationStatus
-	63,  // 65: harpia.plans.v1.ListElicitationsResponse.elicitations:type_name -> harpia.plans.v1.ElicitationRequest
-	63,  // 66: harpia.plans.v1.GetElicitationResponse.elicitation:type_name -> harpia.plans.v1.ElicitationRequest
-	63,  // 67: harpia.plans.v1.RespondToElicitationResponse.elicitation:type_name -> harpia.plans.v1.ElicitationRequest
-	63,  // 68: harpia.plans.v1.WatchElicitationsResponse.elicitations:type_name -> harpia.plans.v1.ElicitationRequest
-	93,  // 69: harpia.plans.v1.ReviewRequest.subject_artifact_ref:type_name -> harpia.artifacts.v1.ArtifactRef
-	14,  // 70: harpia.plans.v1.ReviewRequest.status:type_name -> harpia.plans.v1.ReviewRequestStatus
-	75,  // 71: harpia.plans.v1.ReviewRequest.decision:type_name -> harpia.plans.v1.ReviewDecision
-	15,  // 72: harpia.plans.v1.ReviewDecision.kind:type_name -> harpia.plans.v1.ReviewDecisionKind
-	14,  // 73: harpia.plans.v1.ListReviewRequestsRequest.status:type_name -> harpia.plans.v1.ReviewRequestStatus
-	74,  // 74: harpia.plans.v1.ListReviewRequestsResponse.review_requests:type_name -> harpia.plans.v1.ReviewRequest
-	74,  // 75: harpia.plans.v1.GetReviewRequestResponse.review_request:type_name -> harpia.plans.v1.ReviewRequest
-	75,  // 76: harpia.plans.v1.RespondToReviewRequestRequest.decision:type_name -> harpia.plans.v1.ReviewDecision
-	74,  // 77: harpia.plans.v1.RespondToReviewRequestResponse.review_request:type_name -> harpia.plans.v1.ReviewRequest
-	74,  // 78: harpia.plans.v1.WatchReviewRequestsResponse.review_requests:type_name -> harpia.plans.v1.ReviewRequest
-	16,  // 79: harpia.plans.v1.ApprovalRequest.status:type_name -> harpia.plans.v1.ApprovalRequestStatus
-	93,  // 80: harpia.plans.v1.ApprovalRequest.subject_artifact_ref:type_name -> harpia.artifacts.v1.ArtifactRef
-	16,  // 81: harpia.plans.v1.ListApprovalRequestsRequest.status:type_name -> harpia.plans.v1.ApprovalRequestStatus
-	84,  // 82: harpia.plans.v1.ListApprovalRequestsResponse.approval_requests:type_name -> harpia.plans.v1.ApprovalRequest
-	84,  // 83: harpia.plans.v1.GetApprovalRequestResponse.approval_request:type_name -> harpia.plans.v1.ApprovalRequest
-	84,  // 84: harpia.plans.v1.RespondToApprovalRequestResponse.approval_request:type_name -> harpia.plans.v1.ApprovalRequest
-	84,  // 85: harpia.plans.v1.WatchApprovalRequestsResponse.approval_requests:type_name -> harpia.plans.v1.ApprovalRequest
-	32,  // 86: harpia.plans.v1.PlanService.GetPlanTemplate:input_type -> harpia.plans.v1.GetPlanTemplateRequest
-	34,  // 87: harpia.plans.v1.PlanService.GetPlanTemplateByKey:input_type -> harpia.plans.v1.GetPlanTemplateByKeyRequest
-	36,  // 88: harpia.plans.v1.PlanService.ListPlanTemplates:input_type -> harpia.plans.v1.ListPlanTemplatesRequest
-	38,  // 89: harpia.plans.v1.PlanService.CreatePlanConfiguration:input_type -> harpia.plans.v1.CreatePlanConfigurationRequest
-	40,  // 90: harpia.plans.v1.PlanService.GetPlanConfiguration:input_type -> harpia.plans.v1.GetPlanConfigurationRequest
-	42,  // 91: harpia.plans.v1.PlanService.UpdatePlanConfiguration:input_type -> harpia.plans.v1.UpdatePlanConfigurationRequest
-	49,  // 92: harpia.plans.v1.PlanService.ListPlanConfigurations:input_type -> harpia.plans.v1.ListPlanConfigurationsRequest
-	44,  // 93: harpia.plans.v1.PlanService.NextTurn:input_type -> harpia.plans.v1.NextTurnRequest
-	46,  // 94: harpia.plans.v1.PlanService.SubmitConfigurationSelection:input_type -> harpia.plans.v1.SubmitConfigurationSelectionRequest
-	51,  // 95: harpia.plans.v1.PlanService.CreatePlanExecution:input_type -> harpia.plans.v1.CreatePlanExecutionRequest
-	53,  // 96: harpia.plans.v1.PlanService.RetryPlanExecution:input_type -> harpia.plans.v1.RetryPlanExecutionRequest
-	55,  // 97: harpia.plans.v1.PlanService.GetPlanExecution:input_type -> harpia.plans.v1.GetPlanExecutionRequest
-	57,  // 98: harpia.plans.v1.PlanService.ListPlanExecutions:input_type -> harpia.plans.v1.ListPlanExecutionsRequest
-	59,  // 99: harpia.plans.v1.PlanService.GetStepExecution:input_type -> harpia.plans.v1.GetStepExecutionRequest
-	61,  // 100: harpia.plans.v1.PlanService.ListStepExecutions:input_type -> harpia.plans.v1.ListStepExecutionsRequest
-	66,  // 101: harpia.plans.v1.PlanService.ListElicitations:input_type -> harpia.plans.v1.ListElicitationsRequest
-	68,  // 102: harpia.plans.v1.PlanService.GetElicitation:input_type -> harpia.plans.v1.GetElicitationRequest
-	70,  // 103: harpia.plans.v1.PlanService.RespondToElicitation:input_type -> harpia.plans.v1.RespondToElicitationRequest
-	72,  // 104: harpia.plans.v1.PlanService.WatchElicitations:input_type -> harpia.plans.v1.WatchElicitationsRequest
-	76,  // 105: harpia.plans.v1.PlanService.ListReviewRequests:input_type -> harpia.plans.v1.ListReviewRequestsRequest
-	78,  // 106: harpia.plans.v1.PlanService.GetReviewRequest:input_type -> harpia.plans.v1.GetReviewRequestRequest
-	80,  // 107: harpia.plans.v1.PlanService.RespondToReviewRequest:input_type -> harpia.plans.v1.RespondToReviewRequestRequest
-	82,  // 108: harpia.plans.v1.PlanService.WatchReviewRequests:input_type -> harpia.plans.v1.WatchReviewRequestsRequest
-	85,  // 109: harpia.plans.v1.PlanService.ListApprovalRequests:input_type -> harpia.plans.v1.ListApprovalRequestsRequest
-	87,  // 110: harpia.plans.v1.PlanService.GetApprovalRequest:input_type -> harpia.plans.v1.GetApprovalRequestRequest
-	89,  // 111: harpia.plans.v1.PlanService.RespondToApprovalRequest:input_type -> harpia.plans.v1.RespondToApprovalRequestRequest
-	91,  // 112: harpia.plans.v1.PlanService.WatchApprovalRequests:input_type -> harpia.plans.v1.WatchApprovalRequestsRequest
-	33,  // 113: harpia.plans.v1.PlanService.GetPlanTemplate:output_type -> harpia.plans.v1.GetPlanTemplateResponse
-	35,  // 114: harpia.plans.v1.PlanService.GetPlanTemplateByKey:output_type -> harpia.plans.v1.GetPlanTemplateByKeyResponse
-	37,  // 115: harpia.plans.v1.PlanService.ListPlanTemplates:output_type -> harpia.plans.v1.ListPlanTemplatesResponse
-	39,  // 116: harpia.plans.v1.PlanService.CreatePlanConfiguration:output_type -> harpia.plans.v1.CreatePlanConfigurationResponse
-	41,  // 117: harpia.plans.v1.PlanService.GetPlanConfiguration:output_type -> harpia.plans.v1.GetPlanConfigurationResponse
-	43,  // 118: harpia.plans.v1.PlanService.UpdatePlanConfiguration:output_type -> harpia.plans.v1.UpdatePlanConfigurationResponse
-	50,  // 119: harpia.plans.v1.PlanService.ListPlanConfigurations:output_type -> harpia.plans.v1.ListPlanConfigurationsResponse
-	45,  // 120: harpia.plans.v1.PlanService.NextTurn:output_type -> harpia.plans.v1.NextTurnResponse
-	48,  // 121: harpia.plans.v1.PlanService.SubmitConfigurationSelection:output_type -> harpia.plans.v1.SubmitConfigurationSelectionResponse
-	52,  // 122: harpia.plans.v1.PlanService.CreatePlanExecution:output_type -> harpia.plans.v1.CreatePlanExecutionResponse
-	54,  // 123: harpia.plans.v1.PlanService.RetryPlanExecution:output_type -> harpia.plans.v1.RetryPlanExecutionResponse
-	56,  // 124: harpia.plans.v1.PlanService.GetPlanExecution:output_type -> harpia.plans.v1.GetPlanExecutionResponse
-	58,  // 125: harpia.plans.v1.PlanService.ListPlanExecutions:output_type -> harpia.plans.v1.ListPlanExecutionsResponse
-	60,  // 126: harpia.plans.v1.PlanService.GetStepExecution:output_type -> harpia.plans.v1.GetStepExecutionResponse
-	62,  // 127: harpia.plans.v1.PlanService.ListStepExecutions:output_type -> harpia.plans.v1.ListStepExecutionsResponse
-	67,  // 128: harpia.plans.v1.PlanService.ListElicitations:output_type -> harpia.plans.v1.ListElicitationsResponse
-	69,  // 129: harpia.plans.v1.PlanService.GetElicitation:output_type -> harpia.plans.v1.GetElicitationResponse
-	71,  // 130: harpia.plans.v1.PlanService.RespondToElicitation:output_type -> harpia.plans.v1.RespondToElicitationResponse
-	73,  // 131: harpia.plans.v1.PlanService.WatchElicitations:output_type -> harpia.plans.v1.WatchElicitationsResponse
-	77,  // 132: harpia.plans.v1.PlanService.ListReviewRequests:output_type -> harpia.plans.v1.ListReviewRequestsResponse
-	79,  // 133: harpia.plans.v1.PlanService.GetReviewRequest:output_type -> harpia.plans.v1.GetReviewRequestResponse
-	81,  // 134: harpia.plans.v1.PlanService.RespondToReviewRequest:output_type -> harpia.plans.v1.RespondToReviewRequestResponse
-	83,  // 135: harpia.plans.v1.PlanService.WatchReviewRequests:output_type -> harpia.plans.v1.WatchReviewRequestsResponse
-	86,  // 136: harpia.plans.v1.PlanService.ListApprovalRequests:output_type -> harpia.plans.v1.ListApprovalRequestsResponse
-	88,  // 137: harpia.plans.v1.PlanService.GetApprovalRequest:output_type -> harpia.plans.v1.GetApprovalRequestResponse
-	90,  // 138: harpia.plans.v1.PlanService.RespondToApprovalRequest:output_type -> harpia.plans.v1.RespondToApprovalRequestResponse
-	92,  // 139: harpia.plans.v1.PlanService.WatchApprovalRequests:output_type -> harpia.plans.v1.WatchApprovalRequestsResponse
-	113, // [113:140] is the sub-list for method output_type
-	86,  // [86:113] is the sub-list for method input_type
-	86,  // [86:86] is the sub-list for extension type_name
-	86,  // [86:86] is the sub-list for extension extendee
-	0,   // [0:86] is the sub-list for field type_name
+	17,  // 25: harpia.plans.v1.PlanExecution.plan_template_snapshot:type_name -> harpia.plans.v1.PlanTemplate
+	11,  // 26: harpia.plans.v1.StepExecution.status:type_name -> harpia.plans.v1.StepExecutionStatus
+	93,  // 27: harpia.plans.v1.StepExecution.input_artifact_ref:type_name -> harpia.artifacts.v1.ArtifactRef
+	93,  // 28: harpia.plans.v1.StepExecution.output_artifact_ref:type_name -> harpia.artifacts.v1.ArtifactRef
+	17,  // 29: harpia.plans.v1.GetPlanTemplateResponse.plan_template:type_name -> harpia.plans.v1.PlanTemplate
+	17,  // 30: harpia.plans.v1.GetPlanTemplateByKeyResponse.plan_template:type_name -> harpia.plans.v1.PlanTemplate
+	17,  // 31: harpia.plans.v1.ListPlanTemplatesResponse.plan_templates:type_name -> harpia.plans.v1.PlanTemplate
+	6,   // 32: harpia.plans.v1.CreatePlanConfigurationRequest.status:type_name -> harpia.plans.v1.PlanConfigurationStatus
+	25,  // 33: harpia.plans.v1.CreatePlanConfigurationRequest.seed_artifacts:type_name -> harpia.plans.v1.SeedArtifactBinding
+	26,  // 34: harpia.plans.v1.CreatePlanConfigurationRequest.slot_bindings:type_name -> harpia.plans.v1.SlotBinding
+	27,  // 35: harpia.plans.v1.CreatePlanConfigurationRequest.overseer_bindings:type_name -> harpia.plans.v1.OverseerBinding
+	28,  // 36: harpia.plans.v1.CreatePlanConfigurationRequest.behavior_policies:type_name -> harpia.plans.v1.PlanBehaviorPolicies
+	29,  // 37: harpia.plans.v1.CreatePlanConfigurationRequest.schedule:type_name -> harpia.plans.v1.PlanSchedule
+	5,   // 38: harpia.plans.v1.CreatePlanConfigurationRequest.kind:type_name -> harpia.plans.v1.PlanConfigurationKind
+	24,  // 39: harpia.plans.v1.CreatePlanConfigurationResponse.plan_configuration:type_name -> harpia.plans.v1.PlanConfiguration
+	24,  // 40: harpia.plans.v1.GetPlanConfigurationResponse.plan_configuration:type_name -> harpia.plans.v1.PlanConfiguration
+	6,   // 41: harpia.plans.v1.UpdatePlanConfigurationRequest.status:type_name -> harpia.plans.v1.PlanConfigurationStatus
+	25,  // 42: harpia.plans.v1.UpdatePlanConfigurationRequest.seed_artifacts:type_name -> harpia.plans.v1.SeedArtifactBinding
+	26,  // 43: harpia.plans.v1.UpdatePlanConfigurationRequest.slot_bindings:type_name -> harpia.plans.v1.SlotBinding
+	27,  // 44: harpia.plans.v1.UpdatePlanConfigurationRequest.overseer_bindings:type_name -> harpia.plans.v1.OverseerBinding
+	28,  // 45: harpia.plans.v1.UpdatePlanConfigurationRequest.behavior_policies:type_name -> harpia.plans.v1.PlanBehaviorPolicies
+	29,  // 46: harpia.plans.v1.UpdatePlanConfigurationRequest.schedule:type_name -> harpia.plans.v1.PlanSchedule
+	5,   // 47: harpia.plans.v1.UpdatePlanConfigurationRequest.kind:type_name -> harpia.plans.v1.PlanConfigurationKind
+	24,  // 48: harpia.plans.v1.UpdatePlanConfigurationResponse.plan_configuration:type_name -> harpia.plans.v1.PlanConfiguration
+	47,  // 49: harpia.plans.v1.SubmitConfigurationSelectionRequest.selection:type_name -> harpia.plans.v1.ConfigurationSelection
+	24,  // 50: harpia.plans.v1.SubmitConfigurationSelectionResponse.plan_configuration:type_name -> harpia.plans.v1.PlanConfiguration
+	94,  // 51: harpia.plans.v1.SubmitConfigurationSelectionResponse.messages:type_name -> harpia.chat.v1.ThreadMessage
+	6,   // 52: harpia.plans.v1.ListPlanConfigurationsRequest.status:type_name -> harpia.plans.v1.PlanConfigurationStatus
+	5,   // 53: harpia.plans.v1.ListPlanConfigurationsRequest.kind:type_name -> harpia.plans.v1.PlanConfigurationKind
+	24,  // 54: harpia.plans.v1.ListPlanConfigurationsResponse.plan_configurations:type_name -> harpia.plans.v1.PlanConfiguration
+	30,  // 55: harpia.plans.v1.CreatePlanExecutionResponse.plan_execution:type_name -> harpia.plans.v1.PlanExecution
+	30,  // 56: harpia.plans.v1.RetryPlanExecutionResponse.plan_execution:type_name -> harpia.plans.v1.PlanExecution
+	30,  // 57: harpia.plans.v1.GetPlanExecutionResponse.plan_execution:type_name -> harpia.plans.v1.PlanExecution
+	30,  // 58: harpia.plans.v1.ListPlanExecutionsResponse.plan_executions:type_name -> harpia.plans.v1.PlanExecution
+	31,  // 59: harpia.plans.v1.GetStepExecutionResponse.step_execution:type_name -> harpia.plans.v1.StepExecution
+	31,  // 60: harpia.plans.v1.ListStepExecutionsResponse.step_executions:type_name -> harpia.plans.v1.StepExecution
+	12,  // 61: harpia.plans.v1.ElicitationRequest.status:type_name -> harpia.plans.v1.ElicitationStatus
+	7,   // 62: harpia.plans.v1.ElicitationRequest.timeout_behavior:type_name -> harpia.plans.v1.ElicitationTimeoutBehavior
+	64,  // 63: harpia.plans.v1.ElicitationRequest.thread:type_name -> harpia.plans.v1.ThreadMessage
+	13,  // 64: harpia.plans.v1.ThreadMessage.role:type_name -> harpia.plans.v1.ThreadMessageRole
+	12,  // 65: harpia.plans.v1.ListElicitationsRequest.status:type_name -> harpia.plans.v1.ElicitationStatus
+	63,  // 66: harpia.plans.v1.ListElicitationsResponse.elicitations:type_name -> harpia.plans.v1.ElicitationRequest
+	63,  // 67: harpia.plans.v1.GetElicitationResponse.elicitation:type_name -> harpia.plans.v1.ElicitationRequest
+	63,  // 68: harpia.plans.v1.RespondToElicitationResponse.elicitation:type_name -> harpia.plans.v1.ElicitationRequest
+	63,  // 69: harpia.plans.v1.WatchElicitationsResponse.elicitations:type_name -> harpia.plans.v1.ElicitationRequest
+	93,  // 70: harpia.plans.v1.ReviewRequest.subject_artifact_ref:type_name -> harpia.artifacts.v1.ArtifactRef
+	14,  // 71: harpia.plans.v1.ReviewRequest.status:type_name -> harpia.plans.v1.ReviewRequestStatus
+	75,  // 72: harpia.plans.v1.ReviewRequest.decision:type_name -> harpia.plans.v1.ReviewDecision
+	15,  // 73: harpia.plans.v1.ReviewDecision.kind:type_name -> harpia.plans.v1.ReviewDecisionKind
+	14,  // 74: harpia.plans.v1.ListReviewRequestsRequest.status:type_name -> harpia.plans.v1.ReviewRequestStatus
+	74,  // 75: harpia.plans.v1.ListReviewRequestsResponse.review_requests:type_name -> harpia.plans.v1.ReviewRequest
+	74,  // 76: harpia.plans.v1.GetReviewRequestResponse.review_request:type_name -> harpia.plans.v1.ReviewRequest
+	75,  // 77: harpia.plans.v1.RespondToReviewRequestRequest.decision:type_name -> harpia.plans.v1.ReviewDecision
+	74,  // 78: harpia.plans.v1.RespondToReviewRequestResponse.review_request:type_name -> harpia.plans.v1.ReviewRequest
+	74,  // 79: harpia.plans.v1.WatchReviewRequestsResponse.review_requests:type_name -> harpia.plans.v1.ReviewRequest
+	16,  // 80: harpia.plans.v1.ApprovalRequest.status:type_name -> harpia.plans.v1.ApprovalRequestStatus
+	93,  // 81: harpia.plans.v1.ApprovalRequest.subject_artifact_ref:type_name -> harpia.artifacts.v1.ArtifactRef
+	16,  // 82: harpia.plans.v1.ListApprovalRequestsRequest.status:type_name -> harpia.plans.v1.ApprovalRequestStatus
+	84,  // 83: harpia.plans.v1.ListApprovalRequestsResponse.approval_requests:type_name -> harpia.plans.v1.ApprovalRequest
+	84,  // 84: harpia.plans.v1.GetApprovalRequestResponse.approval_request:type_name -> harpia.plans.v1.ApprovalRequest
+	84,  // 85: harpia.plans.v1.RespondToApprovalRequestResponse.approval_request:type_name -> harpia.plans.v1.ApprovalRequest
+	84,  // 86: harpia.plans.v1.WatchApprovalRequestsResponse.approval_requests:type_name -> harpia.plans.v1.ApprovalRequest
+	32,  // 87: harpia.plans.v1.PlanService.GetPlanTemplate:input_type -> harpia.plans.v1.GetPlanTemplateRequest
+	34,  // 88: harpia.plans.v1.PlanService.GetPlanTemplateByKey:input_type -> harpia.plans.v1.GetPlanTemplateByKeyRequest
+	36,  // 89: harpia.plans.v1.PlanService.ListPlanTemplates:input_type -> harpia.plans.v1.ListPlanTemplatesRequest
+	38,  // 90: harpia.plans.v1.PlanService.CreatePlanConfiguration:input_type -> harpia.plans.v1.CreatePlanConfigurationRequest
+	40,  // 91: harpia.plans.v1.PlanService.GetPlanConfiguration:input_type -> harpia.plans.v1.GetPlanConfigurationRequest
+	42,  // 92: harpia.plans.v1.PlanService.UpdatePlanConfiguration:input_type -> harpia.plans.v1.UpdatePlanConfigurationRequest
+	49,  // 93: harpia.plans.v1.PlanService.ListPlanConfigurations:input_type -> harpia.plans.v1.ListPlanConfigurationsRequest
+	44,  // 94: harpia.plans.v1.PlanService.NextTurn:input_type -> harpia.plans.v1.NextTurnRequest
+	46,  // 95: harpia.plans.v1.PlanService.SubmitConfigurationSelection:input_type -> harpia.plans.v1.SubmitConfigurationSelectionRequest
+	51,  // 96: harpia.plans.v1.PlanService.CreatePlanExecution:input_type -> harpia.plans.v1.CreatePlanExecutionRequest
+	53,  // 97: harpia.plans.v1.PlanService.RetryPlanExecution:input_type -> harpia.plans.v1.RetryPlanExecutionRequest
+	55,  // 98: harpia.plans.v1.PlanService.GetPlanExecution:input_type -> harpia.plans.v1.GetPlanExecutionRequest
+	57,  // 99: harpia.plans.v1.PlanService.ListPlanExecutions:input_type -> harpia.plans.v1.ListPlanExecutionsRequest
+	59,  // 100: harpia.plans.v1.PlanService.GetStepExecution:input_type -> harpia.plans.v1.GetStepExecutionRequest
+	61,  // 101: harpia.plans.v1.PlanService.ListStepExecutions:input_type -> harpia.plans.v1.ListStepExecutionsRequest
+	66,  // 102: harpia.plans.v1.PlanService.ListElicitations:input_type -> harpia.plans.v1.ListElicitationsRequest
+	68,  // 103: harpia.plans.v1.PlanService.GetElicitation:input_type -> harpia.plans.v1.GetElicitationRequest
+	70,  // 104: harpia.plans.v1.PlanService.RespondToElicitation:input_type -> harpia.plans.v1.RespondToElicitationRequest
+	72,  // 105: harpia.plans.v1.PlanService.WatchElicitations:input_type -> harpia.plans.v1.WatchElicitationsRequest
+	76,  // 106: harpia.plans.v1.PlanService.ListReviewRequests:input_type -> harpia.plans.v1.ListReviewRequestsRequest
+	78,  // 107: harpia.plans.v1.PlanService.GetReviewRequest:input_type -> harpia.plans.v1.GetReviewRequestRequest
+	80,  // 108: harpia.plans.v1.PlanService.RespondToReviewRequest:input_type -> harpia.plans.v1.RespondToReviewRequestRequest
+	82,  // 109: harpia.plans.v1.PlanService.WatchReviewRequests:input_type -> harpia.plans.v1.WatchReviewRequestsRequest
+	85,  // 110: harpia.plans.v1.PlanService.ListApprovalRequests:input_type -> harpia.plans.v1.ListApprovalRequestsRequest
+	87,  // 111: harpia.plans.v1.PlanService.GetApprovalRequest:input_type -> harpia.plans.v1.GetApprovalRequestRequest
+	89,  // 112: harpia.plans.v1.PlanService.RespondToApprovalRequest:input_type -> harpia.plans.v1.RespondToApprovalRequestRequest
+	91,  // 113: harpia.plans.v1.PlanService.WatchApprovalRequests:input_type -> harpia.plans.v1.WatchApprovalRequestsRequest
+	33,  // 114: harpia.plans.v1.PlanService.GetPlanTemplate:output_type -> harpia.plans.v1.GetPlanTemplateResponse
+	35,  // 115: harpia.plans.v1.PlanService.GetPlanTemplateByKey:output_type -> harpia.plans.v1.GetPlanTemplateByKeyResponse
+	37,  // 116: harpia.plans.v1.PlanService.ListPlanTemplates:output_type -> harpia.plans.v1.ListPlanTemplatesResponse
+	39,  // 117: harpia.plans.v1.PlanService.CreatePlanConfiguration:output_type -> harpia.plans.v1.CreatePlanConfigurationResponse
+	41,  // 118: harpia.plans.v1.PlanService.GetPlanConfiguration:output_type -> harpia.plans.v1.GetPlanConfigurationResponse
+	43,  // 119: harpia.plans.v1.PlanService.UpdatePlanConfiguration:output_type -> harpia.plans.v1.UpdatePlanConfigurationResponse
+	50,  // 120: harpia.plans.v1.PlanService.ListPlanConfigurations:output_type -> harpia.plans.v1.ListPlanConfigurationsResponse
+	45,  // 121: harpia.plans.v1.PlanService.NextTurn:output_type -> harpia.plans.v1.NextTurnResponse
+	48,  // 122: harpia.plans.v1.PlanService.SubmitConfigurationSelection:output_type -> harpia.plans.v1.SubmitConfigurationSelectionResponse
+	52,  // 123: harpia.plans.v1.PlanService.CreatePlanExecution:output_type -> harpia.plans.v1.CreatePlanExecutionResponse
+	54,  // 124: harpia.plans.v1.PlanService.RetryPlanExecution:output_type -> harpia.plans.v1.RetryPlanExecutionResponse
+	56,  // 125: harpia.plans.v1.PlanService.GetPlanExecution:output_type -> harpia.plans.v1.GetPlanExecutionResponse
+	58,  // 126: harpia.plans.v1.PlanService.ListPlanExecutions:output_type -> harpia.plans.v1.ListPlanExecutionsResponse
+	60,  // 127: harpia.plans.v1.PlanService.GetStepExecution:output_type -> harpia.plans.v1.GetStepExecutionResponse
+	62,  // 128: harpia.plans.v1.PlanService.ListStepExecutions:output_type -> harpia.plans.v1.ListStepExecutionsResponse
+	67,  // 129: harpia.plans.v1.PlanService.ListElicitations:output_type -> harpia.plans.v1.ListElicitationsResponse
+	69,  // 130: harpia.plans.v1.PlanService.GetElicitation:output_type -> harpia.plans.v1.GetElicitationResponse
+	71,  // 131: harpia.plans.v1.PlanService.RespondToElicitation:output_type -> harpia.plans.v1.RespondToElicitationResponse
+	73,  // 132: harpia.plans.v1.PlanService.WatchElicitations:output_type -> harpia.plans.v1.WatchElicitationsResponse
+	77,  // 133: harpia.plans.v1.PlanService.ListReviewRequests:output_type -> harpia.plans.v1.ListReviewRequestsResponse
+	79,  // 134: harpia.plans.v1.PlanService.GetReviewRequest:output_type -> harpia.plans.v1.GetReviewRequestResponse
+	81,  // 135: harpia.plans.v1.PlanService.RespondToReviewRequest:output_type -> harpia.plans.v1.RespondToReviewRequestResponse
+	83,  // 136: harpia.plans.v1.PlanService.WatchReviewRequests:output_type -> harpia.plans.v1.WatchReviewRequestsResponse
+	86,  // 137: harpia.plans.v1.PlanService.ListApprovalRequests:output_type -> harpia.plans.v1.ListApprovalRequestsResponse
+	88,  // 138: harpia.plans.v1.PlanService.GetApprovalRequest:output_type -> harpia.plans.v1.GetApprovalRequestResponse
+	90,  // 139: harpia.plans.v1.PlanService.RespondToApprovalRequest:output_type -> harpia.plans.v1.RespondToApprovalRequestResponse
+	92,  // 140: harpia.plans.v1.PlanService.WatchApprovalRequests:output_type -> harpia.plans.v1.WatchApprovalRequestsResponse
+	114, // [114:141] is the sub-list for method output_type
+	87,  // [87:114] is the sub-list for method input_type
+	87,  // [87:87] is the sub-list for extension type_name
+	87,  // [87:87] is the sub-list for extension extendee
+	0,   // [0:87] is the sub-list for field type_name
 }
 
 func init() { file_harpia_plans_v1_plans_proto_init() }

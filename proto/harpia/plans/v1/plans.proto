@@ -266,6 +266,10 @@ message PlanExecution {
   string updated_at = 10;
   // Immutable active graph selected when this execution was created.
   repeated string active_step_keys = 11;
+  // Immutable template captured with the execution snapshot. Consumers must
+  // derive titles, order, and active rows from this snapshot, never the
+  // current catalog template.
+  PlanTemplate plan_template_snapshot = 12;
 }
 
 enum PlanExecutionStatus {
